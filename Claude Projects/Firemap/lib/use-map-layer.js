@@ -1,9 +1,22 @@
 /**
  * lib/use-map-layer.js
  *
- * React hook: reactively adds/updates a PMTiles or GeoJSON circle layer on the
- * MapLibre map. Uses a ref to always have the latest variable without stale closures,
- * and re-adds layers after setStyle() via the styledata event.
+ * React hook: reactively adds/updates a PMTiles or GeoJSON circle layer.
+ *
+ * Layer ordering contract:
+ *   data circles  →  ca-mask-fill  →  county-borders  →  graticule
+ *
+ * The circles must be BELOW ca-mask-fill so the inverted CA polygon hides
+ * any circle that falls outside the state boundary.
+ *
+ * Visual encoding:
+ * - circle-color   : D3 diverging/sequential colormap
+ * - circle-opacity : for diverging variables, opacity encodes |deviation from
+ *                    zero| — neutral cells are nearly transparent, extremes are
+ *                    opaque. This produces the CarbonPlan heatmap effect.
+ * - circle-radius  : grows with zoom (fills the ~5.5 km synthetic cell footprint),
+ *                    clamped so circles never appear smaller than 2 px or
+ *                    larger than 14 px in screen space.
  */
 
 import { useEffect, useRef } from 'react'
@@ -21,8 +34,7 @@ export const LAYER_ID = 'firemap-cells'
 export function useMapLayer(map, config, state) {
   const isPlaceholder = config.tilesUrl === 'REPLACE_WITH_R2_URL'
 
-  // Keep the latest resolved variable in a ref so the styledata handler never
-  // captures a stale closure value.
+  // Ref keeps the latest variable without stale closures in the styledata handler
   const variableRef = useRef(null)
   variableRef.current = getActiveVariable(config, state.activeLayer, state.activeDimensions)
 
@@ -35,45 +47,49 @@ export function useMapLayer(map, config, state) {
       : { type: 'vector', url: `pmtiles://${config.tilesUrl}` }
 
     function addLayers() {
-      // Guard: style must be fully loaded before adding sources/layers
       if (!map.isStyleLoaded()) return
-      // If source already exists the layers are present — just refresh paint
       if (map.getSource(SOURCE_ID)) {
+        // Source already present — just refresh paint in case variable changed
         updatePaint()
         return
       }
 
       map.addSource(SOURCE_ID, sourceConfig)
 
+      const variable = variableRef.current
       const layerSpec = {
         id: LAYER_ID,
         type: 'circle',
         source: SOURCE_ID,
         paint: {
-          // Radius interpolates exponentially with zoom for CarbonPlan-style cells
+          // Radius: calibrated for ~5.5 km synthetic grid spacing.
+          // Grows with zoom so cells tile together; clamped to [2, 14] px.
           'circle-radius': [
-            'interpolate', ['exponential', 2], ['zoom'],
-            4, 2,
-            7, 2.5,
-            9, 5,
-            11, 14,
-            13, 40,
+            'interpolate', ['linear'], ['zoom'],
+            4,  2,
+            6,  2.5,
+            8,  6,
+            9,  11,
+            10, 14,
+            20, 14,   // cap — stays at 14 px beyond zoom 10
           ],
-          'circle-color': variableRef.current
-            ? buildPaintExpression(variableRef.current)
-            : '#888888',
-          'circle-opacity': 0.9,
+          'circle-color': variable ? buildColorExpression(variable) : '#888888',
+          'circle-opacity': variable ? buildOpacityExpression(variable) : 0.85,
           'circle-stroke-width': 0,
+          // Slight blur softens edges and helps cells blend at low zoom
+          'circle-blur': [
+            'interpolate', ['linear'], ['zoom'],
+            5, 0.4,
+            9, 0.1,
+            12, 0,
+          ],
         },
       }
 
-      // PMTiles vector source requires source-layer; GeoJSON does not
-      if (!isPlaceholder) {
-        layerSpec['source-layer'] = config.id
-      }
+      if (!isPlaceholder) layerSpec['source-layer'] = config.id
 
-      // Insert below county-borders so county lines render on top of cells
-      const before = map.getLayer('county-borders') ? 'county-borders' : undefined
+      // INSERT BELOW ca-mask-fill so the inverted CA polygon clips outside data
+      const before = map.getLayer('ca-mask-fill') ? 'ca-mask-fill' : undefined
       map.addLayer(layerSpec, before)
     }
 
@@ -81,15 +97,11 @@ export function useMapLayer(map, config, state) {
       if (!map.getLayer(LAYER_ID)) return
       const variable = variableRef.current
       if (!variable || variable.type === 'categorical') return
-      map.setPaintProperty(LAYER_ID, 'circle-color', buildPaintExpression(variable))
+      map.setPaintProperty(LAYER_ID, 'circle-color', buildColorExpression(variable))
+      map.setPaintProperty(LAYER_ID, 'circle-opacity', buildOpacityExpression(variable))
     }
 
-    // Add immediately if style is ready, otherwise wait for styledata
-    if (map.isStyleLoaded()) {
-      addLayers()
-    }
-
-    // Re-add after every setStyle() call (which removes all custom layers)
+    if (map.isStyleLoaded()) addLayers()
     map.on('styledata', addLayers)
 
     return () => {
@@ -100,35 +112,61 @@ export function useMapLayer(map, config, state) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, config])
 
-  // ── Paint expression update when active variable changes ──────────────────
+  // ── Update paint when active variable changes ─────────────────────────────
   useEffect(() => {
-    if (!map) return
-    if (!map.isStyleLoaded() || !map.getLayer(LAYER_ID)) return
-
+    if (!map || !map.isStyleLoaded() || !map.getLayer(LAYER_ID)) return
     const variable = variableRef.current
     if (!variable || variable.type === 'categorical') return
-
-    map.setPaintProperty(LAYER_ID, 'circle-color', buildPaintExpression(variable))
+    map.setPaintProperty(LAYER_ID, 'circle-color', buildColorExpression(variable))
+    map.setPaintProperty(LAYER_ID, 'circle-opacity', buildOpacityExpression(variable))
   }, [map, config, state.activeLayer, state.activeDimensions])
 }
 
-/**
- * Build a MapLibre GL interpolate expression mapping property values to colors.
- * @param {import('../contracts/project-config').Variable} variable
- * @returns {Array} MapLibre expression
- */
-function buildPaintExpression(variable) {
-  if (!variable || variable.type === 'categorical') return '#888888'
+// ── Paint expression builders ─────────────────────────────────────────────
 
+/**
+ * MapLibre `interpolate` expression mapping feature property value → CSS color.
+ */
+function buildColorExpression(variable) {
+  if (!variable || variable.type === 'categorical') return '#888888'
   const scale = buildColorScale(variable)
   const { min, max } = variable.domain
   const steps = 24
-  const expression = ['interpolate', ['linear'], ['get', variable.id]]
-
+  const expr = ['interpolate', ['linear'], ['get', variable.id]]
   for (let i = 0; i <= steps; i++) {
-    const value = min + (i / steps) * (max - min)
-    expression.push(value, scale(value))
+    const v = min + (i / steps) * (max - min)
+    expr.push(v, scale(v))
   }
+  return expr
+}
 
-  return expression
+/**
+ * MapLibre expression for circle opacity.
+ *
+ * Diverging variables (e.g. net benefits):
+ *   Opacity = f(|value − zero| / maxAbsDev)
+ *   → zero deviation  = nearly transparent (0.05)
+ *   → max deviation   = opaque (0.88)
+ *   This is the CarbonPlan "opacity encodes magnitude" technique.
+ *
+ * Sequential/non-diverging variables: fixed 0.85 opacity.
+ */
+function buildOpacityExpression(variable) {
+  if (!variable || variable.type === 'categorical') return 0.85
+  if (!variable.diverging) return 0.85
+
+  const { min, max, zero = 0 } = variable.domain
+  const maxAbsDev = Math.max(Math.abs(min - zero), Math.abs(max - zero))
+  if (maxAbsDev === 0) return 0.85
+
+  // |value - zero| / maxAbsDev  → [0, 1]
+  const normalised = ['/', ['abs', ['-', ['get', variable.id], zero]], maxAbsDev]
+
+  return [
+    'interpolate', ['linear'], normalised,
+    0,    0.05,   // at zero: nearly transparent
+    0.05, 0.2,
+    0.2,  0.55,
+    1,    0.88,   // at maximum deviation: opaque
+  ]
 }

@@ -93,7 +93,7 @@ export function addStaticLayers(map, scheme) {
       source: 'counties',
       paint: {
         'line-color': borderColor,
-        'line-width': 0.2,
+        'line-width': 0.5,
       },
     })
   } else {

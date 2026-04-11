@@ -2,23 +2,15 @@
  * components/sidebar/layer-tabs.js
  *
  * Renders config.layers as a row of tab buttons.
- * Active tab has a colored bottom border (primary color).
+ * Active tab is indicated by text color only — no underlines or borders.
  */
 
-import { Flex, Box, Text } from 'theme-ui'
+import { Flex, Box } from 'theme-ui'
 import { Actions } from '../../contracts/events.js'
 
 export function LayerTabs({ config, state, dispatch }) {
   return (
-    <Flex
-      sx={{
-        flexDirection: 'row',
-        borderBottom: '1px solid',
-        borderColor: 'border',
-        mb: 3,
-        gap: 0,
-      }}
-    >
+    <Flex sx={{ flexWrap: 'wrap', gap: 0, mb: 3 }}>
       {config.layers.map((layer) => {
         const isActive = layer.id === state.activeLayer
         return (
@@ -27,25 +19,21 @@ export function LayerTabs({ config, state, dispatch }) {
             as='button'
             onClick={() => dispatch({ type: Actions.SET_LAYER, layerId: layer.id })}
             sx={{
-              flex: 1,
-              py: 2,
-              px: 1,
               bg: 'transparent',
               border: 'none',
-              borderBottom: '2px solid',
-              borderBottomColor: isActive ? 'primary' : 'transparent',
               cursor: 'pointer',
-              color: isActive ? 'text' : 'muted',
+              px: 2,
+              py: 1,
+              mr: 1,
+              mb: 1,
               fontFamily: 'body',
               fontSize: 0,
               fontWeight: isActive ? 'bold' : 'body',
               letterSpacing: 'caps',
               textTransform: 'uppercase',
-              transition: 'all 0.15s ease',
-              textAlign: 'center',
-              '&:hover': {
-                color: 'text',
-              },
+              color: isActive ? 'text' : 'muted',
+              transition: 'color 0.1s',
+              '&:hover': { color: 'text' },
             }}
           >
             {layer.label}

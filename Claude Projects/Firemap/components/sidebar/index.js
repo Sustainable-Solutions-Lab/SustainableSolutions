@@ -2,18 +2,18 @@
  * components/sidebar/index.js
  *
  * Left sidebar: project title, layer tabs, dimension controls,
- * legend, percentile filter, area tool toggle, methods link, and lab logo.
+ * legend, percentile filter, area tool toggle, methods link, lab logo.
  *
  * Props:
  *   config          - ProjectConfig
  *   state           - AppState
  *   dispatch        - Dispatch
- *   filteredCount   - number | null  (computed by pages/index.js)
+ *   filteredCount   - number | null
  *   filteredMean    - number | null
  *   filteredMedian  - number | null
  */
 
-import { Box, Flex, Text, Button } from 'theme-ui'
+import { Box, Flex, Text } from 'theme-ui'
 import { Actions } from '../../contracts/events.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { LayerTabs } from './layer-tabs.js'
@@ -29,32 +29,20 @@ export function Sidebar({
   filteredMean = null,
   filteredMedian = null,
 }) {
-  // Resolve the active variable for legend + percentile filter
-  const activeVariable = getActiveVariable(
-    config,
-    state.activeLayer,
-    state.activeDimensions
-  )
-
-  // Find the active layer definition to know which dimensions to show
+  const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
   const activeDimensionIds = activeLayerConfig?.dimensionIds ?? []
-
-  // Get only the dimensions relevant to this layer
   const visibleDimensions = config.dimensions.filter((d) =>
     activeDimensionIds.includes(d.id)
   )
-
-  // Estimate total feature count from the config (placeholder — pages/index.js may pass this)
-  const featureCount = config._featureCount ?? 0
 
   return (
     <Box
       sx={{
         position: 'relative',
+        width: 280,
         minWidth: 280,
-        maxWidth: 280,
-        height: '100vh',
+        height: '100%',
         bg: 'surface',
         borderRight: '1px solid',
         borderColor: 'border',
@@ -65,55 +53,39 @@ export function Sidebar({
         flexShrink: 0,
       }}
     >
-      {/* Scrollable content area */}
-      <Box sx={{ flex: 1, p: 3 }}>
-        {/* 1. Project title + description */}
-        <Box sx={{ mb: 3 }}>
-          <Text
-            sx={{
-              fontFamily: 'body',
-              fontSize: 2,
-              fontWeight: 'bold',
-              color: 'text',
-              lineHeight: 'heading',
-              display: 'block',
-              mb: 1,
-            }}
-          >
-            {config.title}
-          </Text>
-          <Text
-            sx={{
-              fontFamily: 'body',
-              fontSize: 0,
-              color: 'muted',
-              lineHeight: 'body',
-              display: 'block',
-            }}
-          >
-            {config.description}
-          </Text>
-        </Box>
+      {/* Scrollable content */}
+      <Box sx={{ flex: 1, px: 3, pt: 3, pb: 2 }}>
+        {/* Project title */}
+        <Text
+          sx={{
+            fontFamily: 'body',
+            fontSize: 2,
+            fontWeight: 'bold',
+            color: 'text',
+            lineHeight: 'heading',
+            display: 'block',
+            mb: 1,
+          }}
+        >
+          {config.title}
+        </Text>
+        <Text
+          sx={{
+            fontFamily: 'body',
+            fontSize: 0,
+            color: 'muted',
+            lineHeight: 'body',
+            display: 'block',
+            mb: 3,
+          }}
+        >
+          {config.description}
+        </Text>
 
-        {/* 2. Layer tabs */}
+        {/* Layer tabs */}
         <LayerTabs config={config} state={state} dispatch={dispatch} />
 
-        {/* Layer description */}
-        {activeLayerConfig?.description && (
-          <Text
-            sx={{
-              fontFamily: 'body',
-              fontSize: 0,
-              color: 'muted',
-              mb: 3,
-              display: 'block',
-            }}
-          >
-            {activeLayerConfig.description}
-          </Text>
-        )}
-
-        {/* 3. Dimension controls — only for the active layer */}
+        {/* Dimension controls */}
         {visibleDimensions.map((dim) => (
           <DimensionControl
             key={dim.id}
@@ -123,18 +95,15 @@ export function Sidebar({
           />
         ))}
 
-        {/* Divider */}
-        <Box sx={{ borderTop: '1px solid', borderColor: 'border', my: 3 }} />
-
-        {/* 4. Legend */}
+        {/* Legend */}
         <Legend variable={activeVariable} />
 
-        {/* 5. Percentile filter */}
+        {/* Percentile filter */}
         {config.percentileFilter?.enabled && (
           <PercentileFilter
             variable={activeVariable}
             percentileRange={state.percentileRange}
-            featureCount={featureCount}
+            featureCount={config._featureCount ?? 0}
             filteredCount={filteredCount}
             filteredMean={filteredMean}
             filteredMedian={filteredMedian}
@@ -142,93 +111,82 @@ export function Sidebar({
           />
         )}
 
-        {/* Divider */}
-        <Box sx={{ borderTop: '1px solid', borderColor: 'border', my: 3 }} />
-
-        {/* 6. Area tool toggle */}
+        {/* Area tool toggle */}
         {config.areaTool?.enabled && (
-          <Button
+          <Box
+            as='button'
             onClick={() => dispatch({ type: Actions.TOGGLE_AREA_TOOL })}
             sx={{
+              display: 'block',
               width: '100%',
-              mb: 2,
+              mb: 1,
+              mt: 2,
               fontFamily: 'body',
               fontSize: 0,
               fontWeight: 'bold',
               letterSpacing: 'caps',
               textTransform: 'uppercase',
               cursor: 'pointer',
-              py: 2,
-              px: 3,
-              borderRadius: 'sm',
-              border: '1px solid',
-              bg: state.areaToolActive ? 'primary' : 'transparent',
-              borderColor: state.areaToolActive ? 'primary' : 'border',
-              color: state.areaToolActive ? '#fff' : 'muted',
-              transition: 'all 0.15s ease',
-              '&:hover': {
-                borderColor: 'primary',
-                color: state.areaToolActive ? '#fff' : 'primary',
-              },
+              py: 1,
+              px: 0,
+              border: 'none',
+              bg: 'transparent',
+              textAlign: 'left',
+              color: state.areaToolActive ? 'primary' : 'muted',
+              transition: 'color 0.1s',
+              '&:hover': { color: state.areaToolActive ? 'primary' : 'text' },
             }}
           >
-            {state.areaToolActive ? 'Exit Area Tool' : 'Area Tool'}
-          </Button>
+            {state.areaToolActive ? '× Exit Area Tool' : 'Area Tool'}
+          </Box>
         )}
 
-        {/* 7. Methods link */}
-        <Button
+        {/* Methods */}
+        <Box
+          as='button'
           onClick={() => dispatch({ type: Actions.TOGGLE_METHODS })}
           sx={{
+            display: 'block',
             width: '100%',
+            mt: 1,
             fontFamily: 'body',
             fontSize: 0,
             fontWeight: 'bold',
             letterSpacing: 'caps',
             textTransform: 'uppercase',
             cursor: 'pointer',
-            py: 2,
-            px: 3,
-            borderRadius: 'sm',
-            border: '1px solid',
+            py: 1,
+            px: 0,
+            border: 'none',
             bg: 'transparent',
-            borderColor: 'border',
+            textAlign: 'left',
             color: 'muted',
-            transition: 'all 0.15s ease',
-            '&:hover': {
-              borderColor: 'muted',
-              color: 'text',
-            },
+            transition: 'color 0.1s',
+            '&:hover': { color: 'text' },
           }}
         >
           Methods
-        </Button>
+        </Box>
       </Box>
 
-      {/* Lab logo — pinned to the bottom */}
+      {/* Lab symbol — bottom of sidebar */}
       <Flex
         sx={{
           justifyContent: 'center',
           alignItems: 'center',
           py: 3,
-          borderTop: '1px solid',
-          borderColor: 'border',
         }}
       >
         <a
           href='https://sustainablesolutions.stanford.edu'
           target='_blank'
           rel='noopener noreferrer'
-          style={{ display: 'flex', alignItems: 'center' }}
+          style={{ lineHeight: 0 }}
         >
           <img
-            src={
-              state.colorScheme === 'dark'
-                ? '/LabLogo_light.png'
-                : '/LabLogo_border.png'
-            }
+            src={state.colorScheme === 'dark' ? '/LabLogo_light.png' : '/LabLogo_border.png'}
             alt='Sustainable Solutions Lab'
-            style={{ width: 40, height: 40, marginBottom: 8 }}
+            style={{ width: 36, height: 36, objectFit: 'contain' }}
           />
         </a>
       </Flex>

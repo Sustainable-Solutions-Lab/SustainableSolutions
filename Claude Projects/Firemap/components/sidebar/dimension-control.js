@@ -61,7 +61,7 @@ export function DimensionControl({ dimension, value, dispatch }) {
 
 function ToggleControl({ dimension, value, onChange }) {
   return (
-    <Flex sx={{ flexWrap: 'wrap', gap: 1 }}>
+    <Flex sx={{ flexWrap: 'wrap', gap: 0 }}>
       {dimension.options.map((option) => {
         const isActive = option.id === value
         return (
@@ -72,21 +72,18 @@ function ToggleControl({ dimension, value, onChange }) {
             sx={{
               fontFamily: 'body',
               fontSize: 0,
-              fontWeight: 'body',
+              fontWeight: isActive ? 'bold' : 'body',
               lineHeight: 'body',
               cursor: 'pointer',
               px: 2,
               py: 1,
-              borderRadius: 'pill',
-              border: '1px solid',
-              borderColor: isActive ? 'primary' : 'border',
+              mr: 1,
+              mb: 1,
+              border: 'none',
               bg: 'transparent',
               color: isActive ? 'text' : 'muted',
-              transition: 'all 0.15s ease',
-              '&:hover': {
-                color: 'text',
-                borderColor: 'muted',
-              },
+              transition: 'color 0.1s',
+              '&:hover': { color: 'text' },
             }}
           >
             {option.label}

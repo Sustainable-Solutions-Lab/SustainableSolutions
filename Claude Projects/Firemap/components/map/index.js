@@ -48,6 +48,8 @@ export function Map({ config, state, dispatch, height, onMapReady }) {
       center: config.region.center,
       zoom: config.region.zoom,
       ...(config.region.bounds ? { bounds: config.region.bounds } : {}),
+      // Allow zoom anywhere within CA but prevent panning far outside
+      maxBounds: [-132, 26, -106, 48],
     })
 
     // Add navigation controls

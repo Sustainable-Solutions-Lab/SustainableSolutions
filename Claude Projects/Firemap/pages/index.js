@@ -132,14 +132,9 @@ export default function Home() {
             ☰
           </Button>
 
-          {/* Lab symbol logo */}
-          <img
-            src={isDark ? '/LabLogo_light.png' : '/LabLogo_border.png'}
-            alt='Sustainable Solutions Lab'
-            style={{ height: 36, marginRight: 12, objectFit: 'contain' }}
-          />
-
-          {/* SDSS wordmark — links to lab site */}
+          {/* SDSS wordmark only — links to lab site.
+              SDSS_brand_white.png = white text (dark backgrounds)
+              SDSS_brand.png       = colored text (light backgrounds) */}
           <a
             href='https://sustainablesolutions.stanford.edu'
             target='_blank'
@@ -147,7 +142,7 @@ export default function Home() {
             style={{ lineHeight: 0 }}
           >
             <img
-              src={isDark ? '/SDSS_brand.png' : '/SDSS_brand_white.png'}
+              src={isDark ? '/SDSS_brand_white.png' : '/SDSS_brand.png'}
               alt='Stanford Doerr School of Sustainability'
               style={{ height: 28, objectFit: 'contain' }}
             />

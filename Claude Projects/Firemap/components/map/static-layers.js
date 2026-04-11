@@ -2,8 +2,11 @@
  * components/map/static-layers.js
  *
  * Adds permanent overlay layers on top of the basemap:
- *   1. California county borders (always visible, dashed line)
- *   2. Lat/lon graticule (toggled via a button in the map UI)
+ *   1. California out-of-bounds mask (hides everything outside CA)
+ *   2. California county borders (solid, pale, thin — always visible)
+ *   3. Lat/lon graticule (toggled via a button in the map UI)
+ *
+ * Also hides city/POI label layers from the basemap style.
  *
  * Call addStaticLayers(map, scheme) after map load and after every setStyle().
  */
@@ -16,36 +19,25 @@
  */
 export function buildGraticule(latStep = 2, lonStep = 2) {
   const features = []
-
-  // Horizontal lines (latitude)
   for (let lat = 32; lat <= 43; lat += latStep) {
     features.push({
       type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: [[-125, lat], [-113, lat]],
-      },
+      geometry: { type: 'LineString', coordinates: [[-125, lat], [-113, lat]] },
       properties: { label: `${lat}°N`, type: 'lat' },
     })
   }
-
-  // Vertical lines (longitude)
   for (let lon = -124; lon <= -113; lon += lonStep) {
     features.push({
       type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: [[lon, 32], [lon, 43]],
-      },
+      geometry: { type: 'LineString', coordinates: [[lon, 32], [lon, 43]] },
       properties: { label: `${Math.abs(lon)}°W`, type: 'lon' },
     })
   }
-
   return { type: 'FeatureCollection', features }
 }
 
 /**
- * Add the county borders and graticule sources/layers to the map.
+ * Add the CA mask, county borders, and graticule to the map.
  * Safe to call multiple times — checks for existing sources/layers.
  *
  * @param {import('maplibre-gl').Map} map
@@ -53,13 +45,39 @@ export function buildGraticule(latStep = 2, lonStep = 2) {
  */
 export function addStaticLayers(map, scheme) {
   const borderColor =
-    scheme === 'dark' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'
+    scheme === 'dark' ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)'
+  const maskColor =
+    scheme === 'dark' ? '#1a1a1a' : '#FAFAF7'
   const graticuleColor =
-    scheme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'
+    scheme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'
   const labelColor =
-    scheme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'
+    scheme === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'
 
-  // ── 1. County borders ──────────────────────────────────────────────────────
+  // ── 1. California out-of-bounds mask ──────────────────────────────────────
+  // World rectangle with California punched out — hides everything outside CA.
+
+  if (!map.getSource('ca-mask')) {
+    map.addSource('ca-mask', {
+      type: 'geojson',
+      data: '/ca-mask.geojson',
+    })
+  }
+
+  if (!map.getLayer('ca-mask-fill')) {
+    map.addLayer({
+      id: 'ca-mask-fill',
+      type: 'fill',
+      source: 'ca-mask',
+      paint: {
+        'fill-color': maskColor,
+        'fill-opacity': 1,
+      },
+    })
+  } else {
+    map.setPaintProperty('ca-mask-fill', 'fill-color', maskColor)
+  }
+
+  // ── 2. County borders ─────────────────────────────────────────────────────
 
   if (!map.getSource('counties')) {
     map.addSource('counties', {
@@ -75,16 +93,15 @@ export function addStaticLayers(map, scheme) {
       source: 'counties',
       paint: {
         'line-color': borderColor,
-        'line-width': 0.8,
-        'line-dasharray': [3, 2],
+        'line-width': 0.7,
+        // No dasharray — solid thin lines
       },
     })
   } else {
-    // Update color if scheme changed
     map.setPaintProperty('county-borders', 'line-color', borderColor)
   }
 
-  // ── 2. Graticule ───────────────────────────────────────────────────────────
+  // ── 3. Graticule ──────────────────────────────────────────────────────────
 
   if (!map.getSource('graticule')) {
     map.addSource('graticule', {
@@ -98,12 +115,10 @@ export function addStaticLayers(map, scheme) {
       id: 'graticule',
       type: 'line',
       source: 'graticule',
-      layout: {
-        visibility: 'none',
-      },
+      layout: { visibility: 'none' },
       paint: {
         'line-color': graticuleColor,
-        'line-width': 0.6,
+        'line-width': 0.5,
         'line-dasharray': [4, 3],
       },
     })
@@ -111,7 +126,6 @@ export function addStaticLayers(map, scheme) {
     map.setPaintProperty('graticule', 'line-color', graticuleColor)
   }
 
-  // Graticule degree labels
   if (!map.getLayer('graticule-labels')) {
     map.addLayer({
       id: 'graticule-labels',
@@ -124,7 +138,6 @@ export function addStaticLayers(map, scheme) {
         'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
         'symbol-placement': 'line',
         'text-allow-overlap': false,
-        'text-ignore-placement': false,
       },
       paint: {
         'text-color': labelColor,
@@ -135,6 +148,52 @@ export function addStaticLayers(map, scheme) {
     })
   } else {
     map.setPaintProperty('graticule-labels', 'text-color', labelColor)
+  }
+
+  // ── 4. Hide city / POI labels from the basemap ────────────────────────────
+  hideBasemapLabels(map)
+}
+
+/**
+ * Hide city, town, village, and POI label layers from the loaded basemap style.
+ * Targets layers whose IDs contain common place/POI naming patterns.
+ *
+ * @param {import('maplibre-gl').Map} map
+ */
+function hideBasemapLabels(map) {
+  const HIDE_PATTERNS = [
+    'place_label',
+    'place-label',
+    'poi_label',
+    'poi-label',
+    'settlement_label',
+    'settlement-label',
+    'transit_stop',
+    'transit-stop',
+    'airport_label',
+    'airport-label',
+  ]
+
+  // Keep country and state/region labels — only hide city-level and below
+  const KEEP_PATTERNS = [
+    'country',
+    'state',
+    'region',
+    'admin',
+  ]
+
+  try {
+    const layers = map.getStyle()?.layers ?? []
+    for (const layer of layers) {
+      if (layer.type !== 'symbol') continue
+      const id = layer.id.toLowerCase()
+      if (KEEP_PATTERNS.some((p) => id.includes(p))) continue
+      if (HIDE_PATTERNS.some((p) => id.includes(p))) {
+        map.setLayoutProperty(layer.id, 'visibility', 'none')
+      }
+    }
+  } catch (_) {
+    // Style may not be fully loaded — will retry on next styledata event
   }
 }
 

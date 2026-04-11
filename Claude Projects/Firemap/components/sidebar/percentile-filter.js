@@ -33,42 +33,35 @@ export function PercentileFilter({
     ? 100 - percentileRange.low
     : percentileRange.high
 
-  const [direction, setDirection] = useState(
-    percentileRange.low > 0 ? 'top' : 'bottom'
-  )
-  const [pctValue, setPctValue] = useState(
-    percentileRange.low === 0 && percentileRange.high === 100
-      ? 100
-      : currentPct
-  )
+  const noFilter = percentileRange.low === 0 && percentileRange.high === 100
+
+  // 'all' | 'top' | 'bottom'
+  const [mode, setMode] = useState(noFilter ? 'all' : percentileRange.low > 0 ? 'top' : 'bottom')
+  const [pctValue, setPctValue] = useState(noFilter ? 10 : currentPct)
 
   const unit = variable?.unit || ''
 
-  function apply(newDirection, newPct) {
-    const n = Math.max(1, Math.min(100, newPct))
-    let low, high
-    if (n >= 100) {
-      low = 0; high = 100  // show all
-    } else if (newDirection === 'top') {
-      low = 100 - n; high = 100
-    } else {
-      low = 0; high = n
+  function apply(newMode, newPct) {
+    if (newMode === 'all') {
+      dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
+      return
     }
+    const n = Math.max(1, Math.min(99, newPct))
+    const low = newMode === 'top' ? 100 - n : 0
+    const high = newMode === 'top' ? 100 : n
     dispatch({ type: Actions.SET_PERCENTILE, low, high })
   }
 
-  function handleDirectionChange(newDir) {
-    setDirection(newDir)
-    apply(newDir, pctValue)
+  function handleModeChange(newMode) {
+    setMode(newMode)
+    apply(newMode, pctValue)
   }
 
   function handlePctChange(e) {
     const val = +e.target.value
     setPctValue(val)
-    apply(direction, val)
+    apply(mode, val)
   }
-
-  const noFilter = percentileRange.low === 0 && percentileRange.high === 100
   const pctFiltered =
     featureCount > 0 && filteredCount != null
       ? ((filteredCount / featureCount) * 100).toFixed(0)
@@ -94,70 +87,69 @@ export function PercentileFilter({
         Filter{variable ? ` — ${variable.label}` : ''}
       </Text>
 
-      {/* Controls row: radio + number input */}
-      <Flex sx={{ alignItems: 'center', gap: 2, mb: 2 }}>
-        {/* Top / Bottom radio */}
-        <Flex sx={{ gap: 2, alignItems: 'center' }}>
-          {['top', 'bottom'].map((dir) => (
+      {/* Controls row: All / Top / Bottom radio + number input */}
+      <Flex sx={{ alignItems: 'center', gap: 3, mb: 2, flexWrap: 'wrap' }}>
+        {/* Mode radios */}
+        <Flex sx={{ gap: 3, alignItems: 'center' }}>
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'top', label: 'Top' },
+            { id: 'bottom', label: 'Bottom' },
+          ].map(({ id, label }) => (
             <label
-              key={dir}
+              key={id}
               style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
             >
               <input
                 type='radio'
-                name='pct-direction'
-                value={dir}
-                checked={direction === dir}
-                onChange={() => handleDirectionChange(dir)}
+                name='pct-mode'
+                value={id}
+                checked={mode === id}
+                onChange={() => handleModeChange(id)}
                 style={{ accentColor: 'var(--theme-ui-colors-primary)', cursor: 'pointer' }}
               />
-              <Text
-                sx={{
-                  fontFamily: 'body',
-                  fontSize: 0,
-                  color: direction === dir ? 'text' : 'muted',
-                }}
-              >
-                {dir.charAt(0).toUpperCase() + dir.slice(1)}
+              <Text sx={{ fontFamily: 'body', fontSize: 0, color: mode === id ? 'text' : 'muted' }}>
+                {label}
               </Text>
             </label>
           ))}
         </Flex>
 
-        {/* Numeric input */}
-        <Flex sx={{ alignItems: 'center', gap: 1 }}>
-          <Box
-            as='input'
-            type='number'
-            min={1}
-            max={100}
-            value={pctValue}
-            onChange={handlePctChange}
-            sx={{
-              width: '52px',
-              bg: 'transparent',
-              border: 'none',
-              borderBottom: '1px solid',
-              borderColor: 'border',
-              borderRadius: 0,
-              color: 'text',
-              fontFamily: 'mono',
-              fontSize: 1,
-              textAlign: 'right',
-              px: 1,
-              py: '2px',
-              outline: 'none',
-              '&:focus': { borderColor: 'primary' },
-              // Hide number input spin arrows
-              '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': {
-                WebkitAppearance: 'none',
-                margin: 0,
-              },
-              MozAppearance: 'textfield',
-            }}
-          />
-          <Text sx={{ fontFamily: 'body', fontSize: 0, color: 'muted' }}>%</Text>
-        </Flex>
+        {/* Numeric input — hidden when mode is 'all' */}
+        {mode !== 'all' && (
+          <Flex sx={{ alignItems: 'center', gap: 1 }}>
+            <Box
+              as='input'
+              type='number'
+              min={1}
+              max={99}
+              value={pctValue}
+              onChange={handlePctChange}
+              sx={{
+                width: '44px',
+                bg: 'transparent',
+                border: 'none',
+                borderBottom: '1px solid',
+                borderColor: 'border',
+                borderRadius: 0,
+                color: 'text',
+                fontFamily: 'mono',
+                fontSize: 1,
+                textAlign: 'right',
+                px: 1,
+                py: '2px',
+                outline: 'none',
+                '&:focus': { borderColor: 'primary' },
+                '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': {
+                  WebkitAppearance: 'none',
+                  margin: 0,
+                },
+                MozAppearance: 'textfield',
+              }}
+            />
+            <Text sx={{ fontFamily: 'body', fontSize: 0, color: 'muted' }}>%</Text>
+          </Flex>
+        )}
       </Flex>
 
       {/* Stats */}

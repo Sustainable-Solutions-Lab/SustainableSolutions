@@ -93,8 +93,7 @@ export function addStaticLayers(map, scheme) {
       source: 'counties',
       paint: {
         'line-color': borderColor,
-        'line-width': 0.7,
-        // No dasharray — solid thin lines
+        'line-width': 0.2,
       },
     })
   } else {
@@ -150,51 +149,6 @@ export function addStaticLayers(map, scheme) {
     map.setPaintProperty('graticule-labels', 'text-color', labelColor)
   }
 
-  // ── 4. Hide city / POI labels from the basemap ────────────────────────────
-  hideBasemapLabels(map)
-}
-
-/**
- * Hide city, town, village, and POI label layers from the loaded basemap style.
- * Targets layers whose IDs contain common place/POI naming patterns.
- *
- * @param {import('maplibre-gl').Map} map
- */
-function hideBasemapLabels(map) {
-  const HIDE_PATTERNS = [
-    'place_label',
-    'place-label',
-    'poi_label',
-    'poi-label',
-    'settlement_label',
-    'settlement-label',
-    'transit_stop',
-    'transit-stop',
-    'airport_label',
-    'airport-label',
-  ]
-
-  // Keep country and state/region labels — only hide city-level and below
-  const KEEP_PATTERNS = [
-    'country',
-    'state',
-    'region',
-    'admin',
-  ]
-
-  try {
-    const layers = map.getStyle()?.layers ?? []
-    for (const layer of layers) {
-      if (layer.type !== 'symbol') continue
-      const id = layer.id.toLowerCase()
-      if (KEEP_PATTERNS.some((p) => id.includes(p))) continue
-      if (HIDE_PATTERNS.some((p) => id.includes(p))) {
-        map.setLayoutProperty(layer.id, 'visibility', 'none')
-      }
-    }
-  } catch (_) {
-    // Style may not be fully loaded — will retry on next styledata event
-  }
 }
 
 /**

@@ -80,10 +80,12 @@ export default function Home() {
     dispatch({ type: Actions.TOGGLE_SCHEME })
   }
 
-  // Lazy-load the methods MDX only when the overlay is open
-  const MethodsMDX = state.methodsOpen
-    ? dynamic(() => import(`../projects/${config.id}/methods.mdx`), { ssr: false })
-    : null
+  // Lazy-load the methods MDX once it's first opened; keep it mounted after that
+  // so the panel doesn't flash on re-open.
+  const MethodsMDX = dynamic(
+    () => import(`../projects/${config.id}/methods.mdx`),
+    { ssr: false }
+  )
 
   return (
     <>
@@ -163,15 +165,12 @@ export default function Home() {
           </Button>
         </Flex>
 
-        {/* ── Content row (sidebar + map) ──────────────────────────────────── */}
+        {/* ── Content row: sidebar | map | methods panel ───────────────────── */}
         <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-          {/* Sidebar:
-              - Desktop (≥ 768px): always visible, 280px, in normal flow
-              - Mobile (< 768px):  shown/hidden as full-width overlay above the map */}
+
+          {/* Sidebar — 280px fixed, full-width overlay on mobile */}
           <Box
             sx={{
-              // mobile: absolute overlay when open, hidden when closed
-              // desktop: always in normal flow at 280px
               display: [sidebarOpen ? 'flex' : 'none', 'flex'],
               position: ['absolute', 'relative'],
               top: [0, 'auto'],
@@ -193,7 +192,7 @@ export default function Home() {
             />
           </Box>
 
-          {/* Map (fills remaining width) */}
+          {/* Map — fills remaining space */}
           <Box sx={{ flex: 1, position: 'relative', minWidth: 0 }}>
             <Map
               config={config}
@@ -204,7 +203,7 @@ export default function Home() {
               onFilterStats={setFilterStats}
             />
 
-            {/* Regional data stats panel — absolute bottom-left inside the map area */}
+            {/* Regional data stats panel */}
             <StatsPanel
               config={config}
               drawnCircle={state.drawnCircle}
@@ -213,7 +212,7 @@ export default function Home() {
               dispatch={dispatch}
             />
 
-            {/* Area tool — inside map container so handle uses absolute positioning */}
+            {/* Area tool (resize/move handle overlay) */}
             <AreaTool
               map={mapInstance}
               config={config}
@@ -221,65 +220,122 @@ export default function Home() {
               dispatch={dispatch}
             />
           </Box>
+
+          {/* Methods panel — slides in from the right as a 3rd column */}
+          {state.methodsOpen && (
+            <Box
+              sx={{
+                width: 300,
+                flexShrink: 0,
+                bg: 'surface',
+                borderLeft: '1px solid',
+                borderColor: 'border',
+                display: 'flex',
+                flexDirection: 'column',
+                overflowY: 'auto',
+                zIndex: 2,
+                // Slide in from the right
+                '@keyframes slideInRight': {
+                  from: { transform: 'translateX(100%)' },
+                  to:   { transform: 'translateX(0)' },
+                },
+                animation: 'slideInRight 0.22s ease',
+              }}
+            >
+              {/* Header row */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  px: 3,
+                  pt: 3,
+                  pb: 2,
+                  flexShrink: 0,
+                }}
+              >
+                <Box
+                  sx={{
+                    fontFamily: 'body',
+                    fontSize: 0,
+                    fontWeight: 'bold',
+                    letterSpacing: 'caps',
+                    textTransform: 'uppercase',
+                    color: 'muted',
+                  }}
+                >
+                  Methods
+                </Box>
+                <Button
+                  variant='icon'
+                  onClick={() => dispatch({ type: Actions.TOGGLE_METHODS })}
+                  aria-label='Close methods'
+                  sx={{ width: 24, height: 24, fontSize: '16px' }}
+                >
+                  ×
+                </Button>
+              </Box>
+
+              {/* MDX content — matches sidebar typography */}
+              <Box
+                sx={{
+                  flex: 1,
+                  px: 3,
+                  pb: 4,
+                  color: 'text',
+                  fontFamily: 'body',
+                  fontSize: 0,
+                  lineHeight: 'body',
+                  'h1': {
+                    fontSize: 1,
+                    fontWeight: 'bold',
+                    letterSpacing: 'caps',
+                    textTransform: 'uppercase',
+                    color: 'muted',
+                    mt: 4,
+                    mb: 2,
+                  },
+                  'h2': {
+                    fontSize: 0,
+                    fontWeight: 'bold',
+                    letterSpacing: 'caps',
+                    textTransform: 'uppercase',
+                    color: 'muted',
+                    mt: 3,
+                    mb: 1,
+                  },
+                  'h3': {
+                    fontSize: 0,
+                    fontWeight: 'bold',
+                    color: 'text',
+                    mt: 2,
+                    mb: 1,
+                  },
+                  p: { mb: 2, color: 'text' },
+                  'em': { color: 'muted', fontStyle: 'italic' },
+                  'a': { color: 'primary' },
+                  'table': {
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    mb: 3,
+                    fontSize: 0,
+                  },
+                  'th, td': {
+                    textAlign: 'left',
+                    py: 1,
+                    borderBottom: '1px solid',
+                    borderColor: 'border',
+                  },
+                  'th': { color: 'muted', fontWeight: 'bold' },
+                }}
+              >
+                <MethodsMDX />
+              </Box>
+            </Box>
+          )}
+
         </Box>
       </Box>
-
-      {/* ── Methods overlay ──────────────────────────────────────────────────── */}
-      {state.methodsOpen && (
-        <Box
-          sx={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 30,
-            bg: 'background',
-            overflowY: 'auto',
-          }}
-          onClick={(e) => {
-            // Close when clicking the backdrop (outside the content box)
-            if (e.target === e.currentTarget) {
-              dispatch({ type: Actions.TOGGLE_METHODS })
-            }
-          }}
-        >
-          {/* Close button */}
-          <Button
-            variant='icon'
-            onClick={() => dispatch({ type: Actions.TOGGLE_METHODS })}
-            aria-label='Close methods'
-            sx={{
-              position: 'fixed',
-              top: 16,
-              right: 16,
-              zIndex: 31,
-              fontSize: '20px',
-            }}
-          >
-            ×
-          </Button>
-
-          {/* MDX content */}
-          <Box
-            sx={{
-              maxWidth: 720,
-              mx: 'auto',
-              px: [3, 5],
-              py: 5,
-              color: 'text',
-              fontFamily: 'body',
-              fontSize: 1,
-              lineHeight: 'body',
-              'h1, h2, h3': { fontWeight: 'bold', lineHeight: 'heading', mt: 4, mb: 2 },
-              'h1': { fontSize: 4 },
-              'h2': { fontSize: 3 },
-              'h3': { fontSize: 2 },
-              p: { mb: 3 },
-              'a': { color: 'primary' },
-            }}
-          >
-            {MethodsMDX && <MethodsMDX />}
-          </Box>
-        </Box>
-      )}
     </>
   )
 }

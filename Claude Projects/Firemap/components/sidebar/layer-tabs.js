@@ -11,7 +11,7 @@ import { Actions } from '../../contracts/events.js'
 export function LayerTabs({ config, state, dispatch }) {
   return (
     <Flex sx={{ flexWrap: 'wrap', gap: 0, mb: 3 }}>
-      {config.layers.map((layer) => {
+      {config.layers.filter((layer) => !layer.hidden).map((layer) => {
         const isActive = layer.id === state.activeLayer
         return (
           <Box

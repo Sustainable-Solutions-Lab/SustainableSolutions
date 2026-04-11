@@ -1,127 +1,320 @@
 /**
  * components/area-tool/stats-panel.js
  *
- * Stats display card shown after the user draws a circle on the map.
- * Shows circle info (center, radius, cell count) and aggregate stats
- * (mean + median) for each variable listed in config.areaTool.aggregateVariableIds.
+ * Regional data panel — shown when the area tool is active and a circle
+ * has been drawn. Displays cell count, mean, median, and a mini histogram
+ * of the currently active map variable within the circle.
  *
  * Props:
- *   config:          ProjectConfig
- *   drawnCircle:     DrawnCircle | null
- *   aggregateStats:  AggregateStats | null
- *   dispatch:        Dispatch
+ *   drawnCircle:    DrawnCircle | null
+ *   aggregateStats: AggregateStats | null   (includes activeVarValues: number[])
+ *   areaToolActive: boolean
+ *   activeVariable: Variable | null
+ *   isDark:         boolean
+ *   dispatch:       Dispatch
  */
 
-import { Box, Text, Button } from 'theme-ui'
+import { useMemo } from 'react'
 import { Actions } from '../../contracts/events.js'
-import { formatValue, formatCoord } from '../../lib/format.js'
+import { buildColorScale } from '../../lib/colormap.js'
+import { formatValue } from '../../lib/format.js'
 
-export function StatsPanel({ config, drawnCircle, aggregateStats, areaToolActive, dispatch }) {
+// ── Mini histogram ────────────────────────────────────────────────────────────
+
+const HIST_W = 220
+const HIST_H = 60
+const N_BINS = 24
+
+function MiniHistogram({ values, variable, isDark }) {
+  // Use actual data range for domain so colors are vivid (not washed out by a wide config domain)
+  const scale = useMemo(() => {
+    if (!variable || !values?.length) return null
+    const actualMin = Math.min(...values)
+    const actualMax = Math.max(...values)
+    if (variable.diverging) {
+      const maxAbs = Math.max(Math.abs(actualMin), Math.abs(actualMax))
+      return buildColorScale({ ...variable, domain: { min: -maxAbs, max: maxAbs, zero: 0 } })
+    }
+    return buildColorScale({ ...variable, domain: { min: actualMin, max: actualMax } })
+  }, [variable, values])
+
+  const { bins, binWidth, min, max, mean, median } = useMemo(() => {
+    if (!values?.length || !variable) return { bins: [], binWidth: 0, min: 0, max: 1, mean: null, median: null }
+
+    // Use actual data range so histogram spans only present values, not the full domain
+    const domMin = Math.min(...values)
+    const domMax = Math.max(...values)
+    const range = domMax - domMin || 1
+    const bw = range / N_BINS
+
+    const counts = Array(N_BINS).fill(0)
+    for (const v of values) {
+      const i = Math.min(N_BINS - 1, Math.floor((v - domMin) / bw))
+      if (i >= 0) counts[i]++
+    }
+
+    const mean_ = values.reduce((s, v) => s + v, 0) / values.length
+    const sorted = [...values].sort((a, b) => a - b)
+    const n = sorted.length
+    const median_ = n % 2 === 0
+      ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+      : sorted[Math.floor(n / 2)]
+
+    return {
+      bins: counts,
+      binWidth: bw,
+      min: domMin,
+      max: domMax,
+      mean: mean_,
+      median: median_,
+    }
+  }, [values, variable])
+
+  if (!bins.length || !scale) return null
+
+  const maxCount = Math.max(...bins, 1)
+  const barW = HIST_W / N_BINS
+
+  // Map a domain value to SVG x coordinate
+  const valueToX = (v) => ((v - min) / (max - min)) * HIST_W
+
+  const axisColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'
+  const labelColor = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)'
+
+  return (
+    <svg
+      viewBox={`0 0 ${HIST_W} ${HIST_H + 14}`}
+      preserveAspectRatio='none'
+      style={{ width: '100%', height: HIST_H + 14, display: 'block' }}
+    >
+      {/* Bars */}
+      {bins.map((count, i) => {
+        const binMid = min + (i + 0.5) * binWidth
+        const barH = (count / maxCount) * HIST_H
+        return (
+          <rect
+            key={i}
+            x={i * barW}
+            y={HIST_H - barH}
+            width={Math.max(barW - 0.5, 0.5)}
+            height={barH}
+            fill={scale(binMid)}
+            opacity={0.85}
+          />
+        )
+      })}
+
+      {/* Baseline */}
+      <line x1={0} y1={HIST_H} x2={HIST_W} y2={HIST_H} stroke={axisColor} strokeWidth={0.8} />
+
+      {/* Mean — solid vertical line */}
+      {mean !== null && (
+        <line
+          x1={valueToX(mean)} y1={0}
+          x2={valueToX(mean)} y2={HIST_H}
+          stroke={isDark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.65)'}
+          strokeWidth={1.2}
+        />
+      )}
+
+      {/* Median — dashed vertical line */}
+      {median !== null && (
+        <line
+          x1={valueToX(median)} y1={0}
+          x2={valueToX(median)} y2={HIST_H}
+          stroke={isDark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.65)'}
+          strokeWidth={1.2}
+          strokeDasharray='3 2'
+        />
+      )}
+
+      {/* Axis labels */}
+      <text x={0} y={HIST_H + 11} fontSize={9} fill={labelColor} fontFamily='monospace'>
+        {formatValue(min, variable?.unit ?? '')}
+      </text>
+      <text x={HIST_W} y={HIST_H + 11} fontSize={9} fill={labelColor} fontFamily='monospace' textAnchor='end'>
+        {formatValue(max, variable?.unit ?? '')}
+      </text>
+    </svg>
+  )
+}
+
+// ── Mini pie chart (for categorical variables) ────────────────────────────────
+
+const PIE_SIZE = 72
+
+function MiniPieChart({ values, variable, isDark }) {
+  const categories = variable.categories ?? []
+  const total = values.length
+  if (total === 0) return null
+
+  // Count occurrences of each category
+  const counts = {}
+  for (const v of values) counts[v] = (counts[v] ?? 0) + 1
+
+  const textColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'
+  const cx = PIE_SIZE / 2
+  const cy = PIE_SIZE / 2
+  const r  = PIE_SIZE / 2 - 1
+
+  // Build slices — include only categories present in data
+  const slices = []
+  let startAngle = -Math.PI / 2
+  for (const cat of categories) {
+    const count = counts[cat.id] ?? 0
+    if (count === 0) continue
+    const frac = count / total
+    const sweep = frac * 2 * Math.PI
+    slices.push({ cat, frac, startAngle, endAngle: startAngle + sweep })
+    startAngle += sweep
+  }
+
+  function arcPath(s, e) {
+    const x1 = cx + r * Math.cos(s)
+    const y1 = cy + r * Math.sin(s)
+    const x2 = cx + r * Math.cos(e)
+    const y2 = cy + r * Math.sin(e)
+    const large = (e - s) > Math.PI ? 1 : 0
+    return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+      <svg width={PIE_SIZE} height={PIE_SIZE} style={{ flexShrink: 0 }}>
+        {slices.map((sl, i) => (
+          <path key={i} d={arcPath(sl.startAngle, sl.endAngle)} fill={sl.cat.color} opacity={0.85} />
+        ))}
+      </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {slices.map((sl, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: sl.cat.color, flexShrink: 0 }} />
+            <span style={{ fontFamily: 'sans-serif', fontSize: 10, color: textColor, whiteSpace: 'nowrap' }}>
+              {sl.cat.label} {Math.round(sl.frac * 100)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Panel ─────────────────────────────────────────────────────────────────────
+
+export function StatsPanel({ drawnCircle, aggregateStats, areaToolActive, activeVariable, isDark, dispatch }) {
   if (!drawnCircle) return null
 
   function handleClose() {
-    // Deactivate the tool first (removes circle from map), then clear stats
     if (areaToolActive) dispatch({ type: Actions.TOGGLE_AREA_TOOL })
     dispatch({ type: Actions.SET_DRAWN_CIRCLE, circle: null })
     dispatch({ type: Actions.SET_AGGREGATE_STATS, stats: null })
   }
 
-  const stats = aggregateStats?.stats ?? {}
   const count = aggregateStats?.count ?? 0
+  const activeVarValues = aggregateStats?.activeVarValues ?? []
+
+  // Compute mean and median — only for numeric (non-categorical) variables
+  const { mean, median } = useMemo(() => {
+    if (!activeVarValues.length || activeVariable?.type === 'categorical') return { mean: null, median: null }
+    const mean_ = activeVarValues.reduce((s, v) => s + v, 0) / activeVarValues.length
+    const sorted = [...activeVarValues].sort((a, b) => a - b)
+    const n = sorted.length
+    const median_ = n % 2 === 0
+      ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+      : sorted[Math.floor(n / 2)]
+    return { mean: mean_, median: median_ }
+  }, [activeVarValues])
+
+  const unit = activeVariable?.unit ?? ''
+
+  const panelBg = isDark ? 'rgba(26,26,26,0.92)' : 'rgba(255,255,255,0.95)'
+  const borderColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'
+  const textMuted = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)'
+  const lineColor = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'
+  const btnColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'
+
+  const isCategorical = activeVariable?.type === 'categorical'
+  const hasData = activeVariable && activeVarValues.length > 0
 
   return (
-    <Box
-      sx={{
+    <div
+      style={{
         position: 'absolute',
         bottom: 24,
         left: 24,
-        bg: 'surface',
-        border: '1px solid',
-        borderColor: 'border',
-        borderRadius: 'md',
-        p: 3,
-        minWidth: 220,
-        maxWidth: 280,
+        background: panelBg,
+        border: `1px solid ${borderColor}`,
+        borderRadius: 6,
+        padding: '10px 12px 8px',
+        minWidth: 240,
+        maxWidth: 320,
         zIndex: 10,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
       }}
     >
-      {/* Header row */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Text
-          variant='label'
-          sx={{ fontSize: 0, fontWeight: 'bold', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'muted' }}
-        >
-          Regional Data
-        </Text>
-        <Button
-          variant='icon'
-          onClick={handleClose}
-          aria-label='Close area stats'
-          sx={{ width: 24, height: 24, p: 0, fontSize: 1, lineHeight: 1 }}
-        >
-          ×
-        </Button>
-      </Box>
+      {/* × close button — absolute top-right */}
+      <button
+        onClick={handleClose}
+        aria-label='Close area stats'
+        style={{
+          position: 'absolute',
+          top: 6,
+          right: 8,
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 0,
+          lineHeight: 1,
+          fontSize: 18,
+          color: btnColor,
+        }}
+      >
+        ×
+      </button>
 
-      {/* Circle info */}
-      <Box sx={{ mb: 3 }}>
-        <Text sx={{ fontSize: 1, color: 'text', display: 'block' }}>
-          {formatCoord(drawnCircle.lat, drawnCircle.lng)}
-        </Text>
-        <Text sx={{ fontSize: 1, color: 'muted', display: 'block' }}>
-          {drawnCircle.radiusKm.toFixed(1)} km radius &middot; {count} cells
-        </Text>
-      </Box>
+      {/* Histogram (numeric) or pie chart (categorical) */}
+      {hasData && isCategorical && (
+        <MiniPieChart values={activeVarValues} variable={activeVariable} isDark={isDark} />
+      )}
+      {hasData && !isCategorical && (
+        <MiniHistogram values={activeVarValues} variable={activeVariable} isDark={isDark} />
+      )}
 
-      {/* Per-variable stats rows */}
-      {config.areaTool.aggregateVariableIds.map((varId) => {
-        const variable = config.variables.find((v) => v.id === varId)
-        if (!variable) return null
+      {/* Stats row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: hasData ? 5 : 0, flexWrap: 'wrap' }}>
+        {/* Mean and median — numeric variables only */}
+        {hasData && !isCategorical && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width={14} height={8} style={{ flexShrink: 0 }}>
+                <line x1={0} y1={4} x2={14} y2={4} stroke={lineColor} strokeWidth={1.5} />
+              </svg>
+              <span style={{ fontFamily: 'monospace', fontSize: 10, color: textMuted }}>
+                mean {mean !== null ? formatValue(mean, unit) : '—'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width={14} height={8} style={{ flexShrink: 0 }}>
+                <line x1={0} y1={4} x2={14} y2={4} stroke={lineColor} strokeWidth={1.5} strokeDasharray='3 2' />
+              </svg>
+              <span style={{ fontFamily: 'monospace', fontSize: 10, color: textMuted }}>
+                median {median !== null ? formatValue(median, unit) : '—'}
+              </span>
+            </div>
+            <span style={{ color: borderColor, fontSize: 10, userSelect: 'none' }}>·</span>
+          </>
+        )}
+        <span style={{ fontFamily: 'monospace', fontSize: 10, color: textMuted }}>
+          {count.toLocaleString()} km²
+        </span>
+      </div>
 
-        const varStats = stats[varId]
-        const unit = variable.unit ?? ''
-
-        return (
-          <Box
-            key={varId}
-            sx={{
-              mb: 2,
-              pb: 2,
-              borderBottom: '1px solid',
-              borderColor: 'border',
-              '&:last-child': { mb: 0, pb: 0, borderBottom: 'none' },
-            }}
-          >
-            <Text
-              sx={{
-                fontSize: 0,
-                fontWeight: 'bold',
-                color: 'muted',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                display: 'block',
-                mb: 1,
-              }}
-            >
-              {variable.label}
-            </Text>
-            <Box sx={{ display: 'flex', gap: 3 }}>
-              <Box>
-                <Text sx={{ fontSize: 0, color: 'muted', display: 'block' }}>Mean</Text>
-                <Text variant='mono' sx={{ color: 'text' }}>
-                  {varStats ? formatValue(varStats.mean, unit) : '—'}
-                </Text>
-              </Box>
-              <Box>
-                <Text sx={{ fontSize: 0, color: 'muted', display: 'block' }}>Median</Text>
-                <Text variant='mono' sx={{ color: 'text' }}>
-                  {varStats ? formatValue(varStats.median, unit) : '—'}
-                </Text>
-              </Box>
-            </Box>
-          </Box>
-        )
-      })}
-    </Box>
+      {/* Empty state */}
+      {!hasData && count === 0 && (
+        <span style={{ fontFamily: 'sans-serif', fontSize: 11, color: textMuted }}>
+          Move circle to data area
+        </span>
+      )}
+    </div>
   )
 }

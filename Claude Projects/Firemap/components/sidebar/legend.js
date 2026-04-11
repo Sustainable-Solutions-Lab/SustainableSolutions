@@ -23,20 +23,6 @@ export function Legend({ variable }) {
 function CategoricalLegend({ variable }) {
   return (
     <Box sx={{ mb: 3 }}>
-      <Text
-        sx={{
-          fontFamily: 'body',
-          fontSize: 0,
-          fontWeight: 'bold',
-          letterSpacing: 'caps',
-          textTransform: 'uppercase',
-          color: 'muted',
-          mb: 2,
-          display: 'block',
-        }}
-      >
-        {variable.label}
-      </Text>
       <Flex sx={{ flexDirection: 'column', gap: 1 }}>
         {variable.categories.map((cat) => (
           <Flex key={cat.id} sx={{ alignItems: 'center', gap: 2 }}>
@@ -71,8 +57,8 @@ function withAlpha(cssColor, alpha) {
 /** Mirror of use-map-layer opacityCurve for diverging legends. */
 function legendOpacityCurve(t) {
   if (t < 0.03) return 0.05
-  if (t < 0.20) return 0.05 + ((t - 0.03) / 0.17) * 0.35
-  return 0.40 + ((t - 0.20) / 0.80) * 0.48
+  if (t < 0.18) return 0.05 + ((t - 0.03) / 0.15) * 0.55
+  return 0.60 + ((t - 0.18) / 0.82) * 0.40
 }
 
 function ContinuousLegend({ variable }) {
@@ -95,8 +81,8 @@ function ContinuousLegend({ variable }) {
       const dev = maxAbsDev > 0 ? Math.abs(v - zeroVal) / maxAbsDev : 1
       alpha = legendOpacityCurve(dev)
     } else {
-      // Sequential: linear fade 0 → 1
-      alpha = t
+      // Sequential: start from a low but visible alpha so the gradient is readable
+      alpha = 0.15 + t * 0.85
     }
 
     return `${withAlpha(stop.color, alpha)} ${pct.toFixed(1)}%`
@@ -105,25 +91,11 @@ function ContinuousLegend({ variable }) {
 
   return (
     <Box sx={{ mb: 3 }}>
-      <Flex sx={{ justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
-        <Text
-          sx={{
-            fontFamily: 'body',
-            fontSize: 0,
-            fontWeight: 'bold',
-            letterSpacing: 'caps',
-            textTransform: 'uppercase',
-            color: 'muted',
-          }}
-        >
-          {variable.label}
+      {unit && (
+        <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'muted', display: 'block', mb: 1 }}>
+          {unit}
         </Text>
-        {unit && (
-          <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'muted' }}>
-            {unit}
-          </Text>
-        )}
-      </Flex>
+      )}
 
       {/* Gradient bar */}
       <Box

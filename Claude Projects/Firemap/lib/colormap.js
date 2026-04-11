@@ -25,10 +25,12 @@ const INTERPOLATORS = {
   Oranges: interpolateOranges,
   YlOrRd: interpolateYlOrRd,
   Blues: interpolateBlues,
-  // Blue half of RdBu — for benefit variables: low=transparent, high=blue
-  RdBuBlue: (t) => interpolateRdBu(0.5 + t * 0.5),
-  // Red half of RdBu — for cost variables: low=transparent, high=red
-  RdBuRed: (t) => interpolateRdBu(0.5 - t * 0.5),
+  // Blue half of RdBu — for benefit variables: low=light blue, high=deep blue
+  // Starts at 0.62 (not 0.5/white) so even low values show a visible blue
+  RdBuBlue: (t) => interpolateRdBu(0.62 + t * 0.38),
+  // Red half of RdBu — for cost variables: low=light red, high=deep red
+  // Starts at 0.38 (not 0.5/white) so even low values show a visible red
+  RdBuRed: (t) => interpolateRdBu(0.38 - t * 0.38),
 }
 
 /**

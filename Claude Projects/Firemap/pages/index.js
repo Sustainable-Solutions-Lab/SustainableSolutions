@@ -9,9 +9,10 @@
 import { useReducer, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Head from 'next/head'
-import { Box, Flex, Button, useColorMode } from 'theme-ui'
+import { Box, Button, useColorMode } from 'theme-ui'
 import { Actions, initialState } from '../contracts/events.js'
 import { projects } from '../projects/index.js'
+import { getActiveVariable } from '../lib/get-active-variable.js'
 import { Map } from '../components/map/index.js'
 import { Sidebar } from '../components/sidebar/index.js'
 import { AreaTool } from '../components/area-tool/index.js'
@@ -68,10 +69,11 @@ export default function Home() {
   // Map instance handed off from <Map onMapReady> to <AreaTool>
   const [mapInstance, setMapInstance] = useState(null)
   // Stats computed by the map's percentile filter
-  const [filterStats, setFilterStats] = useState({ count: null, mean: null, median: null, totalCount: null })
+  const [filterStats, setFilterStats] = useState({ count: null, mean: null, median: null, totalCount: null, allValues: [] })
 
   const config = projects[state.projectId]
   const isDark = state.colorScheme === 'dark'
+  const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
 
   // Toggle both Theme UI color mode and app state together
   function handleToggleScheme() {
@@ -105,68 +107,33 @@ export default function Home() {
           bg: 'background',
         }}
       >
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <Flex
-          as='header'
-          sx={{
-            height: 56,
-            flexShrink: 0,
-            alignItems: 'center',
-            px: 3,
-            bg: 'surface',
-            borderBottom: '1px solid',
-            borderColor: 'border',
-            zIndex: 20,
-          }}
-        >
-          {/* Hamburger — mobile only */}
+        {/* ── Content row: sidebar | map | methods panel ───────────────────── */}
+        <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
+
+          {/* Hamburger — mobile only, floating over map */}
           <Button
             variant='icon'
             onClick={() => setSidebarOpen((o) => !o)}
             aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
             sx={{
               display: ['flex', 'none'],
-              mr: 2,
+              position: 'absolute',
+              top: 10,
+              left: 10,
+              zIndex: 20,
               fontSize: '18px',
               alignItems: 'center',
               justifyContent: 'center',
+              bg: isDark ? 'rgba(26,26,26,0.85)' : 'rgba(255,255,255,0.9)',
+              width: 38,
+              height: 38,
+              border: 'none',
+              borderRadius: '4px',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
             }}
           >
             ☰
           </Button>
-
-          {/* SDSS wordmark only — links to lab site.
-              SDSS_brand_white.png = white text (dark backgrounds)
-              SDSS_brand.png       = colored text (light backgrounds) */}
-          <a
-            href='https://sustainablesolutions.stanford.edu'
-            target='_blank'
-            rel='noopener noreferrer'
-            style={{ lineHeight: 0 }}
-          >
-            <img
-              src={isDark ? '/SDSS_brand_white.png' : '/SDSS_brand.png'}
-              alt='Stanford Doerr School of Sustainability'
-              style={{ width: 260, maxWidth: '100%', height: 'auto', objectFit: 'contain' }}
-            />
-          </a>
-
-          {/* Spacer */}
-          <Box sx={{ flex: 1 }} />
-
-          {/* Color scheme toggle */}
-          <Button
-            variant='icon'
-            onClick={handleToggleScheme}
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            sx={{ fontSize: '18px' }}
-          >
-            {isDark ? '☀' : '🌙'}
-          </Button>
-        </Flex>
-
-        {/* ── Content row: sidebar | map | methods panel ───────────────────── */}
-        <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
           {/* Sidebar — 280px fixed, full-width overlay on mobile */}
           <Box
@@ -185,10 +152,7 @@ export default function Home() {
               config={config}
               state={state}
               dispatch={dispatch}
-              filteredCount={filterStats.count}
-              filteredMean={filterStats.mean}
-              filteredMedian={filterStats.median}
-              filteredTotalCount={filterStats.totalCount}
+              allValues={filterStats.allValues}
             />
           </Box>
 
@@ -201,14 +165,17 @@ export default function Home() {
               height='100%'
               onMapReady={(m) => setMapInstance(m)}
               onFilterStats={setFilterStats}
+              onToggleScheme={handleToggleScheme}
+              isDark={isDark}
             />
 
             {/* Regional data stats panel */}
             <StatsPanel
-              config={config}
               drawnCircle={state.drawnCircle}
               aggregateStats={state.aggregateStats}
               areaToolActive={state.areaToolActive}
+              activeVariable={activeVariable}
+              isDark={isDark}
               dispatch={dispatch}
             />
 
@@ -242,35 +209,23 @@ export default function Home() {
                 animation: 'slideInRight 0.22s ease',
               }}
             >
-              {/* Header row */}
+              {/* Close button row */}
               <Box
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  px: 3,
-                  pt: 3,
-                  pb: 2,
+                  justifyContent: 'flex-end',
+                  px: 2,
+                  pt: 2,
+                  pb: 0,
                   flexShrink: 0,
                 }}
               >
-                <Box
-                  sx={{
-                    fontFamily: 'body',
-                    fontSize: 0,
-                    fontWeight: 'bold',
-                    letterSpacing: 'caps',
-                    textTransform: 'uppercase',
-                    color: 'muted',
-                  }}
-                >
-                  Methods
-                </Box>
                 <Button
                   variant='icon'
                   onClick={() => dispatch({ type: Actions.TOGGLE_METHODS })}
                   aria-label='Close methods'
-                  sx={{ width: 24, height: 24, fontSize: '16px' }}
+                  sx={{ width: 28, height: 28, fontSize: '20px', lineHeight: 1 }}
                 >
                   ×
                 </Button>

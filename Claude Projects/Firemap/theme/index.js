@@ -5,6 +5,7 @@ const theme = {
   config: {
     initialColorModeName: 'dark',
     useColorSchemeMediaQuery: false,
+    useLocalStorage: false,
   },
 
   colors: {

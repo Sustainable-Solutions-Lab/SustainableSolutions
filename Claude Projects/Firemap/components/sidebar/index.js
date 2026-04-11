@@ -19,16 +19,13 @@ import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { LayerTabs } from './layer-tabs.js'
 import { DimensionControl } from './dimension-control.js'
 import { Legend } from './legend.js'
-import { PercentileFilter } from './percentile-filter.js'
+import { DistributionChart } from './distribution-chart.js'
 
 export function Sidebar({
   config,
   state,
   dispatch,
-  filteredCount = null,
-  filteredMean = null,
-  filteredMedian = null,
-  filteredTotalCount = null,
+  allValues = [],
 }) {
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
@@ -54,8 +51,24 @@ export function Sidebar({
         flexShrink: 0,
       }}
     >
+      {/* SDSS wordmark — top of sidebar */}
+      <Box sx={{ px: 3, pt: 3, pb: 2, flexShrink: 0 }}>
+        <a
+          href='https://sustainablesolutions.stanford.edu'
+          target='_blank'
+          rel='noopener noreferrer'
+          style={{ lineHeight: 0, display: 'inline-block' }}
+        >
+          <img
+            src={state.colorScheme === 'dark' ? '/SDSS_brand_white.png' : '/SDSS_brand.png'}
+            alt='Stanford Doerr School of Sustainability'
+            style={{ width: '100%', maxWidth: 220, height: 'auto', objectFit: 'contain' }}
+          />
+        </a>
+      </Box>
+
       {/* Scrollable content */}
-      <Box sx={{ flex: 1, px: 3, pt: 3, pb: 2 }}>
+      <Box sx={{ flex: 1, px: 3, pt: 1, pb: 2 }}>
         {/* Project title */}
         <Text
           sx={{
@@ -87,30 +100,35 @@ export function Sidebar({
         <LayerTabs config={config} state={state} dispatch={dispatch} />
 
         {/* Dimension controls */}
-        {visibleDimensions.map((dim) => (
-          <DimensionControl
-            key={dim.id}
-            dimension={dim}
-            value={state.activeDimensions[dim.id] ?? dim.defaultValue}
-            dispatch={dispatch}
-          />
-        ))}
+        {visibleDimensions.map((dim) => {
+          const filteredDim = {
+            ...dim,
+            options: dim.options?.filter(
+              (opt) => !opt.visibleForLayers || opt.visibleForLayers.includes(state.activeLayer)
+            ),
+          }
+          return (
+            <DimensionControl
+              key={dim.id}
+              dimension={filteredDim}
+              value={state.activeDimensions[dim.id] ?? dim.defaultValue}
+              dispatch={dispatch}
+            />
+          )
+        })}
 
-        {/* Legend */}
-        <Legend variable={activeVariable} />
-
-        {/* Percentile filter */}
+        {/* Distribution chart — above colorbar */}
         {config.percentileFilter?.enabled && (
-          <PercentileFilter
+          <DistributionChart
             variable={activeVariable}
+            allValues={allValues}
             percentileRange={state.percentileRange}
-            featureCount={filteredTotalCount ?? 0}
-            filteredCount={filteredCount}
-            filteredMean={filteredMean}
-            filteredMedian={filteredMedian}
             dispatch={dispatch}
           />
         )}
+
+        {/* Legend / colorbar */}
+        <Legend variable={activeVariable} />
 
         {/* Regional Data toggle */}
         {config.areaTool?.enabled && (

@@ -9,6 +9,36 @@ import { useMapLayer } from '../../lib/use-map-layer.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { percentileThresholds } from '../../lib/area-stats.js'
 
+// ── SVG icons for map controls ────────────────────────────────────────────────
+
+function GlobeIcon() {
+  return (
+    <svg width='18' height='18' viewBox='0 0 18 18' fill='none' stroke='currentColor' strokeWidth='1.3'>
+      <circle cx='9' cy='9' r='6.5'/>
+      <ellipse cx='9' cy='9' rx='3' ry='6.5'/>
+      <line x1='2.5' y1='9' x2='15.5' y2='9'/>
+      <line x1='3.8' y1='5.5' x2='14.2' y2='5.5'/>
+      <line x1='3.8' y1='12.5' x2='14.2' y2='12.5'/>
+    </svg>
+  )
+}
+
+function SunIcon() {
+  return (
+    <svg width='18' height='18' viewBox='0 0 18 18' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round'>
+      <circle cx='9' cy='9' r='3'/>
+      <line x1='9' y1='1.5' x2='9' y2='3.5'/>
+      <line x1='9' y1='14.5' x2='9' y2='16.5'/>
+      <line x1='1.5' y1='9' x2='3.5' y2='9'/>
+      <line x1='14.5' y1='9' x2='16.5' y2='9'/>
+      <line x1='3.8' y1='3.8' x2='5.2' y2='5.2'/>
+      <line x1='12.8' y1='12.8' x2='14.2' y2='14.2'/>
+      <line x1='14.2' y1='3.8' x2='12.8' y2='5.2'/>
+      <line x1='5.2' y1='12.8' x2='3.8' y2='14.2'/>
+    </svg>
+  )
+}
+
 /**
  * Interactive MapLibre GL map for Firemap.
  *
@@ -19,7 +49,7 @@ import { percentileThresholds } from '../../lib/area-stats.js'
  * @param {string}   props.height    - CSS height string
  * @param {Function} [props.onMapReady]  - called with the map instance after load
  */
-export function Map({ config, state, dispatch, height, onMapReady, onFilterStats }) {
+export function Map({ config, state, dispatch, height, onMapReady, onFilterStats, onToggleScheme, isDark }) {
   const containerRef = useRef(null)
 
   /** @type {React.MutableRefObject<import('maplibre-gl').Map|null>} */
@@ -51,8 +81,8 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       maxBounds: [-132, 26, -106, 48],
     })
 
-    // Add navigation controls
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+    // Compact attribution — collapsed by default, styled via global CSS
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
 
     mapRef.current = map
 
@@ -138,6 +168,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         totalCount: totalValues.length,
         mean,
         median,
+        allValues: totalValues,  // full unsorted array for distribution chart
       })
     }
   }, [state.percentileRange, state.activeLayer, state.activeDimensions, config, mapReady, onFilterStats])
@@ -160,42 +191,66 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         style={{ position: 'absolute', inset: 0 }}
       />
 
-      {/* Graticule toggle button */}
-      <button
-        onClick={handleGraticuleToggle}
-        title={graticuleVisible ? 'Hide grid' : 'Show grid'}
-        style={{
-          position: 'absolute',
-          bottom: 80,
-          right: 12,
-          width: 30,
-          height: 30,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: state.colorScheme === 'dark'
-            ? 'rgba(26,26,26,0.85)'
-            : 'rgba(255,255,255,0.9)',
-          color: state.colorScheme === 'dark'
-            ? graticuleVisible ? '#E55C2F' : '#f0ede8'
-            : graticuleVisible ? '#C94A1A' : '#1a1a1a',
-          border: state.colorScheme === 'dark'
-            ? '1px solid rgba(255,255,255,0.15)'
-            : '1px solid rgba(0,0,0,0.15)',
-          borderRadius: 4,
-          cursor: 'pointer',
-          fontSize: 16,
-          lineHeight: 1,
-          padding: 0,
-          zIndex: 10,
-          userSelect: 'none',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-        }}
-        aria-pressed={graticuleVisible}
-        aria-label='Toggle lat/lon grid'
-      >
-        ⊞
-      </button>
+      {/* Map control buttons — float above MapLibre's attribution stack (bottom-right) */}
+      <div style={{
+        position: 'absolute',
+        bottom: 96,
+        right: 6,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 4,
+        zIndex: 10,
+      }}>
+        {/* Dark/light scheme toggle — always shows sun icon */}
+        {onToggleScheme && (
+          <button
+            onClick={onToggleScheme}
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            style={{
+              width: 38,
+              height: 38,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              userSelect: 'none',
+            }}
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <SunIcon />
+          </button>
+        )}
+
+        {/* Graticule / city labels toggle */}
+        <button
+          onClick={handleGraticuleToggle}
+          title={graticuleVisible ? 'Hide lat/lon grid' : 'Show lat/lon grid'}
+          style={{
+            width: 38,
+            height: 38,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
+            color: isDark
+              ? graticuleVisible ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.55)'
+              : graticuleVisible ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.45)',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+            userSelect: 'none',
+          }}
+          aria-pressed={graticuleVisible}
+          aria-label='Toggle lat/lon grid'
+        >
+          <GlobeIcon />
+        </button>
+      </div>
     </div>
   )
 }

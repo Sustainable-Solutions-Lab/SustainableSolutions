@@ -7,17 +7,17 @@
  *   - Activate: circle appears at current map center (50 km default radius)
  *   - Cursor inside circle + drag  → moves the circle geographically
  *   - Cursor outside circle + drag → normal map pan (MapLibre handles it)
- *   - Orange handle on east edge   → drag to resize
- *   - Deactivate via StatsPanel ×  or sidebar "Regional Data" click
+ *   - White/gray handle on east edge → drag to resize; diameter shown while dragging
+ *   - Deactivate via StatsPanel × or sidebar "Regional Data" click
  *
- * Must be rendered INSIDE the map container (position:relative) so the handle
- * div can use position:absolute in map-pixel coordinates.
+ * Circle style: solid line, white in dark mode / dark gray in light mode.
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Actions } from '../../contracts/events.js'
 import { haversineKm, featuresWithinCircle, computeAggregateStats } from '../../lib/area-stats.js'
 import { LAYER_ID as FIREMAP_LAYER_ID } from '../../lib/use-map-layer.js'
+import { getActiveVariable } from '../../lib/get-active-variable.js'
 
 const CIRCLE_SOURCE_ID = 'area-circle'
 const CIRCLE_FILL_LAYER_ID = 'area-circle-fill'
@@ -27,6 +27,10 @@ const MIN_RADIUS_KM = 5
 const HANDLE_PX = 8
 
 // ── Map rendering helpers ─────────────────────────────────────────────────────
+
+function circleLineColor(isDark) {
+  return isDark ? 'rgba(255,255,255,0.85)' : 'rgba(50,50,50,0.65)'
+}
 
 function circleToGeoJSON(lat, lng, radiusKm, nPoints = 64) {
   const coords = []
@@ -41,28 +45,34 @@ function circleToGeoJSON(lat, lng, radiusKm, nPoints = 64) {
   return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] }, properties: {} }
 }
 
-function drawCircleOnMap(map, lat, lng, radiusKm) {
+function drawCircleOnMap(map, lat, lng, radiusKm, isDark = true) {
   const geojson = { type: 'FeatureCollection', features: [circleToGeoJSON(lat, lng, radiusKm)] }
+  const lineColor = circleLineColor(isDark)
+
   if (map.getSource(CIRCLE_SOURCE_ID)) {
     map.getSource(CIRCLE_SOURCE_ID).setData(geojson)
   } else {
     map.addSource(CIRCLE_SOURCE_ID, { type: 'geojson', data: geojson })
   }
+
   if (!map.getLayer(CIRCLE_FILL_LAYER_ID)) {
     map.addLayer({
       id: CIRCLE_FILL_LAYER_ID,
       type: 'fill',
       source: CIRCLE_SOURCE_ID,
-      paint: { 'fill-color': 'rgba(255,255,255,0.05)' },
+      paint: { 'fill-color': 'rgba(255,255,255,0.04)' },
     })
   }
+
   if (!map.getLayer(CIRCLE_LINE_LAYER_ID)) {
     map.addLayer({
       id: CIRCLE_LINE_LAYER_ID,
       type: 'line',
       source: CIRCLE_SOURCE_ID,
-      paint: { 'line-color': '#E55C2F', 'line-width': 1.5, 'line-dasharray': [3, 2] },
+      paint: { 'line-color': lineColor, 'line-width': 1.5 },
     })
+  } else {
+    map.setPaintProperty(CIRCLE_LINE_LAYER_ID, 'line-color', lineColor)
   }
 }
 
@@ -76,7 +86,14 @@ function removeCircleFromMap(map) {
 
 export function AreaTool({ map, config, state, dispatch }) {
   const [handlePos, setHandlePos] = useState(null)
+  const [resizeDiameterKm, setResizeDiameterKm] = useState(null)
+
   const circleRef = useRef({ lat: 0, lng: 0, radiusKm: DEFAULT_RADIUS_KM })
+  // Refs so callbacks read current values without stale closure issues
+  const stateRef = useRef(state)
+  stateRef.current = state
+  const isDarkRef = useRef(state.colorScheme === 'dark')
+  isDarkRef.current = state.colorScheme === 'dark'
 
   // ── Handle screen position ────────────────────────────────────────────────
   const updateHandlePos = useCallback(() => {
@@ -101,10 +118,44 @@ export function AreaTool({ map, config, state, dispatch }) {
     ]
     const features = map.queryRenderedFeatures(bbox, { layers: [FIREMAP_LAYER_ID] })
     const filtered = featuresWithinCircle(features, lat, lng, radiusKm)
+
+    // Stats for preset aggregate variables
     const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)
+
+    // Also collect raw values for the active variable (for the histogram in StatsPanel)
+    const currentState = stateRef.current
+    const activeVar = getActiveVariable(
+      config,
+      currentState.activeLayer,
+      currentState.activeDimensions
+    )
+    const activeVarValues = activeVar
+      ? filtered
+          .map((f) => f.properties?.[activeVar.id])
+          .filter((v) => {
+            if (v == null) return false
+            // Keep string values for categorical variables; filter NaN for numeric
+            return activeVar.type === 'categorical' ? true : !isNaN(v)
+          })
+      : []
+
     dispatch({ type: Actions.SET_DRAWN_CIRCLE, circle: { lat, lng, radiusKm } })
-    dispatch({ type: Actions.SET_AGGREGATE_STATS, stats })
+    dispatch({
+      type: Actions.SET_AGGREGATE_STATS,
+      stats: { ...stats, activeVarValues },
+    })
   }, [map, config, dispatch])
+
+  // ── Re-draw circle when color scheme changes ─────────────────────────────
+  useEffect(() => {
+    if (!map || !state.areaToolActive) return
+    if (!map.getLayer(CIRCLE_LINE_LAYER_ID)) return
+    map.setPaintProperty(
+      CIRCLE_LINE_LAYER_ID,
+      'line-color',
+      circleLineColor(state.colorScheme === 'dark')
+    )
+  }, [map, state.colorScheme, state.areaToolActive])
 
   // ── Activate / deactivate ─────────────────────────────────────────────────
   useEffect(() => {
@@ -117,7 +168,7 @@ export function AreaTool({ map, config, state, dispatch }) {
     }
     const center = map.getCenter()
     circleRef.current = { lat: center.lat, lng: center.lng, radiusKm: DEFAULT_RADIUS_KM }
-    drawCircleOnMap(map, center.lat, center.lng, DEFAULT_RADIUS_KM)
+    drawCircleOnMap(map, center.lat, center.lng, DEFAULT_RADIUS_KM, isDarkRef.current)
     updateHandlePos()
     const t = setTimeout(computeAndDispatch, 150)
     return () => clearTimeout(t)
@@ -142,7 +193,6 @@ export function AreaTool({ map, config, state, dispatch }) {
     const canvas = map.getCanvas()
     let movingCircle = false
 
-    // Show 'grab' cursor when hovering inside the circle
     function onMapMouseMove(e) {
       if (movingCircle) return
       const { lat, lng, radiusKm } = circleRef.current
@@ -150,7 +200,6 @@ export function AreaTool({ map, config, state, dispatch }) {
       canvas.style.cursor = dist <= radiusKm ? 'grab' : ''
     }
 
-    // Intercept mousedown BEFORE MapLibre's dragPan (capture phase)
     function onCanvasMouseDown(e) {
       if (e.button !== 0) return
       const rect = canvas.getBoundingClientRect()
@@ -158,10 +207,9 @@ export function AreaTool({ map, config, state, dispatch }) {
       const { lat, lng, radiusKm } = circleRef.current
       const dist = haversineKm(lat, lng, lngLat.lat, lngLat.lng)
 
-      if (dist > radiusKm) return  // outside — let map handle panning
+      if (dist > radiusKm) return
 
-      // Inside circle: take over the drag
-      e.stopPropagation()          // prevents MapLibre dragPan from starting
+      e.stopPropagation()
       movingCircle = true
       canvas.style.cursor = 'grabbing'
 
@@ -176,7 +224,7 @@ export function AreaTool({ map, config, state, dispatch }) {
         const newLat = origLat + (cur.lat - startLat)
         const newLng = origLng + (cur.lng - startLng)
         circleRef.current = { ...circleRef.current, lat: newLat, lng: newLng }
-        drawCircleOnMap(map, newLat, newLng, circleRef.current.radiusKm)
+        drawCircleOnMap(map, newLat, newLng, circleRef.current.radiusKm, isDarkRef.current)
         updateHandlePos()
       }
 
@@ -220,14 +268,16 @@ export function AreaTool({ map, config, state, dispatch }) {
       const newRadius = haversineKm(lat, lng, lngLat.lat, lngLat.lng)
       if (newRadius >= MIN_RADIUS_KM) {
         circleRef.current = { lat, lng, radiusKm: newRadius }
-        drawCircleOnMap(map, lat, lng, newRadius)
+        drawCircleOnMap(map, lat, lng, newRadius, isDarkRef.current)
         updateHandlePos()
+        setResizeDiameterKm((newRadius * 2).toFixed(0))
       }
     }
 
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
+      setResizeDiameterKm(null)
       computeAndDispatch()
     }
 
@@ -237,8 +287,12 @@ export function AreaTool({ map, config, state, dispatch }) {
 
   if (!state.areaToolActive || !handlePos) return null
 
+  const handleColor = state.colorScheme === 'dark' ? 'rgba(255,255,255,0.85)' : 'rgba(50,50,50,0.65)'
+  const handleBorder = state.colorScheme === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.7)'
+
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}>
+      {/* Resize handle */}
       <div
         onMouseDown={onHandleMouseDown}
         title='Drag to resize'
@@ -249,13 +303,35 @@ export function AreaTool({ map, config, state, dispatch }) {
           width: HANDLE_PX * 2,
           height: HANDLE_PX * 2,
           borderRadius: '50%',
-          background: '#E55C2F',
-          border: '2px solid rgba(255,255,255,0.9)',
+          background: handleColor,
+          border: `2px solid ${handleBorder}`,
           cursor: 'ew-resize',
           pointerEvents: 'auto',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
         }}
       />
+
+      {/* Diameter label — visible only while resizing */}
+      {resizeDiameterKm !== null && (
+        <div
+          style={{
+            position: 'absolute',
+            left: handlePos.x + 14,
+            top: handlePos.y - 9,
+            background: 'rgba(0,0,0,0.6)',
+            color: '#fff',
+            padding: '2px 7px',
+            borderRadius: 3,
+            fontSize: 11,
+            fontFamily: 'monospace',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+            letterSpacing: '0.03em',
+          }}
+        >
+          {resizeDiameterKm} km ⌀
+        </div>
+      )}
     </div>
   )
 }

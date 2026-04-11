@@ -71,18 +71,19 @@ function ToggleControl({ dimension, value, onChange }) {
             onClick={() => onChange(option.id)}
             sx={{
               fontFamily: 'body',
-              fontSize: 0,
+              fontSize: '10px',
               fontWeight: isActive ? 'bold' : 'body',
               lineHeight: 'body',
               cursor: 'pointer',
-              px: 2,
+              px: '6px',
               py: 1,
-              mr: 1,
+              mr: '2px',
               mb: 1,
               border: 'none',
               bg: 'transparent',
               color: isActive ? 'text' : 'muted',
               transition: 'color 0.1s',
+              whiteSpace: 'nowrap',
               '&:hover': { color: 'text' },
             }}
           >

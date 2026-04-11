@@ -56,17 +56,18 @@ export function useMapLayer(map, config, state) {
           type: 'circle',
           source: SOURCE_ID,
           paint: {
-            // Radius grows to tile the ~5.5 km grid seamlessly at high zoom
+            // Radius grows to tile the ~5.5 km grid seamlessly at high zoom.
+            // Exponential base 1.5 matches tile-doubling behavior for smooth transitions.
             'circle-radius': [
-              'interpolate', ['linear'], ['zoom'],
+              'interpolate', ['exponential', 1.5], ['zoom'],
               4,  1.5,
-              6,  2,
-              8,  6,
-              9,  12,
-              10, 20,
-              11, 36,
-              12, 58,
-              22, 58,
+              6,  2.5,
+              8,  7,
+              9,  14,
+              10, 24,
+              11, 44,
+              12, 68,
+              22, 68,
             ],
             'circle-color':   buildColorExpression(variable),
             'circle-opacity': buildOpacityExpression(variable),
@@ -93,17 +94,29 @@ export function useMapLayer(map, config, state) {
     function updatePaint() {
       if (!map.getLayer(LAYER_ID)) return
       const variable = variableRef.current
-      if (!variable || variable.type === 'categorical') return
+      if (!variable) return
+      // For categorical: domain is irrelevant (match expression used); skip querySourceFeatures
+      const sourceLayer = isPlaceholder ? undefined : config.id
+      const domain = variable.type === 'categorical'
+        ? null
+        : computeActualDomain(map, variable, sourceLayer)
       try {
-        map.setPaintProperty(LAYER_ID, 'circle-color', buildColorExpression(variable))
-        map.setPaintProperty(LAYER_ID, 'circle-opacity', buildOpacityExpression(variable))
+        map.setPaintProperty(LAYER_ID, 'circle-color', buildColorExpression(variable, domain))
+        map.setPaintProperty(LAYER_ID, 'circle-opacity', buildOpacityExpression(variable, domain))
       } catch (err) {
         console.error('[useMapLayer] updatePaint failed:', err)
       }
     }
 
+    // Re-run updatePaint when source tiles finish loading so the dynamic domain
+    // is computed from real data (querySourceFeatures returns nothing until tiles load)
+    function onSourceData(e) {
+      if (e.sourceId === SOURCE_ID && e.isSourceLoaded) updatePaint()
+    }
+
     // Register styledata listener first (covers setStyle reloads)
     map.on('styledata', addLayers)
+    map.on('sourcedata', onSourceData)
     // Try immediately if loaded; otherwise wait for idle (handles edge case where
     // isStyleLoaded() returns false even after the load event has fired)
     if (map.isStyleLoaded()) {
@@ -114,6 +127,7 @@ export function useMapLayer(map, config, state) {
 
     return () => {
       map.off('styledata', addLayers)
+      map.off('sourcedata', onSourceData)
       if (map.getLayer(LAYER_ID)) map.removeLayer(LAYER_ID)
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID)
     }
@@ -124,25 +138,73 @@ export function useMapLayer(map, config, state) {
   useEffect(() => {
     if (!map || !map.isStyleLoaded() || !map.getLayer(LAYER_ID)) return
     const variable = variableRef.current
-    if (!variable || variable.type === 'categorical') return
+    if (!variable) return
+    const sourceLayer = isPlaceholder ? undefined : config.id
+    const domain = variable.type === 'categorical'
+      ? null
+      : computeActualDomain(map, variable, sourceLayer)
     try {
-      map.setPaintProperty(LAYER_ID, 'circle-color', buildColorExpression(variable))
-      map.setPaintProperty(LAYER_ID, 'circle-opacity', buildOpacityExpression(variable))
+      map.setPaintProperty(LAYER_ID, 'circle-color', buildColorExpression(variable, domain))
+      map.setPaintProperty(LAYER_ID, 'circle-opacity', buildOpacityExpression(variable, domain))
     } catch (err) {
       console.error('[useMapLayer] paint update failed:', err)
     }
   }, [map, config, state.activeLayer, state.activeDimensions])
 }
 
+// ── Dynamic domain from rendered features ─────────────────────────────────
+
+/**
+ * Query the currently rendered source features and compute an actual domain
+ * so that the colormap spans only the real data range, not a hard-coded guess.
+ *
+ * For diverging variables: symmetric around zero (maxAbs on both sides).
+ * For sequential variables: [min, max] of visible values.
+ *
+ * Returns null if there are not enough features to be meaningful.
+ */
+function computeActualDomain(map, variable, sourceLayerId) {
+  if (!variable || variable.type === 'categorical') return null
+  const queryOpts = sourceLayerId ? { sourceLayer: sourceLayerId } : undefined
+  const features = map.querySourceFeatures(SOURCE_ID, queryOpts)
+  const values = features
+    .map(f => f.properties?.[variable.id])
+    .filter(v => v != null && !isNaN(v))
+  if (values.length < 5) return null   // not enough data yet — fall back to config domain
+
+  if (variable.diverging) {
+    const maxAbs = Math.max(...values.map(v => Math.abs(v)))
+    if (maxAbs === 0) return null
+    return { min: -maxAbs, max: maxAbs, zero: variable.domain?.zero ?? 0 }
+  } else {
+    const dMin = Math.min(...values)
+    const dMax = Math.max(...values)
+    if (dMin >= dMax) return null
+    return { min: dMin, max: dMax }
+  }
+}
+
 // ── Paint expression builders ─────────────────────────────────────────────
 
 /**
  * MapLibre interpolate expression: data value → CSS color string.
+ * For categorical variables, builds a match expression from variable.categories.
+ * domainOverride replaces variable.domain for continuous variables.
  */
-function buildColorExpression(variable) {
-  if (!variable || variable.type === 'categorical') return '#888888'
-  const scale = buildColorScale(variable)
-  const { min, max } = variable.domain
+function buildColorExpression(variable, domainOverride = null) {
+  if (!variable) return '#888888'
+  if (variable.type === 'categorical') {
+    // ['match', ['get', id], val1, color1, val2, color2, ..., fallback]
+    const expr = ['match', ['get', variable.id]]
+    for (const cat of variable.categories ?? []) {
+      expr.push(cat.id, cat.color)
+    }
+    expr.push('#888888')
+    return expr
+  }
+  const effectiveVar = domainOverride ? { ...variable, domain: domainOverride } : variable
+  const scale = buildColorScale(effectiveVar)
+  const { min, max } = effectiveVar.domain
   const steps = 24
   const expr = ['interpolate', ['linear'], ['get', variable.id]]
   for (let i = 0; i <= steps; i++) {
@@ -162,42 +224,32 @@ function buildColorExpression(variable) {
  *
  * For sequential / non-diverging variables: returns a fixed 0.85.
  */
-function buildOpacityExpression(variable) {
+function buildOpacityExpression(variable, domainOverride = null) {
   if (!variable || variable.type === 'categorical') return 0.85
-
-  const { min, max } = variable.domain
+  if (!variable.diverging) {
+    return 0.85
+  }
+  const domain = domainOverride ?? variable.domain
+  const { min, max, zero = 0 } = domain
+  const maxAbsDev = Math.max(Math.abs(min - zero), Math.abs(max - zero))
+  if (maxAbsDev === 0) return 0.85
   const steps = 20
   const expr = ['interpolate', ['linear'], ['get', variable.id]]
-
-  if (variable.diverging) {
-    // Diverging: transparent near zero, opaque at extremes
-    const { zero = 0 } = variable.domain
-    const maxAbsDev = Math.max(Math.abs(min - zero), Math.abs(max - zero))
-    if (maxAbsDev === 0) return 0.85
-    for (let i = 0; i <= steps; i++) {
-      const v = min + (i / steps) * (max - min)
-      const t = Math.abs(v - zero) / maxAbsDev
-      expr.push(v, opacityCurve(t))
-    }
-  } else {
-    // Sequential: fade from ~0 at min to 0.85 at max (no white blobs at low values)
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps  // 0 → 1
-      const v = min + t * (max - min)
-      expr.push(v, t * 0.85)
-    }
+  for (let i = 0; i <= steps; i++) {
+    const v = min + (i / steps) * (max - min)
+    const t = Math.abs(v - zero) / maxAbsDev
+    expr.push(v, opacityCurve(t))
   }
-
   return expr
 }
 
 /**
  * Maps normalized absolute deviation (0–1) to opacity.
- * At t=0 (value == zero): 0.05 (nearly invisible)
- * At t=1 (max deviation): 0.88 (opaque)
+ * At t=0 (value == zero): ~0.05 (nearly invisible — no net benefit)
+ * At t=1 (max deviation): 1.0  (fully opaque — strong signal)
  */
 function opacityCurve(t) {
   if (t < 0.03) return 0.05
-  if (t < 0.20) return 0.05 + ((t - 0.03) / 0.17) * 0.35   // 0.05 → 0.40
-  return 0.40 + ((t - 0.20) / 0.80) * 0.48                  // 0.40 → 0.88
+  if (t < 0.18) return 0.05 + ((t - 0.03) / 0.15) * 0.55   // 0.05 → 0.60
+  return 0.60 + ((t - 0.18) / 0.82) * 0.40                  // 0.60 → 1.00
 }

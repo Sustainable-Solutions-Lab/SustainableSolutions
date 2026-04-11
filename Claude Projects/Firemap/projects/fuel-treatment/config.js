@@ -1,0 +1,476 @@
+/**
+ * projects/fuel-treatment/config.js
+ *
+ * Configuration for: California Wildfire Fuel Treatment Cost-Benefit Analysis
+ *
+ * Variable ids must match exact column names in the source CSV (and synthetic data).
+ * Domain values are calibrated to the synthetic dataset; update after inspecting real data.
+ *
+ * @type {import('../../contracts/project-config').ProjectConfig}
+ */
+const config = {
+  id: 'fuel-treatment',
+  title: 'Wildfire Fuel Treatment',
+  description:
+    'Per-km² costs and benefits of wildfire fuel treatment across California. ' +
+    'Compare treatment types, explore climate scenarios, and identify priority areas.',
+
+  region: {
+    center: [-119.5, 37.3],
+    zoom: 5.5,
+    bounds: [-124.5, 32.5, -114.0, 42.1],
+  },
+
+  // ── Layers (sidebar tabs) ────────────────────────────────────────────────
+  layers: [
+    {
+      id: 'costs',
+      label: 'Costs',
+      description: 'Treatment cost per km² by treatment type.',
+      dimensionIds: ['treatment'],
+    },
+    {
+      id: 'benefits',
+      label: 'Benefits',
+      description: 'Expected benefit per km² under current and future climate.',
+      dimensionIds: ['benefit_component', 'climate'],
+    },
+    {
+      id: 'net_benefits',
+      label: 'Net Benefits',
+      description: 'Benefit minus cost. Positive = cost-effective location.',
+      dimensionIds: ['treatment', 'climate'],
+    },
+    {
+      id: 'inputs',
+      label: 'Inputs',
+      description: 'Spatial inputs used in the model.',
+      dimensionIds: ['input_var'],
+    },
+  ],
+
+  // ── Dimensions ───────────────────────────────────────────────────────────
+  dimensions: [
+    {
+      id: 'treatment',
+      label: 'Treatment type',
+      type: 'toggle',
+      defaultValue: 'rx_burn',
+      options: [
+        { id: 'rx_burn',      label: 'Rx Burn' },
+        { id: 'mechanical',   label: 'Mechanical' },
+        { id: 'hand',         label: 'Hand' },
+        { id: 'min',          label: 'Lowest Cost' },
+        { id: 'cheapest_type',label: 'Cheapest Type' },
+      ],
+    },
+    {
+      id: 'climate',
+      label: 'Climate scenario',
+      type: 'toggle',
+      defaultValue: 'current',
+      options: [
+        { id: 'current', label: 'Current' },
+        { id: 'ssp245',  label: 'SSP2-4.5' },
+        { id: 'ssp585',  label: 'SSP5-8.5' },
+      ],
+    },
+    {
+      id: 'benefit_component',
+      label: 'Component',
+      type: 'toggle',
+      defaultValue: 'total',
+      options: [
+        { id: 'total',    label: 'Total' },
+        { id: 'property', label: 'Property' },
+        { id: 'health',   label: 'Health' },
+      ],
+    },
+    {
+      id: 'input_var',
+      label: 'Input variable',
+      type: 'toggle',
+      defaultValue: 'fire_prob',
+      options: [
+        { id: 'fire_prob',   label: 'Fire Risk' },
+        { id: 'veg_density', label: 'Veg. Density' },
+        { id: 'slope',       label: 'Slope' },
+        { id: 'elevation',   label: 'Elevation' },
+        { id: 'wui_dist',    label: 'WUI Distance' },
+      ],
+    },
+  ],
+
+  // ── Variables ────────────────────────────────────────────────────────────
+  // Each variable has `layer` and `dimensionValues` so lib/get-active-variable.js
+  // can resolve which variable to display from (activeLayer, activeDimensions).
+  variables: [
+
+    // ── COSTS ──────────────────────────────────────────────────────────────
+    {
+      id: 'cost_rx_burn',
+      label: 'Cost — Prescribed Burn',
+      unit: '$/km²',
+      colormap: 'Oranges',
+      diverging: false,
+      domain: { min: 0, max: 200000 },
+      layer: 'costs',
+      dimensionValues: { treatment: 'rx_burn' },
+      description: 'Annualized cost of prescribed burning.',
+    },
+    {
+      id: 'cost_mechanical',
+      label: 'Cost — Mechanical Thinning',
+      unit: '$/km²',
+      colormap: 'Oranges',
+      diverging: false,
+      domain: { min: 0, max: 360000 },
+      layer: 'costs',
+      dimensionValues: { treatment: 'mechanical' },
+      description: 'Annualized cost of mechanical vegetation removal.',
+    },
+    {
+      id: 'cost_hand',
+      label: 'Cost — Hand Treatment',
+      unit: '$/km²',
+      colormap: 'Oranges',
+      diverging: false,
+      domain: { min: 0, max: 420000 },
+      layer: 'costs',
+      dimensionValues: { treatment: 'hand' },
+      description: 'Annualized cost of hand-crew fuel treatment.',
+    },
+    {
+      id: 'min_cost',
+      label: 'Lowest Treatment Cost',
+      unit: '$/km²',
+      colormap: 'Oranges',
+      diverging: false,
+      domain: { min: 0, max: 200000 },
+      layer: 'costs',
+      dimensionValues: { treatment: 'min' },
+      description: 'The minimum cost across all three treatment types at each location.',
+    },
+    {
+      type: 'categorical',
+      id: 'cheapest',
+      label: 'Cheapest Treatment Type',
+      unit: '',
+      layer: 'costs',
+      dimensionValues: { treatment: 'cheapest_type' },
+      categories: [
+        { id: 'rx_burn',    label: 'Prescribed Burn', color: '#E55C2F' },
+        { id: 'mechanical', label: 'Mechanical',       color: '#5B8A4E' },
+        { id: 'hand',       label: 'Hand',             color: '#4A90D9' },
+      ],
+      description: 'Which treatment type has the lowest cost at each location.',
+    },
+
+    // ── BENEFITS ──────────────────────────────────────────────────────────
+    // Total benefit
+    {
+      id: 'total_benefit_current',
+      label: 'Total Benefit — Current',
+      unit: '$/km²',
+      colormap: 'Greens',
+      diverging: false,
+      domain: { min: 0, max: 500000 },
+      layer: 'benefits',
+      dimensionValues: { benefit_component: 'total', climate: 'current' },
+    },
+    {
+      id: 'total_benefit_ssp245',
+      label: 'Total Benefit — SSP2-4.5',
+      unit: '$/km²',
+      colormap: 'Greens',
+      diverging: false,
+      domain: { min: 0, max: 650000 },
+      layer: 'benefits',
+      dimensionValues: { benefit_component: 'total', climate: 'ssp245' },
+    },
+    {
+      id: 'total_benefit_ssp585',
+      label: 'Total Benefit — SSP5-8.5',
+      unit: '$/km²',
+      colormap: 'Greens',
+      diverging: false,
+      domain: { min: 0, max: 800000 },
+      layer: 'benefits',
+      dimensionValues: { benefit_component: 'total', climate: 'ssp585' },
+    },
+    // Property benefit
+    {
+      id: 'prop_benefit_current',
+      label: 'Property Benefit — Current',
+      unit: '$/km²',
+      colormap: 'YlOrRd',
+      diverging: false,
+      domain: { min: 0, max: 400000 },
+      layer: 'benefits',
+      dimensionValues: { benefit_component: 'property', climate: 'current' },
+    },
+    {
+      id: 'prop_benefit_ssp245',
+      label: 'Property Benefit — SSP2-4.5',
+      unit: '$/km²',
+      colormap: 'YlOrRd',
+      diverging: false,
+      domain: { min: 0, max: 520000 },
+      layer: 'benefits',
+      dimensionValues: { benefit_component: 'property', climate: 'ssp245' },
+    },
+    {
+      id: 'prop_benefit_ssp585',
+      label: 'Property Benefit — SSP5-8.5',
+      unit: '$/km²',
+      colormap: 'YlOrRd',
+      diverging: false,
+      domain: { min: 0, max: 650000 },
+      layer: 'benefits',
+      dimensionValues: { benefit_component: 'property', climate: 'ssp585' },
+    },
+    // Health benefit
+    {
+      id: 'health_benefit_current',
+      label: 'Health Benefit — Current',
+      unit: '$/km²',
+      colormap: 'Blues',
+      diverging: false,
+      domain: { min: 0, max: 200000 },
+      layer: 'benefits',
+      dimensionValues: { benefit_component: 'health', climate: 'current' },
+    },
+    {
+      id: 'health_benefit_ssp245',
+      label: 'Health Benefit — SSP2-4.5',
+      unit: '$/km²',
+      colormap: 'Blues',
+      diverging: false,
+      domain: { min: 0, max: 260000 },
+      layer: 'benefits',
+      dimensionValues: { benefit_component: 'health', climate: 'ssp245' },
+    },
+    {
+      id: 'health_benefit_ssp585',
+      label: 'Health Benefit — SSP5-8.5',
+      unit: '$/km²',
+      colormap: 'Blues',
+      diverging: false,
+      domain: { min: 0, max: 320000 },
+      layer: 'benefits',
+      dimensionValues: { benefit_component: 'health', climate: 'ssp585' },
+    },
+
+    // ── NET BENEFITS ───────────────────────────────────────────────────────
+    // Rx burn
+    {
+      id: 'net_rx_current',
+      label: 'Net Benefit — Rx Burn, Current',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -200000, max: 450000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'rx_burn', climate: 'current' },
+    },
+    {
+      id: 'net_rx_ssp245',
+      label: 'Net Benefit — Rx Burn, 2050',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -200000, max: 600000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'rx_burn', climate: 'ssp245' },
+    },
+    {
+      id: 'net_rx_ssp585',
+      label: 'Net Benefit — Rx Burn, 2100',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -200000, max: 750000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'rx_burn', climate: 'ssp585' },
+    },
+    // Mechanical
+    {
+      id: 'net_mech_current',
+      label: 'Net Benefit — Mechanical, Current',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -350000, max: 300000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'mechanical', climate: 'current' },
+    },
+    {
+      id: 'net_mech_ssp245',
+      label: 'Net Benefit — Mechanical, 2050',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -350000, max: 450000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'mechanical', climate: 'ssp245' },
+    },
+    {
+      id: 'net_mech_ssp585',
+      label: 'Net Benefit — Mechanical, 2100',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -350000, max: 600000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'mechanical', climate: 'ssp585' },
+    },
+    // Hand
+    {
+      id: 'net_hand_current',
+      label: 'Net Benefit — Hand, Current',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -400000, max: 250000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'hand', climate: 'current' },
+    },
+    {
+      id: 'net_hand_ssp245',
+      label: 'Net Benefit — Hand, 2050',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -400000, max: 380000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'hand', climate: 'ssp245' },
+    },
+    {
+      id: 'net_hand_ssp585',
+      label: 'Net Benefit — Hand, 2100',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -400000, max: 500000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'hand', climate: 'ssp585' },
+    },
+    // Min cost treatment
+    {
+      id: 'net_min_current',
+      label: 'Net Benefit — Lowest Cost, Current',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -200000, max: 450000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'min', climate: 'current' },
+    },
+    {
+      id: 'net_min_ssp245',
+      label: 'Net Benefit — Lowest Cost, 2050',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -200000, max: 600000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'min', climate: 'ssp245' },
+    },
+    {
+      id: 'net_min_ssp585',
+      label: 'Net Benefit — Lowest Cost, 2100',
+      unit: '$/km²',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -200000, max: 750000, zero: 0 },
+      layer: 'net_benefits',
+      dimensionValues: { treatment: 'min', climate: 'ssp585' },
+    },
+
+    // ── SPATIAL INPUTS ─────────────────────────────────────────────────────
+    {
+      id: 'fire_prob',
+      label: 'Fire Probability',
+      unit: '(annual)',
+      colormap: 'YlOrRd',
+      diverging: false,
+      domain: { min: 0, max: 0.7 },
+      layer: 'inputs',
+      dimensionValues: { input_var: 'fire_prob' },
+      description: 'Annual probability of a fire event at this location.',
+    },
+    {
+      id: 'veg_density',
+      label: 'Vegetation Density',
+      unit: '(NDVI)',
+      colormap: 'Greens',
+      diverging: false,
+      domain: { min: 0, max: 1 },
+      layer: 'inputs',
+      dimensionValues: { input_var: 'veg_density' },
+      description: 'Normalized vegetation index (proxy for fuel load).',
+    },
+    {
+      id: 'slope',
+      label: 'Terrain Slope',
+      unit: '°',
+      colormap: 'Oranges',
+      diverging: false,
+      domain: { min: 0, max: 45 },
+      layer: 'inputs',
+      dimensionValues: { input_var: 'slope' },
+      description: 'Average terrain slope in degrees — affects treatment cost and fire spread.',
+    },
+    {
+      id: 'elevation',
+      label: 'Elevation',
+      unit: 'm',
+      colormap: 'Blues',
+      diverging: false,
+      domain: { min: 0, max: 3000 },
+      layer: 'inputs',
+      dimensionValues: { input_var: 'elevation' },
+    },
+    {
+      id: 'wui_dist',
+      label: 'Distance to WUI',
+      unit: 'km',
+      colormap: 'Oranges',
+      diverging: false,
+      domain: { min: 0, max: 100 },
+      layer: 'inputs',
+      dimensionValues: { input_var: 'wui_dist' },
+      description:
+        'Distance to the nearest wildland-urban interface. Shorter distance = higher property benefit.',
+    },
+  ],
+
+  // ── Percentile filter ────────────────────────────────────────────────────
+  percentileFilter: {
+    enabled: true,
+    defaultLow: 0,
+    defaultHigh: 100,
+  },
+
+  // ── Area tool ────────────────────────────────────────────────────────────
+  areaTool: {
+    enabled: true,
+    defaultRadiusKm: 20,
+    maxRadiusKm: 200,
+    aggregateVariableIds: [
+      'net_rx_current',
+      'net_min_current',
+      'total_benefit_current',
+      'min_cost',
+    ],
+  },
+
+  // ── Data ─────────────────────────────────────────────────────────────────
+  // Replace with the Cloudflare R2 URL once tiles are built:
+  //   python scripts/build_tiles.py --input data.csv --output fuel-treatment.pmtiles
+  //   # upload to R2, then:
+  tilesUrl: 'REPLACE_WITH_R2_URL',
+  methodsPath: '/projects/fuel-treatment/methods',
+}
+
+export default config

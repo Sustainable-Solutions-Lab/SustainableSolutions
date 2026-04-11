@@ -1,0 +1,66 @@
+# Methods
+
+## Overview
+
+This tool visualizes results from an integrated cost-benefit analysis of wildfire fuel
+treatment across California at 1 km² spatial resolution. For each grid cell, the model
+estimates the expected costs and benefits of treating the vegetation to reduce wildfire
+risk, accounting for both property damage and human health impacts from smoke.
+
+*[Replace this section with a summary from the paper abstract.]*
+
+## Study Area
+
+The analysis covers the state of California. Grid cells are defined on a 1 km × 1 km
+grid aligned to the WGS84 coordinate system. The map shows all cells for which model
+estimates are available.
+
+*[Add details on data coverage and any cells excluded from analysis.]*
+
+## Treatment Cost Model
+
+Treatment costs represent the annualized per-km² expense of implementing fuel treatment
+(prescribed burning, mechanical thinning, or a combination).
+
+*[Add the cost model description from the paper's methods section.]*
+
+## Property Benefit Model
+
+The property benefit is the expected reduction in property damage from wildfire, estimated
+by combining fire behavior modeling with an inventory of at-risk structures and their
+replacement values.
+
+*[Add the property damage model description.]*
+
+## Health Benefit Model
+
+The health benefit is the economic value of reductions in smoke-related mortality and
+morbidity. Smoke exposure estimates are derived from fire behavior modeling and atmospheric
+transport, with health impacts valued using standard epidemiological dose-response functions.
+
+*[Add the health impact model description.]*
+
+## Net Benefit Calculation
+
+Net benefit = Total benefit − Treatment cost
+
+where Total benefit = Property benefit + Health benefit.
+
+All values are expressed in present-value dollars per km² using a [X]% discount rate
+over a [Y]-year time horizon.
+
+*[Fill in discount rate and time horizon from the paper.]*
+
+## Data Sources
+
+| Dataset | Source |
+|---------|--------|
+| Fuel and vegetation | *[source]* |
+| Fire behavior modeling | *[source]* |
+| Structure exposure | *[source]* |
+| Health dose-response | *[source]* |
+| Property values | *[source]* |
+
+## Citation
+
+*[Add full citation for the paper once published.]*

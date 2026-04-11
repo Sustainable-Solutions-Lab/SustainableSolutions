@@ -16,7 +16,6 @@
 import { useMemo, useRef, useState, useCallback } from 'react'
 import { Box, Flex, Text } from 'theme-ui'
 import { buildColorScale } from '../../lib/colormap.js'
-import { formatValue } from '../../lib/format.js'
 import { Actions } from '../../contracts/events.js'
 
 const CHART_W = 220
@@ -225,21 +224,6 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
           )}
         </svg>
       </Box>
-
-      {/* Value axis labels — show actual data range */}
-      <Flex sx={{ justifyContent: 'space-between', mt: '3px' }}>
-        <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'muted' }}>
-          {formatValue(dataMax, variable.unit ?? '')}
-        </Text>
-        {showZeroLine && (
-          <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'muted' }}>
-            {formatValue(zero, variable.unit ?? '')}
-          </Text>
-        )}
-        <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'muted' }}>
-          {formatValue(dataMin, variable.unit ?? '')}
-        </Text>
-      </Flex>
 
       {/* Filter status */}
       {filterActive && low > 0 && (

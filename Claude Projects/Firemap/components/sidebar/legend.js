@@ -10,14 +10,14 @@ import { Box, Flex, Text } from 'theme-ui'
 import { buildLegendStops } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
 
-export function Legend({ variable }) {
+export function Legend({ variable, allValues = [] }) {
   if (!variable) return null
 
   if (variable.type === 'categorical') {
     return <CategoricalLegend variable={variable} />
   }
 
-  return <ContinuousLegend variable={variable} />
+  return <ContinuousLegend variable={variable} allValues={allValues} />
 }
 
 function CategoricalLegend({ variable }) {
@@ -61,9 +61,26 @@ function legendOpacityCurve(t) {
   return 0.60 + ((t - 0.18) / 0.82) * 0.40
 }
 
-function ContinuousLegend({ variable }) {
-  const stops = buildLegendStops(variable, 30)
-  const { min, max, zero } = variable.domain
+function ContinuousLegend({ variable, allValues = [] }) {
+  // Compute actual domain from rendered data — matches what the map and distribution chart show
+  let effectiveDomain = variable.domain
+  if (allValues.length >= 2) {
+    if (variable.diverging) {
+      const maxAbs = Math.max(...allValues.map(v => Math.abs(v)))
+      if (maxAbs > 0) {
+        effectiveDomain = { ...variable.domain, min: -maxAbs, max: maxAbs }
+      }
+    } else {
+      const dMin = Math.min(...allValues)
+      const dMax = Math.max(...allValues)
+      if (dMin < dMax) {
+        effectiveDomain = { ...variable.domain, min: dMin, max: dMax }
+      }
+    }
+  }
+  const effectiveVariable = { ...variable, domain: effectiveDomain }
+  const stops = buildLegendStops(effectiveVariable, 30)
+  const { min, max, zero } = effectiveVariable.domain
   const unit = variable.unit || ''
 
   // Build CSS gradient from stops, applying alpha so colors fade to transparent

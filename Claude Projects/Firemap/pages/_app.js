@@ -24,14 +24,20 @@ const globalStyles = css`
     height: 30px !important;
     padding: 0 !important;
   }
+  /* Force compact attribution to stay collapsed — hide text in non-expanded state */
+  .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-inner {
+    display: none !important;
+  }
   .maplibregl-ctrl-attrib-button {
-    width: 30px !important;
-    height: 30px !important;
+    width: 24px !important;
+    height: 24px !important;
     padding: 0 !important;
     margin: 0 !important;
-    /* Do NOT set background: transparent — that removes MapLibre's "i" icon background-image */
+    /* background-color transparent removes the white box; background-image "i" is preserved */
+    background-color: transparent !important;
+    border: none !important;
     opacity: 0.45 !important;
-    /* Hide any text that MapLibre v4 may put in the button */
+    /* Hide any raw text that MapLibre v4 may put in the button */
     font-size: 0 !important;
     overflow: hidden !important;
   }

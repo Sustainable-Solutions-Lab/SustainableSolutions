@@ -8,6 +8,7 @@ import { addStaticLayers, setGraticuleVisible as applyGraticuleVisibility } from
 import { useMapLayer } from '../../lib/use-map-layer.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { percentileThresholds } from '../../lib/area-stats.js'
+import { SOURCE_ID } from '../../lib/use-map-layer.js'
 
 // ── SVG icons for map controls ────────────────────────────────────────────────
 
@@ -123,53 +124,70 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
   useEffect(() => {
     const map = mapRef.current
     if (!map || !mapReady) return
-    if (!map.getLayer('firemap-cells')) return
 
-    const variable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
-    if (!variable || variable.type === 'categorical') return
+    function applyFilter() {
+      if (!map.getLayer('firemap-cells')) return
 
-    const features = map.querySourceFeatures('firemap-data')
-    if (features.length === 0) return
+      const variable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
+      if (!variable || variable.type === 'categorical') return
 
-    const { low, high } = percentileThresholds(
-      features,
-      variable.id,
-      state.percentileRange.low,
-      state.percentileRange.high,
-    )
+      const features = map.querySourceFeatures(SOURCE_ID)
+      if (features.length === 0) return
 
-    map.setFilter('firemap-cells', [
-      'all',
-      ['>=', ['get', variable.id], low],
-      ['<=', ['get', variable.id], high],
-    ])
+      const { low, high } = percentileThresholds(
+        features,
+        variable.id,
+        state.percentileRange.low,
+        state.percentileRange.high,
+      )
 
-    // Compute mean / median for filtered features and bubble up to sidebar
-    if (onFilterStats) {
-      const values = features
-        .map((f) => f.properties?.[variable.id])
-        .filter((v) => v != null && !isNaN(v) && v >= low && v <= high)
-      const totalValues = features
-        .map((f) => f.properties?.[variable.id])
-        .filter((v) => v != null && !isNaN(v))
+      map.setFilter('firemap-cells', [
+        'all',
+        ['>=', ['get', variable.id], low],
+        ['<=', ['get', variable.id], high],
+      ])
 
-      const mean = values.length > 0
-        ? values.reduce((s, v) => s + v, 0) / values.length
-        : null
+      // Compute mean / median for filtered features and bubble up to sidebar
+      if (onFilterStats) {
+        const values = features
+          .map((f) => f.properties?.[variable.id])
+          .filter((v) => v != null && !isNaN(v) && v >= low && v <= high)
+        const totalValues = features
+          .map((f) => f.properties?.[variable.id])
+          .filter((v) => v != null && !isNaN(v))
 
-      const sorted = [...values].sort((a, b) => a - b)
-      const n = sorted.length
-      const median = n > 0
-        ? (n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)])
-        : null
+        const mean = values.length > 0
+          ? values.reduce((s, v) => s + v, 0) / values.length
+          : null
 
-      onFilterStats({
-        count: values.length,
-        totalCount: totalValues.length,
-        mean,
-        median,
-        allValues: totalValues,  // full unsorted array for distribution chart
-      })
+        const sorted = [...values].sort((a, b) => a - b)
+        const n = sorted.length
+        const median = n > 0
+          ? (n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)])
+          : null
+
+        onFilterStats({
+          count: values.length,
+          totalCount: totalValues.length,
+          mean,
+          median,
+          allValues: totalValues,  // full unsorted array for distribution chart
+        })
+      }
+    }
+
+    // Try immediately — works if source is already loaded
+    applyFilter()
+
+    // Re-run once the source finishes loading (querySourceFeatures returns empty
+    // until the GeoJSON/tile data has been parsed and loaded into the map)
+    function onSourceData(e) {
+      if (e.sourceId === SOURCE_ID && e.isSourceLoaded) applyFilter()
+    }
+    map.on('sourcedata', onSourceData)
+
+    return () => {
+      map.off('sourcedata', onSourceData)
     }
   }, [state.percentileRange, state.activeLayer, state.activeDimensions, config, mapReady, onFilterStats])
 

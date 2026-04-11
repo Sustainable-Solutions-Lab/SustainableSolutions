@@ -146,6 +146,14 @@ export function AreaTool({ map, config, state, dispatch }) {
     })
   }, [map, config, dispatch])
 
+  // ── Re-compute stats when active variable changes ────────────────────────
+  // (e.g. switching to "Cheapest Type" while the circle is open)
+  useEffect(() => {
+    if (!map || !state.areaToolActive) return
+    const t = setTimeout(computeAndDispatch, 50)
+    return () => clearTimeout(t)
+  }, [map, state.areaToolActive, state.activeLayer, state.activeDimensions, computeAndDispatch])
+
   // ── Re-draw circle when color scheme changes ─────────────────────────────
   useEffect(() => {
     if (!map || !state.areaToolActive) return

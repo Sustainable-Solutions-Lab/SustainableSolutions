@@ -128,7 +128,7 @@ export function Sidebar({
         )}
 
         {/* Legend / colorbar */}
-        <Legend variable={activeVariable} />
+        <Legend variable={activeVariable} allValues={allValues} />
 
         {/* Regional Data toggle */}
         {config.areaTool?.enabled && (

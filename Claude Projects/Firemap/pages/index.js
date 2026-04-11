@@ -6,7 +6,7 @@
  */
 
 /** @jsxImportSource theme-ui */
-import { useReducer, useRef, useState } from 'react'
+import { useReducer, useRef, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import Head from 'next/head'
 import { Box, Flex, Button, useColorMode } from 'theme-ui'
@@ -68,6 +68,8 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // Map instance handed off from <Map onMapReady> to <AreaTool>
   const [mapInstance, setMapInstance] = useState(null)
+  // Stats computed by the map's percentile filter
+  const [filterStats, setFilterStats] = useState({ count: null, mean: null, median: null, totalCount: null })
 
   const config = projects[state.projectId]
   const isDark = state.colorScheme === 'dark'
@@ -144,7 +146,7 @@ export default function Home() {
             <img
               src={isDark ? '/SDSS_brand_white.png' : '/SDSS_brand.png'}
               alt='Stanford Doerr School of Sustainability'
-              style={{ height: 28, objectFit: 'contain' }}
+              style={{ width: 260, maxWidth: '100%', height: 'auto', objectFit: 'contain' }}
             />
           </a>
 
@@ -181,7 +183,15 @@ export default function Home() {
               flexShrink: [0, 0],
             }}
           >
-            <Sidebar config={config} state={state} dispatch={dispatch} />
+            <Sidebar
+              config={config}
+              state={state}
+              dispatch={dispatch}
+              filteredCount={filterStats.count}
+              filteredMean={filterStats.mean}
+              filteredMedian={filterStats.median}
+              filteredTotalCount={filterStats.totalCount}
+            />
           </Box>
 
           {/* Map (fills remaining width) */}
@@ -192,6 +202,7 @@ export default function Home() {
               dispatch={dispatch}
               height='100%'
               onMapReady={(m) => setMapInstance(m)}
+              onFilterStats={setFilterStats}
             />
 
             {/* Detail panel — absolute bottom-right inside the map area */}

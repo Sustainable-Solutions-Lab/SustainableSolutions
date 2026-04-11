@@ -56,15 +56,17 @@ export function useMapLayer(map, config, state) {
           type: 'circle',
           source: SOURCE_ID,
           paint: {
-            // Radius calibrated for ~5.5 km synthetic grid; clamped [2, 14] px
+            // Radius grows to tile the ~5.5 km grid seamlessly at high zoom
             'circle-radius': [
               'interpolate', ['linear'], ['zoom'],
-              4,  2,
-              6,  2.5,
+              4,  1.5,
+              6,  2,
               8,  6,
-              9,  11,
-              10, 14,
-              20, 14,
+              9,  12,
+              10, 20,
+              11, 36,
+              12, 58,
+              22, 58,
             ],
             'circle-color':   buildColorExpression(variable),
             'circle-opacity': buildOpacityExpression(variable),
@@ -100,8 +102,15 @@ export function useMapLayer(map, config, state) {
       }
     }
 
-    if (map.isStyleLoaded()) addLayers()
+    // Register styledata listener first (covers setStyle reloads)
     map.on('styledata', addLayers)
+    // Try immediately if loaded; otherwise wait for idle (handles edge case where
+    // isStyleLoaded() returns false even after the load event has fired)
+    if (map.isStyleLoaded()) {
+      addLayers()
+    } else {
+      map.once('idle', addLayers)
+    }
 
     return () => {
       map.off('styledata', addLayers)
@@ -154,22 +163,29 @@ function buildColorExpression(variable) {
  * For sequential / non-diverging variables: returns a fixed 0.85.
  */
 function buildOpacityExpression(variable) {
-  if (!variable || variable.type === 'categorical' || !variable.diverging) {
-    return 0.85
-  }
+  if (!variable || variable.type === 'categorical') return 0.85
 
-  const { min, max, zero = 0 } = variable.domain
-  const maxAbsDev = Math.max(Math.abs(min - zero), Math.abs(max - zero))
-  if (maxAbsDev === 0) return 0.85
-
+  const { min, max } = variable.domain
   const steps = 20
   const expr = ['interpolate', ['linear'], ['get', variable.id]]
 
-  for (let i = 0; i <= steps; i++) {
-    const v = min + (i / steps) * (max - min)
-    const t = Math.abs(v - zero) / maxAbsDev  // 0 at zero, 1 at extreme
-    const opacity = opacityCurve(t)
-    expr.push(v, opacity)
+  if (variable.diverging) {
+    // Diverging: transparent near zero, opaque at extremes
+    const { zero = 0 } = variable.domain
+    const maxAbsDev = Math.max(Math.abs(min - zero), Math.abs(max - zero))
+    if (maxAbsDev === 0) return 0.85
+    for (let i = 0; i <= steps; i++) {
+      const v = min + (i / steps) * (max - min)
+      const t = Math.abs(v - zero) / maxAbsDev
+      expr.push(v, opacityCurve(t))
+    }
+  } else {
+    // Sequential: fade from ~0 at min to 0.85 at max (no white blobs at low values)
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps  // 0 → 1
+      const v = min + t * (max - min)
+      expr.push(v, t * 0.85)
+    }
   }
 
   return expr

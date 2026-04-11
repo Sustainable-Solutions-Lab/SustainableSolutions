@@ -28,6 +28,7 @@ export function Sidebar({
   filteredCount = null,
   filteredMean = null,
   filteredMedian = null,
+  filteredTotalCount = null,
 }) {
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
@@ -103,7 +104,7 @@ export function Sidebar({
           <PercentileFilter
             variable={activeVariable}
             percentileRange={state.percentileRange}
-            featureCount={config._featureCount ?? 0}
+            featureCount={filteredTotalCount ?? 0}
             filteredCount={filteredCount}
             filteredMean={filteredMean}
             filteredMedian={filteredMedian}

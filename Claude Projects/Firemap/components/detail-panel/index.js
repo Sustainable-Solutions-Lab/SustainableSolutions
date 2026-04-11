@@ -25,9 +25,7 @@ export function DetailPanel({ config, cell, state, dispatch }) {
     state.activeDimensions
   )
 
-  const displayVariables = config.variables.filter(
-    (v) => v.type !== 'categorical'
-  )
+  const rawValue = activeVariable ? cell.values[activeVariable.id] : null
 
   return (
     <Box
@@ -78,51 +76,31 @@ export function DetailPanel({ config, cell, state, dispatch }) {
         </Button>
       </Box>
 
-      {/* Variable rows */}
-      <Box sx={{ mb: 3 }}>
-        {displayVariables.map((variable) => {
-          const isActive = activeVariable && activeVariable.id === variable.id
-          const rawValue = cell.values[variable.id]
-
-          return (
-            <Box
-              key={variable.id}
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'baseline',
-                py: 1,
-                px: 1,
-                borderRadius: 'sm',
-                bg: isActive ? 'rgba(91, 138, 78, 0.12)' : 'transparent',
-                borderLeft: isActive ? '2px solid #5B8A4E' : '2px solid transparent',
-              }}
-            >
-              <Text
-                sx={{
-                  variant: 'text.label',
-                  color: isActive ? 'text' : 'muted',
-                  fontSize: 0,
-                  mr: 2,
-                  flexShrink: 0,
-                }}
-              >
-                {variable.label}
-              </Text>
-              <Text
-                sx={{
-                  variant: 'text.mono',
-                  color: isActive ? 'text' : 'muted',
-                  fontSize: 0,
-                  textAlign: 'right',
-                }}
-              >
-                {formatValue(rawValue, variable.unit)}
-              </Text>
-            </Box>
-          )
-        })}
-      </Box>
+      {/* Active variable value */}
+      {activeVariable && (
+        <Box sx={{ mb: 3 }}>
+          <Text
+            sx={{
+              variant: 'text.label',
+              color: 'muted',
+              fontSize: 0,
+              display: 'block',
+              mb: 1,
+            }}
+          >
+            {activeVariable.label}
+          </Text>
+          <Text
+            sx={{
+              variant: 'text.mono',
+              color: 'text',
+              fontSize: 2,
+            }}
+          >
+            {formatValue(rawValue, activeVariable.unit)}
+          </Text>
+        </Box>
+      )}
 
       {/* Benefit vs cost chart */}
       <BenefitCostChart cell={cell} config={config} />

@@ -8,7 +8,7 @@ export const fonts = {
   mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
 }
 
-export const fontSizes = [10, 12, 14, 16, 20, 24, 32]
+export const fontSizes = [15, 18, 21, 24, 30, 36, 48]
 // index:                   0   1   2   3   4   5   6
 
 export const fontWeights = {

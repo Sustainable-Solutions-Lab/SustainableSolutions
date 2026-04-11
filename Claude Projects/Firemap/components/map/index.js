@@ -20,7 +20,7 @@ import { percentileThresholds } from '../../lib/area-stats.js'
  * @param {string}   props.height    - CSS height string
  * @param {Function} [props.onMapReady]  - called with the map instance after load
  */
-export function Map({ config, state, dispatch, height, onMapReady }) {
+export function Map({ config, state, dispatch, height, onMapReady, onFilterStats }) {
   const containerRef = useRef(null)
 
   /** @type {React.MutableRefObject<import('maplibre-gl').Map|null>} */
@@ -117,7 +117,34 @@ export function Map({ config, state, dispatch, height, onMapReady }) {
       ['>=', ['get', variable.id], low],
       ['<=', ['get', variable.id], high],
     ])
-  }, [state.percentileRange, state.activeLayer, state.activeDimensions, config, mapReady])
+
+    // Compute mean / median for filtered features and bubble up to sidebar
+    if (onFilterStats) {
+      const values = features
+        .map((f) => f.properties?.[variable.id])
+        .filter((v) => v != null && !isNaN(v) && v >= low && v <= high)
+      const totalValues = features
+        .map((f) => f.properties?.[variable.id])
+        .filter((v) => v != null && !isNaN(v))
+
+      const mean = values.length > 0
+        ? values.reduce((s, v) => s + v, 0) / values.length
+        : null
+
+      const sorted = [...values].sort((a, b) => a - b)
+      const n = sorted.length
+      const median = n > 0
+        ? (n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)])
+        : null
+
+      onFilterStats({
+        count: values.length,
+        totalCount: totalValues.length,
+        mean,
+        median,
+      })
+    }
+  }, [state.percentileRange, state.activeLayer, state.activeDimensions, config, mapReady, onFilterStats])
 
   // ── Graticule toggle ─────────────────────────────────────────────────────
   const handleGraticuleToggle = () => {

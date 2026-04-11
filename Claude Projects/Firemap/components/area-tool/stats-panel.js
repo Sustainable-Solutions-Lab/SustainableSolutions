@@ -16,10 +16,12 @@ import { Box, Text, Button } from 'theme-ui'
 import { Actions } from '../../contracts/events.js'
 import { formatValue, formatCoord } from '../../lib/format.js'
 
-export function StatsPanel({ config, drawnCircle, aggregateStats, dispatch }) {
+export function StatsPanel({ config, drawnCircle, aggregateStats, areaToolActive, dispatch }) {
   if (!drawnCircle) return null
 
   function handleClose() {
+    // Deactivate the tool first (removes circle from map), then clear stats
+    if (areaToolActive) dispatch({ type: Actions.TOGGLE_AREA_TOOL })
     dispatch({ type: Actions.SET_DRAWN_CIRCLE, circle: null })
     dispatch({ type: Actions.SET_AGGREGATE_STATS, stats: null })
   }
@@ -49,7 +51,7 @@ export function StatsPanel({ config, drawnCircle, aggregateStats, dispatch }) {
           variant='label'
           sx={{ fontSize: 0, fontWeight: 'bold', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'muted' }}
         >
-          Area Selection
+          Regional Data
         </Text>
         <Button
           variant='icon'

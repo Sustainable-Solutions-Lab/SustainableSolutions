@@ -5,7 +5,6 @@ import maplibregl from 'maplibre-gl'
 import { Protocol } from 'pmtiles'
 import { basemapStyle } from './basemap-style.js'
 import { addStaticLayers, setGraticuleVisible as applyGraticuleVisibility } from './static-layers.js'
-import { useClickHandler } from './click-handler.js'
 import { useMapLayer } from '../../lib/use-map-layer.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { percentileThresholds } from '../../lib/area-stats.js'
@@ -74,9 +73,6 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
 
   // ── Data layer (PMTiles / GeoJSON) ───────────────────────────────────────
   useMapLayer(mapReady ? mapRef.current : null, config, state)
-
-  // ── Click handler ────────────────────────────────────────────────────────
-  useClickHandler(mapReady ? mapRef.current : null, config, dispatch)
 
   // ── Color scheme change ──────────────────────────────────────────────────
   useEffect(() => {

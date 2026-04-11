@@ -112,7 +112,7 @@ export function Sidebar({
           />
         )}
 
-        {/* Area tool toggle */}
+        {/* Regional Data toggle */}
         {config.areaTool?.enabled && (
           <Box
             as='button'
@@ -138,7 +138,7 @@ export function Sidebar({
               '&:hover': { color: state.areaToolActive ? 'primary' : 'text' },
             }}
           >
-            {state.areaToolActive ? '× Exit Area Tool' : 'Area Tool'}
+            Regional Data
           </Box>
         )}
 

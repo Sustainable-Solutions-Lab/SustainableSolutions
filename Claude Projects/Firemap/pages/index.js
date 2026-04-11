@@ -6,7 +6,7 @@
  */
 
 /** @jsxImportSource theme-ui */
-import { useReducer, useRef, useState, useCallback } from 'react'
+import { useReducer, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Head from 'next/head'
 import { Box, Flex, Button, useColorMode } from 'theme-ui'
@@ -14,7 +14,6 @@ import { Actions, initialState } from '../contracts/events.js'
 import { projects } from '../projects/index.js'
 import { Map } from '../components/map/index.js'
 import { Sidebar } from '../components/sidebar/index.js'
-import { DetailPanel } from '../components/detail-panel/index.js'
 import { AreaTool } from '../components/area-tool/index.js'
 import { StatsPanel } from '../components/area-tool/stats-panel.js'
 
@@ -205,32 +204,25 @@ export default function Home() {
               onFilterStats={setFilterStats}
             />
 
-            {/* Detail panel — absolute bottom-right inside the map area */}
-            <DetailPanel
-              config={config}
-              cell={state.selectedCell}
-              state={state}
-              dispatch={dispatch}
-            />
-
-            {/* Area stats panel — absolute bottom-left inside the map area */}
+            {/* Regional data stats panel — absolute bottom-left inside the map area */}
             <StatsPanel
               config={config}
               drawnCircle={state.drawnCircle}
               aggregateStats={state.aggregateStats}
+              areaToolActive={state.areaToolActive}
+              dispatch={dispatch}
+            />
+
+            {/* Area tool — inside map container so handle uses absolute positioning */}
+            <AreaTool
+              map={mapInstance}
+              config={config}
+              state={state}
               dispatch={dispatch}
             />
           </Box>
         </Box>
       </Box>
-
-      {/* ── Area tool (logic-only, no DOM output) ───────────────────────────── */}
-      <AreaTool
-        map={mapInstance}
-        config={config}
-        state={state}
-        dispatch={dispatch}
-      />
 
       {/* ── Methods overlay ──────────────────────────────────────────────────── */}
       {state.methodsOpen && (

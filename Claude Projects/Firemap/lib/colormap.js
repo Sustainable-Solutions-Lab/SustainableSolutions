@@ -18,12 +18,17 @@ import {
 } from 'd3-scale-chromatic'
 
 const INTERPOLATORS = {
-  RdBu: (t) => interpolateRdBu(1 - t), // reversed: blue = high benefit
+  // Standard RdBu: t=0 → red (costs > benefits), t=1 → blue (benefits > costs)
+  RdBu: interpolateRdBu,
   PuOr: interpolatePuOr,
   Greens: interpolateGreens,
   Oranges: interpolateOranges,
   YlOrRd: interpolateYlOrRd,
   Blues: interpolateBlues,
+  // Blue half of RdBu — for benefit variables: low=transparent, high=blue
+  RdBuBlue: (t) => interpolateRdBu(0.5 + t * 0.5),
+  // Red half of RdBu — for cost variables: low=transparent, high=red
+  RdBuRed: (t) => interpolateRdBu(0.5 - t * 0.5),
 }
 
 /**

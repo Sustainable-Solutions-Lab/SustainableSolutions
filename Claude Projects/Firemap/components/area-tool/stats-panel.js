@@ -139,58 +139,65 @@ function MiniHistogram({ values, variable, isDark }) {
   )
 }
 
-// ── Mini pie chart (for categorical variables) ────────────────────────────────
+// ── Stacked bar (for categorical variables) ───────────────────────────────────
 
-const PIE_SIZE = 72
-
-function MiniPieChart({ values, variable, isDark }) {
+function StackedBar({ values, variable, isDark }) {
   const categories = variable.categories ?? []
   const total = values.length
   if (total === 0) return null
 
-  // Count occurrences of each category
-  const counts = {}
-  for (const v of values) counts[v] = (counts[v] ?? 0) + 1
+  const textColor = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)'
 
-  const textColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'
-  const cx = PIE_SIZE / 2
-  const cy = PIE_SIZE / 2
-  const r  = PIE_SIZE / 2 - 1
+  // Count and compute fractions — preserve config order, skip zeros
+  const segments = categories
+    .map((cat) => {
+      const count = values.filter((v) => v === cat.id).length
+      return { cat, count, frac: count / total }
+    })
+    .filter((s) => s.count > 0)
 
-  // Build slices — include only categories present in data
-  const slices = []
-  let startAngle = -Math.PI / 2
-  for (const cat of categories) {
-    const count = counts[cat.id] ?? 0
-    if (count === 0) continue
-    const frac = count / total
-    const sweep = frac * 2 * Math.PI
-    slices.push({ cat, frac, startAngle, endAngle: startAngle + sweep })
-    startAngle += sweep
-  }
-
-  function arcPath(s, e) {
-    const x1 = cx + r * Math.cos(s)
-    const y1 = cy + r * Math.sin(s)
-    const x2 = cx + r * Math.cos(e)
-    const y2 = cy + r * Math.sin(e)
-    const large = (e - s) > Math.PI ? 1 : 0
-    return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`
-  }
+  // Build SVG segments: each rect starts where the previous ended
+  let cursor = 0
+  const BAR_W = 220
+  const BAR_H = 18
 
   return (
-    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-      <svg width={PIE_SIZE} height={PIE_SIZE} style={{ flexShrink: 0 }}>
-        {slices.map((sl, i) => (
-          <path key={i} d={arcPath(sl.startAngle, sl.endAngle)} fill={sl.cat.color} opacity={0.85} />
-        ))}
+    <div style={{ width: '100%' }}>
+      {/* Stacked bar */}
+      <svg
+        viewBox={`0 0 ${BAR_W} ${BAR_H}`}
+        preserveAspectRatio='none'
+        style={{ width: '100%', height: BAR_H, display: 'block', borderRadius: 2, overflow: 'hidden' }}
+      >
+        {segments.map((seg, i) => {
+          const x = cursor * BAR_W
+          const w = seg.frac * BAR_W
+          cursor += seg.frac
+          return (
+            <rect
+              key={i}
+              x={x} y={0}
+              width={Math.max(w, 0.5)} height={BAR_H}
+              fill={seg.cat.color}
+              opacity={0.85}
+            />
+          )
+        })}
       </svg>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {slices.map((sl, i) => (
+
+      {/* Legend rows — one per present category */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 5 }}>
+        {segments.map((seg, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: sl.cat.color, flexShrink: 0 }} />
-            <span style={{ fontFamily: 'sans-serif', fontSize: 10, color: textColor, whiteSpace: 'nowrap' }}>
-              {sl.cat.label} {Math.round(sl.frac * 100)}%
+            <div style={{
+              width: 8, height: 8, borderRadius: 1,
+              background: seg.cat.color, opacity: 0.85, flexShrink: 0,
+            }} />
+            <span style={{ fontFamily: 'monospace', fontSize: 10, color: textColor, whiteSpace: 'nowrap' }}>
+              {seg.cat.label}
+            </span>
+            <span style={{ fontFamily: 'monospace', fontSize: 10, color: textColor, marginLeft: 'auto', paddingLeft: 8 }}>
+              {Math.round(seg.frac * 100)}%
             </span>
           </div>
         ))}
@@ -274,7 +281,7 @@ export function StatsPanel({ drawnCircle, aggregateStats, areaToolActive, active
 
       {/* Histogram (numeric) or pie chart (categorical) */}
       {hasData && isCategorical && (
-        <MiniPieChart values={activeVarValues} variable={activeVariable} isDark={isDark} />
+        <StackedBar values={activeVarValues} variable={activeVariable} isDark={isDark} />
       )}
       {hasData && !isCategorical && (
         <MiniHistogram values={activeVarValues} variable={activeVariable} isDark={isDark} />

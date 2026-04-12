@@ -25,7 +25,13 @@ function reducer(state, action) {
     case Actions.SET_PROJECT:
       return { ...state, projectId: action.projectId }
     case Actions.SET_LAYER:
-      return { ...state, activeLayer: action.layerId }
+      return {
+        ...state,
+        activeLayer: action.layerId,
+        ...(action.dimensionResets
+          ? { activeDimensions: { ...state.activeDimensions, ...action.dimensionResets } }
+          : {}),
+      }
     case Actions.SET_DIMENSION:
       return {
         ...state,

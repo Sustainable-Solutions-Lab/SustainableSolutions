@@ -80,10 +80,9 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       ...(config.region.bounds ? { bounds: config.region.bounds } : {}),
       // Allow zoom anywhere within CA but prevent panning far outside
       maxBounds: [-132, 26, -106, 48],
+      // Disable built-in attribution — we render our own static text below
+      attributionControl: false,
     })
-
-    // Compact attribution — collapsed by default, styled via global CSS
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
 
     mapRef.current = map
 
@@ -268,6 +267,46 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         >
           <GlobeIcon />
         </button>
+      </div>
+
+      {/* Static attribution — replaces MapLibre's built-in control */}
+      <div style={{
+        position: 'absolute',
+        bottom: 4,
+        right: 6,
+        fontSize: 10,
+        fontFamily: 'sans-serif',
+        color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
+        pointerEvents: 'none',
+        userSelect: 'none',
+      }}>
+        © <a
+          href='https://maplibre.org'
+          target='_blank'
+          rel='noopener noreferrer'
+          style={{ color: 'inherit', textDecoration: 'none', pointerEvents: 'auto' }}
+        >MapLibre</a>
+        {' · '}
+        <a
+          href='https://stadiamaps.com/attribution'
+          target='_blank'
+          rel='noopener noreferrer'
+          style={{ color: 'inherit', textDecoration: 'none', pointerEvents: 'auto' }}
+        >Stadia Maps</a>
+        {' · '}
+        <a
+          href='https://openmaptiles.org/attribution'
+          target='_blank'
+          rel='noopener noreferrer'
+          style={{ color: 'inherit', textDecoration: 'none', pointerEvents: 'auto' }}
+        >OpenMapTiles</a>
+        {' · '}
+        <a
+          href='https://www.openstreetmap.org/copyright'
+          target='_blank'
+          rel='noopener noreferrer'
+          style={{ color: 'inherit', textDecoration: 'none', pointerEvents: 'auto' }}
+        >OpenStreetMap</a>
       </div>
     </div>
   )

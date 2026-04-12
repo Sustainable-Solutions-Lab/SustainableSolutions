@@ -24,44 +24,9 @@ const globalStyles = css`
     height: 30px !important;
     padding: 0 !important;
   }
-  /* Force compact attribution to stay collapsed — hide text in non-expanded state */
-  .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-inner {
+  /* Hide MapLibre's built-in attribution entirely — we render our own static text */
+  .maplibregl-ctrl-attrib {
     display: none !important;
-  }
-  .maplibregl-ctrl-attrib-button {
-    width: 24px !important;
-    height: 24px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    /* background-color transparent removes the white box; background-image "i" is preserved */
-    background-color: transparent !important;
-    border: none !important;
-    opacity: 0.45 !important;
-    /* Hide any raw text that MapLibre v4 may put in the button */
-    font-size: 0 !important;
-    overflow: hidden !important;
-  }
-  .maplibregl-ctrl-attrib-button:hover {
-    opacity: 0.8 !important;
-  }
-  /* Remove blue focus ring */
-  .maplibregl-ctrl-attrib-button:focus,
-  .maplibregl-ctrl-attrib-button:active {
-    outline: none !important;
-    box-shadow: none !important;
-  }
-  /* Expanded attribution panel (after clicking the "i") */
-  .maplibregl-ctrl-attrib.maplibregl-compact-show {
-    background: rgba(255, 255, 255, 0.88) !important;
-    width: auto !important;
-    height: auto !important;
-    padding: 4px 10px !important;
-    border-radius: 4px !important;
-  }
-  .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner,
-  .maplibregl-ctrl-attrib.maplibregl-compact-show a {
-    font-size: 11px !important;
-    color: rgba(60, 60, 60, 0.8) !important;
   }
 `
 

@@ -9,6 +9,26 @@ import { Flex, Box } from 'theme-ui'
 import { Actions } from '../../contracts/events.js'
 
 export function LayerTabs({ config, state, dispatch }) {
+  function handleLayerChange(layerId) {
+    // If any currently-active dimension value is hidden in the target layer
+    // (via visibleForLayers), reset it. Fall back to 'min' if it exists,
+    // otherwise the dimension's defaultValue.
+    const dimensionResets = {}
+    for (const dim of config.dimensions) {
+      const current = state.activeDimensions[dim.id] ?? dim.defaultValue
+      const opt = dim.options?.find((o) => o.id === current)
+      if (opt?.visibleForLayers && !opt.visibleForLayers.includes(layerId)) {
+        const hasMIn = dim.options?.some((o) => o.id === 'min')
+        dimensionResets[dim.id] = hasMIn ? 'min' : dim.defaultValue
+      }
+    }
+    dispatch({
+      type: Actions.SET_LAYER,
+      layerId,
+      ...(Object.keys(dimensionResets).length ? { dimensionResets } : {}),
+    })
+  }
+
   return (
     <Flex sx={{ flexWrap: 'wrap', gap: 0, mb: 3 }}>
       {config.layers.filter((layer) => !layer.hidden).map((layer) => {
@@ -17,7 +37,7 @@ export function LayerTabs({ config, state, dispatch }) {
           <Box
             key={layer.id}
             as='button'
-            onClick={() => dispatch({ type: Actions.SET_LAYER, layerId: layer.id })}
+            onClick={() => handleLayerChange(layer.id)}
             sx={{
               bg: 'transparent',
               border: 'none',

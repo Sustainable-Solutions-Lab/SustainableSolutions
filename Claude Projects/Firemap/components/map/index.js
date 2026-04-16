@@ -77,8 +77,8 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       container: containerRef.current,
       style: basemapStyle(schemeRef.current),
       center: config.region.center,
-      zoom: isMobile ? 4.5 : 6,
-      minZoom: isMobile ? 3.5 : 6,
+      zoom: isMobile ? 4.5 : 5,
+      minZoom: isMobile ? 3.5 : 5,
       maxZoom: 9.5,
       // Disable built-in attribution — we render our own static text below
       attributionControl: false,

@@ -165,11 +165,13 @@ export function useMapLayer(map, config, state, opacityP95) {
         map.addSource(SOURCE_ID, sourceConfig)
 
         const variable = variableRef.current
-        // Insert circles ABOVE the CA mask but BELOW city labels.
-        // The mask (fill-opacity:1) covers non-CA basemap; putting circles above
-        // it avoids the race condition where the mask gets re-added on top of circles
-        // after a style reload (dark/light toggle).  All our data is within CA so
-        // nothing meaningfully escapes the mask's visual boundary anyway.
+        // COARSE circles sit BELOW ca-mask-fill so the mask clips any border-straddling
+        // 0.1° cells that extend outside California.
+        // MED/AGG sit ABOVE the mask (below city labels) — their cells are fine-grained
+        // enough that border artifacts are negligible.
+        const beforeCoarse = map.getLayer('ca-mask-fill') ? 'ca-mask-fill'
+                           : map.getLayer('city-labels-r1') ? 'city-labels-r1'
+                           : undefined
         const before = map.getLayer('city-labels-r1') ? 'city-labels-r1'
                      : map.getLayer('ca-border')      ? 'ca-border'
                      : undefined
@@ -195,7 +197,7 @@ export function useMapLayer(map, config, state, opacityP95) {
             'circle-stroke-width': 0,
             'circle-blur':         0,
           },
-        }, before)
+        }, beforeCoarse)
 
         // ── Finest dev LOD: scale 3–9 (0.03° grid, 36,670 cells), zoom 7+ ──
         // Replaces COARSE at zoom 7 so there is no overlap at the default view.

@@ -31,6 +31,16 @@ const INTERPOLATORS = {
   // Red half of RdBu — for cost variables: low=light red, high=deep red
   // Starts at 0.38 (not 0.5/white) so even low values show a visible red
   RdBuRed: (t) => interpolateRdBu(0.38 - t * 0.38),
+
+  // Scheme-aware variants that top out at the same hues as the diverging anchors:
+  //   dark  blue anchor: #4393c3 ≈ interpolateRdBu(0.80)
+  //   light blue anchor: #2166ac ≈ interpolateRdBu(0.90)
+  //   dark  red  anchor: #d6604d ≈ interpolateRdBu(0.20)
+  //   light red  anchor: #b2182b ≈ interpolateRdBu(0.10)
+  RdBuBlueDark:  (t) => interpolateRdBu(0.62 + t * 0.18),
+  RdBuBlueLight: (t) => interpolateRdBu(0.57 + t * 0.33),
+  RdBuRedDark:   (t) => interpolateRdBu(0.38 - t * 0.18),
+  RdBuRedLight:  (t) => interpolateRdBu(0.43 - t * 0.33),
 }
 
 /**

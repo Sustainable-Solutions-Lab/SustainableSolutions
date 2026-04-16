@@ -102,7 +102,11 @@ function ContinuousLegend({ variable, allValues = [], isDark = true }) {
       ${red} 100%)`
   } else {
     // Sequential: high value on left (reverse the gradient)
-    const stops = buildLegendStops({ ...variable, domain: effectiveDomain }, 30)
+    // Use scheme-aware colormap so colors match the diverging anchors
+    let cm = variable.colormap
+    if (cm === 'RdBuBlue') cm = isDark ? 'RdBuBlueDark' : 'RdBuBlueLight'
+    if (cm === 'RdBuRed')  cm = isDark ? 'RdBuRedDark'  : 'RdBuRedLight'
+    const stops = buildLegendStops({ ...variable, domain: effectiveDomain, colormap: cm }, 30)
     const parts = stops.map((stop, i) => {
       const alpha = 0.15 + (i / (stops.length - 1)) * 0.85
       return `${withAlpha(stop.color, alpha)} ${(i / (stops.length - 1) * 100).toFixed(1)}%`
@@ -176,7 +180,10 @@ function MobileContinuousLegend({ variable, allValues = [], isDark }) {
     const redRgb  = isDark ? '214,96,77'  : '178,24,43'
     gradient = `linear-gradient(to right, ${blue} 0%, rgba(${blueRgb},0) ${zeroPct.toFixed(1)}%, rgba(${redRgb},0) ${zeroPct.toFixed(1)}%, ${red} 100%)`
   } else {
-    const stops = buildLegendStops({ ...variable, domain: effectiveDomain }, 30)
+    let cm = variable.colormap
+    if (cm === 'RdBuBlue') cm = isDark ? 'RdBuBlueDark' : 'RdBuBlueLight'
+    if (cm === 'RdBuRed')  cm = isDark ? 'RdBuRedDark'  : 'RdBuRedLight'
+    const stops = buildLegendStops({ ...variable, domain: effectiveDomain, colormap: cm }, 30)
     const parts = stops.map((stop, i) => {
       const alpha = 0.15 + (i / (stops.length - 1)) * 0.85
       return `${withAlpha(stop.color, alpha)} ${(i / (stops.length - 1) * 100).toFixed(1)}%`

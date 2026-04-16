@@ -423,7 +423,11 @@ function buildColorExpression(variable, colorRange = null, isDark = true) {
   const effectiveDomain = colorRange
     ? { ...variable.domain, min: colorRange.min, max: colorRange.max }
     : variable.domain
-  const scale = buildColorScale({ ...variable, domain: effectiveDomain })
+  // Pick scheme-aware colormap so the high-value color matches the diverging anchors
+  let colormapName = variable.colormap
+  if (colormapName === 'RdBuBlue') colormapName = isDark ? 'RdBuBlueDark' : 'RdBuBlueLight'
+  if (colormapName === 'RdBuRed')  colormapName = isDark ? 'RdBuRedDark'  : 'RdBuRedLight'
+  const scale = buildColorScale({ ...variable, domain: effectiveDomain, colormap: colormapName })
   const { min, max } = effectiveDomain
   const steps = 24
   const expr = ['interpolate', ['linear'], ['get', variable.id]]

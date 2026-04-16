@@ -6,6 +6,7 @@ export const fonts = {
   body: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   heading: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+  serif: 'var(--font-source-serif), "Source Serif 4", Georgia, serif',
 }
 
 export const fontSizes = [11, 14, 16, 18, 23, 27, 36]

@@ -1,7 +1,16 @@
 import { ThemeProvider } from 'theme-ui'
 import { Global, css } from '@emotion/react'
+import { Source_Serif_4 } from 'next/font/google'
 import theme from '../theme/index.js'
 import 'maplibre-gl/dist/maplibre-gl.css'
+
+const sourceSerif4 = Source_Serif_4({
+  subsets: ['latin'],
+  weight: ['400', '600', '700'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-source-serif',
+})
 
 const globalStyles = css`
   /* Position bottom-right controls flush with our button stack */
@@ -34,7 +43,9 @@ export default function App({ Component, pageProps }) {
   return (
     <ThemeProvider theme={theme}>
       <Global styles={globalStyles} />
-      <Component {...pageProps} />
+      <div className={sourceSerif4.variable} style={{ display: 'contents' }}>
+        <Component {...pageProps} />
+      </div>
     </ThemeProvider>
   )
 }

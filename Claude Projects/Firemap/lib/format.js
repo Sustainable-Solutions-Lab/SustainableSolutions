@@ -15,11 +15,22 @@ export function formatValue(value, unit) {
 
   let formatted
   const abs = Math.abs(value)
+  const sign = value < 0 ? '-' : ''
+
+  // Handle $k unit label — values are raw dollars, displayed with k/M suffix.
+  // e.g. unit='$k/km²', value=200000 → '$200k/km²'
+  //      unit='$k/km²', value=1500000 → '$1.5M/km²'
+  if (unit.startsWith('$k')) {
+    const suffix = unit.slice(2)  // e.g. '/km²'
+    if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)}M${suffix}`
+    if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(0)}k${suffix}`
+    return `${sign}$${abs.toFixed(0)}${suffix}`
+  }
 
   if (unit.startsWith('$')) {
-    if (abs >= 1e6) formatted = `$${(value / 1e6).toFixed(1)}M`
-    else if (abs >= 1e3) formatted = `$${(value / 1e3).toFixed(0)}k`
-    else formatted = `$${value.toFixed(0)}`
+    if (abs >= 1e6) formatted = `${sign}$${(abs / 1e6).toFixed(1)}M`
+    else if (abs >= 1e3) formatted = `${sign}$${(abs / 1e3).toFixed(0)}k`
+    else formatted = `${sign}$${abs.toFixed(0)}`
     // Append the rest of the unit after the $ prefix
     const rest = unit.slice(1)
     return rest ? `${formatted}${rest}` : formatted
@@ -27,8 +38,7 @@ export function formatValue(value, unit) {
 
   if (abs >= 1e6) formatted = `${(value / 1e6).toFixed(1)}M`
   else if (abs >= 1e3) formatted = `${(value / 1e3).toFixed(0)}k`
-  else if (abs < 10) formatted = value.toFixed(2)
-  else formatted = value.toFixed(0)
+  else formatted = Math.round(value).toString()
 
   return unit ? `${formatted} ${unit}` : formatted
 }

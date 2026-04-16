@@ -21,6 +21,9 @@ const theme = {
   lineHeights,
   letterSpacings,
 
+  // Breakpoints: mobile < 768px, desktop >= 768px
+  breakpoints: ['48em', '64em', '80em'],
+
   space: [0, 4, 8, 12, 16, 24, 32, 48, 64],
   // index: 0  1  2   3   4   5   6   7   8
 

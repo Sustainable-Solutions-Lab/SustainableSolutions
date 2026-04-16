@@ -19,6 +19,9 @@ import { Actions } from '../../contracts/events.js'
 import { buildColorScale } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
 
+const POS_COLOR = '#4393c3'
+const NEG_COLOR = '#d6604d'
+
 // ── Mini histogram ────────────────────────────────────────────────────────────
 
 const HIST_W = 220
@@ -26,40 +29,54 @@ const HIST_H = 60
 const N_BINS = 24
 
 function MiniHistogram({ values, variable, isDark }) {
-  // Use actual data range for domain so colors are vivid (not washed out by a wide config domain)
-  const scale = useMemo(() => {
-    if (!variable || !values?.length) return null
-    const actualMin = Math.min(...values)
-    const actualMax = Math.max(...values)
-    if (variable.diverging) {
-      const maxAbs = Math.max(Math.abs(actualMin), Math.abs(actualMax))
-      return buildColorScale({ ...variable, domain: { min: -maxAbs, max: maxAbs, zero: 0 } })
+  // Compute p1/p99 clip range once — shared by scale and bins
+  const { p01, p99: p99val } = useMemo(() => {
+    if (!values?.length) return { p01: 0, p99: 1 }
+    const s = [...values].sort((a, b) => a - b)
+    return {
+      p01: s[Math.floor(s.length * 0.01)] ?? s[0],
+      p99: s[Math.floor(s.length * 0.99)] ?? s[s.length - 1],
     }
-    return buildColorScale({ ...variable, domain: { min: actualMin, max: actualMax } })
-  }, [variable, values])
+  }, [values])
 
-  const { bins, binWidth, min, max, mean, median } = useMemo(() => {
-    if (!values?.length || !variable) return { bins: [], binWidth: 0, min: 0, max: 1, mean: null, median: null }
+  const scale = useMemo(() => {
+    if (!variable || variable.diverging || !values?.length) return null
+    return buildColorScale({ ...variable, domain: { min: p01, max: p99val } })
+  }, [variable, values, p01, p99val])
 
-    // Use actual data range so histogram spans only present values, not the full domain
-    const domMin = Math.min(...values)
-    const domMax = Math.max(...values)
+  const { bins, binWidth, min, max, mean, median, maxPosDev, maxNegDev } = useMemo(() => {
+    if (!values?.length || !variable) return { bins: [], binWidth: 0, min: 0, max: 1, mean: null, median: null, maxPosDev: 1, maxNegDev: 1 }
+
+    // Use p1–p99 as the bin range so outliers don't squash the distribution.
+    // Values outside the range are clamped into the edge bins.
+    const domMin = p01
+    const domMax = p99val
     const range = domMax - domMin || 1
     const bw = range / N_BINS
 
     const counts = Array(N_BINS).fill(0)
     for (const v of values) {
-      const i = Math.min(N_BINS - 1, Math.floor((v - domMin) / bw))
-      if (i >= 0) counts[i]++
+      const i = Math.max(0, Math.min(N_BINS - 1, Math.floor((v - domMin) / bw)))
+      counts[i]++
     }
 
     const mean_ = values.reduce((s, v) => s + v, 0) / values.length
-    const sorted = [...values].sort((a, b) => a - b)
-    const n = sorted.length
+    const sv = [...values].sort((a, b) => a - b)
+    const n = sv.length
     const median_ = n % 2 === 0
-      ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
-      : sorted[Math.floor(n / 2)]
+      ? (sv[n / 2 - 1] + sv[n / 2]) / 2
+      : sv[Math.floor(n / 2)]
 
+    const zero = variable.domain?.zero ?? 0
+    // Per-side p99 so both extremes reach full opacity (matching map + statewide chart)
+    const posDevs = values.filter(v => v > zero).map(v => v - zero).sort((a, b) => a - b)
+    const negDevs = values.filter(v => v < zero).map(v => zero - v).sort((a, b) => a - b)
+    const maxPosDev = posDevs.length > 0
+      ? Math.max(posDevs[Math.floor(posDevs.length * 0.99)] ?? posDevs[posDevs.length - 1], 0.001)
+      : Math.max(domMax - zero, 0.001)
+    const maxNegDev = negDevs.length > 0
+      ? Math.max(negDevs[Math.floor(negDevs.length * 0.99)] ?? negDevs[negDevs.length - 1], 0.001)
+      : Math.max(zero - domMin, 0.001)
     return {
       bins: counts,
       binWidth: bw,
@@ -67,17 +84,18 @@ function MiniHistogram({ values, variable, isDark }) {
       max: domMax,
       mean: mean_,
       median: median_,
+      maxPosDev,
+      maxNegDev,
     }
-  }, [values, variable])
+  }, [values, variable, p01, p99val])
 
-  if (!bins.length || !scale) return null
+  if (!bins.length || (!scale && !variable?.diverging)) return null
 
   const maxCount = Math.max(...bins, 1)
   const barW = HIST_W / N_BINS
+  const zero = variable?.domain?.zero ?? 0
 
-  // Map a domain value to SVG x coordinate
   const valueToX = (v) => ((v - min) / (max - min)) * HIST_W
-
   const axisColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'
   const labelColor = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)'
 
@@ -91,6 +109,19 @@ function MiniHistogram({ values, variable, isDark }) {
       {bins.map((count, i) => {
         const binMid = min + (i + 0.5) * binWidth
         const barH = (count / maxCount) * HIST_H
+
+        // Diverging: binary color + asymmetric opacity (matching statewide chart)
+        // Sequential: continuous colormap, flat opacity
+        const fill = variable.diverging
+          ? (binMid >= zero ? POS_COLOR : NEG_COLOR)
+          : scale(binMid)
+        const tRaw = variable.diverging
+          ? (binMid >= zero
+              ? Math.min(1, (binMid - zero) / maxPosDev)
+              : Math.min(1, (zero - binMid) / maxNegDev))
+          : 1
+        const opacity = variable.diverging ? (0.15 + 0.85 * Math.pow(tRaw, 0.4)) : 0.85
+
         return (
           <rect
             key={i}
@@ -98,8 +129,8 @@ function MiniHistogram({ values, variable, isDark }) {
             y={HIST_H - barH}
             width={Math.max(barW - 0.5, 0.5)}
             height={barH}
-            fill={scale(binMid)}
-            opacity={0.85}
+            fill={fill}
+            opacity={opacity}
           />
         )
       })}

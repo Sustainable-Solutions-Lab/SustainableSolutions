@@ -20,11 +20,11 @@ export function DimensionControl({ dimension, value, dispatch }) {
       <Text
         sx={{
           fontFamily: 'body',
-          fontSize: 0,
+          fontSize: 1,
           fontWeight: 'bold',
           letterSpacing: 'caps',
           textTransform: 'uppercase',
-          color: 'muted',
+          color: 'text',
           mb: 2,
           display: 'block',
         }}
@@ -71,8 +71,10 @@ function ToggleControl({ dimension, value, onChange }) {
             onClick={() => onChange(option.id)}
             sx={{
               fontFamily: 'body',
-              fontSize: '10px',
+              fontSize: '12px',
               fontWeight: isActive ? 'bold' : 'body',
+              letterSpacing: 'caps',
+              textTransform: 'uppercase',
               lineHeight: 'body',
               cursor: 'pointer',
               px: '6px',
@@ -82,6 +84,8 @@ function ToggleControl({ dimension, value, onChange }) {
               border: 'none',
               bg: 'transparent',
               color: isActive ? 'text' : 'muted',
+              textDecoration: isActive ? 'underline' : 'none',
+              textUnderlineOffset: '3px',
               transition: 'color 0.1s',
               whiteSpace: 'nowrap',
               '&:hover': { color: 'text' },
@@ -105,13 +109,13 @@ function SliderControl({ dimension, value, onChange }) {
   return (
     <Box>
       <Flex sx={{ justifyContent: 'space-between', mb: 1 }}>
-        <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'muted' }}>
+        <Text sx={{ fontFamily: 'mono', fontSize: 1, color: 'muted' }}>
           {min}{dimension.unit ? ` ${dimension.unit}` : ''}
         </Text>
-        <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'text' }}>
+        <Text sx={{ fontFamily: 'mono', fontSize: 1, color: 'text' }}>
           {numericValue}{dimension.unit ? ` ${dimension.unit}` : ''}
         </Text>
-        <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'muted' }}>
+        <Text sx={{ fontFamily: 'mono', fontSize: 1, color: 'muted' }}>
           {max}{dimension.unit ? ` ${dimension.unit}` : ''}
         </Text>
       </Flex>

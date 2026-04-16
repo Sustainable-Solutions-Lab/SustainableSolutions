@@ -14,3 +14,4 @@ __pycache__/
 *.pyc
 scripts/venv/
 scripts/.venv/
+.vercel

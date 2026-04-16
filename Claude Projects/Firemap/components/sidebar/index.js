@@ -13,7 +13,8 @@
  *   filteredMedian  - number | null
  */
 
-import { Box, Flex, Text } from 'theme-ui'
+import { useState } from 'react'
+import { Box, Text } from 'theme-ui'
 import { Actions } from '../../contracts/events.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { LayerTabs } from './layer-tabs.js'
@@ -27,6 +28,7 @@ export function Sidebar({
   dispatch,
   allValues = [],
 }) {
+  const [aboutOpen, setAboutOpen] = useState(false)
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
   const activeDimensionIds = activeLayerConfig?.dimensionIds ?? []
@@ -72,9 +74,9 @@ export function Sidebar({
         {/* Project title */}
         <Text
           sx={{
-            fontFamily: 'body',
-            fontSize: 2,
-            fontWeight: 'bold',
+            fontFamily: 'serif',
+            fontSize: '22px',
+            fontWeight: '600',
             color: 'text',
             lineHeight: 'heading',
             display: 'block',
@@ -83,17 +85,60 @@ export function Sidebar({
         >
           {config.title}
         </Text>
+        {/* About toggle */}
+        <Box
+          as='button'
+          onClick={() => setAboutOpen((o) => !o)}
+          sx={{
+            display: 'block',
+            width: '100%',
+            mb: aboutOpen ? 2 : 3,
+            fontFamily: 'body',
+            fontSize: 1,
+            fontWeight: 'bold',
+            letterSpacing: 'caps',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+            py: 0,
+            px: 0,
+            border: 'none',
+            bg: 'transparent',
+            textAlign: 'left',
+            color: aboutOpen ? 'text' : 'muted',
+            transition: 'color 0.1s',
+            '&:hover': { color: 'text' },
+          }}
+        >
+          About
+        </Box>
+        {aboutOpen && (
+          <Box
+            dangerouslySetInnerHTML={{ __html: config.description }}
+            sx={{
+              fontFamily: 'body',
+              fontSize: 0,
+              color: 'text',
+              lineHeight: 'body',
+              mb: 3,
+              'a': { color: 'text', textDecoration: 'underline', '&:hover': { opacity: 0.75 } },
+            }}
+          />
+        )}
+
+        {/* MAP section header */}
         <Text
           sx={{
             fontFamily: 'body',
-            fontSize: 0,
-            color: 'muted',
-            lineHeight: 'body',
+            fontSize: 1,
+            fontWeight: 'bold',
+            letterSpacing: 'caps',
+            textTransform: 'uppercase',
+            color: 'text',
             display: 'block',
-            mb: 3,
+            mb: 2,
           }}
         >
-          {config.description}
+          Map
         </Text>
 
         {/* Layer tabs */}
@@ -124,24 +169,28 @@ export function Sidebar({
             allValues={allValues}
             percentileRange={state.percentileRange}
             dispatch={dispatch}
+            isDark={state.colorScheme === 'dark'}
           />
         )}
 
         {/* Legend / colorbar */}
-        <Legend variable={activeVariable} allValues={allValues} />
+        <Legend variable={activeVariable} allValues={allValues} isDark={state.colorScheme === 'dark'} />
 
         {/* Regional Data toggle */}
         {config.areaTool?.enabled && (
           <Box
             as='button'
-            onClick={() => dispatch({ type: Actions.TOGGLE_AREA_TOOL })}
+            onClick={() => {
+              if (state.methodsOpen) dispatch({ type: Actions.TOGGLE_METHODS })
+              dispatch({ type: Actions.TOGGLE_AREA_TOOL })
+            }}
             sx={{
               display: 'block',
               width: '100%',
               mb: 1,
               mt: 2,
               fontFamily: 'body',
-              fontSize: 0,
+              fontSize: 1,
               fontWeight: 'bold',
               letterSpacing: 'caps',
               textTransform: 'uppercase',
@@ -151,16 +200,16 @@ export function Sidebar({
               border: 'none',
               bg: 'transparent',
               textAlign: 'left',
-              color: state.areaToolActive ? 'primary' : 'muted',
+              color: state.areaToolActive ? 'text' : 'muted',
               transition: 'color 0.1s',
-              '&:hover': { color: state.areaToolActive ? 'primary' : 'text' },
+              '&:hover': { color: 'text' },
             }}
           >
             Regional Data
           </Box>
         )}
 
-        {/* Methods */}
+        {/* Read Methods */}
         <Box
           as='button'
           onClick={() => dispatch({ type: Actions.TOGGLE_METHODS })}
@@ -169,7 +218,7 @@ export function Sidebar({
             width: '100%',
             mt: 1,
             fontFamily: 'body',
-            fontSize: 0,
+            fontSize: 1,
             fontWeight: 'bold',
             letterSpacing: 'caps',
             textTransform: 'uppercase',
@@ -184,31 +233,10 @@ export function Sidebar({
             '&:hover': { color: 'text' },
           }}
         >
-          Methods
+          Read Methods
         </Box>
       </Box>
 
-      {/* Lab symbol — bottom of sidebar */}
-      <Flex
-        sx={{
-          justifyContent: 'center',
-          alignItems: 'center',
-          py: 3,
-        }}
-      >
-        <a
-          href='https://sustainablesolutions.stanford.edu'
-          target='_blank'
-          rel='noopener noreferrer'
-          style={{ lineHeight: 0 }}
-        >
-          <img
-            src={state.colorScheme === 'dark' ? '/LabLogo_light.png' : '/LabLogo_border.png'}
-            alt='Sustainable Solutions Lab'
-            style={{ width: 36, height: 36, objectFit: 'contain' }}
-          />
-        </a>
-      </Flex>
     </Box>
   )
 }

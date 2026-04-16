@@ -16,13 +16,13 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Actions } from '../../contracts/events.js'
 import { haversineKm, featuresWithinCircle, computeAggregateStats } from '../../lib/area-stats.js'
-import { LAYER_ID as FIREMAP_LAYER_ID } from '../../lib/use-map-layer.js'
+import { LAYER_IDS } from '../../lib/use-map-layer.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 
 const CIRCLE_SOURCE_ID = 'area-circle'
+const CIRCLE_MASK_LAYER_ID = 'area-circle-mask'
 const CIRCLE_FILL_LAYER_ID = 'area-circle-fill'
 const CIRCLE_LINE_LAYER_ID = 'area-circle-line'
-const DEFAULT_RADIUS_KM = 50
 const MIN_RADIUS_KM = 5
 const HANDLE_PX = 8
 
@@ -45,8 +45,24 @@ function circleToGeoJSON(lat, lng, radiusKm, nPoints = 64) {
   return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] }, properties: {} }
 }
 
+// World polygon with a circular hole — dims everything outside the selection circle.
+// Outer ring covers the whole world; inner ring (reversed winding) punches the hole.
+function worldWithHole(circlePoly) {
+  const world = [[-180, -89], [180, -89], [180, 89], [-180, 89], [-180, -89]]
+  const hole  = [...circlePoly.geometry.coordinates[0]].reverse()
+  return {
+    type: 'Feature',
+    geometry: { type: 'Polygon', coordinates: [world, hole] },
+    properties: { _mask: 1 },
+  }
+}
+
 function drawCircleOnMap(map, lat, lng, radiusKm, isDark = true) {
-  const geojson = { type: 'FeatureCollection', features: [circleToGeoJSON(lat, lng, radiusKm)] }
+  const circlePoly = circleToGeoJSON(lat, lng, radiusKm)
+  const geojson = {
+    type: 'FeatureCollection',
+    features: [circlePoly, worldWithHole(circlePoly)],
+  }
   const lineColor = circleLineColor(isDark)
 
   if (map.getSource(CIRCLE_SOURCE_ID)) {
@@ -55,13 +71,18 @@ function drawCircleOnMap(map, lat, lng, radiusKm, isDark = true) {
     map.addSource(CIRCLE_SOURCE_ID, { type: 'geojson', data: geojson })
   }
 
-  if (!map.getLayer(CIRCLE_FILL_LAYER_ID)) {
+  // Dim mask — world-with-hole polygon tagged with _mask=1 dims everything outside circle
+  if (!map.getLayer(CIRCLE_MASK_LAYER_ID)) {
     map.addLayer({
-      id: CIRCLE_FILL_LAYER_ID,
+      id: CIRCLE_MASK_LAYER_ID,
       type: 'fill',
       source: CIRCLE_SOURCE_ID,
-      paint: { 'fill-color': 'rgba(255,255,255,0.04)' },
+      filter: ['==', ['get', '_mask'], 1],
+      paint: { 'fill-color': isDark ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.30)' },
     })
+  } else {
+    map.setPaintProperty(CIRCLE_MASK_LAYER_ID, 'fill-color',
+      isDark ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.30)')
   }
 
   if (!map.getLayer(CIRCLE_LINE_LAYER_ID)) {
@@ -78,7 +99,7 @@ function drawCircleOnMap(map, lat, lng, radiusKm, isDark = true) {
 
 function removeCircleFromMap(map) {
   if (map.getLayer(CIRCLE_LINE_LAYER_ID)) map.removeLayer(CIRCLE_LINE_LAYER_ID)
-  if (map.getLayer(CIRCLE_FILL_LAYER_ID)) map.removeLayer(CIRCLE_FILL_LAYER_ID)
+  if (map.getLayer(CIRCLE_MASK_LAYER_ID)) map.removeLayer(CIRCLE_MASK_LAYER_ID)
   if (map.getSource(CIRCLE_SOURCE_ID)) map.removeSource(CIRCLE_SOURCE_ID)
 }
 
@@ -88,7 +109,7 @@ export function AreaTool({ map, config, state, dispatch }) {
   const [handlePos, setHandlePos] = useState(null)
   const [resizeDiameterKm, setResizeDiameterKm] = useState(null)
 
-  const circleRef = useRef({ lat: 0, lng: 0, radiusKm: DEFAULT_RADIUS_KM })
+  const circleRef = useRef({ lat: 0, lng: 0, radiusKm: 50 })
   // Refs so callbacks read current values without stale closure issues
   const stateRef = useRef(state)
   stateRef.current = state
@@ -116,7 +137,8 @@ export function AreaTool({ map, config, state, dispatch }) {
       [Math.min(p1.x, p2.x), Math.min(p1.y, p2.y)],
       [Math.max(p1.x, p2.x), Math.max(p1.y, p2.y)],
     ]
-    const features = map.queryRenderedFeatures(bbox, { layers: [FIREMAP_LAYER_ID] })
+    const activeLayers = LAYER_IDS.filter(id => map.getLayer(id))
+    const features = map.queryRenderedFeatures(bbox, { layers: activeLayers })
     const filtered = featuresWithinCircle(features, lat, lng, radiusKm)
 
     // Stats for preset aggregate variables
@@ -172,16 +194,23 @@ export function AreaTool({ map, config, state, dispatch }) {
       removeCircleFromMap(map)
       setHandlePos(null)
       map.getCanvas().style.cursor = ''
+      dispatch({ type: Actions.SET_DRAWN_CIRCLE, circle: null })
+      dispatch({ type: Actions.SET_AGGREGATE_STATS, stats: null })
       return
     }
     const center = map.getCenter()
-    circleRef.current = { lat: center.lat, lng: center.lng, radiusKm: DEFAULT_RADIUS_KM }
-    drawCircleOnMap(map, center.lat, center.lng, DEFAULT_RADIUS_KM, isDarkRef.current)
+    // Scale default radius to current zoom so the circle fits the visible area.
+    // Zoom 5 (statewide) → ~50 km; zoom 10 (city) → ~5 km, exponentially interpolated.
+    const zoom = map.getZoom()
+    const zoomT = Math.max(0, Math.min(1, (zoom - 5) / 5))
+    const radiusKm = Math.max(MIN_RADIUS_KM, Math.round(50 * Math.pow(0.1, zoomT)))
+    circleRef.current = { lat: center.lat, lng: center.lng, radiusKm }
+    drawCircleOnMap(map, center.lat, center.lng, radiusKm, isDarkRef.current)
     updateHandlePos()
-    const t = setTimeout(computeAndDispatch, 150)
-    return () => clearTimeout(t)
+    const timer = setTimeout(computeAndDispatch, 150)
+    return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, state.areaToolActive])
+  }, [map, state.areaToolActive, dispatch])
 
   // ── Keep handle in sync with map pan / zoom ───────────────────────────────
   useEffect(() => {

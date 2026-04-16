@@ -63,22 +63,43 @@ brew install tippecanoe
 
 ### 2c. Build the PMTiles file
 
+Both scripts accept **NetCDF (`.nc`) or CSV (`.csv`)** input, auto-detected by
+extension. Use `--rename SRC:DST` to map the variable name in the file to the
+column ID expected by the app config.
+
+**Current dataset** — `Net_benefit_current.nc` (lowest-cost treatment, current climate):
+
 ```bash
+# Quick local preview (GeoJSON, ~38 MB — fine for dev):
+python scripts/build_geojson.py \
+  --input data/Net_benefit_current.nc \
+  --rename Net_benefit:net_min_current \
+  --output public/fuel-treatment.geojson
+
+# Production tiles:
 python scripts/build_tiles.py \
-  --input /path/to/your/real_data.csv \
+  --input data/Net_benefit_current.nc \
+  --rename Net_benefit:net_min_current \
   --output fuel-treatment.pmtiles
 ```
 
+**Adding more scenarios** — repeat for each new `.nc` file, then merge all columns
+into one GeoJSON/PMTiles before uploading:
+
+| File | `--rename` target |
+|------|-------------------|
+| `Net_benefit_current.nc` | `net_min_current` |
+| `Net_benefit_ssp245.nc`  | `net_min_ssp245`  |
+| `Net_benefit_ssp585.nc`  | `net_min_ssp585`  |
+| `Net_benefit_rx_current.nc` | `net_rx_current` |
+| *(etc.)* | *(see config variable ids)* |
+
+For a merged multi-variable build, convert each file to a flat CSV first (one
+column per variable, shared `lat`/`lon`), then pass the merged CSV to
+`build_tiles.py`.
+
 This produces a single binary file (`fuel-treatment.pmtiles`) that the browser
-streams on demand — efficient for the full ~420k-cell California dataset.
-
-For quick local testing first:
-
-```bash
-python scripts/build_geojson.py \
-  --input /path/to/your/real_data.csv \
-  --output public/fuel-treatment.geojson
-```
+streams on demand — efficient for the full ~293k-cell California dataset.
 
 Then run `npm run dev` to check the data looks right before building tiles.
 
@@ -105,15 +126,19 @@ tilesUrl: 'REPLACE_WITH_R2_URL',
 tilesUrl: 'https://pub-XXXXXXXXXXXX.r2.dev/fuel-treatment.pmtiles',
 ```
 
-Also update the `domain` values for each variable to match the real data range.
-For example, if real net benefits range from −$800k to +$800k per km²:
+Also update the `domain` and `unit` for each variable to match the real data.
+The `net_min_current` variable is already set to the real data range:
 
 ```js
-domain: { min: -800000, max: 800000, zero: 0 },
+// Already configured for the current dataset:
+unit: '$k/km²',
+domain: { min: -1000, max: 12500, zero: 0 },
 ```
 
-The map uses dynamic domain detection from rendered features, so rough values
-are fine — they only affect the initial render before tiles load.
+Update the remaining variables (other treatments, SSP scenarios) once those
+datasets are available. The map uses dynamic domain detection from rendered
+features, so values only need to be roughly correct — they only affect the
+initial render before tiles load.
 
 ### 2f. Test locally, then push
 

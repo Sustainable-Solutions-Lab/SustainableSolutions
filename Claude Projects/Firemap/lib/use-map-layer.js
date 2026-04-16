@@ -186,7 +186,7 @@ export function useMapLayer(map, config, state, opacityP95) {
           id: LAYER_ID_COARSE,
           type: 'circle',
           source: SOURCE_ID,
-          minzoom: 5.3,
+          minzoom: 0,
           maxzoom: 5.8,
           filter: ['>=', ['coalesce', ['to-number', ['get', '_scale']], 0], 10],
           ...sourceLayerProp,

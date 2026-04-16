@@ -205,7 +205,7 @@ export function useMapLayer(map, config, state, opacityP95) {
           type: 'circle',
           source: SOURCE_ID,
           minzoom: 7,
-          maxzoom: 9,
+          maxzoom: 8.5,
           filter: ['all',
             ['>=', ['coalesce', ['to-number', ['get', '_scale']], 0], 3],
             ['<',  ['coalesce', ['to-number', ['get', '_scale']], 0], 10],
@@ -227,7 +227,7 @@ export function useMapLayer(map, config, state, opacityP95) {
           id: LAYER_ID_AGG,
           type: 'circle',
           source: SOURCE_ID,
-          minzoom: 9,
+          minzoom: 8.5,
           filter: ['<', ['coalesce', ['to-number', ['get', '_scale']], 5], 3],
           ...sourceLayerProp,
           paint: {

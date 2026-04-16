@@ -77,25 +77,14 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       container: containerRef.current,
       style: basemapStyle(schemeRef.current),
       center: config.region.center,
-      zoom: isMobile ? 4.1 : config.region.zoom,
-      ...(config.region.bounds ? {
-        bounds: config.region.bounds,
-        // padding zooms out slightly so there's visible context around CA
-        fitBoundsOptions: { padding: 40 },
-      } : {}),
-      minZoom: isMobile ? 3.5 : 4.5,
-      maxZoom: 10,
+      zoom: isMobile ? 4.5 : 6,
+      minZoom: isMobile ? 3.5 : 6,
+      maxZoom: 9.5,
       // Disable built-in attribution — we render our own static text below
       attributionControl: false,
     })
 
     mapRef.current = map
-
-    // Lock minZoom to the initial bounds-fitted zoom so users can't pan further out.
-    // MapLibre computes the bounds zoom synchronously in the constructor.
-    if (!isMobile && config.region.bounds) {
-      map.setMinZoom(map.getZoom())
-    }
 
     map.once('load', () => {
       addStaticLayers(map, schemeRef.current)

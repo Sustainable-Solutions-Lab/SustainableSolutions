@@ -8,13 +8,13 @@ import { addStaticLayers, setGraticuleVisible as applyGraticuleVisibility } from
 import { useMapLayer } from '../../lib/use-map-layer.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { percentileThresholds } from '../../lib/area-stats.js'
-import { SOURCE_ID } from '../../lib/use-map-layer.js'
+import { SOURCE_ID, LAYER_ID, LAYER_ID_AGG, LAYER_ID_MED, LAYER_ID_COARSE, LAYER_IDS } from '../../lib/use-map-layer.js'
 
 // ── SVG icons for map controls ────────────────────────────────────────────────
 
 function GlobeIcon() {
   return (
-    <svg width='18' height='18' viewBox='0 0 18 18' fill='none' stroke='currentColor' strokeWidth='1.3'>
+    <svg width='22' height='22' viewBox='0 0 18 18' fill='none' stroke='currentColor' strokeWidth='1.3'>
       <circle cx='9' cy='9' r='6.5'/>
       <ellipse cx='9' cy='9' rx='3' ry='6.5'/>
       <line x1='2.5' y1='9' x2='15.5' y2='9'/>
@@ -26,7 +26,7 @@ function GlobeIcon() {
 
 function SunIcon() {
   return (
-    <svg width='18' height='18' viewBox='0 0 18 18' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round'>
+    <svg width='22' height='22' viewBox='0 0 18 18' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round'>
       <circle cx='9' cy='9' r='3'/>
       <line x1='9' y1='1.5' x2='9' y2='3.5'/>
       <line x1='9' y1='14.5' x2='9' y2='16.5'/>
@@ -50,7 +50,7 @@ function SunIcon() {
  * @param {string}   props.height    - CSS height string
  * @param {Function} [props.onMapReady]  - called with the map instance after load
  */
-export function Map({ config, state, dispatch, height, onMapReady, onFilterStats, onToggleScheme, isDark }) {
+export function Map({ config, state, dispatch, height, onMapReady, onFilterStats, onToggleScheme, isDark, opacityP95 }) {
   const containerRef = useRef(null)
 
   /** @type {React.MutableRefObject<import('maplibre-gl').Map|null>} */
@@ -72,19 +72,30 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     const protocol = new Protocol()
     maplibregl.addProtocol('pmtiles', protocol.tile)
 
+    const isMobile = window.innerWidth < 768
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: basemapStyle(schemeRef.current),
       center: config.region.center,
-      zoom: config.region.zoom,
-      ...(config.region.bounds ? { bounds: config.region.bounds } : {}),
-      // Allow zoom anywhere within CA but prevent panning far outside
-      maxBounds: [-132, 26, -106, 48],
+      zoom: isMobile ? 4.1 : config.region.zoom,
+      ...(config.region.bounds ? {
+        bounds: config.region.bounds,
+        // padding zooms out slightly so there's visible context around CA
+        fitBoundsOptions: { padding: 40 },
+      } : {}),
+      minZoom: isMobile ? 3.5 : 4.5,
+      maxZoom: 10,
       // Disable built-in attribution — we render our own static text below
       attributionControl: false,
     })
 
     mapRef.current = map
+
+    // Lock minZoom to the initial bounds-fitted zoom so users can't pan further out.
+    // MapLibre computes the bounds zoom synchronously in the constructor.
+    if (!isMobile && config.region.bounds) {
+      map.setMinZoom(map.getZoom())
+    }
 
     map.once('load', () => {
       addStaticLayers(map, schemeRef.current)
@@ -102,7 +113,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
   }, [])
 
   // ── Data layer (PMTiles / GeoJSON) ───────────────────────────────────────
-  useMapLayer(mapReady ? mapRef.current : null, config, state)
+  useMapLayer(mapReady ? mapRef.current : null, config, state, opacityP95)
 
   // ── Color scheme change ──────────────────────────────────────────────────
   useEffect(() => {
@@ -125,13 +136,26 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     if (!map || !mapReady) return
 
     function applyFilter() {
-      if (!map.getLayer('firemap-cells')) return
+      const hasAnyLayer = LAYER_IDS.some(id => map.getLayer(id))
+      if (!hasAnyLayer) return
 
       const variable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
       if (!variable || variable.type === 'categorical') return
 
-      const features = map.querySourceFeatures(SOURCE_ID)
-      if (features.length === 0) return
+      // PMTiles (vector) sources require sourceLayer; GeoJSON sources do not.
+      const sourceOptions = config.tilesUrl === 'REPLACE_WITH_R2_URL'
+        ? {}
+        : { sourceLayer: config.id }
+      const allFeatures = map.querySourceFeatures(SOURCE_ID, sourceOptions)
+      if (allFeatures.length === 0) return
+
+      // Prefer finest-resolution features (_scale ≤ 3) for statistics so
+      // block-averaged means don't distort the distribution; fall back progressively.
+      const fineFeatures = allFeatures.filter(f => {
+        const s = f.properties?._scale
+        return s == null || Number(s) <= 3
+      })
+      const features = fineFeatures.length >= 5 ? fineFeatures : allFeatures
 
       const { low, high } = percentileThresholds(
         features,
@@ -140,11 +164,31 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         state.percentileRange.high,
       )
 
-      map.setFilter('firemap-cells', [
-        'all',
+      // Apply percentile filter to each layer, preserving their _scale range conditions
+      const pctFilter = (scaleExpr) => ['all',
+        scaleExpr,
         ['>=', ['get', variable.id], low],
         ['<=', ['get', variable.id], high],
-      ])
+      ]
+      if (map.getLayer(LAYER_ID_COARSE)) {
+        map.setFilter(LAYER_ID_COARSE, pctFilter(
+          ['>=', ['coalesce', ['to-number', ['get', '_scale']], 0], 10]
+        ))
+      }
+      if (map.getLayer(LAYER_ID_MED)) {
+        map.setFilter(LAYER_ID_MED, pctFilter(['all',
+          ['>=', ['coalesce', ['to-number', ['get', '_scale']], 0], 3],
+          ['<',  ['coalesce', ['to-number', ['get', '_scale']], 0], 10],
+        ]))
+      }
+      if (map.getLayer(LAYER_ID_AGG)) {
+        map.setFilter(LAYER_ID_AGG, pctFilter(
+          ['<', ['coalesce', ['to-number', ['get', '_scale']], 5], 3]
+        ))
+      }
+      if (map.getLayer(LAYER_ID)) {
+        map.setFilter(LAYER_ID, ['<', ['coalesce', ['to-number', ['get', '_scale']], 5], 0])
+      }
 
       // Compute mean / median for filtered features and bubble up to sidebar
       if (onFilterStats) {
@@ -206,32 +250,39 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       <div
         ref={containerRef}
         style={{ position: 'absolute', inset: 0 }}
+        onClick={() => { if (state.methodsOpen) dispatch({ type: 'TOGGLE_METHODS' }) }}
       />
 
-      {/* Map control buttons — float above MapLibre's attribution stack (bottom-right) */}
-      <div style={{
-        position: 'absolute',
-        bottom: 96,
-        right: 6,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 4,
-        zIndex: 10,
-      }}>
-        {/* Dark/light scheme toggle — always shows sun icon */}
+      {/* Map control buttons — upper right */}
+      <style>{`
+        .firemap-map-controls {
+          position: absolute;
+          top: 18px;
+          right: 10px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          z-index: 10;
+        }
+        @media (max-width: 767px) {
+          .firemap-map-controls { top: 82px; }
+        }
+      `}</style>
+      <div className='firemap-map-controls'>
+        {/* Dark/light scheme toggle */}
         {onToggleScheme && (
           <button
             onClick={onToggleScheme}
             title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             style={{
-              width: 38,
-              height: 38,
+              width: 48,
+              height: 48,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               background: 'transparent',
-              color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)',
+              color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.65)',
               border: 'none',
               cursor: 'pointer',
               padding: 0,
@@ -246,10 +297,10 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         {/* Graticule / city labels toggle */}
         <button
           onClick={handleGraticuleToggle}
-          title={graticuleVisible ? 'Hide lat/lon grid' : 'Show lat/lon grid'}
+          title={graticuleVisible ? 'Hide city labels' : 'Show city labels'}
           style={{
-            width: 38,
-            height: 38,
+            width: 48,
+            height: 48,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -263,7 +314,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
             userSelect: 'none',
           }}
           aria-pressed={graticuleVisible}
-          aria-label='Toggle lat/lon grid'
+          aria-label='Toggle city labels'
         >
           <GlobeIcon />
         </button>

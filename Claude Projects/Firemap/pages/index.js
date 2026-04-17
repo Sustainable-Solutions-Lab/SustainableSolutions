@@ -272,7 +272,7 @@ export default function Home() {
               sx={{
                 display: ['block', 'none'],
                 position: 'absolute',
-                bottom: 24,
+                bottom: 44,
                 right: 10,
                 zIndex: 10,
                 width: 160,
@@ -293,7 +293,7 @@ export default function Home() {
             <Box
               sx={{
                 position: 'absolute',
-                bottom: 20,
+                bottom: 40,
                 left: 16,
                 zIndex: 10,
               }}

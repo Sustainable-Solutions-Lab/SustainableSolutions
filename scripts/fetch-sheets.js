@@ -1,11 +1,13 @@
 // scripts/fetch-sheets.js
 // Build-time fetcher: pulls each published-CSV URL, parses, validates, writes JSON.
-// Runs as `prebuild`. Skips quietly when env vars are missing (so dev still works).
+// Runs as `prebuild`. Falls back to templates/*.csv when env vars are missing,
+// so dev/CI builds work without a live Sheet.
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const OUT_DIR = resolve('src/data');
+const TEMPLATES_DIR = resolve('templates');
 
 // Schema definitions — column names per CLAUDE.md sheet specs.
 // Required columns fail the build loudly if missing.
@@ -120,28 +122,41 @@ function validate(records, required, tabName) {
 
 async function fetchTab(tabName, { env, required }) {
   const url = process.env[env];
-  if (!url) {
-    console.warn(`[fetch-sheets] ${env} not set — writing empty ${tabName}.json`);
-    return [];
+  let text;
+  let source;
+
+  if (url) {
+    const res = await fetch(url, { redirect: 'follow' });
+    if (!res.ok) {
+      throw new Error(`[fetch-sheets] ${tabName} fetch failed: ${res.status} ${res.statusText}`);
+    }
+    text = await res.text();
+    source = 'sheet';
+  } else {
+    const fallback = resolve(TEMPLATES_DIR, `${tabName}.csv`);
+    try {
+      text = await readFile(fallback, 'utf8');
+      source = 'template';
+    } catch {
+      console.warn(`[fetch-sheets] ${env} unset and no ${fallback} — writing empty ${tabName}.json`);
+      return { records: [], source: 'empty' };
+    }
   }
-  const res = await fetch(url, { redirect: 'follow' });
-  if (!res.ok) {
-    throw new Error(`[fetch-sheets] ${tabName} fetch failed: ${res.status} ${res.statusText}`);
-  }
-  const text = await res.text();
+
   const records = normalize(rowsToObjects(parseCsv(text)));
   validate(records, required, tabName);
-  return records;
+  return { records, source };
 }
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
   for (const [name, spec] of Object.entries(tabs)) {
     try {
-      const records = await fetchTab(name, spec);
+      const { records, source } = await fetchTab(name, spec);
       const out = resolve(OUT_DIR, `${name}.json`);
       await writeFile(out, JSON.stringify(records, null, 2));
-      console.log(`[fetch-sheets] wrote ${records.length.toString().padStart(4)} rows → ${out}`);
+      const tag = source === 'sheet' ? '   sheet' : source === 'template' ? 'template' : '   empty';
+      console.log(`[fetch-sheets] [${tag}] wrote ${records.length.toString().padStart(4)} rows → ${out}`);
     } catch (err) {
       console.error(err.message);
       process.exit(1);

@@ -1,0 +1,71 @@
+---
+import type { Person } from '../lib/types';
+
+interface Props {
+  person: Person;
+}
+
+const { person } = Astro.props;
+
+// Stable spectral hue per slug so the avatar palette feels intentional.
+const spectralColors = [
+  'var(--spectral-2)',
+  'var(--spectral-3)',
+  'var(--spectral-4)',
+  'var(--spectral-9)',
+  'var(--spectral-10)',
+  'var(--spectral-11)',
+];
+const hash = [...person.slug].reduce((a, c) => a + c.charCodeAt(0), 0);
+const avatarBg = spectralColors[hash % spectralColors.length];
+
+const initials = person.name
+  .split(/\s+/)
+  .filter((s) => /^[A-Z]/.test(s) && s.length > 1) // skip middle initials like "J."
+  .slice(0, 2)
+  .map((s) => s[0])
+  .join('');
+
+const detailHref = `/people/${person.slug}`;
+const isAlum = person.status === 'alumni';
+---
+
+<a
+  href={detailHref}
+  class="group block bg-paper border border-rule p-5 hover:border-rule-strong transition-colors border-b-0"
+>
+  <div class="flex items-center gap-4">
+    {
+      person.photo_filename ? (
+        <img
+          src={`/people/${person.photo_filename}`}
+          alt={person.name}
+          width="64"
+          height="64"
+          loading="lazy"
+          class="w-16 h-16 object-cover"
+          style="border-radius: var(--radius-md);"
+        />
+      ) : (
+        <div
+          aria-hidden="true"
+          class="w-16 h-16 flex items-center justify-center font-mono text-xl text-paper select-none"
+          style={`background: ${avatarBg}; border-radius: var(--radius-md);`}
+        >
+          {initials || '·'}
+        </div>
+      )
+    }
+    <div class="min-w-0">
+      <p class="font-serif text-lg leading-tight m-0">{person.name}</p>
+      <p class="text-ink-3 text-sm mt-1 truncate">{person.role}</p>
+      {
+        isAlum && person.current_position && (
+          <p class="text-ink-3 text-xs mt-1 font-mono uppercase tracking-wider truncate">
+            Now: {person.current_position}
+          </p>
+        )
+      }
+    </div>
+  </div>
+</a>

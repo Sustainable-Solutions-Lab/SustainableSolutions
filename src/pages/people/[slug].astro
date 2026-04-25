@@ -1,21 +1,72 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import people from '../../data/people.json';
+import type { Person } from '../../lib/types';
 
-export function getStaticPaths() {
-  // Will be generated from src/data/people.json once the sheets pipeline is wired.
-  return [{ params: { slug: 'placeholder' }, props: { name: 'Placeholder' } }];
+export async function getStaticPaths() {
+  const { default: people } = await import('../../data/people.json');
+  return (people as Person[]).map((person) => ({
+    params: { slug: person.slug },
+    props: { person },
+  }));
 }
 
-const { name } = Astro.props;
+const { person } = Astro.props as { person: Person };
+
+const dateRange = person.left_date
+  ? `${person.joined_date ?? '?'} – ${person.left_date}`
+  : person.joined_date
+    ? `${person.joined_date} – present`
+    : null;
 ---
 
-<BaseLayout title={name}>
+<BaseLayout title={person.name}>
   <article class="container-prose py-16">
-    <p class="eyebrow mb-4">PERSON</p>
-    <h1>{name}</h1>
-    <p class="text-ink-3">
-      Individual person page. Pulls from the People sheet plus an optional Markdown
-      bio at <code>src/content/people/{Astro.params.slug}.md</code>.
+    <p class="eyebrow mb-4">
+      <span class="cardinal-dot"></span>
+      {person.status === 'alumni' ? 'ALUMNI' : person.unit === 'ciu' ? 'CIU' : 'CURRENT'}
+    </p>
+
+    <h1>{person.name}</h1>
+    <p class="lede mt-2">{person.role}</p>
+
+    {
+      person.bio_short && (
+        <p class="mt-6">{person.bio_short}</p>
+      )
+    }
+
+    <dl class="mt-10 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sm">
+      {
+        person.current_position && (
+          <>
+            <dt class="font-mono text-xs uppercase tracking-wider text-ink-3">Currently</dt>
+            <dd class="m-0">{person.current_position}</dd>
+          </>
+        )
+      }
+      {
+        dateRange && (
+          <>
+            <dt class="font-mono text-xs uppercase tracking-wider text-ink-3">In the lab</dt>
+            <dd class="m-0">{dateRange}</dd>
+          </>
+        )
+      }
+      {
+        person.personal_url && (
+          <>
+            <dt class="font-mono text-xs uppercase tracking-wider text-ink-3">Site</dt>
+            <dd class="m-0">
+              <a href={person.personal_url} data-external>{person.personal_url.replace(/^https?:\/\//, '')}</a>
+            </dd>
+          </>
+        )
+      }
+    </dl>
+
+    <p class="mt-12">
+      <a href="/people" class="font-mono text-xs uppercase tracking-wider">← Back to People</a>
     </p>
   </article>
 </BaseLayout>

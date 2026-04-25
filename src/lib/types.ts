@@ -1,0 +1,54 @@
+// Shared types for the structured-data layer (built from CSV → JSON at build time).
+
+export type Person = {
+  slug: string;
+  name: string;
+  role: string;
+  unit: 'main' | 'ciu' | string;
+  status: 'current' | 'alumni' | string;
+  photo_filename: string | null;
+  current_position: string | null;
+  personal_url: string | null;
+  bio_short: string | null;
+  joined_date: string | null;
+  left_date: string | null;
+  order: number;
+};
+
+export type Publication = {
+  authors: string;
+  title: string;
+  journal: string;
+  year: number;
+  month: number | null;
+  volume_issue: string | null;
+  pages: string | null;
+  doi: string;
+  url: string | null;
+  pdf_url: string | null;
+  code_url: string | null;
+  themes: string[];
+  lab_authors: string[];
+  featured: boolean;
+  press_url: string | null;
+};
+
+export type NewsItem = {
+  date: string;
+  title: string;
+  summary: string;
+  type: 'paper' | 'press' | 'talk' | 'award' | 'other' | string;
+  link: string | null;
+  image_filename: string | null;
+  featured: boolean;
+  long_form_slug: string | null;
+};
+
+export type FeaturedItem = {
+  order: number;
+  title: string;
+  blurb: string;
+  image_filename: string | null;
+  link: string;
+  type: 'research' | 'tool' | 'publication' | 'news' | string;
+};

@@ -1,5 +1,28 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PersonCard from '../../components/PersonCard.astro';
+import people from '../../data/people.json';
+import type { Person } from '../../lib/types';
+
+const all = (people as Person[]).slice().sort((a, b) => a.order - b.order);
+
+const sections = [
+  {
+    id: 'current',
+    label: 'Current',
+    members: all.filter((p) => p.status === 'current' && p.unit !== 'ciu'),
+  },
+  {
+    id: 'ciu',
+    label: 'Conceptual Investigations Unit',
+    members: all.filter((p) => p.unit === 'ciu'),
+  },
+  {
+    id: 'alumni',
+    label: 'Alumni',
+    members: all.filter((p) => p.status === 'alumni'),
+  },
+];
 ---
 
 <BaseLayout title="People">
@@ -12,10 +35,21 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     </p>
   </section>
 
-  <section class="container-content pb-24">
-    <p class="text-ink-3 text-sm">
-      Roster grid will populate from <code>src/data/people.json</code> (built from the
-      <code>People</code> sheet tab). Filters: Current / Alumni / CIU.
-    </p>
-  </section>
+  {
+    sections.map(
+      ({ id, label, members }) =>
+        members.length > 0 && (
+          <section id={id} class="container-content pb-12">
+            <p class="eyebrow mb-4">{label.toUpperCase()}</p>
+            <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0">
+              {members.map((person) => (
+                <li>
+                  <PersonCard person={person} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ),
+    )
+  }
 </BaseLayout>

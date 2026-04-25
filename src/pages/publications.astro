@@ -1,5 +1,17 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import PublicationItem from '../components/PublicationItem.astro';
+import publications from '../data/publications.json';
+import type { Publication } from '../lib/types';
+
+const all = (publications as Publication[])
+  .slice()
+  .sort((a, b) => b.year - a.year || (b.month ?? 0) - (a.month ?? 0));
+
+const years = [...new Set(all.map((p) => p.year))].sort((a, b) => b - a);
+const themes = [...new Set(all.flatMap((p) => p.themes ?? []))].sort();
+
+const total = all.length;
 ---
 
 <BaseLayout title="Publications">
@@ -7,14 +19,110 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <p class="eyebrow mb-4">PUBLICATIONS</p>
     <h1>Peer-reviewed work</h1>
     <p class="lede max-w-prose mt-4">
-      Reverse chronological. Filter by theme, year, or author. Each entry links
-      to the DOI and, where available, replication code and PDFs.
+      Reverse chronological. Filter by theme, year, or featured status; search
+      across titles, authors, and journals.
     </p>
   </section>
 
   <section class="container-content pb-24">
-    <p class="text-ink-3 text-sm">
-      List will populate from <code>src/data/publications.json</code>.
+    <div
+      class="flex flex-wrap items-center gap-4 py-4 mb-2 border-y border-rule"
+      role="search"
+    >
+      <label class="flex items-center gap-2 text-sm">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Search</span>
+        <input
+          id="pub-search"
+          type="search"
+          placeholder="Title, author, journal…"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
+          style="border-radius: var(--radius-sm); min-width: 16ch;"
+        />
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Year</span>
+        <select
+          id="pub-year"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
+          style="border-radius: var(--radius-sm);"
+        >
+          <option value="">All</option>
+          {years.map((y) => <option value={y}>{y}</option>)}
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Theme</span>
+        <select
+          id="pub-theme"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
+          style="border-radius: var(--radius-sm);"
+        >
+          <option value="">All</option>
+          {themes.map((t) => <option value={t}>{t}</option>)}
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <input id="pub-featured" type="checkbox" class="accent-cardinal" />
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Featured only</span>
+      </label>
+
+      <span id="pub-count" class="ml-auto font-mono text-xs text-ink-3">
+        {total} of {total}
+      </span>
+    </div>
+
+    <ul id="pub-list" class="list-none p-0 m-0">
+      {all.map((pub) => <PublicationItem pub={pub} />)}
+    </ul>
+
+    <p id="pub-empty" hidden class="py-12 text-center text-ink-3 text-sm">
+      No publications match the current filters.
     </p>
   </section>
 </BaseLayout>
+
+<script is:inline>
+  (function () {
+    const search = document.getElementById('pub-search');
+    const yearSel = document.getElementById('pub-year');
+    const themeSel = document.getElementById('pub-theme');
+    const feat = document.getElementById('pub-featured');
+    const list = document.getElementById('pub-list');
+    const empty = document.getElementById('pub-empty');
+    const count = document.getElementById('pub-count');
+    if (!list || !count) return;
+
+    const items = Array.from(list.querySelectorAll('[data-pub]'));
+    const total = items.length;
+
+    const apply = () => {
+      const q = (search?.value ?? '').trim().toLowerCase();
+      const y = yearSel?.value ?? '';
+      const t = themeSel?.value ?? '';
+      const f = feat?.checked ?? false;
+
+      let visible = 0;
+      for (const li of items) {
+        const themes = (li.dataset.themes ?? '').split(',').filter(Boolean);
+        const ok =
+          (!q || (li.dataset.search ?? '').includes(q)) &&
+          (!y || li.dataset.year === y) &&
+          (!t || themes.includes(t)) &&
+          (!f || li.dataset.featured === 'true');
+        li.hidden = !ok;
+        if (ok) visible++;
+      }
+
+      count.textContent = `${visible} of ${total}`;
+      if (empty) empty.hidden = visible !== 0;
+    };
+
+    [search, yearSel, themeSel, feat].forEach((el) => {
+      el?.addEventListener('input', apply);
+      el?.addEventListener('change', apply);
+    });
+  })();
+</script>

@@ -1,0 +1,68 @@
+---
+import type { Publication } from '../lib/types';
+
+interface Props {
+  pub: Publication;
+}
+
+const { pub } = Astro.props;
+
+const doiUrl = pub.url ?? (pub.doi ? `https://doi.org/${pub.doi}` : null);
+
+// Search blob — concatenated lowercase string the client-side filter greps.
+const searchBlob = [pub.authors, pub.title, pub.journal, String(pub.year)]
+  .filter(Boolean)
+  .join(' ')
+  .toLowerCase();
+
+// Citation tail: "Nature Sustainability 9(3), 201–210 (2026)"
+const citationParts: string[] = [];
+if (pub.volume_issue) citationParts.push(pub.volume_issue);
+if (pub.pages) citationParts.push(pub.pages.replace(/-/g, '–'));
+const citationTail = citationParts.join(', ');
+---
+
+<li
+  class="py-6 border-b border-rule"
+  data-pub
+  data-year={pub.year}
+  data-themes={(pub.themes ?? []).join(',')}
+  data-featured={String(pub.featured)}
+  data-search={searchBlob}
+>
+  <div class="flex items-baseline justify-between gap-4 mb-2">
+    <p class="eyebrow m-0">
+      <em class="not-italic">{pub.journal}</em>
+      <span class="dot">·</span>
+      {pub.year}
+      {pub.featured && (<><span class="dot">·</span><span class="cardinal">FEATURED</span></>)}
+    </p>
+  </div>
+
+  <h3 class="m-0">
+    {
+      doiUrl ? (
+        <a href={doiUrl} class="border-b-0 hover:underline" data-external>
+          {pub.title}
+        </a>
+      ) : (
+        pub.title
+      )
+    }
+  </h3>
+
+  <p class="text-ink-2 mt-2 text-sm m-0">{pub.authors}</p>
+
+  {
+    citationTail && (
+      <p class="font-mono text-xs text-ink-3 mt-2 m-0">{citationTail}</p>
+    )
+  }
+
+  <div class="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs font-mono uppercase tracking-wider">
+    {doiUrl && (<a href={doiUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>DOI</a>)}
+    {pub.pdf_url && (<a href={pub.pdf_url} class="text-ink-2 hover:text-ink border-b-0" data-external>PDF</a>)}
+    {pub.code_url && (<a href={pub.code_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Code</a>)}
+    {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
+  </div>
+</li>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 96" width="320" height="96" role="img" aria-label="Sustainable Solutions Lab">
+  
+  
+  <rect x="0" y="44" width="40" height="2" class="card"></rect>
+  
+  <text x="48" y="36" class="serif ink" font-size="22">Sustainable Solutions</text>
+  <text x="48" y="60" class="serif ink" font-size="22">Lab</text>
+  
+  <text x="48" y="80" class="mono dim" font-size="9">STEVEN J. DAVIS · STANFORD</text>
+</svg>

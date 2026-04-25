@@ -1,0 +1,28 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Sustainable Solutions Lab" showCoordReadout={true}>
+  <section class="container-content pt-16 pb-12">
+    <p class="eyebrow mb-4">
+      <span class="cardinal-dot"></span>STANFORD DOERR SCHOOL OF SUSTAINABILITY
+    </p>
+    <h1 class="display max-w-[20ch]">Climate science, in plain sight.</h1>
+    <p class="lede max-w-prose mt-6">
+      Our lab is dedicated to understanding the unavoidable environmental tradeoffs
+      of energy, food, and material security, and to prioritizing the most
+      sustainable solutions.
+    </p>
+  </section>
+
+  <hr class="border-rule" />
+
+  <section class="container-content py-16">
+    <p class="eyebrow mb-6">FEATURED</p>
+    <div class="grid md:grid-cols-3 gap-8 text-sm text-ink-3">
+      <p>Featured items will populate from the <code>Featured</code> sheet tab.</p>
+      <p>Home page is built last per the development sequence in CLAUDE.md.</p>
+      <p>Above the fold will host an interactive component (the firemap or a featured chart).</p>
+    </div>
+  </section>
+</BaseLayout>

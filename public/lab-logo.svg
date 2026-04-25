@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 343.48 343.91">
+  <defs>
+    
+  </defs>
+  <g id="Layer_1" data-name="Layer 1" class="cls-15">
+    <g id="V6Mw9n">
+      <image id="V6Mw9n-2" data-name="V6Mw9n" width="1024" height="1024" transform="translate(-503.3 -22.35)"></image>
+    </g>
+  </g>
+  <g id="For_Light_Backgrounds" data-name="For Light Backgrounds">
+    <path class="cls-2" d="M176.11,170.75v-90.18c49.8,0,90.18,40.37,90.18,90.18"></path>
+    <path class="cls-2" d="M176.11,170.75v90.18c49.8,0,90.18-40.37,90.18-90.18"></path>
+    <path class="cls-4" d="M176.11,260.93c-49.8,0-90.18-40.37-90.18-90.18s40.37-90.18,90.18-90.18"></path>
+    <g>
+      <line class="cls-9" x1="176.72" y1="157.52" x2="265.32" y2="157.52"></line>
+      <line class="cls-9" x1="176.72" y1="126.17" x2="254.51" y2="126.17"></line>
+      <path class="cls-10" d="M176.07,94.13c11.66-.85,33.12,5.93,38.49,10.16"></path>
+    </g>
+    <rect class="cls-1" x="171.63" y="215.05" width="75.84" height="25.98"></rect>
+    <path class="cls-5" d="M180.48,234.6c6.78-26.73,45.74-4.89,65.13-17.88"></path>
+    <circle class="cls-7" cx="176.11" cy="170.75" r="90.18"></circle>
+    <line class="cls-7" x1="176.07" y1="25.47" x2="176.07" y2="329.28"></line>
+    <line class="cls-7" x1="182.5" y1="170.75" x2="326.88" y2="170.75"></line>
+    <line class="cls-7" x1="18.21" y1="170.75" x2="133.59" y2="170.75"></line>
+    <circle class="cls-13" cx="85.39" cy="60.81" r="17.49"></circle>
+    <circle class="cls-13" cx="284.38" cy="95.3" r="21.86"></circle>
+    <circle class="cls-13" cx="270.04" cy="280.7" r="17.49"></circle>
+    <path class="cls-14" d="M102.88,294.33c-25.86-15.32-46.51-38.52-58.64-66.29"></path>
+    <path class="cls-14" d="M309.41,224.43c-6.06,14.98-14.57,28.7-25.03,40.67"></path>
+    <path class="cls-14" d="M32.27,170.53c0-36.8,14.04-73.6,42.12-101.68"></path>
+  </g>
+  <g id="For_Dark_Backgrounds" data-name="For Dark Backgrounds" class="cls-15">
+    <path class="cls-2" d="M176.11,170.75v-90.18c49.8,0,90.18,40.37,90.18,90.18"></path>
+    <path class="cls-2" d="M176.11,170.75v90.18c49.8,0,90.18-40.37,90.18-90.18"></path>
+    <path class="cls-4" d="M176.11,260.93c-49.8,0-90.18-40.37-90.18-90.18s40.37-90.18,90.18-90.18"></path>
+    <g>
+      <line class="cls-8" x1="176.72" y1="157.52" x2="265.32" y2="157.52"></line>
+      <line class="cls-8" x1="176.72" y1="126.17" x2="254.51" y2="126.17"></line>
+      <path class="cls-6" d="M176.07,94.13c11.66-.85,33.12,5.93,38.49,10.16"></path>
+    </g>
+    <rect class="cls-3" x="171.63" y="215.05" width="75.84" height="25.98"></rect>
+    <path class="cls-11" d="M180.48,234.6c6.78-26.73,45.74-4.89,65.13-17.88"></path>
+    <circle class="cls-10" cx="176.11" cy="170.75" r="90.18"></circle>
+    <line class="cls-10" x1="176.07" y1="25.47" x2="176.07" y2="329.28"></line>
+    <line class="cls-10" x1="182.5" y1="170.75" x2="326.88" y2="170.75"></line>
+    <line class="cls-10" x1="18.21" y1="170.75" x2="133.59" y2="170.75"></line>
+    <circle class="cls-12" cx="85.39" cy="60.81" r="17.49"></circle>
+    <circle class="cls-12" cx="284.38" cy="95.3" r="21.86"></circle>
+    <circle class="cls-12" cx="270.04" cy="280.7" r="17.49"></circle>
+    <path class="cls-10" d="M102.88,294.33c-25.86-15.32-46.51-38.52-58.64-66.29"></path>
+    <path class="cls-10" d="M309.41,224.43c-6.06,14.98-14.57,28.7-25.03,40.67"></path>
+    <path class="cls-10" d="M32.27,170.53c0-35.13,12.79-70.25,38.37-97.8"></path>
+  </g>
+</svg>

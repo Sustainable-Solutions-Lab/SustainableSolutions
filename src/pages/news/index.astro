@@ -1,0 +1,20 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="News">
+  <section class="container-content pt-16 pb-8">
+    <p class="eyebrow mb-4">NEWS</p>
+    <h1>Recent</h1>
+    <p class="lede max-w-prose mt-4">
+      Papers, talks, awards, and press. Reverse chronological.
+    </p>
+  </section>
+
+  <section class="container-content pb-24">
+    <p class="text-ink-3 text-sm">
+      List will populate from <code>src/data/news.json</code> (short items) and
+      <code>src/content/news/*.md</code> (long-form posts).
+    </p>
+  </section>
+</BaseLayout>

@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+.astro/
+.vercel/
+
+# generated data
+src/data/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# design system reference (kept locally, not in git)
+design-system/
+design-system.raw
+design-system.bin
+
+# OS
+.DS_Store
+
+# editor
+.vscode/
+.idea/
+*.swp

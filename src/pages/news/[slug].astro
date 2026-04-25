@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export function getStaticPaths() {
+  return [{ params: { slug: 'placeholder' }, props: { title: 'Placeholder' } }];
+}
+
+const { title } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <article class="container-prose py-16">
+    <p class="eyebrow mb-4">NEWS</p>
+    <h1>{title}</h1>
+    <p class="text-ink-3">
+      Long-form post. Pulls from <code>src/content/news/{Astro.params.slug}.md</code>.
+    </p>
+  </article>
+</BaseLayout>

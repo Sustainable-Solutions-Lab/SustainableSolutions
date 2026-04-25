@@ -1,0 +1,36 @@
+---
+// CarbonPlan-style scroll-tracking coordinate readout.
+// Bottom-left, monospaced, subtle. Optional per-page via BaseLayout prop.
+---
+
+<div
+  data-coord-readout
+  aria-hidden="true"
+  class="fixed bottom-3 left-3 z-40 font-mono text-xs text-ink-3 select-none pointer-events-none"
+>
+  X,Y: <span data-coord-x>0000</span>,<span data-coord-y>0000</span>
+</div>
+
+<script is:inline>
+  (function () {
+    const xEl = document.querySelector('[data-coord-x]');
+    const yEl = document.querySelector('[data-coord-y]');
+    if (!xEl || !yEl) return;
+
+    const pad = (n) => String(Math.max(0, Math.round(n))).padStart(4, '0');
+    let frame = null;
+
+    const update = () => {
+      frame = null;
+      xEl.textContent = pad(window.scrollX);
+      yEl.textContent = pad(window.scrollY);
+    };
+
+    const onScroll = () => {
+      if (frame === null) frame = requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  })();
+</script>

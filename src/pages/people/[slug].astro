@@ -1,0 +1,21 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export function getStaticPaths() {
+  // Will be generated from src/data/people.json once the sheets pipeline is wired.
+  return [{ params: { slug: 'placeholder' }, props: { name: 'Placeholder' } }];
+}
+
+const { name } = Astro.props;
+---
+
+<BaseLayout title={name}>
+  <article class="container-prose py-16">
+    <p class="eyebrow mb-4">PERSON</p>
+    <h1>{name}</h1>
+    <p class="text-ink-3">
+      Individual person page. Pulls from the People sheet plus an optional Markdown
+      bio at <code>src/content/people/{Astro.params.slug}.md</code>.
+    </p>
+  </article>
+</BaseLayout>

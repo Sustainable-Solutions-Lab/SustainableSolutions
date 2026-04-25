@@ -1,0 +1,83 @@
+---
+const links = [
+  { href: '/research', label: 'Research' },
+  { href: '/people', label: 'People' },
+  { href: '/publications', label: 'Publications' },
+  { href: '/tools', label: 'Tools' },
+  { href: '/news', label: 'News' },
+  { href: '/contact', label: 'Contact' },
+];
+
+const path = Astro.url.pathname;
+---
+
+<header class="sticky top-0 z-50 backdrop-blur-md border-b border-rule bg-paper/70">
+  <nav
+    aria-label="Primary"
+    class="container-content flex items-center justify-between h-14"
+  >
+    <a href="/" class="font-serif text-lg leading-none border-b-0 hover:opacity-70">
+      Sustainable Solutions Lab
+    </a>
+
+    <ul class="hidden md:flex items-center gap-6 text-sm">
+      {
+        links.map(({ href, label }) => {
+          const active = href === '/' ? path === '/' : path.startsWith(href);
+          return (
+            <li>
+              <a
+                href={href}
+                class:list={[
+                  'border-b-0 hover:opacity-70',
+                  active ? 'text-ink font-medium' : 'text-ink-2',
+                ]}
+                aria-current={active ? 'page' : undefined}
+              >
+                {label}
+              </a>
+            </li>
+          );
+        })
+      }
+    </ul>
+
+    <button
+      type="button"
+      data-theme-toggle
+      aria-label="Toggle color theme"
+      class="font-mono text-xs uppercase tracking-wider text-ink-3 hover:text-ink"
+    >
+      <span data-theme-light>Dark</span>
+      <span data-theme-dark class="hidden">Light</span>
+    </button>
+  </nav>
+</header>
+
+<script is:inline>
+  // Theme toggle — flips data-theme on <html>, persists in localStorage.
+  (function () {
+    const button = document.querySelector('[data-theme-toggle]');
+    if (!button) return;
+
+    const sync = () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      button.querySelector('[data-theme-light]')?.classList.toggle('hidden', isDark);
+      button.querySelector('[data-theme-dark]')?.classList.toggle('hidden', !isDark);
+    };
+
+    button.addEventListener('click', () => {
+      const next =
+        document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      if (next === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      localStorage.setItem('ssl-theme', next);
+      sync();
+    });
+
+    sync();
+  })();
+</script>

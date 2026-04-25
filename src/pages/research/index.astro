@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const themes = [
+  { slug: 'energy-systems', title: 'Energy systems' },
+  { slug: 'land-use', title: 'Land use' },
+  { slug: 'trade', title: 'Trade' },
+  { slug: 'impacts', title: 'Impacts' },
+  { slug: 'solutions', title: 'Solutions' },
+];
+---
+
+<BaseLayout title="Research" showCoordReadout={true}>
+  <section class="container-content pt-16 pb-8">
+    <p class="eyebrow mb-4">RESEARCH</p>
+    <h1>What we study</h1>
+    <p class="lede max-w-prose mt-4">
+      The lab studies the unavoidable environmental tradeoffs of energy, food, and
+      material security — and the most viable paths to a sustainable future.
+    </p>
+  </section>
+
+  <section class="container-content pb-24">
+    <ul class="grid md:grid-cols-2 gap-px bg-rule border border-rule">
+      {
+        themes.map(({ slug, title }) => (
+          <li class="bg-paper p-6 hover:bg-paper-2">
+            <a href={`/research/${slug}`} class="block border-b-0">
+              <p class="eyebrow mb-2">THEME</p>
+              <h3 class="m-0">{title}</h3>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</BaseLayout>

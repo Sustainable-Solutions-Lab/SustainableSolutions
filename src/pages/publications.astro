@@ -1,0 +1,20 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Publications">
+  <section class="container-content pt-16 pb-8">
+    <p class="eyebrow mb-4">PUBLICATIONS</p>
+    <h1>Peer-reviewed work</h1>
+    <p class="lede max-w-prose mt-4">
+      Reverse chronological. Filter by theme, year, or author. Each entry links
+      to the DOI and, where available, replication code and PDFs.
+    </p>
+  </section>
+
+  <section class="container-content pb-24">
+    <p class="text-ink-3 text-sm">
+      List will populate from <code>src/data/publications.json</code>.
+    </p>
+  </section>
+</BaseLayout>

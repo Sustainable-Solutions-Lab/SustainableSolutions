@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export function getStaticPaths() {
+  return [
+    { params: { slug: 'energy-systems' }, props: { title: 'Energy systems' } },
+    { params: { slug: 'land-use' }, props: { title: 'Land use' } },
+    { params: { slug: 'trade' }, props: { title: 'Trade' } },
+    { params: { slug: 'impacts' }, props: { title: 'Impacts' } },
+    { params: { slug: 'solutions' }, props: { title: 'Solutions' } },
+  ];
+}
+
+const { title } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <article class="container-prose py-16">
+    <p class="eyebrow mb-4">RESEARCH THEME</p>
+    <h1>{title}</h1>
+    <p class="lede mt-4">
+      Theme prose lives in <code>src/content/research/{Astro.params.slug}.md</code>
+      and renders here.
+    </p>
+    <p class="text-ink-3">
+      Auto-generated list of papers tagged with this theme will appear below.
+    </p>
+  </article>
+</BaseLayout>

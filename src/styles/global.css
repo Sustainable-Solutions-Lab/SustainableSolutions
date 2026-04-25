@@ -1,0 +1,149 @@
+/* ==========================================================================
+   Sustainable Solutions Lab — global stylesheet
+   --------------------------------------------------------------------------
+   Order matters:
+     1. Tailwind v4 — utility engine
+     2. colors_and_type.css — canonical CSS variables (the design system)
+     3. @theme inline — bridge those variables into Tailwind utility classes
+     4. Local overrides
+   ========================================================================== */
+
+@import 'tailwindcss';
+@import './colors_and_type.css';
+
+/* ---------- Tailwind v4 token bridge ------------------------------------
+   Each utility (e.g. `bg-paper`, `text-ink-2`, `border-rule`) resolves to
+   the CSS variable defined in colors_and_type.css. Using `inline` keeps the
+   reference live, so [data-theme="dark"] flips colors at runtime. */
+
+@theme inline {
+  /* Paper / Ink — semantic surfaces */
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-paper-3: var(--paper-3);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-highlight: var(--highlight);
+
+  /* Brand palette (sampled from the lab logo) */
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-green: var(--brand-green);
+  --color-brand-teal: var(--brand-teal);
+  --color-brand-orange: var(--brand-orange);
+  --color-brand-cream: var(--brand-cream);
+
+  /* Stanford accent */
+  --color-cardinal: var(--cardinal);
+  --color-cardinal-bg: var(--cardinal-bg);
+
+  /* ColorBrewer Spectral (data) */
+  --color-spectral-1: var(--spectral-1);
+  --color-spectral-2: var(--spectral-2);
+  --color-spectral-3: var(--spectral-3);
+  --color-spectral-4: var(--spectral-4);
+  --color-spectral-5: var(--spectral-5);
+  --color-spectral-6: var(--spectral-6);
+  --color-spectral-7: var(--spectral-7);
+  --color-spectral-8: var(--spectral-8);
+  --color-spectral-9: var(--spectral-9);
+  --color-spectral-10: var(--spectral-10);
+  --color-spectral-11: var(--spectral-11);
+
+  /* Type families */
+  --font-serif: var(--font-serif);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+/* ---------- Static (non-themed) tokens ----------------------------------- */
+
+@theme {
+  /* Type scale (1.20 minor-third, anchored 16px) — matches colors_and_type.css */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 16px;
+  --text-md: 19px;
+  --text-lg: 23px;
+  --text-xl: 28px;
+  --text-2xl: 34px;
+  --text-3xl: 41px;
+  --text-4xl: 56px;
+  --text-5xl: 72px;
+
+  /* Spacing — 4px base */
+  --spacing: 4px;
+
+  /* Radii */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+
+  /* Layout */
+  --container-prose: 680px;
+  --container-content: 1200px;
+
+  /* Motion */
+  --ease-paper: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Elevation */
+  --shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ---------- Local overrides --------------------------------------------- */
+
+/* Smooth color transitions when the user toggles the theme. */
+html {
+  transition:
+    background-color var(--dur-content) var(--ease),
+    color var(--dur-content) var(--ease);
+}
+
+/* Tailwind's default `container` is too narrow — replace with our scale. */
+.container-content {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter-mobile);
+}
+
+@media (min-width: 768px) {
+  .container-content {
+    padding-inline: var(--gutter);
+  }
+}
+
+.container-prose {
+  width: 100%;
+  max-width: var(--prose-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter-mobile);
+}
+
+@media (min-width: 768px) {
+  .container-prose {
+    padding-inline: var(--gutter);
+  }
+}
+
+/* Hairline rule used liberally throughout the design system. */
+.rule {
+  border-top: 1px solid var(--rule);
+}
+.rule-strong {
+  border-top: 1px solid var(--rule-strong);
+}
+
+/* The cardinal marker dot used as an accent in eyebrows and callouts. */
+.cardinal-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cardinal);
+  vertical-align: middle;
+  margin-right: 0.4em;
+}

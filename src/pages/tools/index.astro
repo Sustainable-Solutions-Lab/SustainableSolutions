@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Tools">
+  <section class="container-content pt-16 pb-8">
+    <p class="eyebrow mb-4">TOOLS</p>
+    <h1>Things we ship</h1>
+    <p class="lede max-w-prose mt-4">
+      Interactive maps, datasets, and code releases that accompany our research.
+    </p>
+  </section>
+
+  <section class="container-content pb-24 grid md:grid-cols-2 gap-px bg-rule border border-rule">
+    <a href="/tools/firemap" class="block bg-paper p-6 hover:bg-paper-2 border-b-0">
+      <p class="eyebrow mb-2">INTERACTIVE MAP</p>
+      <h3 class="m-0">Firemap</h3>
+      <p class="text-ink-2 text-sm mt-2">
+        Per-km² costs and benefits of wildfire fuel treatment in California.
+      </p>
+    </a>
+  </section>
+</BaseLayout>

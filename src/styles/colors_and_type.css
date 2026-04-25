@@ -1,0 +1,439 @@
+/* ==========================================================================
+   Sustainable Solutions Lab — Design System
+   colors_and_type.css
+   --------------------------------------------------------------------------
+   CSS variables (tokens) and base typography for the SSL design system.
+   Two modes: default (light, "paper") and [data-theme="dark"] (CarbonPlan-deep).
+   ========================================================================== */
+
+/* ---------- Fonts -------------------------------------------------------- */
+
+/* Google Fonts (Source Serif 4, Inter, JetBrains Mono) are loaded via <link>
+   in BaseLayout.astro for parallel fetching. If the lab licenses Tiempos
+   Headline, drop .woff2 files in /public/fonts/tiempos/ and uncomment: */
+/*
+@font-face {
+  font-family: 'Tiempos Headline';
+  src: url('/fonts/tiempos/TiemposHeadline-Regular.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Tiempos Headline';
+  src: url('/fonts/tiempos/TiemposHeadline-Medium.woff2') format('woff2');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+*/
+
+/* ---------- Color tokens (light / paper mode, default) ------------------- */
+
+:root {
+  /* Paper & Ink — cream paper sampled from the lab mark, navy ink sampled from its crosshair. */
+  --paper:       #F8F8E8;        /* cream canvas (from logo) */
+  --paper-2:     #F1F1DF;        /* recessed surface */
+  --paper-3:     #E8E8D4;        /* alternate row */
+  --ink:         #181838;        /* navy ink (from logo crosshair) */
+  --ink-2:       #3A3A5A;        /* secondary text */
+  --ink-3:       #6B6B80;        /* tertiary / metadata */
+  --ink-4:       #9A9AAE;        /* disabled / hint */
+  --rule:        rgba(24, 24, 56, 0.14);
+  --rule-strong: rgba(24, 24, 56, 0.28);
+  --highlight:   rgba(120, 200, 216, 0.35); /* teal highlight */
+
+  /* Brand palette — sampled directly from the lab mark (globe + planet dots). */
+  --brand-navy:   #181838;       /* primary ink */
+  --brand-green:  #48A848;       /* lit hemisphere */
+  --brand-teal:   #78C8D8;       /* ocean band */
+  --brand-orange: #E87828;       /* accent planet — the cardinal replacement */
+  --brand-cream:  #F8F8E8;       /* paper */
+
+  /* Accent — Stanford cardinal as primary; Spectral remains the data palette. */
+  --accent-brand: #8C1515;       /* primary accent (cardinal) */
+  --accent-bg:    rgba(140, 21, 21, 0.08);
+  --cardinal:     #8C1515;       /* alias retained for legacy refs */
+  --cardinal-bg:  rgba(140, 21, 21, 0.06);
+
+  /* ColorBrewer Spectral 11 — the lab's signature data palette */
+  --spectral-1:  #9E0142;
+  --spectral-2:  #D53E4F;
+  --spectral-3:  #F46D43;
+  --spectral-4:  #FDAE61;
+  --spectral-5:  #FEE08B;
+  --spectral-6:  #FFFFBF;
+  --spectral-7:  #E6F598;
+  --spectral-8:  #ABDDA4;
+  --spectral-9:  #66C2A5;
+  --spectral-10: #3288BD;
+  --spectral-11: #5E4FA2;
+
+  /* Semantic */
+  --bg:          var(--paper);
+  --bg-alt:      var(--paper-2);
+  --fg:          var(--ink);
+  --fg-2:        var(--ink-2);
+  --fg-3:        var(--ink-3);
+  --link:        var(--ink);
+  --link-rule:   var(--rule-strong);
+  --accent:      var(--accent-brand);
+  --focus:       var(--accent-brand);
+
+  /* Spectral semantic aliases */
+  --positive:    var(--spectral-9);  /* green */
+  --negative:    var(--spectral-2);  /* red */
+  --warn:        var(--spectral-3);  /* orange */
+  --info:        var(--spectral-10); /* blue */
+
+  /* Type families */
+  --font-serif:  'Tiempos Headline', 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
+  --font-sans:   'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:   'JetBrains Mono', 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Type scale (1.20 minor-third, anchored 16px) */
+  --t-xs:   11px;   /* mono labels, captions */
+  --t-sm:   13px;   /* metadata, small body */
+  --t-base: 16px;   /* body */
+  --t-md:   19px;   /* large body, lede */
+  --t-lg:   23px;   /* h4 */
+  --t-xl:   28px;   /* h3 */
+  --t-2xl:  34px;   /* h2 */
+  --t-3xl:  41px;   /* h1 */
+  --t-4xl:  56px;   /* display */
+  --t-5xl:  72px;   /* hero */
+
+  /* Line heights */
+  --lh-tight:  1.12;
+  --lh-snug:   1.28;
+  --lh-normal: 1.5;
+  --lh-loose:  1.7;
+
+  /* Letter spacing */
+  --tr-tight:   -0.02em;  /* large display */
+  --tr-normal:  0;
+  --tr-mono:    0.04em;   /* mono caps */
+  --tr-eyebrow: 0.12em;   /* small-caps eyebrow */
+
+  /* Spacing scale (4px base) */
+  --s-1:   4px;
+  --s-2:   8px;
+  --s-3:   12px;
+  --s-4:   16px;
+  --s-5:   24px;
+  --s-6:   32px;
+  --s-7:   48px;
+  --s-8:   64px;
+  --s-9:   96px;
+  --s-10:  128px;
+
+  /* Radii */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+
+  /* Layout */
+  --content-max:  1200px;
+  --prose-max:    680px;
+  --gutter:       24px;
+  --gutter-mobile: 16px;
+
+  /* Motion */
+  --ease:        cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast:    120ms;
+  --dur-ui:      200ms;
+  --dur-content: 400ms;
+  --dur-page:    600ms;
+
+  /* Elevation (the only shadow we use) */
+  --shadow-pop:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ---------- Dark mode (CarbonPlan-deep) --------------------------------- */
+
+[data-theme="dark"] {
+  /* Dark mode keyed to the navy ink — deeper, richer than a neutral near-black. */
+  --paper:   #0C0C1C;
+  --paper-2: #14142A;
+  --paper-3: #1C1C36;
+  --ink:     #F8F8E8;
+  --ink-2:   #C8C8D8;
+  --ink-3:   #9A9AB0;
+  --ink-4:   #686880;
+  --rule:        rgba(248, 248, 232, 0.14);
+  --rule-strong: rgba(248, 248, 232, 0.28);
+  --highlight:   rgba(120, 200, 216, 0.22);
+
+  --accent-brand: #E04545;      /* lifted cardinal for dark-mode contrast */
+  --accent-bg:    rgba(224, 69, 69, 0.10);
+  --cardinal:     #E04545;
+  --cardinal-bg:  rgba(224, 69, 69, 0.10);
+
+  --bg:        var(--paper);
+  --bg-alt:    var(--paper-2);
+  --fg:        var(--ink);
+  --link:      var(--ink);
+  --link-rule: var(--rule-strong);
+  --accent:    var(--accent-brand);
+  --focus:     var(--accent-brand);
+
+  --shadow-pop:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Base ---------------------------------------------------------- */
+
+* { box-sizing: border-box; }
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--t-base);
+  line-height: var(--lh-normal);
+  font-feature-settings: "kern", "liga", "calt", "ss01";
+}
+
+/* ---------- Semantic typography ------------------------------------------ */
+
+.display, h1.display {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--t-5xl);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tight);
+  margin: 0 0 var(--s-5);
+  text-wrap: balance;
+}
+
+h1, .h1 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--t-3xl);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tight);
+  margin: 0 0 var(--s-4);
+  text-wrap: balance;
+}
+
+h2, .h2 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--t-2xl);
+  line-height: var(--lh-snug);
+  margin: 0 0 var(--s-3);
+  text-wrap: balance;
+}
+
+h3, .h3 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: var(--t-xl);
+  line-height: var(--lh-snug);
+  margin: 0 0 var(--s-3);
+}
+
+h4, .h4 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--t-lg);
+  line-height: var(--lh-snug);
+  margin: 0 0 var(--s-2);
+}
+
+h5, .h5 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--t-base);
+  line-height: var(--lh-snug);
+  margin: 0 0 var(--s-2);
+}
+
+p, .p {
+  margin: 0 0 var(--s-4);
+  max-width: var(--prose-max);
+  text-wrap: pretty;
+}
+
+.lede {
+  font-family: var(--font-serif);
+  font-size: var(--t-md);
+  line-height: var(--lh-loose);
+  color: var(--ink-2);
+  font-weight: 400;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  letter-spacing: var(--tr-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: inline-block;
+}
+
+.eyebrow--accent {
+  color: var(--cardinal);
+}
+
+.eyebrow .dot {
+  display: inline-block;
+  margin: 0 0.5em;
+  color: var(--ink-4);
+}
+
+.caption {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--t-sm);
+  line-height: var(--lh-loose);
+  color: var(--ink-2);
+  max-width: var(--prose-max);
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: var(--tr-mono);
+  color: var(--ink-3);
+}
+
+code, kbd, samp, pre, .mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+code {
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+}
+
+pre {
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--s-4);
+  overflow-x: auto;
+  line-height: var(--lh-normal);
+}
+
+pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+blockquote {
+  margin: var(--s-5) 0;
+  padding-left: var(--s-4);
+  border-left: 2px solid var(--cardinal);
+  font-family: var(--font-serif);
+  font-size: var(--t-md);
+  line-height: var(--lh-loose);
+  color: var(--ink-2);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: var(--s-6) 0;
+}
+
+/* ---------- Links --------------------------------------------------------- */
+
+a {
+  color: var(--link);
+  text-decoration: none;
+  border-bottom: 1px solid var(--link-rule);
+  transition: border-color var(--dur-ui) var(--ease);
+}
+
+a:hover {
+  border-bottom-color: var(--ink);
+  border-bottom-width: 2px;
+  margin-bottom: -1px; /* prevent jitter */
+}
+
+a.bare {
+  border-bottom: 0;
+}
+
+a.bare:hover {
+  opacity: 0.7;
+}
+
+/* External-link arrow */
+a[data-external]::after,
+a.ext::after {
+  content: " ↗";
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--ink-3);
+}
+
+/* ---------- Selection & focus -------------------------------------------- */
+
+::selection {
+  background: var(--highlight);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Utility ------------------------------------------------------- */
+
+.cardinal { color: var(--cardinal); }
+.accent   { color: var(--accent-brand); }
+.brand-navy   { color: var(--brand-navy); }
+.brand-green  { color: var(--brand-green); }
+.brand-teal   { color: var(--brand-teal); }
+.brand-orange { color: var(--brand-orange); }
+.dim      { color: var(--ink-3); }
+.dimmer   { color: var(--ink-4); }
+.serif    { font-family: var(--font-serif); }
+.sans     { font-family: var(--font-sans); }
+.mono     { font-family: var(--font-mono); }
+
+.smallcaps {
+  font-variant-caps: all-small-caps;
+  letter-spacing: var(--tr-eyebrow);
+}
+
+.rule { border-top: 1px solid var(--rule); }
+.rule-strong { border-top: 1px solid var(--rule-strong); }
+
+.cardinal-mark {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-brand);
+  vertical-align: middle;
+  margin-right: 0.4em;
+}
+
+/* Spectral utility classes for chart elements */
+.spec-1  { color: var(--spectral-1); }
+.spec-2  { color: var(--spectral-2); }
+.spec-3  { color: var(--spectral-3); }
+.spec-4  { color: var(--spectral-4); }
+.spec-5  { color: var(--spectral-5); }
+.spec-6  { color: var(--spectral-6); }
+.spec-7  { color: var(--spectral-7); }
+.spec-8  { color: var(--spectral-8); }
+.spec-9  { color: var(--spectral-9); }
+.spec-10 { color: var(--spectral-10); }
+.spec-11 { color: var(--spectral-11); }

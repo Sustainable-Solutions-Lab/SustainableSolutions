@@ -206,19 +206,13 @@ body {
 .display, h1.display {
   font-family: var(--font-serif);
   font-weight: 400;
-  font-size: var(--t-3xl);  /* 41px on mobile */
+  /* Fluid sizing: ~26px at 320px viewport → ~56px at 1280px+.
+     Sized so "Underexamined questions." fits on one line at every breakpoint. */
+  font-size: clamp(26px, 3.2vw + 14px, 56px);
   line-height: var(--lh-tight);
   letter-spacing: var(--tr-tight);
   margin: 0 0 var(--s-5);
   text-wrap: balance;
-}
-
-@media (min-width: 640px) {
-  .display, h1.display { font-size: var(--t-4xl); }  /* 56px on tablet */
-}
-
-@media (min-width: 1024px) {
-  .display, h1.display { font-size: var(--t-5xl); }  /* 72px on desktop */
 }
 
 h1, .h1 {

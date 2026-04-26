@@ -6,6 +6,8 @@ import type { Person } from '../../lib/types';
 
 const all = (people as Person[]).slice().sort((a, b) => a.order - b.order);
 
+// Sections are mutually exclusive — each person appears in exactly one.
+// Priority: alumni > current CIU > current main.
 const sections = [
   {
     id: 'current',
@@ -15,7 +17,7 @@ const sections = [
   {
     id: 'ciu',
     label: 'Conceptual Investigations Unit',
-    members: all.filter((p) => p.unit === 'ciu'),
+    members: all.filter((p) => p.status === 'current' && p.unit === 'ciu'),
   },
   {
     id: 'alumni',

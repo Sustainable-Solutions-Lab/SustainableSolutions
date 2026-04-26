@@ -370,6 +370,10 @@ a.bare {
 
 a.bare:hover {
   opacity: 0.7;
+  /* Cancel the border-width and margin changes from a:hover above so
+     bare links don't jitter (esp. when wrapping an <img>). */
+  border-bottom-width: 0;
+  margin-bottom: 0;
 }
 
 /* External-link arrow */

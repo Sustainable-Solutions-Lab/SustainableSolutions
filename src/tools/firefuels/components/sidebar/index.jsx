@@ -55,25 +55,24 @@ export function Sidebar({
     >
       {/* Back-to-lab link + SDSS wordmark — top of sidebar */}
       <Box sx={{ px: 3, pt: 3, pb: 2, flexShrink: 0 }}>
-        <Box
-          as='a'
+        <a
           href='/'
-          sx={{
+          className='bare'
+          style={{
             display: 'inline-block',
-            fontFamily: 'mono',
-            fontSize: 0,
-            letterSpacing: 'caps',
+            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+            fontSize: '11px',
+            letterSpacing: '0.12em',
             textTransform: 'uppercase',
-            color: 'muted',
-            textDecoration: 'none',
-            mb: 2,
-            '&:hover': { color: 'text' },
+            color: 'var(--ink-3)',
+            marginBottom: '8px',
           }}
         >
           ← Sustainable Solutions Lab
-        </Box>
+        </a>
         <a
           href='/'
+          className='bare'
           style={{ lineHeight: 0, display: 'inline-block' }}
         >
           <img

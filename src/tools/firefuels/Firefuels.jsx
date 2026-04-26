@@ -64,9 +64,23 @@ function reducer(state, action) {
 
 // ── App body (inside ThemeProvider) ─────────────────────────────────────────
 
+// Read site-level theme (set by BaseLayout's bootstrap script) so firefuels
+// starts in the same mode as the rest of the site. Falls back to dark on SSR.
+function readSiteScheme() {
+  if (typeof document === 'undefined') return 'dark'
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+}
+
 function FirefuelsApp() {
-  const [state, dispatch] = useReducer(reducer, initialState)
+  const initialScheme = readSiteScheme()
+  const [state, dispatch] = useReducer(reducer, { ...initialState, colorScheme: initialScheme })
   const [, setColorMode] = useColorMode()
+
+  // Sync Theme UI's color mode to the site theme on mount.
+  useEffect(() => {
+    setColorMode(initialScheme)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
   const [mobileAboutOpen, setMobileAboutOpen] = useState(false)
   const [mapInstance, setMapInstance] = useState(null)
@@ -107,6 +121,14 @@ function FirefuelsApp() {
     const next = state.colorScheme === 'dark' ? 'light' : 'dark'
     setColorMode(next)
     dispatch({ type: Actions.TOGGLE_SCHEME })
+    // Mirror to the site-level theme so the body bg, BaseLayout, and any
+    // future site chrome stay in lockstep with firefuels.
+    if (next === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark')
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+    try { localStorage.setItem('ssl-theme', next) } catch {}
   }
 
   // Mobile panel: show only treatment + climate dimensions for the active layer
@@ -147,25 +169,25 @@ function FirefuelsApp() {
         }}
       >
         <Flex sx={{ flexDirection: 'column', gap: '3px' }}>
-          <Box
-            as='a'
+          <a
             href='/'
-            sx={{
-              fontFamily: 'mono',
+            className='bare'
+            style={{
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
               fontSize: '10px',
-              letterSpacing: 'caps',
+              letterSpacing: '0.12em',
               textTransform: 'uppercase',
-              color: 'muted',
-              textDecoration: 'none',
+              color: 'var(--ink-3)',
               lineHeight: 1,
-              mb: '2px',
-              '&:hover': { color: 'text' },
+              marginBottom: '2px',
+              display: 'inline-block',
             }}
           >
             ← Lab
-          </Box>
+          </a>
           <a
             href='/'
+            className='bare'
             style={{ lineHeight: 0, display: 'inline-block' }}
           >
             <img
@@ -273,7 +295,7 @@ function FirefuelsApp() {
               zIndex: 10,
             }}
           >
-            <a href='/' style={{ lineHeight: 0, display: 'block' }}>
+            <a href='/' className='bare' style={{ lineHeight: 0, display: 'block' }}>
               <img
                 src={isDark ? '/LabLogo_light.png' : '/LabLogo_border.png'}
                 alt='Back to Sustainable Solutions Lab'

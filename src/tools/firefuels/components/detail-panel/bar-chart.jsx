@@ -5,9 +5,11 @@
 
 import { formatValue } from '../../lib/format.js'
 
-const BENEFIT_COLOR = '#5B8A4E'
-const COST_COLOR = '#E55C2F'
-const MUTED_COLOR = '#6b6b6b'
+// Aligned with the lab design system brand palette (sampled from logo).
+const BENEFIT_COLOR = '#48A848'  // --brand-green
+const COST_COLOR = '#E87828'     // --brand-orange
+// Neutral gray that reads cleanly on both paper and dark paper backgrounds.
+const MUTED_COLOR = '#6B6B80'
 
 const SVG_WIDTH = 220
 const SVG_HEIGHT = 90
@@ -75,7 +77,7 @@ export function BenefitCostChart({ cell, config }) {
         y={TITLE_HEIGHT - 3}
         fontSize={10}
         fill={MUTED_COLOR}
-        fontFamily='system-ui, sans-serif'
+        fontFamily="'Inter', sans-serif"
       >
         Current Climate
       </text>
@@ -86,7 +88,7 @@ export function BenefitCostChart({ cell, config }) {
         y={benefitBarY + BAR_HEIGHT - 2}
         fontSize={10}
         fill={MUTED_COLOR}
-        fontFamily='system-ui, sans-serif'
+        fontFamily="'Inter', sans-serif"
       >
         Benefit
       </text>
@@ -103,7 +105,7 @@ export function BenefitCostChart({ cell, config }) {
         y={benefitBarY + BAR_HEIGHT - 2}
         fontSize={10}
         fill={BENEFIT_COLOR}
-        fontFamily='ui-monospace, monospace'
+        fontFamily="'JetBrains Mono', ui-monospace, monospace"
       >
         {formatValue(benefit, '$/km²')}
       </text>
@@ -114,7 +116,7 @@ export function BenefitCostChart({ cell, config }) {
         y={costBarY + BAR_HEIGHT - 2}
         fontSize={10}
         fill={MUTED_COLOR}
-        fontFamily='system-ui, sans-serif'
+        fontFamily="'Inter', sans-serif"
       >
         Cost
       </text>
@@ -131,7 +133,7 @@ export function BenefitCostChart({ cell, config }) {
         y={costBarY + BAR_HEIGHT - 2}
         fontSize={10}
         fill={COST_COLOR}
-        fontFamily='ui-monospace, monospace'
+        fontFamily="'JetBrains Mono', ui-monospace, monospace"
       >
         {formatValue(cost, '$/km²')}
       </text>
@@ -153,7 +155,7 @@ export function BenefitCostChart({ cell, config }) {
         y={costBarY + BAR_HEIGHT + 14}
         fontSize={10}
         fill={netColor}
-        fontFamily='ui-monospace, monospace'
+        fontFamily="'JetBrains Mono', ui-monospace, monospace"
         fontWeight='600'
       >
         {netLabel}

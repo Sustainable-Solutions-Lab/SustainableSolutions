@@ -40,24 +40,24 @@ const isAlum = person.status === 'alumni';
         <img
           src={`/people/${person.photo_filename}`}
           alt={person.name}
-          width="64"
-          height="64"
+          width="88"
+          height="88"
           loading="lazy"
-          class="w-16 h-16 object-cover"
-          style="border-radius: var(--radius-md);"
+          class="w-22 h-22 shrink-0 object-cover"
+          style="width: 88px; height: 88px; border-radius: var(--radius-md);"
         />
       ) : (
         <div
           aria-hidden="true"
-          class="w-16 h-16 flex items-center justify-center font-mono text-xl text-paper select-none"
-          style={`background: ${avatarBg}; border-radius: var(--radius-md);`}
+          class="shrink-0 flex items-center justify-center font-mono text-2xl text-paper select-none"
+          style={`width: 88px; height: 88px; background: ${avatarBg}; border-radius: var(--radius-md);`}
         >
           {initials || '·'}
         </div>
       )
     }
-    <div class="min-w-0">
-      <p class="font-serif text-lg leading-tight m-0">{person.name}</p>
+    <div class="min-w-0 flex-1">
+      <p class="font-serif text-lg leading-tight m-0 truncate">{person.name}</p>
       <p class="text-ink-3 text-sm mt-1 truncate">{person.role}</p>
       {
         isAlum && person.current_position && (

@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Firefuels from '../../tools/firefuels/Firefuels.jsx';
+---
+
+<BaseLayout
+  title="Firefuels"
+  description="Per-km² costs and benefits of wildfire fuel treatment in California."
+>
+  <div class="firefuels-host">
+    <Firefuels client:only="react" />
+  </div>
+</BaseLayout>
+
+<style is:global>
+  /* Firefuels takes over the viewport: hide the site nav so the tool's own
+     header bar is the only chrome. The site footer is also suppressed since
+     the tool fills the screen. Use the back-to-tools link in the tool's UI. */
+  body:has(.firefuels-host) > header,
+  body:has(.firefuels-host) > footer {
+    display: none;
+  }
+  body:has(.firefuels-host) {
+    overflow: hidden;
+  }
+  .firefuels-host {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+</style>

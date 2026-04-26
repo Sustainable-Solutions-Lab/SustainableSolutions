@@ -3,18 +3,9 @@
  *
  * Left sidebar: project title, layer tabs, dimension controls,
  * legend, percentile filter, area tool toggle, methods link, lab logo.
- *
- * Props:
- *   config          - ProjectConfig
- *   state           - AppState
- *   dispatch        - Dispatch
- *   filteredCount   - number | null
- *   filteredMean    - number | null
- *   filteredMedian  - number | null
  */
 
 import { useState } from 'react'
-import { Box, Text } from 'theme-ui'
 import { Actions } from '../../contracts/events.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { LayerTabs } from './layer-tabs.jsx'
@@ -22,12 +13,7 @@ import { DimensionControl } from './dimension-control.jsx'
 import { Legend } from './legend.jsx'
 import { DistributionChart } from './distribution-chart.jsx'
 
-export function Sidebar({
-  config,
-  state,
-  dispatch,
-  allValues = [],
-}) {
+export function Sidebar({ config, state, dispatch, allValues = [] }) {
   const [aboutOpen, setAboutOpen] = useState(false)
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
@@ -37,26 +23,15 @@ export function Sidebar({
   )
 
   return (
-    <Box
-      sx={{
-        position: 'relative',
-        width: 280,
-        minWidth: 280,
-        height: '100%',
-        bg: 'background',
-        borderRight: '1px solid',
-        borderColor: 'border',
-        overflowX: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        flexShrink: 0,
-      }}
+    <aside
+      className="relative h-full bg-paper border-r border-rule overflow-x-hidden flex flex-col shrink-0"
+      style={{ width: 280, minWidth: 280 }}
     >
-      {/* Header — back link only (wordmark moved to footer) */}
-      <Box sx={{ px: 3, pt: 3, pb: 3, flexShrink: 0 }}>
+      {/* Header — back link only */}
+      <div className="px-3 pt-3 pb-3 shrink-0">
         <a
-          href='/'
-          className='bare'
+          href="/"
+          className="bare"
           style={{
             display: 'inline-block',
             fontFamily: "'JetBrains Mono', ui-monospace, monospace",
@@ -68,79 +43,44 @@ export function Sidebar({
         >
           ← Sustainable Solutions Lab
         </a>
-      </Box>
+      </div>
 
       {/* Scrollable content */}
-      <Box sx={{ flex: 1, px: 3, pt: 1, pb: 2, overflowY: 'auto', overflowX: 'hidden' }}>
+      <div className="flex-1 px-3 pt-1 pb-2 overflow-y-auto overflow-x-hidden">
         {/* Project title */}
-        <Text
-          sx={{
-            fontFamily: 'serif',
-            fontSize: '22px',
-            fontWeight: '600',
-            color: 'text',
-            lineHeight: 'heading',
-            display: 'block',
-            mb: 1,
-          }}
+        <p
+          className="font-serif text-ink mb-1 m-0"
+          style={{ fontSize: '22px', fontWeight: 600, lineHeight: 1.28 }}
         >
           {config.title}
-        </Text>
+        </p>
+
         {/* About toggle */}
-        <Box
-          as='button'
+        <button
+          type="button"
           onClick={() => setAboutOpen((o) => !o)}
-          sx={{
-            display: 'block',
-            width: '100%',
-            mb: aboutOpen ? 2 : 3,
-            fontFamily: 'body',
-            fontSize: 1,
-            fontWeight: 'bold',
-            letterSpacing: 'caps',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            py: 0,
-            px: 0,
-            border: 'none',
-            bg: 'transparent',
-            textAlign: 'left',
-            color: aboutOpen ? 'text' : 'muted',
-            transition: 'color 0.1s',
-            '&:hover': { color: 'text' },
-          }}
+          className={[
+            'block w-full text-left bg-transparent border-0 cursor-pointer p-0',
+            'font-sans text-[13px] font-bold uppercase tracking-[0.12em] transition-colors',
+            aboutOpen ? 'mb-2 text-ink' : 'mb-3 text-ink-3',
+            'hover:text-ink',
+          ].join(' ')}
         >
           About
-        </Box>
+        </button>
+
         {aboutOpen && (
-          <Box
+          <div
             dangerouslySetInnerHTML={{ __html: config.description }}
-            sx={{
-              fontFamily: 'body',
-              fontSize: 0,
-              color: 'text',
-              lineHeight: 'body',
-              mb: 3,
-              'a': { color: 'text', textDecoration: 'underline', '&:hover': { opacity: 0.75 } },
-            }}
+            className="font-sans text-[13px] text-ink mb-3"
+            style={{ lineHeight: 1.5 }}
           />
         )}
 
         {/* MAP section header */}
-        <Text
-          sx={{
-            fontFamily: 'body',
-            fontSize: 1,
-            fontWeight: 'bold',
-            letterSpacing: 'caps',
-            textTransform: 'uppercase',
-            color: 'text',
-            display: 'block',
-            mb: 2,
-          }}
-        >
+        <p className="font-sans text-[13px] font-bold uppercase tracking-[0.12em] text-ink mb-2 m-0">
           Map
-        </Text>
+        </p>
 
         {/* Layer tabs */}
         <LayerTabs config={config} state={state} dispatch={dispatch} />
@@ -150,7 +90,7 @@ export function Sidebar({
           const filteredDim = {
             ...dim,
             options: dim.options?.filter(
-              (opt) => !opt.visibleForLayers || opt.visibleForLayers.includes(state.activeLayer)
+              (opt) => !opt.visibleForLayers || opt.visibleForLayers.includes(state.activeLayer),
             ),
           }
           return (
@@ -175,92 +115,51 @@ export function Sidebar({
         )}
 
         {/* Legend / colorbar */}
-        <Legend variable={activeVariable} allValues={allValues} isDark={state.colorScheme === 'dark'} />
+        <Legend
+          variable={activeVariable}
+          allValues={allValues}
+          isDark={state.colorScheme === 'dark'}
+        />
 
         {/* Regional Data toggle */}
         {config.areaTool?.enabled && (
-          <Box
-            as='button'
+          <button
+            type="button"
             onClick={() => {
               if (state.methodsOpen) dispatch({ type: Actions.TOGGLE_METHODS })
               dispatch({ type: Actions.TOGGLE_AREA_TOOL })
             }}
-            sx={{
-              display: 'block',
-              width: '100%',
-              mb: 1,
-              mt: 2,
-              fontFamily: 'body',
-              fontSize: 1,
-              fontWeight: 'bold',
-              letterSpacing: 'caps',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              py: 1,
-              px: 0,
-              border: 'none',
-              bg: 'transparent',
-              textAlign: 'left',
-              color: state.areaToolActive ? 'text' : 'muted',
-              transition: 'color 0.1s',
-              '&:hover': { color: 'text' },
-            }}
+            className={[
+              'block w-full text-left bg-transparent border-0 cursor-pointer py-1 px-0 mb-1 mt-2',
+              'font-sans text-[13px] font-bold uppercase tracking-[0.12em] transition-colors',
+              state.areaToolActive ? 'text-ink' : 'text-ink-3',
+              'hover:text-ink',
+            ].join(' ')}
           >
             Regional Data
-          </Box>
+          </button>
         )}
 
         {/* Read Methods */}
-        <Box
-          as='button'
+        <button
+          type="button"
           onClick={() => dispatch({ type: Actions.TOGGLE_METHODS })}
-          sx={{
-            display: 'block',
-            width: '100%',
-            mt: 1,
-            fontFamily: 'body',
-            fontSize: 1,
-            fontWeight: 'bold',
-            letterSpacing: 'caps',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            py: 1,
-            px: 0,
-            border: 'none',
-            bg: 'transparent',
-            textAlign: 'left',
-            color: 'muted',
-            transition: 'color 0.1s',
-            '&:hover': { color: 'text' },
-          }}
+          className="block w-full text-left bg-transparent border-0 cursor-pointer py-1 px-0 mt-1 font-sans text-[13px] font-bold uppercase tracking-[0.12em] text-ink-3 hover:text-ink transition-colors"
         >
           Read Methods
-        </Box>
-      </Box>
+        </button>
+      </div>
 
-      {/* Footer — SDSS wordmark, pinned to the bottom of the sidebar */}
-      <Box
-        sx={{
-          flexShrink: 0,
-          px: 3,
-          py: 3,
-          borderTop: '1px solid',
-          borderColor: 'border',
-        }}
-      >
-        <a
-          href='/'
-          className='bare'
-          style={{ lineHeight: 0, display: 'inline-block' }}
-        >
+      {/* Footer — SDSS wordmark, pinned to the bottom */}
+      <div className="shrink-0 px-3 py-3 border-t border-rule">
+        <a href="/" className="bare" style={{ lineHeight: 0, display: 'inline-block' }}>
           <img
             src={state.colorScheme === 'dark' ? '/SDSS_brand_white.png' : '/SDSS_brand.png'}
-            alt='Stanford Doerr School of Sustainability'
+            alt="Stanford Doerr School of Sustainability"
             style={{ width: '100%', maxWidth: 200, height: 'auto', objectFit: 'contain' }}
           />
         </a>
-      </Box>
-
-    </Box>
+      </div>
+    </aside>
   )
 }

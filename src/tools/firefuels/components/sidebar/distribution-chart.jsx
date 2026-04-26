@@ -12,9 +12,8 @@
  * - Returns null for categorical variables (no meaningful distribution)
  */
 
-/** @jsxImportSource theme-ui */
 import { useMemo, useRef, useState, useCallback } from 'react'
-import { Box, Flex, Text } from 'theme-ui'
+import { SlidersHorizontal } from 'lucide-react'
 import { buildColorScale } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
 import { Actions } from '../../contracts/events.js'
@@ -23,9 +22,6 @@ const CHART_W = 220
 const CHART_H = 90
 
 // Lucide SlidersHorizontal — 1.5px stroke, 24px grid, matches the design system.
-// Active state is conveyed by color (caller sets currentColor on the button).
-import { SlidersHorizontal } from 'lucide-react'
-
 function SlidersIcon({ size = 16 }) {
   return <SlidersHorizontal size={size} strokeWidth={1.5} aria-hidden='true' />
 }
@@ -165,41 +161,33 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
   if (!variable || isCategorical || !sorted.length) return null
 
   return (
-    <Box sx={{ mb: 3 }}>
+    <div className="mb-6">
       {/* Chart with filter icon overlay */}
-      <Box sx={{ position: 'relative' }}>
+      <div className="relative">
         {/* Unit label — top right, just left of the filter icon */}
         {unit && (
-          <Text sx={{
-            position: 'absolute', top: '5px', right: '32px',
-            fontFamily: 'mono', fontSize: 1, color: 'muted', lineHeight: 1,
-            zIndex: 1, userSelect: 'none',
-          }}>
+          <span
+            className="absolute font-mono text-[13px] text-ink-3 leading-none z-10 select-none"
+            style={{ top: '5px', right: '32px' }}
+          >
             {unit}
-          </Text>
+          </span>
         )}
 
         {/* Filter toggle button — upper right of chart */}
-        <Box
-          as='button'
+        <button
+          type="button"
           onClick={handleToggleFilter}
           title={filterActive ? 'Clear filter' : 'Filter by percentile'}
-          sx={{
-            position: 'absolute',
-            top: '5px',
-            right: '5px',
-            zIndex: 1,
-            bg: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            p: 0,
-            lineHeight: 0,
-            color: filterActive ? 'text' : 'muted',
-            '&:hover': { color: 'text' },
-          }}
+          className={[
+            'absolute z-10 bg-transparent border-0 cursor-pointer p-0 leading-none transition-colors',
+            filterActive ? 'text-ink' : 'text-ink-3',
+            'hover:text-ink',
+          ].join(' ')}
+          style={{ top: '5px', right: '5px' }}
         >
           <SlidersIcon size={18} />
-        </Box>
+        </button>
 
         <svg
           ref={svgRef}
@@ -273,46 +261,37 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
             </g>
           )}
         </svg>
-      </Box>
+      </div>
 
       {/* Axis labels — left=max, right=min, zero label at crossover for diverging */}
-      <Box sx={{ position: 'relative', height: '14px', mt: '3px', mb: '2px' }}>
+      <div className="relative" style={{ height: '14px', marginTop: '3px', marginBottom: '2px' }}>
         {/* High-end label (left) */}
-        <Text sx={{
-          position: 'absolute', left: 0,
-          fontFamily: 'mono', fontSize: 1, color: 'muted', lineHeight: 1,
-        }}>
+        <span className="absolute left-0 font-mono text-[13px] text-ink-3 leading-none">
           {showHighGT ? '>' : ''}{formatValue(dataMax, '')}
-        </Text>
+        </span>
 
         {/* Zero crossover label — only when diverging and zero falls well inside range */}
         {zeroCrossoverPct !== null && zeroCrossoverPct > 8 && zeroCrossoverPct < 92 && (
-          <Text sx={{
-            position: 'absolute',
-            left: `${zeroCrossoverPct}%`,
-            transform: 'translateX(-50%)',
-            fontFamily: 'mono', fontSize: 1, color: 'muted', lineHeight: 1,
-            whiteSpace: 'nowrap',
-          }}>
+          <span
+            className="absolute font-mono text-[13px] text-ink-3 leading-none whitespace-nowrap"
+            style={{ left: `${zeroCrossoverPct}%`, transform: 'translateX(-50%)' }}
+          >
             {formatValue(zero ?? 0, '')}
-          </Text>
+          </span>
         )}
 
         {/* Low-end label (right) */}
-        <Text sx={{
-          position: 'absolute', right: 0,
-          fontFamily: 'mono', fontSize: 1, color: 'muted', lineHeight: 1,
-        }}>
+        <span className="absolute right-0 font-mono text-[13px] text-ink-3 leading-none">
           {showLowLT ? '<' : ''}{formatValue(dataMin, '')}
-        </Text>
-      </Box>
+        </span>
+      </div>
 
       {/* Filter status */}
       {filterActive && low > 0 && (
-        <Text sx={{ fontFamily: 'body', fontSize: 1, color: 'muted', mt: 1 }}>
+        <p className="font-sans text-[13px] text-ink-3 mt-1 m-0">
           Showing top {100 - low}%
-        </Text>
+        </p>
       )}
-    </Box>
+    </div>
   )
 }

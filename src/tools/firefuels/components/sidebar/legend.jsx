@@ -6,7 +6,6 @@
  *   - Continuous:  gradient bar with min/zero/max labels
  */
 
-import { Box, Flex, Text } from 'theme-ui'
 import { buildLegendStops } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
 
@@ -18,8 +17,6 @@ export function Legend({ variable, allValues = [], isDark = true }) {
 
 /**
  * Compact color bar for the mobile map overlay.
- * Renders a gradient bar + labels for continuous variables,
- * or colored swatches for categorical variables.
  */
 export function MobileLegend({ variable, allValues = [], isDark = true }) {
   if (!variable) return null
@@ -31,29 +28,27 @@ export function MobileLegend({ variable, allValues = [], isDark = true }) {
 
 function CategoricalLegend({ variable, isDark = true }) {
   return (
-    <Box sx={{ mb: 3 }}>
-      <Flex sx={{ flexDirection: 'column', gap: 1 }}>
+    <div className="mb-6">
+      <div className="flex flex-col gap-1">
         {variable.categories.map((cat) => {
           const color = isDark ? (cat.colorDark ?? cat.color) : (cat.colorLight ?? cat.color)
           return (
-            <Flex key={cat.id} sx={{ alignItems: 'center', gap: 2 }}>
-              <Box
-                sx={{
+            <div key={cat.id} className="flex items-center gap-2">
+              <span
+                className="shrink-0"
+                style={{
                   width: 12,
                   height: 12,
-                  borderRadius: 'sm',
-                  flexShrink: 0,
-                  bg: color,
+                  borderRadius: 'var(--radius-sm)',
+                  background: color,
                 }}
               />
-              <Text sx={{ fontFamily: 'body', fontSize: 1, color: 'text' }}>
-                {cat.label}
-              </Text>
-            </Flex>
+              <span className="font-sans text-[13px] text-ink">{cat.label}</span>
+            </div>
           )
         })}
-      </Flex>
-    </Box>
+      </div>
+    </div>
   )
 }
 
@@ -65,11 +60,12 @@ function withAlpha(cssColor, alpha) {
   return cssColor.replace(/^rgb\(/, 'rgba(').replace(/\)$/, `, ${alpha.toFixed(3)})`)
 }
 
+// (Continuous sidebar legend — currently unused; the distribution chart
+// covers the continuous case in the desktop sidebar. Kept for parity.)
 function ContinuousLegend({ variable, allValues = [], isDark = true }) {
   const { zero } = variable.domain
   const unit = variable.unit || ''
 
-  // Compute actual domain from rendered data (p1–p99, matching colorRangeRef in use-map-layer)
   let effectiveDomain = variable.domain
   if (allValues.length >= 2) {
     const sorted_ = [...allValues].sort((a, b) => a - b)
@@ -79,18 +75,14 @@ function ContinuousLegend({ variable, allValues = [], isDark = true }) {
   }
   const { min, max } = effectiveDomain
 
-  // Distribution chart is sorted descending (high → low, left → right).
-  // Legend matches that orientation: max on left, min on right.
   let gradient
   if (variable.diverging) {
     const zeroVal = variable.domain?.zero ?? 0
     const negRange = Math.max(zeroVal - min, 0.001)
     const posRange = Math.max(max - zeroVal, 0.001)
     const totalRange = negRange + posRange
-    // Zero sits at posRange/total from the left (positive side is on the left now)
     const zeroPct = (posRange / totalRange * 100).toFixed(1)
 
-    // High (positive, blue) on left → transparent at zero → low (negative, red) on right
     const blue = isDark ? '#4393c3' : '#2166ac'
     const red  = isDark ? '#d6604d' : '#b2182b'
     const blueRgb = isDark ? '67,147,195' : '33,102,172'
@@ -101,8 +93,6 @@ function ContinuousLegend({ variable, allValues = [], isDark = true }) {
       rgba(${redRgb},0) ${zeroPct}%,
       ${red} 100%)`
   } else {
-    // Sequential: high value on left (reverse the gradient)
-    // Use scheme-aware colormap so colors match the diverging anchors
     let cm = variable.colormap
     if (cm === 'RdBuBlue') cm = isDark ? 'RdBuBlueDark' : 'RdBuBlueLight'
     if (cm === 'RdBuRed')  cm = isDark ? 'RdBuRedDark'  : 'RdBuRedLight'
@@ -115,30 +105,22 @@ function ContinuousLegend({ variable, allValues = [], isDark = true }) {
   }
 
   return (
-    <Box sx={{ mb: 3 }}>
+    <div className="mb-6">
       {unit && (
-        <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'muted', display: 'block', mb: 1 }}>
-          {unit}
-        </Text>
+        <p className="font-mono text-[11px] text-ink-3 mb-1 m-0">{unit}</p>
       )}
-
-      <Box sx={{ height: 10, borderRadius: 'sm', background: gradient, mb: 1 }} />
-
-      {/* Labels: max on left, zero in centre, min on right — matching chart sort order */}
-      <Flex sx={{ justifyContent: 'space-between' }}>
-        <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'muted' }}>
-          {formatValue(max, unit)}
-        </Text>
+      <div
+        className="mb-1"
+        style={{ height: 10, borderRadius: 'var(--radius-sm)', background: gradient }}
+      />
+      <div className="flex justify-between">
+        <span className="font-mono text-[11px] text-ink-3">{formatValue(max, unit)}</span>
         {variable.diverging && zero !== undefined && (
-          <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'muted' }}>
-            {formatValue(zero, unit)}
-          </Text>
+          <span className="font-mono text-[11px] text-ink-3">{formatValue(zero, unit)}</span>
         )}
-        <Text sx={{ fontFamily: 'mono', fontSize: 0, color: 'muted' }}>
-          {formatValue(min, unit)}
-        </Text>
-      </Flex>
-    </Box>
+        <span className="font-mono text-[11px] text-ink-3">{formatValue(min, unit)}</span>
+      </div>
+    </div>
   )
 }
 
@@ -169,7 +151,7 @@ function MobileContinuousLegend({ variable, allValues = [], isDark }) {
   const { min, max } = effectiveDomain
 
   let gradient
-  let zeroPct = null   // percentage from left where the gradient is transparent (diverging only)
+  let zeroPct = null
   if (variable.diverging) {
     const negRange = Math.max(zeroVal - min, 0.001)
     const posRange = Math.max(max - zeroVal, 0.001)
@@ -195,44 +177,39 @@ function MobileContinuousLegend({ variable, allValues = [], isDark }) {
   const labelStyle = { fontFamily: 'monospace', fontSize: 10, color: textColor, position: 'absolute', whiteSpace: 'nowrap' }
 
   return (
-    <Box>
+    <div>
       {unit && (
-        <Box style={{ fontFamily: 'monospace', fontSize: 10, color: textColor, marginBottom: 3 }}>
+        <div style={{ fontFamily: 'monospace', fontSize: 10, color: textColor, marginBottom: 3 }}>
           {unit}
-        </Box>
+        </div>
       )}
-      <Box style={{ height: 8, borderRadius: 3, background: gradient, marginBottom: 3 }} />
-      {/* Labels: positioned absolutely so zero aligns with the transparent point */}
-      <Box style={{ position: 'relative', height: 13 }}>
-        <Box style={{ ...labelStyle, left: 0 }}>{fmtNum(max)}</Box>
+      <div style={{ height: 8, borderRadius: 3, background: gradient, marginBottom: 3 }} />
+      <div style={{ position: 'relative', height: 13 }}>
+        <div style={{ ...labelStyle, left: 0 }}>{fmtNum(max)}</div>
         {variable.diverging && zeroPct !== null && (
-          <Box style={{
-            ...labelStyle,
-            left: `${zeroPct.toFixed(1)}%`,
-            transform: 'translateX(-50%)',
-          }}>
+          <div style={{ ...labelStyle, left: `${zeroPct.toFixed(1)}%`, transform: 'translateX(-50%)' }}>
             {fmtNum(zeroVal)}
-          </Box>
+          </div>
         )}
-        <Box style={{ ...labelStyle, right: 0 }}>{fmtNum(min)}</Box>
-      </Box>
-    </Box>
+        <div style={{ ...labelStyle, right: 0 }}>{fmtNum(min)}</div>
+      </div>
+    </div>
   )
 }
 
 function MobileCategoricalLegend({ variable, isDark }) {
   const textColor = isDark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.65)'
   return (
-    <Flex sx={{ flexDirection: 'column', gap: '4px' }}>
+    <div className="flex flex-col" style={{ gap: '4px' }}>
       {variable.categories.map((cat) => {
         const color = isDark ? (cat.colorDark ?? cat.color) : (cat.colorLight ?? cat.color)
         return (
-          <Flex key={cat.id} sx={{ alignItems: 'center', gap: '6px' }}>
-            <Box style={{ width: 10, height: 10, borderRadius: 2, flexShrink: 0, background: color }} />
-            <Box style={{ fontFamily: 'monospace', fontSize: 10, color: textColor }}>{cat.label}</Box>
-          </Flex>
+          <div key={cat.id} className="flex items-center" style={{ gap: '6px' }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, flexShrink: 0, background: color }} />
+            <span style={{ fontFamily: 'monospace', fontSize: 10, color: textColor }}>{cat.label}</span>
+          </div>
         )
       })}
-    </Flex>
+    </div>
   )
 }

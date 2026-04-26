@@ -7,7 +7,6 @@
  *   - 'dropdown' → native <select>
  */
 
-import { Box, Flex, Text } from 'theme-ui'
 import { Actions } from '../../contracts/events.js'
 
 export function DimensionControl({ dimension, value, dispatch }) {
@@ -16,150 +15,95 @@ export function DimensionControl({ dimension, value, dispatch }) {
   }
 
   return (
-    <Box sx={{ mb: 3 }}>
-      <Text
-        sx={{
-          fontFamily: 'body',
-          fontSize: 1,
-          fontWeight: 'bold',
-          letterSpacing: 'caps',
-          textTransform: 'uppercase',
-          color: 'text',
-          mb: 2,
-          display: 'block',
-        }}
-      >
+    <div className="mb-6">
+      <p className="font-sans text-[13px] font-bold uppercase tracking-[0.12em] text-ink mb-2 m-0">
         {dimension.label}
-      </Text>
+      </p>
 
       {dimension.type === 'toggle' && (
-        <ToggleControl
-          dimension={dimension}
-          value={value}
-          onChange={handleChange}
-        />
+        <ToggleControl dimension={dimension} value={value} onChange={handleChange} />
       )}
-
       {dimension.type === 'slider' && (
-        <SliderControl
-          dimension={dimension}
-          value={value}
-          onChange={handleChange}
-        />
+        <SliderControl dimension={dimension} value={value} onChange={handleChange} />
       )}
-
       {dimension.type === 'dropdown' && (
-        <DropdownControl
-          dimension={dimension}
-          value={value}
-          onChange={handleChange}
-        />
+        <DropdownControl dimension={dimension} value={value} onChange={handleChange} />
       )}
-    </Box>
+    </div>
   )
 }
 
 function ToggleControl({ dimension, value, onChange }) {
   return (
-    <Flex sx={{ flexWrap: 'wrap', gap: 0 }}>
+    <div className="flex flex-wrap">
       {dimension.options.map((option) => {
         const isActive = option.id === value
         return (
-          <Box
+          <button
             key={option.id}
-            as='button'
+            type="button"
             onClick={() => onChange(option.id)}
-            sx={{
-              fontFamily: 'body',
-              fontSize: '12px',
-              fontWeight: isActive ? 'bold' : 'body',
-              letterSpacing: 'caps',
-              textTransform: 'uppercase',
-              lineHeight: 'body',
-              cursor: 'pointer',
-              px: '6px',
-              py: 1,
-              mr: '2px',
-              mb: 1,
-              border: 'none',
-              bg: 'transparent',
-              color: isActive ? 'text' : 'muted',
-              textDecoration: isActive ? 'underline' : 'none',
-              textUnderlineOffset: '3px',
-              transition: 'color 0.1s',
-              whiteSpace: 'nowrap',
-              '&:hover': { color: 'text' },
-            }}
+            className={[
+              'cursor-pointer bg-transparent border-0 py-1 mb-1 mr-[2px] px-[6px]',
+              'font-sans text-[12px] uppercase tracking-[0.12em] whitespace-nowrap',
+              'underline-offset-[3px] transition-colors',
+              isActive
+                ? 'font-bold text-ink underline'
+                : 'font-normal text-ink-3 hover:text-ink no-underline',
+            ].join(' ')}
           >
             {option.label}
-          </Box>
+          </button>
         )
       })}
-    </Flex>
+    </div>
   )
 }
 
 function SliderControl({ dimension, value, onChange }) {
   const numericValue = typeof value === 'number' ? value : parseFloat(value)
   const options = dimension.options
-  // Use options array as discrete stops, or treat as min/max if exactly 2
   const min = options.length >= 2 ? parseFloat(options[0].id) : 0
   const max = options.length >= 2 ? parseFloat(options[options.length - 1].id) : 100
 
   return (
-    <Box>
-      <Flex sx={{ justifyContent: 'space-between', mb: 1 }}>
-        <Text sx={{ fontFamily: 'mono', fontSize: 1, color: 'muted' }}>
+    <div>
+      <div className="flex justify-between mb-1">
+        <span className="font-mono text-[13px] text-ink-3">
           {min}{dimension.unit ? ` ${dimension.unit}` : ''}
-        </Text>
-        <Text sx={{ fontFamily: 'mono', fontSize: 1, color: 'text' }}>
+        </span>
+        <span className="font-mono text-[13px] text-ink">
           {numericValue}{dimension.unit ? ` ${dimension.unit}` : ''}
-        </Text>
-        <Text sx={{ fontFamily: 'mono', fontSize: 1, color: 'muted' }}>
+        </span>
+        <span className="font-mono text-[13px] text-ink-3">
           {max}{dimension.unit ? ` ${dimension.unit}` : ''}
-        </Text>
-      </Flex>
+        </span>
+      </div>
       <input
-        type='range'
+        type="range"
         min={min}
         max={max}
         value={numericValue}
         onChange={(e) => onChange(+e.target.value)}
-        style={{ width: '100%', accentColor: 'var(--theme-ui-colors-primary)' }}
+        style={{ width: '100%', accentColor: 'var(--cardinal)' }}
       />
-    </Box>
+    </div>
   )
 }
 
 function DropdownControl({ dimension, value, onChange }) {
   return (
-    <Box
-      as='select'
+    <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      sx={{
-        width: '100%',
-        bg: 'surface',
-        color: 'text',
-        border: '1px solid',
-        borderColor: 'border',
-        borderRadius: 'sm',
-        px: 2,
-        py: 1,
-        fontFamily: 'body',
-        fontSize: 1,
-        cursor: 'pointer',
-        '&:focus': {
-          outline: 'none',
-          borderColor: 'primary',
-        },
-      }}
+      className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
+      style={{ borderRadius: 'var(--radius-sm)' }}
     >
       {dimension.options.map((option) => (
         <option key={option.id} value={option.id}>
           {option.label}
         </option>
       ))}
-    </Box>
+    </select>
   )
 }

@@ -260,8 +260,9 @@ export function addStaticLayers(map, scheme) {
       },
       paint: {
         'text-color': labelColor,
+        // Halo uses the basemap paper color so labels blend with the map background.
         'text-halo-color':
-          scheme === 'dark' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)',
+          scheme === 'dark' ? 'rgba(12, 12, 28, 0.6)' : 'rgba(248, 248, 232, 0.7)',
         'text-halo-width': 1,
       },
     })
@@ -277,8 +278,10 @@ export function addStaticLayers(map, scheme) {
 
   // City labels use higher contrast than graticule labels — they need to be legible
   // over the data circles regardless of color scheme.
-  const cityTextColor = scheme === 'dark' ? 'rgba(255,255,255,0.88)' : 'rgba(20,20,20,0.82)'
-  const cityHaloColor = scheme === 'dark' ? 'rgba(0,0,0,0.80)' : 'rgba(255,255,255,0.92)'
+  const cityTextColor = scheme === 'dark' ? 'rgba(248, 248, 232, 0.88)' : 'rgba(24, 24, 56, 0.82)'
+  // Halo uses the basemap paper color (--paper) so the glow blends with the map
+  // background and doesn't read as a pure-black or pure-white box around each label.
+  const cityHaloColor = scheme === 'dark' ? 'rgba(12, 12, 28, 0.85)' : 'rgba(248, 248, 232, 0.92)'
 
   const cityLabelPaint = {
     'text-color': cityTextColor,

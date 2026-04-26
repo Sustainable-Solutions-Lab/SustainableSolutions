@@ -11,7 +11,7 @@ const links = [
 const path = Astro.url.pathname;
 ---
 
-<header class="sticky top-0 z-50 backdrop-blur-md border-b border-rule bg-paper/70">
+<header class="sticky top-0 z-50 backdrop-blur-md border-b border-rule bg-paper/70" data-nav>
   <nav
     aria-label="Primary"
     class="container-content flex items-center justify-between h-14"
@@ -20,6 +20,7 @@ const path = Astro.url.pathname;
       Sustainable Solutions Lab
     </a>
 
+    {/* Desktop link list */}
     <ul class="hidden md:flex items-center gap-6 text-sm">
       {
         links.map(({ href, label }) => {
@@ -42,16 +43,67 @@ const path = Astro.url.pathname;
       }
     </ul>
 
-    <button
-      type="button"
-      data-theme-toggle
-      aria-label="Toggle color theme"
-      class="font-mono text-xs uppercase tracking-wider text-ink-3 hover:text-ink"
-    >
-      <span data-theme-light>Dark</span>
-      <span data-theme-dark class="hidden">Light</span>
-    </button>
+    {/* Right-side controls: theme toggle (always) + hamburger (mobile only) */}
+    <div class="flex items-center gap-3">
+      <button
+        type="button"
+        data-theme-toggle
+        aria-label="Toggle color theme"
+        class="font-mono text-xs uppercase tracking-wider text-ink-3 hover:text-ink"
+      >
+        <span data-theme-light>Dark</span>
+        <span data-theme-dark class="hidden">Light</span>
+      </button>
+
+      <button
+        type="button"
+        data-mobile-menu-toggle
+        aria-label="Open menu"
+        aria-controls="mobile-menu"
+        aria-expanded="false"
+        class="md:hidden inline-flex items-center justify-center text-ink-3 hover:text-ink"
+      >
+        <svg data-icon-menu width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="4" y1="6" x2="20" y2="6" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="18" x2="20" y2="18" />
+        </svg>
+        <svg data-icon-close width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="hidden">
+          <line x1="6" y1="6" x2="18" y2="18" />
+          <line x1="18" y1="6" x2="6" y2="18" />
+        </svg>
+      </button>
+    </div>
   </nav>
+
+  {/* Mobile drawer — slides down from the nav, hairline-rule separated */}
+  <div
+    id="mobile-menu"
+    class="md:hidden hidden border-t border-rule bg-paper"
+    data-mobile-menu
+  >
+    <ul class="container-content py-3 flex flex-col gap-1 text-sm">
+      {
+        links.map(({ href, label }) => {
+          const active = href === '/' ? path === '/' : path.startsWith(href);
+          return (
+            <li>
+              <a
+                href={href}
+                class:list={[
+                  'block py-2 border-b-0',
+                  active ? 'text-ink font-medium' : 'text-ink-2 hover:text-ink',
+                ]}
+                aria-current={active ? 'page' : undefined}
+              >
+                {label}
+              </a>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </div>
 </header>
 
 <script is:inline>
@@ -79,5 +131,32 @@ const path = Astro.url.pathname;
     });
 
     sync();
+  })();
+
+  // Mobile menu toggle — shows/hides the drawer, swaps menu/close icons.
+  (function () {
+    const toggle = document.querySelector('[data-mobile-menu-toggle]');
+    const menu = document.querySelector('[data-mobile-menu]');
+    if (!toggle || !menu) return;
+
+    const iconMenu = toggle.querySelector('[data-icon-menu]');
+    const iconClose = toggle.querySelector('[data-icon-close]');
+
+    const setOpen = (open) => {
+      menu.classList.toggle('hidden', !open);
+      iconMenu?.classList.toggle('hidden', open);
+      iconClose?.classList.toggle('hidden', !open);
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    };
+
+    toggle.addEventListener('click', () => {
+      setOpen(menu.classList.contains('hidden'));
+    });
+
+    // Close the drawer when a link is tapped.
+    menu.addEventListener('click', (e) => {
+      if (e.target.closest('a')) setOpen(false);
+    });
   })();
 </script>

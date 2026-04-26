@@ -8,12 +8,12 @@
  *   costs        → red  (#d6604d)
  *   benefits     → blue (#4393c3)
  *   net_benefits → blue (#4393c3)
+ *
+ * Phase 2 pilot: Theme UI → Tailwind v4 + design system tokens.
  */
 
-import { Flex, Box } from 'theme-ui'
 import { Actions } from '../../contracts/events.js'
 
-// Per-layer accent colors for the active tab label
 const LAYER_COLORS = {
   costs:        '#d6604d',
   benefits:     '#4393c3',
@@ -39,40 +39,37 @@ export function LayerTabs({ config, state, dispatch }) {
   }
 
   return (
-    <Flex sx={{ flexWrap: 'wrap', gap: 0, mb: 3 }}>
+    <div className="flex flex-wrap mb-6">
       {config.layers.filter((layer) => !layer.hidden).map((layer) => {
         const isActive = layer.id === state.activeLayer
-        const activeColor = LAYER_COLORS[layer.id] ?? 'text'
+        const activeColor = LAYER_COLORS[layer.id]
         return (
-          <Box
+          <button
             key={layer.id}
-            as='button'
+            type="button"
             onClick={() => handleLayerChange(layer.id)}
-            sx={{
-              bg: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              px: 0,
-              py: 1,
-              mr: 3,
-              mb: 1,
-              fontFamily: 'body',
-              fontSize: '12px',
-              fontWeight: isActive ? 'bold' : 'body',
-              letterSpacing: 'caps',
-              textTransform: 'uppercase',
-              color: isActive ? activeColor : 'muted',
-              textDecoration: isActive ? 'underline' : 'none',
-              textUnderlineOffset: '3px',
-              textDecorationColor: isActive ? activeColor : 'transparent',
-              transition: 'color 0.1s',
-              '&:hover': { color: isActive ? activeColor : 'text' },
-            }}
+            className={[
+              'cursor-pointer bg-transparent border-0 px-0 py-1 mr-3 mb-1',
+              'font-sans text-[12px] uppercase tracking-[0.12em]',
+              'transition-colors',
+              'underline-offset-[3px]',
+              isActive
+                ? 'font-bold underline'
+                : 'font-normal text-ink-3 hover:text-ink no-underline',
+            ].join(' ')}
+            style={
+              isActive
+                ? {
+                    color: activeColor,
+                    textDecorationColor: activeColor,
+                  }
+                : undefined
+            }
           >
             {layer.label}
-          </Box>
+          </button>
         )
       })}
-    </Flex>
+    </div>
   )
 }

@@ -3,42 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import { Protocol } from 'pmtiles'
+import { Sun, Moon, Globe } from 'lucide-react'
 import { basemapStyle } from './basemap-style.jsx'
 import { addStaticLayers, setGraticuleVisible as applyGraticuleVisibility } from './static-layers.jsx'
 import { useMapLayer } from '../../lib/use-map-layer.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { percentileThresholds } from '../../lib/area-stats.js'
 import { SOURCE_ID, LAYER_ID, LAYER_ID_AGG, LAYER_ID_MED, LAYER_ID_COARSE, LAYER_IDS } from '../../lib/use-map-layer.js'
-
-// ── SVG icons for map controls ────────────────────────────────────────────────
-
-function GlobeIcon() {
-  return (
-    <svg width='22' height='22' viewBox='0 0 18 18' fill='none' stroke='currentColor' strokeWidth='1.3'>
-      <circle cx='9' cy='9' r='6.5'/>
-      <ellipse cx='9' cy='9' rx='3' ry='6.5'/>
-      <line x1='2.5' y1='9' x2='15.5' y2='9'/>
-      <line x1='3.8' y1='5.5' x2='14.2' y2='5.5'/>
-      <line x1='3.8' y1='12.5' x2='14.2' y2='12.5'/>
-    </svg>
-  )
-}
-
-function SunIcon() {
-  return (
-    <svg width='22' height='22' viewBox='0 0 18 18' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round'>
-      <circle cx='9' cy='9' r='3'/>
-      <line x1='9' y1='1.5' x2='9' y2='3.5'/>
-      <line x1='9' y1='14.5' x2='9' y2='16.5'/>
-      <line x1='1.5' y1='9' x2='3.5' y2='9'/>
-      <line x1='14.5' y1='9' x2='16.5' y2='9'/>
-      <line x1='3.8' y1='3.8' x2='5.2' y2='5.2'/>
-      <line x1='12.8' y1='12.8' x2='14.2' y2='14.2'/>
-      <line x1='14.2' y1='3.8' x2='12.8' y2='5.2'/>
-      <line x1='5.2' y1='12.8' x2='3.8' y2='14.2'/>
-    </svg>
-  )
-}
 
 /**
  * Interactive MapLibre GL map for Firemap.
@@ -279,7 +250,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
             }}
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            <SunIcon />
+            {isDark ? <Sun size={22} strokeWidth={1.5} /> : <Moon size={22} strokeWidth={1.5} />}
           </button>
         )}
 
@@ -305,7 +276,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
           aria-pressed={graticuleVisible}
           aria-label='Toggle city labels'
         >
-          <GlobeIcon />
+          <Globe size={22} strokeWidth={1.5} />
         </button>
       </div>
 

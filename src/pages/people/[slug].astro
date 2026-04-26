@@ -1,38 +1,66 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import people from '../../data/people.json';
-import type { Person } from '../../lib/types';
+import { getCollection, render } from 'astro:content'
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import PublicationItem from '../../components/PublicationItem.astro'
+import people from '../../data/people.json'
+import publications from '../../data/publications.json'
+import type { Person, Publication } from '../../lib/types'
 
 export async function getStaticPaths() {
-  const { default: people } = await import('../../data/people.json');
+  const { default: people } = await import('../../data/people.json')
   return (people as Person[]).map((person) => ({
     params: { slug: person.slug },
     props: { person },
-  }));
+  }))
 }
 
-const { person } = Astro.props as { person: Person };
+const { person } = Astro.props as { person: Person }
+
+const personPubs = (publications as Publication[])
+  .filter((p) => (p.lab_authors ?? []).includes(person.slug))
+  .sort((a, b) => b.year - a.year || (b.month ?? 0) - (a.month ?? 0))
+
+// Optional Markdown bio: src/content/people/<slug>.md
+let BioContent: any = null
+const peopleEntries = await getCollection('people')
+const bioEntry = peopleEntries.find((e) => e.id === person.slug)
+if (bioEntry) {
+  const rendered = await render(bioEntry)
+  BioContent = rendered.Content
+}
 
 const dateRange = person.left_date
   ? `${person.joined_date ?? '?'} – ${person.left_date}`
   : person.joined_date
     ? `${person.joined_date} – present`
-    : null;
+    : null
+
+const sectionLabel =
+  person.status === 'alumni' ? 'ALUMNI'
+  : person.unit === 'ciu' ? 'CONCEPTUAL INVESTIGATIONS UNIT'
+  : 'CURRENT'
 ---
 
 <BaseLayout title={person.name}>
   <article class="container-prose py-16">
     <p class="eyebrow mb-4">
-      <span class="cardinal-dot"></span>
-      {person.status === 'alumni' ? 'ALUMNI' : person.unit === 'ciu' ? 'CIU' : 'CURRENT'}
+      <span class="cardinal-dot"></span>{sectionLabel}
     </p>
 
     <h1>{person.name}</h1>
     <p class="lede mt-2">{person.role}</p>
 
     {
-      person.bio_short && (
+      person.bio_short && !BioContent && (
         <p class="mt-6">{person.bio_short}</p>
+      )
+    }
+
+    {
+      BioContent && (
+        <div class="mt-8 prose-content">
+          <BioContent />
+        </div>
       )
     }
 
@@ -65,8 +93,47 @@ const dateRange = person.left_date
       }
     </dl>
 
+    {
+      personPubs.length > 0 && (
+        <section class="mt-16">
+          <p class="eyebrow mb-4">PUBLICATIONS</p>
+          <ul class="list-none p-0 m-0">
+            {personPubs.map((pub) => <PublicationItem pub={pub} />)}
+          </ul>
+        </section>
+      )
+    }
+
     <p class="mt-12">
       <a href="/people" class="font-mono text-xs uppercase tracking-wider">← Back to People</a>
     </p>
   </article>
 </BaseLayout>
+
+<style>
+  /* Markdown content renders inside .prose-content — light typography
+     overrides for headings/paragraphs/lists when a bio.md is present. */
+  .prose-content :global(h2) {
+    font-family: var(--font-serif);
+    font-size: var(--t-xl);
+    font-weight: 500;
+    line-height: var(--lh-snug);
+    margin: var(--s-6) 0 var(--s-3);
+  }
+  .prose-content :global(h3) {
+    font-family: var(--font-sans);
+    font-size: var(--t-md);
+    font-weight: 600;
+    margin: var(--s-5) 0 var(--s-2);
+  }
+  .prose-content :global(p) {
+    margin: 0 0 var(--s-4);
+  }
+  .prose-content :global(ul) {
+    padding-left: var(--s-5);
+    margin: 0 0 var(--s-4);
+  }
+  .prose-content :global(li) {
+    margin-bottom: var(--s-2);
+  }
+</style>

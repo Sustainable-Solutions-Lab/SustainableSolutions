@@ -15,12 +15,16 @@
  */
 
 import { useMemo } from 'react'
+import { X } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
 import { buildColorScale } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
 
 const POS_COLOR = '#4393c3'
 const NEG_COLOR = '#d6604d'
+
+const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
+const FONT_SANS = "'Inter', sans-serif"
 
 // ── Mini histogram ────────────────────────────────────────────────────────────
 
@@ -160,10 +164,10 @@ function MiniHistogram({ values, variable, isDark }) {
       )}
 
       {/* Axis labels */}
-      <text x={0} y={HIST_H + 11} fontSize={9} fill={labelColor} fontFamily='monospace'>
+      <text x={0} y={HIST_H + 11} fontSize={9} fill={labelColor} fontFamily={FONT_MONO}>
         {formatValue(min, variable?.unit ?? '')}
       </text>
-      <text x={HIST_W} y={HIST_H + 11} fontSize={9} fill={labelColor} fontFamily='monospace' textAnchor='end'>
+      <text x={HIST_W} y={HIST_H + 11} fontSize={9} fill={labelColor} fontFamily={FONT_MONO} textAnchor='end'>
         {formatValue(max, variable?.unit ?? '')}
       </text>
     </svg>
@@ -224,10 +228,10 @@ function StackedBar({ values, variable, isDark }) {
               width: 8, height: 8, borderRadius: 1,
               background: seg.cat.color, opacity: 0.85, flexShrink: 0,
             }} />
-            <span style={{ fontFamily: 'monospace', fontSize: 10, color: textColor, whiteSpace: 'nowrap' }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: textColor, whiteSpace: 'nowrap' }}>
               {seg.cat.label}
             </span>
-            <span style={{ fontFamily: 'monospace', fontSize: 10, color: textColor, marginLeft: 'auto', paddingLeft: 8 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: textColor, marginLeft: 'auto', paddingLeft: 8 }}>
               {Math.round(seg.frac * 100)}%
             </span>
           </div>
@@ -265,11 +269,13 @@ export function StatsPanel({ drawnCircle, aggregateStats, areaToolActive, active
 
   const unit = activeVariable?.unit ?? ''
 
-  const panelBg = isDark ? 'rgba(26,26,26,0.92)' : 'rgba(255,255,255,0.95)'
-  const borderColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'
-  const textMuted = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)'
-  const lineColor = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'
-  const btnColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'
+  // Aligned with the design system: paper-2 with translucency so map context
+  // shows through; rule-strength border; ink-3 muted text; ink line color.
+  const panelBg = isDark ? 'rgba(20, 20, 42, 0.92)' : 'rgba(241, 241, 223, 0.95)'
+  const borderColor = isDark ? 'rgba(248, 248, 232, 0.14)' : 'rgba(24, 24, 56, 0.14)'
+  const textMuted = isDark ? 'rgba(248, 248, 232, 0.55)' : 'rgba(24, 24, 56, 0.55)'
+  const lineColor = isDark ? 'rgba(248, 248, 232, 0.75)' : 'rgba(24, 24, 56, 0.7)'
+  const btnColor = isDark ? 'rgba(248, 248, 232, 0.45)' : 'rgba(24, 24, 56, 0.45)'
 
   const isCategorical = activeVariable?.type === 'categorical'
   const hasData = activeVariable && activeVarValues.length > 0
@@ -282,32 +288,34 @@ export function StatsPanel({ drawnCircle, aggregateStats, areaToolActive, active
         left: 24,
         background: panelBg,
         border: `1px solid ${borderColor}`,
-        borderRadius: 6,
+        borderRadius: 'var(--radius-md)',
         padding: '10px 12px 8px',
         minWidth: 240,
         maxWidth: 320,
         zIndex: 10,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+        // Design system shadow (--shadow-pop): soft, neutral, not blue-tinted.
+        boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      {/* × close button — absolute top-right */}
+      {/* Close button — absolute top-right */}
       <button
         onClick={handleClose}
         aria-label='Close area stats'
         style={{
           position: 'absolute',
           top: 6,
-          right: 8,
-          background: 'none',
+          right: 6,
+          background: 'transparent',
           border: 'none',
           cursor: 'pointer',
-          padding: 0,
-          lineHeight: 1,
-          fontSize: 18,
+          padding: 4,
+          lineHeight: 0,
           color: btnColor,
         }}
       >
-        ×
+        <X size={14} strokeWidth={1.5} />
       </button>
 
       {/* Histogram (numeric) or pie chart (categorical) */}
@@ -327,7 +335,7 @@ export function StatsPanel({ drawnCircle, aggregateStats, areaToolActive, active
               <svg width={14} height={8} style={{ flexShrink: 0 }}>
                 <line x1={0} y1={4} x2={14} y2={4} stroke={lineColor} strokeWidth={1.5} />
               </svg>
-              <span style={{ fontFamily: 'monospace', fontSize: 10, color: textMuted }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: textMuted }}>
                 mean {mean !== null ? formatValue(mean, unit) : '—'}
               </span>
             </div>
@@ -335,21 +343,21 @@ export function StatsPanel({ drawnCircle, aggregateStats, areaToolActive, active
               <svg width={14} height={8} style={{ flexShrink: 0 }}>
                 <line x1={0} y1={4} x2={14} y2={4} stroke={lineColor} strokeWidth={1.5} strokeDasharray='3 2' />
               </svg>
-              <span style={{ fontFamily: 'monospace', fontSize: 10, color: textMuted }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: textMuted }}>
                 median {median !== null ? formatValue(median, unit) : '—'}
               </span>
             </div>
             <span style={{ color: borderColor, fontSize: 10, userSelect: 'none' }}>·</span>
           </>
         )}
-        <span style={{ fontFamily: 'monospace', fontSize: 10, color: textMuted }}>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: textMuted }}>
           {count.toLocaleString()} km²
         </span>
       </div>
 
       {/* Empty state */}
       {!hasData && count === 0 && (
-        <span style={{ fontFamily: 'sans-serif', fontSize: 11, color: textMuted }}>
+        <span style={{ fontFamily: FONT_SANS, fontSize: 11, color: textMuted }}>
           Move circle to data area
         </span>
       )}

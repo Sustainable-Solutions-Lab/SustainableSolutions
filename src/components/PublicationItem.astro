@@ -1,13 +1,31 @@
 ---
 import type { Publication, Person } from '../lib/types';
 import people from '../data/people.json';
+import scholarDetails from '../../templates/scholar-details.json';
 import { buildAuthorReplacements, splitAuthors } from '../lib/author-links';
+import CitationChart from './CitationChart.astro';
 
 interface Props {
   pub: Publication;
 }
 
 const { pub } = Astro.props;
+
+// Build a {DOI → citations[]} lookup once at module load time. Survives
+// the build because scholar-details.json is statically imported.
+const citationsByDoi = new Map<string, Array<{ year: number; count: number }>>();
+const totalsByDoi = new Map<string, number>();
+for (const detail of Object.values(scholarDetails as Record<string, any>)) {
+  if (detail?.doi && Array.isArray(detail.citations) && detail.citations.length > 0) {
+    citationsByDoi.set(detail.doi, detail.citations);
+    if (typeof detail.total_citations === 'number') {
+      totalsByDoi.set(detail.doi, detail.total_citations);
+    }
+  }
+}
+
+const citationsForPub = pub.doi ? citationsByDoi.get(pub.doi) ?? null : null;
+const totalCitationsForPub = pub.doi ? totalsByDoi.get(pub.doi) ?? null : null;
 
 const doiUrl = pub.url ?? (pub.doi ? `https://doi.org/${pub.doi}` : null);
 
@@ -127,6 +145,12 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
               data-doi={pub.doi}
               data-style="small_circle"
             ></div>
+          </div>
+        )}
+
+        {citationsForPub && (
+          <div class="mt-3">
+            <CitationChart citations={citationsForPub} total={totalCitationsForPub} />
           </div>
         )}
       </div>

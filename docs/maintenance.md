@@ -74,6 +74,22 @@ Sheet-driven. Each row in the **Publications** tab is one citation. Filtered by 
 | Add a research brief or slides link | `brief_url` and `ppt_url` columns. Render as additional small mono action links. |
 | Make a paper richer / hero | Set `featured = TRUE` and (optionally) fill in `abstract` (2–3 sentences) and `image_filename` (drop image into `/public/publications/`). Featured papers get a wider card with hero block + abstract + Altmetric/Dimensions badges. If `image_filename` is blank, a typographic placeholder uses the journal name on a Spectral-accented panel. |
 
+### Refreshing rich metadata from Google Scholar
+
+When new papers appear on Steve's Scholar profile or you want to refresh authors / abstracts / DOIs / citation charts:
+
+```
+node scripts/scrape-scholar.js master    # quick — just the profile listing
+node scripts/scrape-scholar.js details   # ~6 minutes for 100 papers; resumable
+node scripts/scholar-to-csv.js           # merge → templates/publications-from-scholar.csv
+```
+
+The `details` stage hits Scholar at most once per paper (3-second polite delay). Scholar **will rate-limit** if you fire too fast or run repeatedly in a short window — when that happens you'll see HTTP 429 errors. The script is resumable: rerun a few hours later and it skips IDs already saved in `templates/scholar-details.json`.
+
+`scholar-to-csv.js` writes `templates/publications-from-scholar.csv`. Open it, copy the rows you want, paste into the Publications Sheet. Authors get reformatted from full-name style to `Last, F.M.` to match the schema; chemical formulas (CO₂, CH₄, etc.) get Unicode subscripts.
+
+The scraped citation chart per paper is stored in `templates/scholar-details.json`. It's loaded at build time and renders as a small SVG sparkline below the badges on featured publication cards (when the DOI matches).
+
 ### Filling missing metadata from a DOI (Crossref)
 
 For a row that has a `doi` but is missing other fields (authors, journal, year, volume_issue, pages, month), run:

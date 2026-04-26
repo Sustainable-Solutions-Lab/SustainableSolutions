@@ -1,0 +1,47 @@
+---
+// Tiny SVG sparkline of year-by-year citation counts. Inputs come from
+// scholar-details.json (scraped from Google Scholar) keyed by DOI.
+
+interface Props {
+  citations: { year: number; count: number }[];
+  total?: number | null;
+}
+
+const { citations, total } = Astro.props;
+
+const W = 120;
+const H = 24;
+const barW = W / Math.max(citations.length, 1);
+const max = Math.max(...citations.map((c) => c.count), 1);
+---
+
+<div class="w-full" style="max-width: 220px;">
+  <svg
+    viewBox={`0 0 ${W} ${H}`}
+    preserveAspectRatio="none"
+    style="width: 100%; height: 28px; display: block;"
+    aria-label={total != null ? `${total} total citations` : `Citation history`}
+  >
+    {
+      citations.map((c, i) => {
+        const h = (c.count / max) * H;
+        return (
+          <rect
+            x={i * barW + 0.5}
+            y={H - h}
+            width={Math.max(barW - 1, 0.5)}
+            height={Math.max(h, 0.5)}
+            fill="var(--ink-3)"
+          >
+            <title>{c.year}: {c.count} citation{c.count === 1 ? '' : 's'}</title>
+          </rect>
+        );
+      })
+    }
+  </svg>
+  <div class="flex justify-between items-baseline mt-1 font-mono text-[10px] text-ink-3 leading-none">
+    <span>{citations[0].year}</span>
+    {total != null && <span>{total.toLocaleString()} citations</span>}
+    <span>{citations[citations.length - 1].year}</span>
+  </div>
+</div>

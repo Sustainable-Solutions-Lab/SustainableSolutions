@@ -238,6 +238,10 @@ All sheets live in a single Google Spreadsheet titled "SSL Site Content" with on
 | M      | lab_authors       | Text, comma-separated                          | Slugs matching People sheet `slug` column      |
 | N      | featured          | Boolean (TRUE/FALSE)                           |                                                |
 | O      | press_url         | Text                                           | Optional press coverage link                   |
+| P      | abstract          | Text                                           | 2–3 sentences shown on featured cards          |
+| Q      | image_filename    | Text                                           | Hero image, in `/public/publications/`         |
+| R      | brief_url         | Text                                           | Research brief link                            |
+| S      | ppt_url           | Text                                           | Slides link                                    |
 
 ### Tab: `People`
 

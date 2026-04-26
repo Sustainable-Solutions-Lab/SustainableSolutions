@@ -31,6 +31,11 @@ export type Publication = {
   lab_authors: string[];
   featured: boolean;
   press_url: string | null;
+  // Optional richer-card columns — used for featured publications.
+  abstract: string | null;
+  image_filename: string | null;  // hero image, lives at /public/publications/
+  brief_url: string | null;       // research brief link
+  ppt_url: string | null;         // slides link
 };
 
 export type NewsItem = {

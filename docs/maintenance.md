@@ -71,6 +71,8 @@ Sheet-driven. Each row in the **Publications** tab is one citation. Filtered by 
 | Lab authors | Comma-separated `slug` values from the People tab, e.g. `steve-davis, sample-postdoc`. Used by per-person publication lists (when wired). |
 | Feature on the home page | Set `featured` to `TRUE`. |
 | Add replication code or a PDF link | `code_url` and `pdf_url` columns. Both render as small mono action links next to the DOI. |
+| Add a research brief or slides link | `brief_url` and `ppt_url` columns. Render as additional small mono action links. |
+| Make a paper richer / hero | Set `featured = TRUE` and (optionally) fill in `abstract` (2–3 sentences) and `image_filename` (drop image into `/public/publications/`). Featured papers get a wider card with hero block + abstract + Altmetric/Dimensions badges. If `image_filename` is blank, a typographic placeholder uses the journal name on a Spectral-accented panel. |
 
 ### Filling missing metadata from a DOI (Crossref)
 

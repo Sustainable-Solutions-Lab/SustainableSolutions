@@ -21,15 +21,34 @@ const searchBlob = [pub.authors, pub.title, pub.journal, String(pub.year)]
   .join(' ')
   .toLowerCase();
 
-// Citation tail: "Nature Sustainability 9(3), 201–210 (2026)"
+// Citation tail: "9(3), 201–210"
 const citationParts: string[] = [];
 if (pub.volume_issue) citationParts.push(pub.volume_issue);
 if (pub.pages) citationParts.push(pub.pages.replace(/-/g, '–'));
 const citationTail = citationParts.join(', ');
+
+// Featured cards get a hero block. If image_filename is set, use it.
+// Otherwise: typographic placeholder with a stable Spectral-color stripe.
+const isFeatured = !!pub.featured;
+const heroImageUrl = pub.image_filename ? `/publications/${pub.image_filename}` : null;
+
+const spectralColors = [
+  'var(--spectral-2)',
+  'var(--spectral-3)',
+  'var(--spectral-4)',
+  'var(--spectral-9)',
+  'var(--spectral-10)',
+  'var(--spectral-11)',
+];
+const heroHash = [...(pub.doi || pub.title || '')].reduce(
+  (a, c) => a + c.charCodeAt(0),
+  0,
+);
+const heroAccent = spectralColors[heroHash % spectralColors.length];
 ---
 
 <li
-  class="py-6 border-b border-rule"
+  class:list={['relative', isFeatured ? 'py-6' : 'py-6 border-b border-rule']}
   data-pub
   data-year={pub.year}
   data-themes={(pub.themes ?? []).join(',')}
@@ -37,55 +56,153 @@ const citationTail = citationParts.join(', ');
   data-featured={String(pub.featured)}
   data-search={searchBlob}
 >
-  <div class="flex items-baseline justify-between gap-4 mb-2">
-    <p class="eyebrow m-0">
-      <em class="not-italic">{pub.journal}</em>
-      <span class="dot">·</span>
-      {pub.year}
-      {pub.featured && (<><span class="dot">·</span><span class="cardinal">FEATURED</span></>)}
-    </p>
-  </div>
+  {isFeatured ? (
+    <article
+      class="grid md:grid-cols-[1fr_280px] gap-6 p-6 border border-rule bg-paper"
+      style="border-radius: var(--radius-md);"
+    >
+      <div class="min-w-0">
+        <p class="eyebrow m-0 mb-2">
+          <span class="cardinal">FEATURED</span>
+          <span class="dot">·</span>
+          <em class="not-italic">{pub.journal}</em>
+          <span class="dot">·</span>
+          {pub.year}
+        </p>
 
-  <h3 class="m-0">
-    {
-      doiUrl ? (
-        <a href={doiUrl} class="border-b-0 hover:underline" data-external>
-          {pub.title}
-        </a>
+        <h3 class="m-0">
+          {doiUrl ? (
+            <a href={doiUrl} class="border-b-0 hover:underline" data-external>
+              {pub.title}
+            </a>
+          ) : (
+            pub.title
+          )}
+        </h3>
+
+        <p class="text-ink-2 mt-2 text-sm m-0">
+          {authorSegments.map((seg, i) => (
+            <>
+              {i > 0 && '; '}
+              {seg.slug ? (
+                <a href={`/people/${seg.slug}`} class="font-semibold text-ink border-b-0 hover:opacity-70">
+                  {seg.text}
+                </a>
+              ) : (
+                seg.text
+              )}
+            </>
+          ))}
+        </p>
+
+        {pub.abstract && (
+          <p class="mt-4 text-sm text-ink m-0" style="line-height: 1.5;">
+            {pub.abstract}
+          </p>
+        )}
+
+        {citationTail && (
+          <p class="font-mono text-xs text-ink-3 mt-3 m-0">{citationTail}</p>
+        )}
+
+        <div class="flex flex-wrap gap-x-5 gap-y-1 mt-4 text-xs font-mono uppercase tracking-wider">
+          {doiUrl && (<a href={doiUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>DOI</a>)}
+          {pub.pdf_url && (<a href={pub.pdf_url} class="text-ink-2 hover:text-ink border-b-0" data-external>PDF</a>)}
+          {pub.code_url && (<a href={pub.code_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Code</a>)}
+          {pub.brief_url && (<a href={pub.brief_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Brief</a>)}
+          {pub.ppt_url && (<a href={pub.ppt_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Slides</a>)}
+          {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
+        </div>
+
+        {pub.doi && (
+          <div class="flex items-center gap-4 mt-4 min-h-[60px]">
+            <div
+              class="altmetric-embed"
+              data-badge-popover="right"
+              data-badge-type="medium-donut"
+              data-doi={pub.doi}
+            ></div>
+            <div
+              class="__dimensions_badge_embed__"
+              data-doi={pub.doi}
+              data-style="small_circle"
+            ></div>
+          </div>
+        )}
+      </div>
+
+      {heroImageUrl ? (
+        <img
+          src={heroImageUrl}
+          alt={pub.title}
+          loading="lazy"
+          class="w-full object-cover border border-rule"
+          style="aspect-ratio: 16/10; border-radius: var(--radius-md);"
+        />
       ) : (
-        pub.title
-      )
-    }
-  </h3>
+        <div
+          aria-hidden="true"
+          class="relative flex flex-col justify-end p-4 overflow-hidden"
+          style={`
+            aspect-ratio: 16/10;
+            background: var(--paper-2);
+            border: 1px solid var(--rule);
+            border-left: 4px solid ${heroAccent};
+            border-radius: var(--radius-md);
+          `}
+        >
+          <p class="font-serif leading-tight m-0" style="font-size: 19px;">{pub.journal}</p>
+          <p class="font-mono text-xs text-ink-3 mt-1 m-0">{pub.year}</p>
+        </div>
+      )}
+    </article>
+  ) : (
+    <>
+      <div class="flex items-baseline justify-between gap-4 mb-2">
+        <p class="eyebrow m-0">
+          <em class="not-italic">{pub.journal}</em>
+          <span class="dot">·</span>
+          {pub.year}
+        </p>
+      </div>
 
-  <p class="text-ink-2 mt-2 text-sm m-0">
-    {authorSegments.map((seg, i) => (
-      <>
-        {i > 0 && '; '}
-        {seg.slug ? (
-          <a
-            href={`/people/${seg.slug}`}
-            class="font-semibold text-ink border-b-0 hover:opacity-70"
-          >
-            {seg.text}
+      <h3 class="m-0">
+        {doiUrl ? (
+          <a href={doiUrl} class="border-b-0 hover:underline" data-external>
+            {pub.title}
           </a>
         ) : (
-          seg.text
+          pub.title
         )}
-      </>
-    ))}
-  </p>
+      </h3>
 
-  {
-    citationTail && (
-      <p class="font-mono text-xs text-ink-3 mt-2 m-0">{citationTail}</p>
-    )
-  }
+      <p class="text-ink-2 mt-2 text-sm m-0">
+        {authorSegments.map((seg, i) => (
+          <>
+            {i > 0 && '; '}
+            {seg.slug ? (
+              <a href={`/people/${seg.slug}`} class="font-semibold text-ink border-b-0 hover:opacity-70">
+                {seg.text}
+              </a>
+            ) : (
+              seg.text
+            )}
+          </>
+        ))}
+      </p>
 
-  <div class="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs font-mono uppercase tracking-wider">
-    {doiUrl && (<a href={doiUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>DOI</a>)}
-    {pub.pdf_url && (<a href={pub.pdf_url} class="text-ink-2 hover:text-ink border-b-0" data-external>PDF</a>)}
-    {pub.code_url && (<a href={pub.code_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Code</a>)}
-    {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
-  </div>
+      {citationTail && (
+        <p class="font-mono text-xs text-ink-3 mt-2 m-0">{citationTail}</p>
+      )}
+
+      <div class="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs font-mono uppercase tracking-wider">
+        {doiUrl && (<a href={doiUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>DOI</a>)}
+        {pub.pdf_url && (<a href={pub.pdf_url} class="text-ink-2 hover:text-ink border-b-0" data-external>PDF</a>)}
+        {pub.code_url && (<a href={pub.code_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Code</a>)}
+        {pub.brief_url && (<a href={pub.brief_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Brief</a>)}
+        {pub.ppt_url && (<a href={pub.ppt_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Slides</a>)}
+        {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
+      </div>
+    </>
+  )}
 </li>

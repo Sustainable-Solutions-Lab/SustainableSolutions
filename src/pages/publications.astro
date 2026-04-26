@@ -107,6 +107,11 @@ const total = all.length;
   </section>
 </BaseLayout>
 
+{/* Altmetric + Dimensions badge embeds — read data-doi attributes
+    rendered into featured publication cards. Loaded only on this page. */}
+<script async src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script>
+<script async src="https://badge.dimensions.ai/badge.js" charset="utf-8"></script>
+
 <script is:inline>
   (function () {
     const search = document.getElementById('pub-search');

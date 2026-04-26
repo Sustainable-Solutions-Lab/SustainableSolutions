@@ -43,7 +43,7 @@ export function Sidebar({
         width: 280,
         minWidth: 280,
         height: '100%',
-        bg: 'surface',
+        bg: 'background',
         borderRight: '1px solid',
         borderColor: 'border',
         overflowY: 'auto',
@@ -53,12 +53,27 @@ export function Sidebar({
         flexShrink: 0,
       }}
     >
-      {/* SDSS wordmark — top of sidebar */}
+      {/* Back-to-lab link + SDSS wordmark — top of sidebar */}
       <Box sx={{ px: 3, pt: 3, pb: 2, flexShrink: 0 }}>
+        <Box
+          as='a'
+          href='/'
+          sx={{
+            display: 'inline-block',
+            fontFamily: 'mono',
+            fontSize: 0,
+            letterSpacing: 'caps',
+            textTransform: 'uppercase',
+            color: 'muted',
+            textDecoration: 'none',
+            mb: 2,
+            '&:hover': { color: 'text' },
+          }}
+        >
+          ← Sustainable Solutions Lab
+        </Box>
         <a
-          href='https://sustainablesolutions.stanford.edu'
-          target='_blank'
-          rel='noopener noreferrer'
+          href='/'
           style={{ lineHeight: 0, display: 'inline-block' }}
         >
           <img

@@ -140,17 +140,32 @@ function FirefuelsApp() {
           height: 68,
           alignItems: 'center',
           px: 3,
-          bg: 'surface',
+          bg: 'background',
           borderBottom: '1px solid',
           borderColor: 'border',
           zIndex: 30,
         }}
       >
         <Flex sx={{ flexDirection: 'column', gap: '3px' }}>
+          <Box
+            as='a'
+            href='/'
+            sx={{
+              fontFamily: 'mono',
+              fontSize: '10px',
+              letterSpacing: 'caps',
+              textTransform: 'uppercase',
+              color: 'muted',
+              textDecoration: 'none',
+              lineHeight: 1,
+              mb: '2px',
+              '&:hover': { color: 'text' },
+            }}
+          >
+            ← Lab
+          </Box>
           <a
-            href='https://sustainablesolutions.stanford.edu'
-            target='_blank'
-            rel='noopener noreferrer'
+            href='/'
             style={{ lineHeight: 0, display: 'inline-block' }}
           >
             <img
@@ -249,7 +264,7 @@ function FirefuelsApp() {
             />
           </Box>
 
-          {/* Lab symbol */}
+          {/* Lab symbol — clicks back to lab home */}
           <Box
             sx={{
               position: 'absolute',
@@ -258,15 +273,10 @@ function FirefuelsApp() {
               zIndex: 10,
             }}
           >
-            <a
-              href='https://sustainablesolutions.stanford.edu'
-              target='_blank'
-              rel='noopener noreferrer'
-              style={{ lineHeight: 0, display: 'block' }}
-            >
+            <a href='/' style={{ lineHeight: 0, display: 'block' }}>
               <img
                 src={isDark ? '/LabLogo_light.png' : '/LabLogo_border.png'}
-                alt='Sustainable Solutions Lab'
+                alt='Back to Sustainable Solutions Lab'
                 style={{ width: 36, height: 36, objectFit: 'contain' }}
               />
             </a>
@@ -305,7 +315,7 @@ function FirefuelsApp() {
           left: 0,
           right: 0,
           zIndex: 21,
-          bg: 'surface',
+          bg: 'background',
           borderBottom: '1px solid',
           borderColor: 'border',
           transform: mobilePanelOpen ? 'translateY(0)' : 'translateY(-110%)',

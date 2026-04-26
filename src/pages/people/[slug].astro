@@ -112,8 +112,8 @@ const initials = person.name
         currentInstitution && (
           <>
             <dt class="font-mono text-xs uppercase tracking-wider text-ink-3">Currently</dt>
-            <dd class="m-0">
-              {currentInstitution}
+            <dd class="m-0" style="line-height: 1.15;">
+              {currentInstitution}{currentRole ? ',' : ''}
               {currentRole && (<><br />{currentRole}</>)}
             </dd>
           </>

@@ -137,8 +137,11 @@ export function addStaticLayers(map, scheme) {
     scheme === 'dark' ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.28)'
   const stateBorderColor =
     scheme === 'dark' ? 'rgba(255,255,255,0.40)' : 'rgba(0,0,0,0.35)'
+  // Mask color must match the basemap background exactly so the area
+  // outside California reads as a single continuous color with the chrome.
+  // Aligned with basemap-style.jsx + colors_and_type.css --paper.
   const maskColor =
-    scheme === 'dark' ? '#1a1a1a' : '#FAFAF7'
+    scheme === 'dark' ? '#0C0C1C' : '#F8F8E8'
   const graticuleColor =
     scheme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'
   const labelColor =

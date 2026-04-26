@@ -1,9 +1,7 @@
-/** @jsxImportSource theme-ui */
 import { useReducer, useState, useEffect } from 'react'
-import { ThemeProvider, Box, Button, Flex, useColorMode } from 'theme-ui'
+import { Menu, X } from 'lucide-react'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
-import theme from './theme/index.js'
 import { Actions, initialState } from './contracts/events.js'
 import { projects } from './projects/index.js'
 import { getActiveVariable } from './lib/get-active-variable.js'
@@ -62,8 +60,6 @@ function reducer(state, action) {
   }
 }
 
-// ── App body (inside ThemeProvider) ─────────────────────────────────────────
-
 // Read site-level theme (set by BaseLayout's bootstrap script) so firefuels
 // starts in the same mode as the rest of the site. Falls back to dark on SSR.
 function readSiteScheme() {
@@ -71,16 +67,12 @@ function readSiteScheme() {
   return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
 }
 
-function FirefuelsApp() {
+// ── App ─────────────────────────────────────────────────────────────────────
+
+export default function Firefuels() {
   const initialScheme = readSiteScheme()
   const [state, dispatch] = useReducer(reducer, { ...initialState, colorScheme: initialScheme })
-  const [, setColorMode] = useColorMode()
 
-  // Sync Theme UI's color mode to the site theme on mount.
-  useEffect(() => {
-    setColorMode(initialScheme)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
   const [mobileAboutOpen, setMobileAboutOpen] = useState(false)
   const [mapInstance, setMapInstance] = useState(null)
@@ -102,14 +94,14 @@ function FirefuelsApp() {
     const varId = activeVariable.id
     const zero = activeVariable.domain?.zero ?? activeVariable.domain?.min ?? 0
     fetch('/fuel-treatment.geojson')
-      .then(r => r.json())
-      .then(data => {
+      .then((r) => r.json())
+      .then((data) => {
         const vals = data.features
-          .map(f => f.properties?.[varId])
-          .filter(v => v != null && isFinite(v))
+          .map((f) => f.properties?.[varId])
+          .filter((v) => v != null && isFinite(v))
         setStatewideValues(vals)
         if (vals.length > 0) {
-          const absDev = vals.map(v => Math.abs(v - zero)).sort((a, b) => a - b)
+          const absDev = vals.map((v) => Math.abs(v - zero)).sort((a, b) => a - b)
           const idx = Math.floor(0.95 * (absDev.length - 1))
           setOpacityP95(absDev[idx])
         }
@@ -119,7 +111,6 @@ function FirefuelsApp() {
 
   function handleToggleScheme() {
     const next = state.colorScheme === 'dark' ? 'light' : 'dark'
-    setColorMode(next)
     dispatch({ type: Actions.TOGGLE_SCHEME })
     // Mirror to the site-level theme so the body bg, BaseLayout, and any
     // future site chrome stay in lockstep with firefuels.
@@ -133,45 +124,25 @@ function FirefuelsApp() {
 
   // Mobile panel: show only treatment + climate dimensions for the active layer
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
-  const mobileDimensions = config.dimensions.filter((d) =>
-    (d.id === 'treatment' || d.id === 'climate') &&
-    activeLayerConfig?.dimensionIds?.includes(d.id)
+  const mobileDimensions = config.dimensions.filter(
+    (d) =>
+      (d.id === 'treatment' || d.id === 'climate') &&
+      activeLayerConfig?.dimensionIds?.includes(d.id),
   )
 
   const wordmarkSrc = isDark ? '/SDSS_brand_white.png' : '/SDSS_brand.png'
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100%',
-        height: '100vh',
-        overflow: 'hidden',
-        bg: 'background',
-      }}
-    >
+    <div className="flex flex-col w-full h-screen overflow-hidden bg-paper">
       {/* ── Mobile header bar ──────────────────────────────────────────── */}
-      <Box
-        sx={{
-          display: ['flex', 'none'],
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 68,
-          alignItems: 'center',
-          px: 3,
-          bg: 'background',
-          borderBottom: '1px solid',
-          borderColor: 'border',
-          zIndex: 30,
-        }}
+      <header
+        className="flex md:hidden fixed top-0 left-0 right-0 items-center px-3 bg-paper border-b border-rule z-30"
+        style={{ height: 68 }}
       >
-        <Flex sx={{ flexDirection: 'column', gap: '3px' }}>
+        <div className="flex flex-col" style={{ gap: '3px' }}>
           <a
-            href='/'
-            className='bare'
+            href="/"
+            className="bare"
             style={{
               fontFamily: "'JetBrains Mono', ui-monospace, monospace",
               fontSize: '10px',
@@ -186,77 +157,64 @@ function FirefuelsApp() {
             ← Lab
           </a>
           <a
-            href='/'
-            className='bare'
+            href="/"
+            className="bare"
             style={{ lineHeight: 0, display: 'inline-block' }}
           >
             <img
               src={wordmarkSrc}
-              alt='Stanford Doerr School of Sustainability'
+              alt="Stanford Doerr School of Sustainability"
               style={{ height: 26, width: 'auto', objectFit: 'contain' }}
             />
           </a>
-          <Box
-            sx={{
-              fontFamily: 'serif',
-              fontSize: '19px',
-              fontWeight: '600',
-              color: 'text',
-              lineHeight: 1,
-            }}
+          <span
+            className="font-serif text-ink"
+            style={{ fontSize: '19px', fontWeight: 600, lineHeight: 1 }}
           >
             {config.title}
-          </Box>
-        </Flex>
+          </span>
+        </div>
 
-        <Box sx={{ flex: 1 }} />
+        <div className="flex-1" />
 
-        <Box
-          as='button'
+        <button
+          type="button"
           onClick={() => setMobilePanelOpen((o) => !o)}
           aria-label={mobilePanelOpen ? 'Close controls' : 'Open controls'}
           aria-expanded={mobilePanelOpen}
-          sx={{
-            fontFamily: 'body',
-            fontSize: 1,
-            fontWeight: 'bold',
-            letterSpacing: 'caps',
-            textTransform: 'uppercase',
-            color: mobilePanelOpen ? 'text' : 'muted',
-            bg: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            px: 2,
-            py: 1,
-          }}
+          className={[
+            'flex items-center gap-1 cursor-pointer bg-transparent border-0 px-2 py-1',
+            'font-sans text-[13px] font-bold uppercase tracking-[0.12em]',
+            mobilePanelOpen ? 'text-ink' : 'text-ink-3',
+          ].join(' ')}
         >
-          {mobilePanelOpen ? '✕ Close' : '☰ Controls'}
-        </Box>
-      </Box>
+          {mobilePanelOpen ? <X size={16} strokeWidth={1.5} /> : <Menu size={16} strokeWidth={1.5} />}
+          {mobilePanelOpen ? 'Close' : 'Controls'}
+        </button>
+      </header>
 
       {/* Spacer for mobile fixed header */}
-      <Box sx={{ display: ['block', 'none'], height: 68, flexShrink: 0 }} />
+      <div className="block md:hidden shrink-0" style={{ height: 68 }} />
 
       {/* ── Content row: sidebar | map ──────────────────────────────────── */}
-      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Sidebar — desktop only */}
-        <Box sx={{ display: ['none', 'flex'], flexShrink: 0 }}>
+        <div className="hidden md:flex shrink-0">
           <Sidebar
             config={config}
             state={state}
             dispatch={dispatch}
             allValues={statewideValues}
           />
-        </Box>
+        </div>
 
         {/* Map — fills remaining space */}
-        <Box sx={{ flex: 1, position: 'relative', minWidth: 0 }}>
+        <div className="flex-1 relative min-w-0">
           <Map
             config={config}
             state={state}
             dispatch={dispatch}
-            height='100%'
+            height="100%"
             onMapReady={(m) => setMapInstance(m)}
             onFilterStats={setFilterStats}
             onToggleScheme={handleToggleScheme}
@@ -265,47 +223,33 @@ function FirefuelsApp() {
           />
 
           {/* Mobile color bar */}
-          <Box
-            sx={{
-              display: ['block', 'none'],
-              position: 'absolute',
+          <div
+            className="block md:hidden absolute z-10"
+            style={{
               bottom: 44,
               right: 10,
-              zIndex: 10,
               width: 160,
-              bg: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.75)',
+              background: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.75)',
               borderRadius: 4,
-              px: '8px',
-              py: '6px',
+              padding: '6px 8px',
             }}
           >
-            <MobileLegend
-              variable={activeVariable}
-              allValues={statewideValues}
-              isDark={isDark}
-            />
-          </Box>
+            <MobileLegend variable={activeVariable} allValues={statewideValues} isDark={isDark} />
+          </div>
 
           {/* Lab symbol — clicks back to lab home */}
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: 40,
-              left: 16,
-              zIndex: 10,
-            }}
-          >
-            <a href='/' className='bare' style={{ lineHeight: 0, display: 'block' }}>
+          <div className="absolute z-10" style={{ bottom: 40, left: 16 }}>
+            <a href="/" className="bare" style={{ lineHeight: 0, display: 'block' }}>
               <img
                 src={isDark ? '/LabLogo_light.png' : '/LabLogo_border.png'}
-                alt='Back to Sustainable Solutions Lab'
+                alt="Back to Sustainable Solutions Lab"
                 style={{ width: 36, height: 36, objectFit: 'contain' }}
               />
             </a>
-          </Box>
+          </div>
 
           {/* Regional data stats panel — desktop only */}
-          <Box sx={{ display: ['none', 'block'] }}>
+          <div className="hidden md:block">
             <StatsPanel
               drawnCircle={state.drawnCircle}
               aggregateStats={state.aggregateStats}
@@ -314,106 +258,63 @@ function FirefuelsApp() {
               isDark={isDark}
               dispatch={dispatch}
             />
-          </Box>
+          </div>
 
           {/* Area tool — desktop only */}
-          <Box sx={{ display: ['none', 'block'] }}>
+          <div className="hidden md:block">
             <AreaTool
               map={mapInstance}
               config={config}
               state={state}
               dispatch={dispatch}
             />
-          </Box>
-        </Box>
-      </Box>
+          </div>
+        </div>
+      </div>
 
       {/* ── Mobile controls panel ─────────────────────────────────────── */}
-      <Box
-        sx={{
-          display: ['block', 'none'],
-          position: 'fixed',
+      <div
+        className="block md:hidden fixed left-0 right-0 z-[21] bg-paper border-b border-rule overflow-y-auto px-4 pt-3 pb-4"
+        style={{
           top: 68,
-          left: 0,
-          right: 0,
-          zIndex: 21,
-          bg: 'background',
-          borderBottom: '1px solid',
-          borderColor: 'border',
+          maxHeight: 'calc(100vh - 68px)',
           transform: mobilePanelOpen ? 'translateY(0)' : 'translateY(-110%)',
           transition: 'transform 0.18s ease',
-          maxHeight: 'calc(100vh - 68px)',
-          overflowY: 'auto',
-          px: 4,
-          pt: 3,
-          pb: 4,
         }}
       >
-        <Box sx={{ mb: 3 }}>
-          <Box
-            as='button'
+        <div className="mb-3">
+          <button
+            type="button"
             onClick={() => setMobileAboutOpen((o) => !o)}
-            sx={{
-              display: 'block',
-              width: '100%',
-              fontFamily: 'body',
-              fontSize: 1,
-              fontWeight: 'bold',
-              letterSpacing: 'caps',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              py: 0,
-              px: 0,
-              border: 'none',
-              bg: 'transparent',
-              textAlign: 'left',
-              color: mobileAboutOpen ? 'text' : 'muted',
-              mb: mobileAboutOpen ? 2 : 0,
-            }}
+            className={[
+              'block w-full text-left bg-transparent border-0 cursor-pointer p-0',
+              'font-sans text-[13px] font-bold uppercase tracking-[0.12em]',
+              mobileAboutOpen ? 'text-ink mb-2' : 'text-ink-3 mb-0',
+            ].join(' ')}
           >
             About
-          </Box>
+          </button>
           {mobileAboutOpen && (
-            <Box
+            <div
               dangerouslySetInnerHTML={{ __html: config.description }}
-              sx={{
-                fontFamily: 'body',
-                fontSize: 0,
-                color: 'text',
-                lineHeight: 'body',
-                'a': { color: 'text', textDecoration: 'underline' },
-                'strong': { fontWeight: 'bold' },
-              }}
+              className="font-sans text-[11px] text-ink"
+              style={{ lineHeight: 1.5 }}
             />
           )}
-        </Box>
+        </div>
 
-        <Box sx={{ mb: 3 }}>
-          <Box
-            sx={{
-              fontFamily: 'body',
-              fontSize: 1,
-              fontWeight: 'bold',
-              letterSpacing: 'caps',
-              textTransform: 'uppercase',
-              color: 'muted',
-              mb: 2,
-            }}
-          >
+        <div className="mb-3">
+          <p className="font-sans text-[13px] font-bold uppercase tracking-[0.12em] text-ink-3 mb-2 m-0">
             Map
-          </Box>
-          <LayerTabs
-            config={config}
-            state={state}
-            dispatch={dispatch}
-          />
-        </Box>
+          </p>
+          <LayerTabs config={config} state={state} dispatch={dispatch} />
+        </div>
 
         {mobileDimensions.map((dim) => {
           const filteredDim = {
             ...dim,
             options: dim.options?.filter(
-              (opt) => !opt.visibleForLayers || opt.visibleForLayers.includes(state.activeLayer)
+              (opt) => !opt.visibleForLayers || opt.visibleForLayers.includes(state.activeLayer),
             ),
           }
           return (
@@ -427,54 +328,46 @@ function FirefuelsApp() {
         })}
 
         {config.percentileFilter?.enabled && activeVariable && activeVariable.type !== 'categorical' && (
-          <Box sx={{ mt: 3 }}>
-            <Flex sx={{ gap: 3 }}>
-              {[{ label: 'Top 10%', value: 90 }, { label: 'Top 1%', value: 99 }].map(({ label, value }) => {
+          <div className="mt-3">
+            <div className="flex gap-3">
+              {[
+                { label: 'Top 10%', value: 90 },
+                { label: 'Top 1%', value: 99 },
+              ].map(({ label, value }) => {
                 const isActive = state.percentileRange.low === value
                 return (
-                  <Box
+                  <button
                     key={value}
-                    as='button'
-                    onClick={() => dispatch({
-                      type: Actions.SET_PERCENTILE,
-                      low: isActive ? 0 : value,
-                      high: 100,
-                    })}
-                    sx={{
-                      fontFamily: 'body',
-                      fontSize: 0,
-                      fontWeight: isActive ? 'bold' : 'normal',
-                      letterSpacing: 'caps',
-                      textTransform: 'uppercase',
-                      cursor: 'pointer',
-                      py: '2px',
-                      px: 0,
-                      border: 'none',
-                      bg: 'transparent',
-                      color: isActive ? 'text' : 'muted',
-                      textDecoration: isActive ? 'underline' : 'none',
-                      textUnderlineOffset: '3px',
-                    }}
+                    type="button"
+                    onClick={() =>
+                      dispatch({
+                        type: Actions.SET_PERCENTILE,
+                        low: isActive ? 0 : value,
+                        high: 100,
+                      })
+                    }
+                    className={[
+                      'cursor-pointer bg-transparent border-0 px-0',
+                      'font-sans text-[11px] uppercase tracking-[0.12em] underline-offset-[3px]',
+                      isActive ? 'font-bold text-ink underline' : 'font-normal text-ink-3 no-underline',
+                    ].join(' ')}
+                    style={{ paddingTop: '2px', paddingBottom: '2px' }}
                   >
                     {label}
-                  </Box>
+                  </button>
                 )
               })}
-            </Flex>
-          </Box>
+            </div>
+          </div>
         )}
-      </Box>
+      </div>
 
       {/* Scrim — grays out map while mobile panel is open */}
-      <Box
-        sx={{
-          display: ['block', 'none'],
-          position: 'fixed',
+      <div
+        className="block md:hidden fixed left-0 right-0 bottom-0"
+        style={{
           top: 68,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          bg: 'rgba(0,0,0,0.52)',
+          background: 'rgba(0,0,0,0.52)',
           zIndex: 20,
           opacity: mobilePanelOpen ? 1 : 0,
           pointerEvents: mobilePanelOpen ? 'auto' : 'none',
@@ -482,16 +375,6 @@ function FirefuelsApp() {
         }}
         onClick={() => setMobilePanelOpen(false)}
       />
-    </Box>
-  )
-}
-
-// ── Default export: ThemeProvider + app ─────────────────────────────────────
-
-export default function Firefuels() {
-  return (
-    <ThemeProvider theme={theme}>
-      <FirefuelsApp />
-    </ThemeProvider>
+    </div>
   )
 }

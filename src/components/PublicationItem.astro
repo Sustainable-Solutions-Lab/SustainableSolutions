@@ -1,5 +1,7 @@
 ---
-import type { Publication } from '../lib/types';
+import type { Publication, Person } from '../lib/types';
+import people from '../data/people.json';
+import { buildAuthorReplacements, splitAuthors } from '../lib/author-links';
 
 interface Props {
   pub: Publication;
@@ -8,6 +10,10 @@ interface Props {
 const { pub } = Astro.props;
 
 const doiUrl = pub.url ?? (pub.doi ? `https://doi.org/${pub.doi}` : null);
+
+// Build a token → slug map from the publication's lab_authors slugs.
+const replacements = buildAuthorReplacements(pub.lab_authors ?? [], people as Person[]);
+const authorSegments = splitAuthors(pub.authors ?? '', replacements);
 
 // Search blob — concatenated lowercase string the client-side filter greps.
 const searchBlob = [pub.authors, pub.title, pub.journal, String(pub.year)]
@@ -27,6 +33,7 @@ const citationTail = citationParts.join(', ');
   data-pub
   data-year={pub.year}
   data-themes={(pub.themes ?? []).join(',')}
+  data-lab-authors={(pub.lab_authors ?? []).join(',')}
   data-featured={String(pub.featured)}
   data-search={searchBlob}
 >
@@ -51,7 +58,23 @@ const citationTail = citationParts.join(', ');
     }
   </h3>
 
-  <p class="text-ink-2 mt-2 text-sm m-0">{pub.authors}</p>
+  <p class="text-ink-2 mt-2 text-sm m-0">
+    {authorSegments.map((seg, i) => (
+      <>
+        {i > 0 && '; '}
+        {seg.slug ? (
+          <a
+            href={`/people/${seg.slug}`}
+            class="font-semibold text-ink border-b-0 hover:opacity-70"
+          >
+            {seg.text}
+          </a>
+        ) : (
+          seg.text
+        )}
+      </>
+    ))}
+  </p>
 
   {
     citationTail && (

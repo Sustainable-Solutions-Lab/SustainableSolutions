@@ -72,6 +72,18 @@ Sheet-driven. Each row in the **Publications** tab is one citation. Filtered by 
 | Feature on the home page | Set `featured` to `TRUE`. |
 | Add replication code or a PDF link | `code_url` and `pdf_url` columns. Both render as small mono action links next to the DOI. |
 
+### Filling missing metadata from a DOI (Crossref)
+
+For a row that has a `doi` but is missing other fields (authors, journal, year, volume_issue, pages, month), run:
+
+```
+node scripts/enrich-from-crossref.js
+```
+
+This reads `templates/publications-from-scholar.csv` by default (override with `INPUT=path/to/your.csv`), hits the Crossref REST API for each row that has a DOI, and writes an enriched copy to `templates/publications-enriched.csv`. The script is **additive only** — non-empty cells are never overwritten. Open the output, copy the columns you want, paste back into the Sheet.
+
+Crossref is free, no auth needed, but be polite — the script throttles to 100ms between requests. A 100-row batch takes ~10 seconds.
+
 ### Importing many papers at once (Google Scholar)
 
 For bulk imports — e.g., the initial backfill, or after a long publishing streak — there's a pipeline that pulls from a Scholar profile.

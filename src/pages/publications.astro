@@ -2,7 +2,8 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PublicationItem from '../components/PublicationItem.astro';
 import publications from '../data/publications.json';
-import type { Publication } from '../lib/types';
+import people from '../data/people.json';
+import type { Publication, Person } from '../lib/types';
 
 const all = (publications as Publication[])
   .slice()
@@ -10,6 +11,14 @@ const all = (publications as Publication[])
 
 const years = [...new Set(all.map((p) => p.year))].sort((a, b) => b - a);
 const themes = [...new Set(all.flatMap((p) => p.themes ?? []))].sort();
+
+// Lab-author filter options: any slug that appears in at least one publication's
+// lab_authors AND has a matching row in the People sheet.
+const taggedSlugs = new Set(all.flatMap((p) => p.lab_authors ?? []));
+const peopleArr = people as Person[];
+const labAuthorOptions = peopleArr
+  .filter((p) => taggedSlugs.has(p.slug))
+  .sort((a, b) => a.name.localeCompare(b.name));
 
 const total = all.length;
 ---
@@ -64,6 +73,20 @@ const total = all.length;
         </select>
       </label>
 
+      {labAuthorOptions.length > 0 && (
+        <label class="flex items-center gap-2 text-sm">
+          <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Author</span>
+          <select
+            id="pub-author"
+            class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
+            style="border-radius: var(--radius-sm);"
+          >
+            <option value="">All</option>
+            {labAuthorOptions.map((p) => <option value={p.slug}>{p.name}</option>)}
+          </select>
+        </label>
+      )}
+
       <label class="flex items-center gap-2 text-sm">
         <input id="pub-featured" type="checkbox" class="accent-cardinal" />
         <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Featured only</span>
@@ -89,6 +112,7 @@ const total = all.length;
     const search = document.getElementById('pub-search');
     const yearSel = document.getElementById('pub-year');
     const themeSel = document.getElementById('pub-theme');
+    const authorSel = document.getElementById('pub-author');
     const feat = document.getElementById('pub-featured');
     const list = document.getElementById('pub-list');
     const empty = document.getElementById('pub-empty');
@@ -102,15 +126,18 @@ const total = all.length;
       const q = (search?.value ?? '').trim().toLowerCase();
       const y = yearSel?.value ?? '';
       const t = themeSel?.value ?? '';
+      const a = authorSel?.value ?? '';
       const f = feat?.checked ?? false;
 
       let visible = 0;
       for (const li of items) {
         const themes = (li.dataset.themes ?? '').split(',').filter(Boolean);
+        const labAuthors = (li.dataset.labAuthors ?? '').split(',').filter(Boolean);
         const ok =
           (!q || (li.dataset.search ?? '').includes(q)) &&
           (!y || li.dataset.year === y) &&
           (!t || themes.includes(t)) &&
+          (!a || labAuthors.includes(a)) &&
           (!f || li.dataset.featured === 'true');
         li.hidden = !ok;
         if (ok) visible++;
@@ -120,7 +147,7 @@ const total = all.length;
       if (empty) empty.hidden = visible !== 0;
     };
 
-    [search, yearSel, themeSel, feat].forEach((el) => {
+    [search, yearSel, themeSel, authorSel, feat].forEach((el) => {
       el?.addEventListener('input', apply);
       el?.addEventListener('change', apply);
     });

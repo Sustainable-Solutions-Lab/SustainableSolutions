@@ -59,10 +59,10 @@ const isAlum = person.status === 'alumni';
     }
     <div class="min-w-0 flex-1 overflow-hidden">
       <p class="font-serif text-lg leading-tight m-0 line-clamp-2">{person.name}</p>
-      <p class="text-ink-3 text-sm mt-1 line-clamp-2">{person.role}</p>
+      <p class="text-ink-3 text-sm leading-tight mt-1 line-clamp-2">{person.role}</p>
       {
         isAlum && person.current_position && (
-          <p class="text-ink-3 text-xs mt-1 font-mono uppercase tracking-wider line-clamp-2">
+          <p class="text-ink-3 text-xs leading-tight mt-1 font-mono uppercase tracking-wider line-clamp-2">
             Now: {person.current_position}
           </p>
         )

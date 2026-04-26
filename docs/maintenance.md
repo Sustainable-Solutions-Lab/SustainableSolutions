@@ -54,6 +54,7 @@ Sheet-driven. Each row in the **People** tab generates one entry on the grid plu
 | Reorder the grid | Set `order` (lower = earlier) in the row. Sorting is by `order` within each section. |
 | Tag a person to the CIU | Set `unit` to `ciu`. They'll appear in the "Conceptual Investigations Unit" section. |
 | Long-form bio | The `bio_short` column is one sentence. For a richer bio, drop a `src/content/people/<slug>.md` file. The frontmatter takes optional `title` and `role` (otherwise pulled from the Sheet). The Markdown body renders above the metadata grid on `/people/<slug>`. See `steve-davis.md` for a template. |
+| Generate stubs for new people | After adding rows to the People Sheet, run `npm run prebuild && node scripts/generate-people-stubs.js`. The script writes a placeholder `<slug>.md` for any person who doesn't have one yet. Existing files are never overwritten. |
 | Per-person publications list | Automatic. The detail page filters `publications.json` by the `lab_authors` column matching the person's slug, sorted reverse-chronologically. To add a paper to someone's page, add their slug to that paper's `lab_authors` cell in the Publications Sheet. |
 
 ---

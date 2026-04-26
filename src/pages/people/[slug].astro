@@ -39,16 +39,53 @@ const sectionLabel =
   person.status === 'alumni' ? 'ALUMNI'
   : person.unit === 'ciu' ? 'CONCEPTUAL INVESTIGATIONS UNIT'
   : 'CURRENT'
+
+// Spectral letter-avatar fallback (mirrors PersonCard logic for a consistent feel)
+const spectralColors = [
+  'var(--spectral-2)', 'var(--spectral-3)', 'var(--spectral-4)',
+  'var(--spectral-9)', 'var(--spectral-10)', 'var(--spectral-11)',
+]
+const hash = [...person.slug].reduce((a, c) => a + c.charCodeAt(0), 0)
+const avatarBg = spectralColors[hash % spectralColors.length]
+const initials = person.name
+  .split(/\s+/)
+  .filter((s: string) => /^[A-Z]/.test(s) && s.length > 1)
+  .slice(0, 2)
+  .map((s: string) => s[0])
+  .join('')
 ---
 
 <BaseLayout title={person.name}>
   <article class="container-prose py-16">
-    <p class="eyebrow mb-4">
-      <span class="cardinal-dot"></span>{sectionLabel}
-    </p>
-
-    <h1>{person.name}</h1>
-    <p class="lede mt-2">{person.role}</p>
+    <div class="flex flex-col sm:flex-row items-start gap-6 mb-10">
+      {
+        person.photo_filename ? (
+          <img
+            src={`/people/${person.photo_filename}`}
+            alt={person.name}
+            width="144"
+            height="144"
+            class="shrink-0 object-cover"
+            style="width: 144px; height: 144px; border-radius: var(--radius-md);"
+          />
+        ) : (
+          <div
+            aria-hidden="true"
+            class="shrink-0 flex items-center justify-center font-mono text-4xl text-paper select-none"
+            style={`width: 144px; height: 144px; background: ${avatarBg}; border-radius: var(--radius-md);`}
+          >
+            {initials || '·'}
+          </div>
+        )
+      }
+      <div class="flex-1 min-w-0">
+        <p class="eyebrow mb-3">
+          <span class="cardinal-dot"></span>{sectionLabel}
+        </p>
+        <h1 class="m-0">{person.name}</h1>
+        <p class="lede mt-2 m-0">{person.role}</p>
+      </div>
+    </div>
 
     {
       person.bio_short && !BioContent && (

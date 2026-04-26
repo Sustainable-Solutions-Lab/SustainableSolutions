@@ -206,9 +206,10 @@ body {
 .display, h1.display {
   font-family: var(--font-serif);
   font-weight: 400;
-  /* Fluid sizing: ~26px at 320px viewport → ~56px at 1280px+.
-     Sized so "Underexamined questions." fits on one line at every breakpoint. */
-  font-size: clamp(26px, 3.2vw + 14px, 56px);
+  /* Fluid sizing: ~22px at 320px viewport → ~56px at 1280px+.
+     Sized so "Underexamined questions." (24 chars) fits on one line at every
+     breakpoint when the h1 is unconstrained. */
+  font-size: clamp(20px, 2.6vw + 14px, 56px);
   line-height: var(--lh-tight);
   letter-spacing: var(--tr-tight);
   margin: 0 0 var(--s-5);

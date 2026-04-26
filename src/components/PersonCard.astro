@@ -33,7 +33,7 @@ const isAlum = person.status === 'alumni';
 <a
   href={detailHref}
   class="group block bg-paper border border-rule p-5 hover:border-rule-strong transition-colors border-b-0"
-  style="min-height: 128px;"
+  style="min-height: 168px;"
 >
   <div class="flex items-center gap-4 h-full">
     {
@@ -58,24 +58,11 @@ const isAlum = person.status === 'alumni';
       )
     }
     <div class="min-w-0 flex-1 overflow-hidden">
-      <p
-        class="font-serif text-lg leading-tight m-0"
-        style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-      >
-        {person.name}
-      </p>
-      <p
-        class="text-ink-3 text-sm mt-1"
-        style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-      >
-        {person.role}
-      </p>
+      <p class="font-serif text-lg leading-tight m-0 line-clamp-2">{person.name}</p>
+      <p class="text-ink-3 text-sm mt-1 line-clamp-2">{person.role}</p>
       {
         isAlum && person.current_position && (
-          <p
-            class="text-ink-3 text-xs mt-1 font-mono uppercase tracking-wider"
-            style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-          >
+          <p class="text-ink-3 text-xs mt-1 font-mono uppercase tracking-wider line-clamp-2">
             Now: {person.current_position}
           </p>
         )

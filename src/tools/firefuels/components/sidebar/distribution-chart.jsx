@@ -22,26 +22,12 @@ import { Actions } from '../../contracts/events.js'
 const CHART_W = 220
 const CHART_H = 90
 
-function SlidersIcon({ active, size = 16 }) {
-  return (
-    <svg
-      width={size} height={size} viewBox='0 0 14 14'
-      fill='none' stroke='currentColor' strokeWidth='1.6' strokeLinecap='round'
-    >
-      <line x1='2' y1='4.5' x2='12' y2='4.5'/>
-      <line x1='2' y1='9.5' x2='12' y2='9.5'/>
-      <circle
-        cx='5' cy='4.5' r='1.8'
-        fill={active ? 'currentColor' : 'none'}
-        strokeWidth='1.4'
-      />
-      <circle
-        cx='9' cy='9.5' r='1.8'
-        fill={active ? 'currentColor' : 'none'}
-        strokeWidth='1.4'
-      />
-    </svg>
-  )
+// Lucide SlidersHorizontal — 1.5px stroke, 24px grid, matches the design system.
+// Active state is conveyed by color (caller sets currentColor on the button).
+import { SlidersHorizontal } from 'lucide-react'
+
+function SlidersIcon({ size = 16 }) {
+  return <SlidersHorizontal size={size} strokeWidth={1.5} aria-hidden='true' />
 }
 
 export function DistributionChart({ variable, allValues, percentileRange, dispatch, isDark = false }) {
@@ -212,7 +198,7 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
             '&:hover': { color: 'text' },
           }}
         >
-          <SlidersIcon active={filterActive} size={20} />
+          <SlidersIcon size={18} />
         </Box>
 
         <svg

@@ -46,15 +46,14 @@ export function Sidebar({
         bg: 'background',
         borderRight: '1px solid',
         borderColor: 'border',
-        overflowY: 'auto',
         overflowX: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
       }}
     >
-      {/* Back-to-lab link + SDSS wordmark — top of sidebar */}
-      <Box sx={{ px: 3, pt: 3, pb: 2, flexShrink: 0 }}>
+      {/* Header — back link only (wordmark moved to footer) */}
+      <Box sx={{ px: 3, pt: 3, pb: 3, flexShrink: 0 }}>
         <a
           href='/'
           className='bare'
@@ -65,26 +64,14 @@ export function Sidebar({
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
             color: 'var(--ink-3)',
-            marginBottom: '8px',
           }}
         >
           ← Sustainable Solutions Lab
         </a>
-        <a
-          href='/'
-          className='bare'
-          style={{ lineHeight: 0, display: 'inline-block' }}
-        >
-          <img
-            src={state.colorScheme === 'dark' ? '/SDSS_brand_white.png' : '/SDSS_brand.png'}
-            alt='Stanford Doerr School of Sustainability'
-            style={{ width: '100%', maxWidth: 220, height: 'auto', objectFit: 'contain' }}
-          />
-        </a>
       </Box>
 
       {/* Scrollable content */}
-      <Box sx={{ flex: 1, px: 3, pt: 1, pb: 2 }}>
+      <Box sx={{ flex: 1, px: 3, pt: 1, pb: 2, overflowY: 'auto', overflowX: 'hidden' }}>
         {/* Project title */}
         <Text
           sx={{
@@ -249,6 +236,29 @@ export function Sidebar({
         >
           Read Methods
         </Box>
+      </Box>
+
+      {/* Footer — SDSS wordmark, pinned to the bottom of the sidebar */}
+      <Box
+        sx={{
+          flexShrink: 0,
+          px: 3,
+          py: 3,
+          borderTop: '1px solid',
+          borderColor: 'border',
+        }}
+      >
+        <a
+          href='/'
+          className='bare'
+          style={{ lineHeight: 0, display: 'inline-block' }}
+        >
+          <img
+            src={state.colorScheme === 'dark' ? '/SDSS_brand_white.png' : '/SDSS_brand.png'}
+            alt='Stanford Doerr School of Sustainability'
+            style={{ width: '100%', maxWidth: 200, height: 'auto', objectFit: 'contain' }}
+          />
+        </a>
       </Box>
 
     </Box>

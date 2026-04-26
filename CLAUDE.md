@@ -49,7 +49,7 @@ The design system was developed in Claude Design and exported as a bundle. **The
 
 **Synthesis**: CarbonPlan (dark/mono/grid) × NYT graphics (small-caps eyebrows, hairline rules, italic captions) × ColorBrewer Spectral (signature data palette). A whisper of Stanford DNA via Cardinal `#8C1515` accent only — never as a banner.
 
-**Tagline (working)**: *Climate science, in plain sight.*
+**Tagline (working)**: *Underexamined questions. Lasting answers.*
 
 ### Colors (sampled from the lab logo)
 

@@ -106,7 +106,13 @@ const filterChips = [
 
     const apply = (filter) => {
       groups.forEach((g) => {
-        const visible = filter === 'all' || g.dataset.peopleGroup === filter;
+        const group = g.dataset.peopleGroup;
+        // "Current" reveals both the main current section AND CIU
+        // (active CIU members are still current lab members).
+        const visible =
+          filter === 'all' ||
+          group === filter ||
+          (filter === 'current' && group === 'ciu');
         g.hidden = !visible;
       });
       buttons.forEach((b) => {

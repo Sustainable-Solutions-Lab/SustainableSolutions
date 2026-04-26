@@ -48,7 +48,8 @@ Sheet-driven. Each row in the **People** tab generates one entry on the grid plu
 | What you want to change | How |
 |---|---|
 | Add a new lab member | Add a row to the People tab. Required: `slug`, `name`, `role`, `unit` (`main` or `ciu`), `status` (`current` or `alumni`). |
-| Photo | Save a square JPG (256×256+) named `<slug>.jpg` to `/public/people/`, then put `<slug>.jpg` in the `photo_filename` column. If left blank, the card shows a Spectral-colored letter avatar. |
+| Photo | Save a square image (256×256+) to `/public/people/`. **If you name the file `<slug>.jpg` (or `.png` / `.webp` / `.avif`), it's auto-detected — no Sheet edit needed.** If you use a different filename, put it in the `photo_filename` column. If neither is set, the card shows a Spectral-colored letter avatar. |
+| Audit photos | `node scripts/audit-people-photos.js` cross-references the People sheet against `/public/people/`. Reports missing files, orphan files (uploaded but unused), case mismatches, and rows still on the letter-avatar fallback. Run after editing the Sheet or uploading photos. |
 | Person moves to alumni | Set `status` to `alumni`, add `current_position`, fill in `left_date` (YYYY-MM). |
 | Reorder the grid | Set `order` (lower = earlier) in the row. Sorting is by `order` within each section. |
 | Tag a person to the CIU | Set `unit` to `ciu`. They'll appear in the "Conceptual Investigations Unit" section. |

@@ -3,11 +3,14 @@
 // Runs as `prebuild`. Falls back to templates/*.csv when env vars are missing,
 // so dev/CI builds work without a live Sheet.
 
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const OUT_DIR = resolve('src/data');
 const TEMPLATES_DIR = resolve('templates');
+const PHOTOS_DIR = resolve('public/people');
+
+const PHOTO_EXT_RE = /\.(jpe?g|png|webp|avif)$/i;
 
 // Schema definitions — column names per CLAUDE.md sheet specs.
 // Required columns fail the build loudly if missing.
@@ -148,15 +151,52 @@ async function fetchTab(tabName, { env, required }) {
   return { records, source };
 }
 
+// For each person row whose photo_filename is empty, look for a photo in
+// /public/people/ whose stem matches the slug (case-insensitive). This means
+// uploading "pablo-busch.jpg" is enough — no Sheet edit required.
+async function resolvePeoplePhotos(records) {
+  let files;
+  try {
+    files = await readdir(PHOTOS_DIR);
+  } catch {
+    return { records, autoMatched: 0 };
+  }
+  const photos = files.filter((f) => PHOTO_EXT_RE.test(f));
+  if (photos.length === 0) return { records, autoMatched: 0 };
+
+  // Build a lowercase-stem → actual-filename map (first-write-wins on collision).
+  const stemMap = new Map();
+  for (const f of photos) {
+    const stem = f.replace(PHOTO_EXT_RE, '').toLowerCase();
+    if (!stemMap.has(stem)) stemMap.set(stem, f);
+  }
+
+  let autoMatched = 0;
+  const updated = records.map((p) => {
+    if (p.photo_filename) return p;
+    const guess = stemMap.get((p.slug ?? '').toLowerCase());
+    if (!guess) return p;
+    autoMatched++;
+    return { ...p, photo_filename: guess };
+  });
+  return { records: updated, autoMatched };
+}
+
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
   for (const [name, spec] of Object.entries(tabs)) {
     try {
-      const { records, source } = await fetchTab(name, spec);
+      let { records, source } = await fetchTab(name, spec);
+      let extra = '';
+      if (name === 'people') {
+        const { records: r2, autoMatched } = await resolvePeoplePhotos(records);
+        records = r2;
+        if (autoMatched > 0) extra = ` (auto-matched ${autoMatched} photo${autoMatched === 1 ? '' : 's'} by slug)`;
+      }
       const out = resolve(OUT_DIR, `${name}.json`);
       await writeFile(out, JSON.stringify(records, null, 2));
       const tag = source === 'sheet' ? '   sheet' : source === 'template' ? 'template' : '   empty';
-      console.log(`[fetch-sheets] [${tag}] wrote ${records.length.toString().padStart(4)} rows → ${out}`);
+      console.log(`[fetch-sheets] [${tag}] wrote ${records.length.toString().padStart(4)} rows → ${out}${extra}`);
     } catch (err) {
       console.error(err.message);
       process.exit(1);

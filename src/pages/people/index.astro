@@ -23,10 +23,18 @@ const sections = [
     members: all.filter((p) => p.status === 'alumni'),
   },
 ];
+
+const visibleSections = sections.filter((s) => s.members.length > 0);
+
+// Filter chips — only show chips for sections that actually have members.
+const filterChips = [
+  { id: 'all', label: 'All' },
+  ...visibleSections.map((s) => ({ id: s.id, label: s.label })),
+];
 ---
 
 <BaseLayout title="People">
-  <section class="container-content pt-16 pb-8">
+  <section class="container-content pt-16 pb-6">
     <p class="eyebrow mb-4">PEOPLE</p>
     <h1>Lab members</h1>
     <p class="lede max-w-prose mt-4">
@@ -35,21 +43,80 @@ const sections = [
     </p>
   </section>
 
+  <div class="container-content pb-6">
+    <div
+      class="flex flex-wrap items-center gap-x-5 gap-y-2 py-3 border-y border-rule"
+      role="tablist"
+      aria-label="Filter people"
+    >
+      <span class="font-mono text-xs uppercase tracking-wider text-ink-3 mr-1">Filter</span>
+      {
+        filterChips.map(({ id, label }, i) => (
+          <button
+            type="button"
+            role="tab"
+            data-people-filter={id}
+            aria-selected={i === 0 ? 'true' : 'false'}
+            class:list={[
+              'cursor-pointer bg-transparent border-0 p-0',
+              'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
+              'transition-colors',
+              i === 0
+                ? 'font-bold text-ink underline'
+                : 'font-normal text-ink-3 hover:text-ink',
+            ]}
+          >
+            {label}
+          </button>
+        ))
+      }
+    </div>
+  </div>
+
   {
-    sections.map(
-      ({ id, label, members }) =>
-        members.length > 0 && (
-          <section id={id} class="container-content pb-12">
-            <p class="eyebrow mb-4">{label.toUpperCase()}</p>
-            <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0">
-              {members.map((person) => (
-                <li>
-                  <PersonCard person={person} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ),
-    )
+    visibleSections.map(({ id, label, members }) => (
+      <section
+        id={id}
+        data-people-group={id}
+        class="container-content pb-12"
+      >
+        <p class="eyebrow mb-4">{label.toUpperCase()}</p>
+        <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0">
+          {members.map((person) => (
+            <li>
+              <PersonCard person={person} />
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
   }
 </BaseLayout>
+
+<script is:inline>
+  (function () {
+    const buttons = document.querySelectorAll('[data-people-filter]');
+    const groups = document.querySelectorAll('[data-people-group]');
+    if (!buttons.length || !groups.length) return;
+
+    const ACTIVE = ['font-bold', 'text-ink', 'underline'];
+    const INACTIVE = ['font-normal', 'text-ink-3', 'no-underline'];
+
+    const apply = (filter) => {
+      groups.forEach((g) => {
+        const visible = filter === 'all' || g.dataset.peopleGroup === filter;
+        g.hidden = !visible;
+      });
+      buttons.forEach((b) => {
+        const isActive = b.dataset.peopleFilter === filter;
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        ACTIVE.forEach((c) => b.classList.toggle(c, isActive));
+        INACTIVE.forEach((c) => b.classList.toggle(c, !isActive));
+      });
+    };
+
+    buttons.forEach((b) => {
+      b.addEventListener('click', () => apply(b.dataset.peopleFilter));
+    });
+  })();
+</script>

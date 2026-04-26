@@ -28,12 +28,18 @@ const initials = person.name
 
 const detailHref = `/people/${person.slug}`;
 const isAlum = person.status === 'alumni';
+
+// Sheet cell format: "Institution" or "Institution, Role" — split on first comma.
+const cp = person.current_position ?? '';
+const commaIdx = cp.indexOf(',');
+const nowInstitution = commaIdx === -1 ? cp.trim() : cp.slice(0, commaIdx).trim();
+const nowRole = commaIdx === -1 ? '' : cp.slice(commaIdx + 1).trim();
 ---
 
 <a
   href={detailHref}
   class="group block bg-paper border border-rule p-5 hover:border-rule-strong transition-colors border-b-0"
-  style="min-height: 168px;"
+  style="min-height: 176px;"
 >
   <div class="flex items-center gap-4 h-full">
     {
@@ -61,9 +67,16 @@ const isAlum = person.status === 'alumni';
       <p class="font-serif text-lg leading-tight m-0 line-clamp-2">{person.name}</p>
       <p class="text-ink-3 text-sm leading-tight mt-1 line-clamp-2">{person.role}</p>
       {
-        isAlum && person.current_position && (
-          <p class="text-ink-3 text-xs leading-tight mt-1 font-mono uppercase tracking-wider line-clamp-2">
-            Now: {person.current_position}
+        isAlum && nowInstitution && (
+          <p class="text-ink-3 text-xs leading-tight mt-1 font-mono uppercase tracking-wider line-clamp-1">
+            Now: {nowInstitution}
+          </p>
+        )
+      }
+      {
+        isAlum && nowRole && (
+          <p class="text-ink-3 text-xs leading-tight mt-0.5 font-mono uppercase tracking-wider line-clamp-1">
+            {nowRole}
           </p>
         )
       }

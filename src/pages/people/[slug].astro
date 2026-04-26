@@ -30,10 +30,16 @@ if (bioEntry) {
 }
 
 const dateRange = person.left_date
-  ? `${person.joined_date ?? '?'} – ${person.left_date}`
+  ? `${person.joined_date ?? '?'} through ${person.left_date}`
   : person.joined_date
-    ? `${person.joined_date} – present`
+    ? `Since ${person.joined_date}`
     : null
+
+// Split current_position on first comma into institution + role.
+const cp = person.current_position ?? ''
+const commaIdx = cp.indexOf(',')
+const currentInstitution = commaIdx === -1 ? cp.trim() : cp.slice(0, commaIdx).trim()
+const currentRole = commaIdx === -1 ? '' : cp.slice(commaIdx + 1).trim()
 
 const sectionLabel =
   person.status === 'alumni' ? 'ALUMNI'
@@ -103,10 +109,13 @@ const initials = person.name
 
     <dl class="mt-10 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sm">
       {
-        person.current_position && (
+        currentInstitution && (
           <>
             <dt class="font-mono text-xs uppercase tracking-wider text-ink-3">Currently</dt>
-            <dd class="m-0">{person.current_position}</dd>
+            <dd class="m-0">
+              {currentInstitution}
+              {currentRole && (<><br />{currentRole}</>)}
+            </dd>
           </>
         )
       }

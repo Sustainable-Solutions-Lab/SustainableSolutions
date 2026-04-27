@@ -1,5 +1,6 @@
 ---
 import type { Person } from '../lib/types';
+import { roleColor } from '../lib/roles';
 
 interface Props {
   person: Person;
@@ -9,6 +10,7 @@ const { person } = Astro.props;
 const detailHref = `/people/${person.slug}`;
 const sectionLabel =
   person.unit === 'ciu' ? 'CONCEPTUAL INVESTIGATIONS UNIT' : 'CURRENT';
+const stripeColor = roleColor(person.role);
 
 // Spectral letter-avatar fallback (same hash as PersonCard for visual continuity)
 const spectralColors = [
@@ -29,7 +31,7 @@ const orcidUrl = person.orcid ? `https://orcid.org/${person.orcid}` : null;
 
 <article
   class="grid md:grid-cols-[1fr_240px] gap-6 p-6 border border-rule bg-paper"
-  style="border-radius: var(--radius-md);"
+  style={`border-radius: var(--radius-md); border-left: 4px solid ${stripeColor};`}
 >
   <div class="min-w-0">
     <p class="eyebrow m-0 mb-2">

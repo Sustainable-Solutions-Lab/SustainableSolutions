@@ -150,8 +150,11 @@ function extractDetail(html, master) {
 
 // ── Stages ─────────────────────────────────────────────────────────────────
 async function runMaster() {
-  // Paginate through the profile in chunks of 100. Stop when a page returns
-  // fewer than 100 — that's the last page.
+  // Paginate through the profile in chunks of 100. Continue until a page
+  // returns 0 new papers — that's how Scholar signals end of list.
+  // Don't early-exit on `page.length < 100`: the regex sometimes misses a
+  // few entries on a full page, and Scholar may also have natural breaks
+  // mid-page that don't equal 100.
   const all = []
   const seen = new Set()
   let cstart = 0
@@ -166,7 +169,7 @@ async function runMaster() {
       added++
     }
     console.log(`[scrape-scholar] master: cstart=${cstart}  +${added} (total ${all.length})`)
-    if (page.length < 100 || added === 0) break
+    if (added === 0) break
     cstart += 100
     await wait(DELAY_MS)
   }

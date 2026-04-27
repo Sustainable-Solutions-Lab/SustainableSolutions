@@ -3270,5 +3270,1371 @@
         "count": 8
       }
     ]
+  },
+  "6ScxedgR18sC": {
+    "id": "6ScxedgR18sC",
+    "title": "Climate warming increases extreme daily wildfire growth risk in California",
+    "authors": "Patrick T. Brown, Holt Hanley, Ankur Mahesh, Colorado Reed, Scott J. Strenfel, Steven J. Davis, Adam K. Kochanski, Craig B. Clements",
+    "publication_date": "2023/8/30",
+    "journal": "Nature",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Macmillan",
+    "abstract": "California has experienced enhanced extreme wildfire behaviour in recent years , – , leading to substantial loss of life and property , . Some portion of the change in wildfire behaviour is attributable to anthropogenic climate warming, but formally quantifying this contribution is difficult because of numerous confounding factors , and because wildfires are below the grid scale of global climate models. Here we use machine learning to quantify empirical relationships between temperature (as well as the influence of temperature on aridity) and the risk of extreme daily wildfire growth (>10,000 acres) in California and find that the influence of temperature on the risk is primarily mediated through its influence on fuel moisture. We use the uncovered relationships to estimate the changes in extreme daily wildfire growth risk under anthropogenic warming by subjecting historical fires from 2003 to 2020 to differing background …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 226,
+    "citations": [
+      {
+        "year": 2023,
+        "count": 3
+      },
+      {
+        "year": 2024,
+        "count": 79
+      },
+      {
+        "year": 2025,
+        "count": 99
+      },
+      {
+        "year": 2026,
+        "count": 43
+      }
+    ]
+  },
+  "Se3iqnhoufwC": {
+    "id": "Se3iqnhoufwC",
+    "title": "The Cenozoic climatic and topographic evolution of the western North American Cordillera",
+    "authors": "C Page Chamberlain, Hari T Mix, Andreas Mulch, Michael T Hren, Malinda L Kent-Corson, Steven J Davis, Travis Horton, Stephan A Graham",
+    "publication_date": "2012",
+    "journal": "",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "American Journal of Science",
+    "abstract": "Herein we present oxygen isotope records from Cretaceous to Recent terrestrial sediments in the western North American Cordillera. The purpose of this analysis is to use oxygen isotope records to understand the coupled surface elevation and climate histories of this region through the Cenozoic. To do this we constructed δ¹⁸ (O) maps of surface waters for time intervals that trace the development of topography of western North America. These maps are based on 4861 oxygen isotope analyses from both published (4478) and new (383) data. We determined the δ¹⁸ (O) values of surface waters using paleotemperatures derived previously from floral assemblages and the appropriate isotope fractionation factors. These data suggest that in the late Cretaceous to early Eocene the Sevier hinterland formed a plateau of unknown height. Around 50 Ma, a topographic wave developed in British Columbia and eastern …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 220,
+    "citations": [
+      {
+        "year": 2011,
+        "count": 1
+      },
+      {
+        "year": 2012,
+        "count": 5
+      },
+      {
+        "year": 2013,
+        "count": 14
+      },
+      {
+        "year": 2014,
+        "count": 13
+      },
+      {
+        "year": 2015,
+        "count": 21
+      },
+      {
+        "year": 2016,
+        "count": 18
+      },
+      {
+        "year": 2017,
+        "count": 14
+      },
+      {
+        "year": 2018,
+        "count": 17
+      },
+      {
+        "year": 2019,
+        "count": 10
+      },
+      {
+        "year": 2020,
+        "count": 17
+      },
+      {
+        "year": 2021,
+        "count": 21
+      },
+      {
+        "year": 2022,
+        "count": 16
+      },
+      {
+        "year": 2023,
+        "count": 21
+      },
+      {
+        "year": 2024,
+        "count": 12
+      },
+      {
+        "year": 2025,
+        "count": 13
+      },
+      {
+        "year": 2026,
+        "count": 5
+      }
+    ]
+  },
+  "ITz7TVZQ0sgC": {
+    "id": "ITz7TVZQ0sgC",
+    "title": "Land-use emissions embodied in international trade",
+    "authors": "Chaopeng Hong, Hongyan Zhao, Yue Qin, Jennifer A. Burney, Julia Pongratz, Kerstin Hartung, Yu Liu, Frances C. Moore, Robert B. Jackson, Qiang Zhang, Steven J. Davis",
+    "publication_date": "2022/5/6",
+    "journal": "Science",
+    "volume": "376",
+    "issue": "6593",
+    "pages": "597-603",
+    "publisher": "AAAS",
+    "abstract": "International trade separates consumption of goods from related environmental impacts, including greenhouse gas emissions from agriculture and land-use change (together referred to as “land-use emissions”). Through use of new emissions estimates and a multiregional input-output model, we evaluated land-use emissions embodied in global trade from 2004 to 2017. Annually, 27% of land-use emissions and 22% of agricultural land are related to agricultural products ultimately consumed in a different region from where they were produced. Roughly three-quarters of embodied emissions are from land-use change, with the largest transfers from lower-income countries such as Brazil, Indonesia, and Argentina to more industrialized regions such as Europe, the United States, and China. Mitigation of global land-use emissions and sustainable development may thus depend on improving the transparency of …",
+    "journal_link": null,
+    "doi": "10.1126/science.abj1572",
+    "total_citations": 215,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 23
+      },
+      {
+        "year": 2023,
+        "count": 38
+      },
+      {
+        "year": 2024,
+        "count": 66
+      },
+      {
+        "year": 2025,
+        "count": 64
+      },
+      {
+        "year": 2026,
+        "count": 21
+      }
+    ]
+  },
+  "VBDT71xRUdcC": {
+    "id": "VBDT71xRUdcC",
+    "title": "Comparing national greenhouse gas budgets reported in UNFCCC inventories against atmospheric inversions",
+    "authors": "Zhu Deng, Philippe Ciais, Zitely A. Tzompa-Sosa, Marielle Saunois, Chunjing Qiu, Chang Tan, Taochun Sun, Piyu Ke, Yanan Cui, Katsumasa Tanaka, Xin Lin, Rona L. Thompson, Hanqin Tian, Yuanzhi Yao, Yuanyuan Huang, Ronny Lauerwald, Atul K. Jain, Xiaoming Xu, Ana Bastos, Stephen Sitch, Paul I. Palmer, Thomas Lauvaux, Alexandre d'Aspremont, Clément Giron, Antoine Benoit, Benjamin Poulter, Jinfeng Chang, Ana Maria Roxana Petrescu, Steven J. Davis, Zhu Liu, Giacomo Grassi, Clément Albergel, Francesco N. Tubiello, Lucia Perugini, Wouter Peters, Frédéric Chevallier",
+    "publication_date": "2022/4/11",
+    "journal": "Earth System Science Data",
+    "volume": "14",
+    "issue": "4",
+    "pages": "1639–1675",
+    "publisher": "Copernicus Publications",
+    "abstract": "In support of the global stocktake of the Paris Agreement on climate change, this study presents a comprehensive framework to process the results of an ensemble of atmospheric inversions in order to make their net ecosystem exchange (NEE) carbon dioxide (CO 2 ) flux suitable for evaluating national greenhouse gas inventories (NGHGIs) submitted by countries to the United Nations Framework Convention on Climate Change (UNFCCC). From inversions we also deduced anthropogenic methane (CH 4 ) emissions regrouped into fossil and agriculture and waste emissions, as well as anthropogenic nitrous oxide (N 2 O) emissions. To compare inversion results with national reports, we compiled a new global harmonized database of emissions and removals from periodical UNFCCC inventories by Annex I countries, and from sporadic and less detailed emissions reports by non-Annex I countries, given by national communications and biennial update reports. No gap filling was applied. The method to reconcile inversions with inventories is applied to selected large countries covering ∼90 % of the global land carbon uptake for CO 2 and top emitters of CH 4 and N 2 O. Our method uses results from an ensemble of global inversions produced by the Global Carbon Project for the three greenhouse gases, with ancillary data. We examine the role of CO 2 fluxes caused by lateral transfer processes from rivers and from trade in crop and wood products and the role of carbon uptake in unmanaged lands, both not accounted for by NGHGIs. Here we show that, despite a large spread across the inversions, the median of available inversion models points to a …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 192,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 2
+      },
+      {
+        "year": 2022,
+        "count": 23
+      },
+      {
+        "year": 2023,
+        "count": 45
+      },
+      {
+        "year": 2024,
+        "count": 49
+      },
+      {
+        "year": 2025,
+        "count": 58
+      },
+      {
+        "year": 2026,
+        "count": 11
+      }
+    ]
+  },
+  "cx97FdCJQX8C": {
+    "id": "cx97FdCJQX8C",
+    "title": "Simulating the Earth system response to negative emissions",
+    "authors": "C D Jones, P Ciais, S J Davis, P Friedlingstein, T Gasser, G P Peters, J Rogelj, D P van Vuuren, J G Canadell, A Cowie, R B Jackson, M Jonas, E Kriegler, E Littleton, J A Lowe, J Milne, G Shrestha, P Smith, A Torvanger, A Wiltshire",
+    "publication_date": "2016/9/20",
+    "journal": "Environmental Research Letters",
+    "volume": "11",
+    "issue": "9",
+    "pages": "095012",
+    "publisher": "",
+    "abstract": "Natural carbon sinks currently absorb approximately half of the anthropogenic CO 2 emitted by fossil fuel burning, cement production and land-use change. However, this airborne fraction may change in the future depending on the emissions scenario. An important issue in developing carbon budgets to achieve climate stabilisation targets is the behaviour of natural carbon sinks, particularly under low emissions mitigation scenarios as required to meet the goals of the Paris Agreement. A key requirement for low carbon pathways is to quantify the effectiveness of negative emissions technologies which will be strongly affected by carbon cycle feedbacks. Here we find that Earth system models suggest significant weakening, even potential reversal, of the ocean and land sinks under future low emission scenarios. For the RCP2.6 concentration pathway, models project land and ocean sinks to weaken to 0.8 ± 0.9 and 1 …",
+    "journal_link": null,
+    "doi": "10.1088/1748-9326/11/9/095012/meta",
+    "total_citations": 188,
+    "citations": [
+      {
+        "year": 2016,
+        "count": 2
+      },
+      {
+        "year": 2017,
+        "count": 9
+      },
+      {
+        "year": 2018,
+        "count": 27
+      },
+      {
+        "year": 2019,
+        "count": 19
+      },
+      {
+        "year": 2020,
+        "count": 22
+      },
+      {
+        "year": 2021,
+        "count": 19
+      },
+      {
+        "year": 2022,
+        "count": 21
+      },
+      {
+        "year": 2023,
+        "count": 22
+      },
+      {
+        "year": 2024,
+        "count": 21
+      },
+      {
+        "year": 2025,
+        "count": 23
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "xIusEVNJREcC": {
+    "id": "xIusEVNJREcC",
+    "title": "Trends and drivers of African fossil fuel CO2 emissions 1990-2017",
+    "authors": "Lacour Mody Ayompe, Steven J Davis, Benis N Egoh",
+    "publication_date": "2020/10/30",
+    "journal": "Environmental Research Letters",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "IOP",
+    "abstract": "International efforts to avoid dangerous climate change aim for global carbon dioxide (CO 2 ) emissions to be net-zero by midcentury. Such a goal will require both drastically reducing emissions from high-income countries and avoiding large increases in emissions from still-developing countries. Yet most analyses focus on rich-country emissions reductions, with much less attention to trends in low-income countries. Here, we use a Kaya framework to analyze patterns and trends in CO 2 emissions from the combustion of fossil fuels in Africa between 1990 and 2017. In total, African CO 2 emissions were just 4% of global fossil fuel emissions in 2017, or 1185 MtCO 2 , having grown by 4.6% yr −1 on average over the period 1990–2017 (cf the global growth rate of 2.2% yr −1 over the same period). In 2017, 10 countries accounted for about 87% of the continent’s emissions. Despite modest recent reductions in some …",
+    "journal_link": null,
+    "doi": "10.1088/1748-9326/abc64f/pdf",
+    "total_citations": 184,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 12
+      },
+      {
+        "year": 2022,
+        "count": 29
+      },
+      {
+        "year": 2023,
+        "count": 38
+      },
+      {
+        "year": 2024,
+        "count": 51
+      },
+      {
+        "year": 2025,
+        "count": 45
+      },
+      {
+        "year": 2026,
+        "count": 8
+      }
+    ]
+  },
+  "Y0RG-0fxPaAC": {
+    "id": "Y0RG-0fxPaAC",
+    "title": "Cement and steel — nine steps to net zero",
+    "authors": "Paul Fennell, Justin Driver, Christopher Bataille, Steven J. Davis",
+    "publication_date": "2022/3/24",
+    "journal": "Nature",
+    "volume": "603",
+    "issue": "",
+    "pages": "574-578",
+    "publisher": "Springer Macmillan",
+    "abstract": "It is possible — and crucial — to green the building blocks of the modern world.",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 180,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 10
+      },
+      {
+        "year": 2023,
+        "count": 33
+      },
+      {
+        "year": 2024,
+        "count": 65
+      },
+      {
+        "year": 2025,
+        "count": 54
+      },
+      {
+        "year": 2026,
+        "count": 15
+      }
+    ]
+  },
+  "ZYsTHYU9jrMC": {
+    "id": "ZYsTHYU9jrMC",
+    "title": "Assessment of China's virtual air pollution transport embodied in trade by using a consumption-based emission inventory",
+    "authors": "HY Zhao, Q Zhang, DB Guan, SJ Davis, Z Liu, H Huo, JT Lin, WD Liu, KB He",
+    "publication_date": "2015/5/19",
+    "journal": "Atmospheric Chemistry and Physics",
+    "volume": "15",
+    "issue": "10",
+    "pages": "5443-5456",
+    "publisher": "Copernicus GmbH",
+    "abstract": "Substantial anthropogenic emissions from China have resulted in serious air pollution, and this has generated considerable academic and public concern. The physical transport of air pollutants in the atmosphere has been extensively investigated; however, understanding the mechanisms how the pollutant was transferred through economic and trade activities remains a challenge. For the first time, we quantified and tracked China's air pollutant emission flows embodied in interprovincial trade, using a multiregional input–output model framework. Trade relative emissions for four key air pollutants (primary fine particle matter, sulfur dioxide, nitrogen oxides and non-methane volatile organic compounds) were assessed for 2007 in each Chinese province. We found that emissions were significantly redistributed among provinces owing to interprovincial trade. Large amounts of emissions were embodied in the imports of eastern regions from northern and central regions, and these were determined by differences in regional economic status and environmental policy. It is suggested that measures should be introduced to reduce air pollution by integrating cross-regional consumers and producers within national agreements to encourage efficiency improvement in the supply chain and optimize consumption structure internationally. The consumption-based air pollutant emission inventory developed in this work can be further used to attribute pollution to various economic activities and final demand types with the aid of air quality models.",
+    "journal_link": null,
+    "doi": "10.5194/acp-15-5443-2015&amp;title=Atmospheric+Chemistry+and+Physics+(ACP)&amp;volume=15&amp;issue=10&amp;date=2015&amp;spage=5443&amp;issn=1680-7324",
+    "total_citations": 177,
+    "citations": [
+      {
+        "year": 2015,
+        "count": 3
+      },
+      {
+        "year": 2016,
+        "count": 13
+      },
+      {
+        "year": 2017,
+        "count": 21
+      },
+      {
+        "year": 2018,
+        "count": 26
+      },
+      {
+        "year": 2019,
+        "count": 20
+      },
+      {
+        "year": 2020,
+        "count": 18
+      },
+      {
+        "year": 2021,
+        "count": 26
+      },
+      {
+        "year": 2022,
+        "count": 18
+      },
+      {
+        "year": 2023,
+        "count": 7
+      },
+      {
+        "year": 2024,
+        "count": 11
+      },
+      {
+        "year": 2025,
+        "count": 12
+      },
+      {
+        "year": 2026,
+        "count": 1
+      }
+    ]
+  },
+  "2mikiJ1VBVsC": {
+    "id": "2mikiJ1VBVsC",
+    "title": "Global carbon emissions and decarbonization in 2024",
+    "authors": "Zhu Deng, Biqing Zhu, Steven J Davis, Philippe Ciais, Dabo Guan, Peng Gong, Zhu Liu",
+    "publication_date": "2025/4",
+    "journal": "Nature Reviews Earth & Environment",
+    "volume": "6",
+    "issue": "4",
+    "pages": "231-233",
+    "publisher": "Nature Publishing Group UK",
+    "abstract": "Global CO 2 emissions in 2024 increased 0.9% on the previous year, totalling 36.3 Gt CO 2 . These ongoing emissions further deplete remaining carbon budgets, with some estimates suggesting the 1.5 °C budget will be surpassed within the next 5 years — and may have been already.",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 171,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 88
+      },
+      {
+        "year": 2026,
+        "count": 81
+      }
+    ]
+  },
+  "_n8fIOMweQoC": {
+    "id": "_n8fIOMweQoC",
+    "title": "Future CO2 emissions and electricity generation from proposed coal-fired power plants in India",
+    "authors": "Steven J. Davis Christine Shearer, Robert Fofrich",
+    "publication_date": "2017/3/21",
+    "journal": "Earth's Future",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Wiley",
+    "abstract": "With its growing population, industrializing economy, and large coal reserves, India represents a critical unknown in global projections of future CO 2 emissions. Here, we assess proposed construction of coal‐fired power plants in India and evaluate their implications for future emissions and energy production in the country. As of mid‐2016, 243 gigawatts (GW) of coal‐fired generating capacity are under development in India, including 65 GW under construction and an additional 178 GW proposed. These under‐development plants would increase the coal capacity of India's power sector by 123% and, when combined with the country's goal to produce at least 40% of its power from non‐fossil sources by 2030, exceed the country's projected future electricity demand. The current proposals for new coal‐fired plants could therefore either “strand” fossil energy assets (i.e., force them to retire early or else operate at very …",
+    "journal_link": null,
+    "doi": "10.1002/2017EF000542",
+    "total_citations": 166,
+    "citations": [
+      {
+        "year": 2017,
+        "count": 5
+      },
+      {
+        "year": 2018,
+        "count": 19
+      },
+      {
+        "year": 2019,
+        "count": 22
+      },
+      {
+        "year": 2020,
+        "count": 12
+      },
+      {
+        "year": 2021,
+        "count": 28
+      },
+      {
+        "year": 2022,
+        "count": 23
+      },
+      {
+        "year": 2023,
+        "count": 17
+      },
+      {
+        "year": 2024,
+        "count": 14
+      },
+      {
+        "year": 2025,
+        "count": 17
+      },
+      {
+        "year": 2026,
+        "count": 7
+      }
+    ]
+  },
+  "aVq8r21TQD4C": {
+    "id": "aVq8r21TQD4C",
+    "title": "Future demand for electricity generation materials under different climate mitigation scenarios",
+    "authors": "Seaver Wang, Zeke Hausfather, Steven J. Davis, Juzel Lloyd, Erik B. Olson, Lauren Liebermann, Guido D. Núñez-Mujica, Jameson McBride",
+    "publication_date": "2023/1/27",
+    "journal": "Joule",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Elsevier",
+    "abstract": "Achieving global climate goals will require prodigious increases in low-carbon electricity generation, raising concerns about the scale of materials needed and associated environmental impacts. Here, we estimate power generation infrastructure demand for materials and related carbon-dioxide-equivalent (CO 2 eq) emissions from 2020 to 2050 across 75 different climate-energy scenarios and explore the impact of climate and technology choices upon material demand and carbon emitted. Material demands increase but cumulatively do not exceed geological reserves. However, annual production of neodymium (Nd), dysprosium (Dy), tellurium (Te), fiberglass, and solar-grade polysilicon may need to grow considerably. Cumulative CO 2 emissions related to materials for electricity infrastructure may be substantial (4–29 Gt CO 2 eq in 1.5°C scenarios) but consume only a minor share of global carbon budgets (1%–9 …",
+    "journal_link": null,
+    "doi": "10.1016/j.joule.2023.01.001&amp;title=Joule.&amp;volume=7&amp;issue=2&amp;date=2023&amp;spage=309&amp;issn=2542-4351",
+    "total_citations": 158,
+    "citations": [
+      {
+        "year": 2023,
+        "count": 27
+      },
+      {
+        "year": 2024,
+        "count": 57
+      },
+      {
+        "year": 2025,
+        "count": 52
+      },
+      {
+        "year": 2026,
+        "count": 19
+      }
+    ]
+  },
+  "o0eFlWRwRSUC": {
+    "id": "o0eFlWRwRSUC",
+    "title": "Large and inequitable flood risks in Los Angeles, California",
+    "authors": "Brett F Sanders, Jochen E Schubert, Daniel T Kahl, Katharine J Mach, David Brady, Amir AghaKouchak, Fonna Forman, Richard A Matthew, Nicola Ulibarri, Steven J Davis",
+    "publication_date": "2023/1",
+    "journal": "Nature sustainability",
+    "volume": "6",
+    "issue": "1",
+    "pages": "47-57",
+    "publisher": "Nature Publishing Group UK",
+    "abstract": "Flood risks in the United States have historically been underestimated, particularly with respect to human well-being and within low-wealth and marginalized communities. Here, we characterize a fuller range of risks in Los Angeles, California, using a quantitative framework that intersects flood hazards from rainfall, streamflow and storm tides with measures of exposure and vulnerability including ethnicity, race and socioeconomic disadvantage. We find that between 197,000 and 874,000 people (median 425,000) and between US$36 billion and US$108 billion in property (median US$56 billion) are exposed to flooding greater than 30 cm within the 100-year flood zone, risk levels far above federally defined floodplains and similar to the most damaging hurricanes in US history. These risks are disproportionately higher for non-Hispanic Black and disadvantaged populations, burdening communities that may …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 153,
+    "citations": [
+      {
+        "year": 2023,
+        "count": 30
+      },
+      {
+        "year": 2024,
+        "count": 53
+      },
+      {
+        "year": 2025,
+        "count": 53
+      },
+      {
+        "year": 2026,
+        "count": 17
+      }
+    ]
+  },
+  "JavbeY_VQWIC": {
+    "id": "JavbeY_VQWIC",
+    "title": "Atmospheric methane removal: a research agenda",
+    "authors": "Robert B. Jackson, Sam Abernethy, Josep G. Canadell, Matteo Cargnello, Steven J. Davis, Sarah Féron, Sabine Fuss, Alexander J. Heyer, Chaopeng Hong, Chris D. Jones, H. Damon Matthews, Fiona M. O'Connor, Maxwell Pisciotta, Hannah M. Rhoda, Renaud de Richter, Edward I. Solomon, Jennifer L. Wilcox, Kirsten Zickfeld",
+    "publication_date": "2021/9/27",
+    "journal": "Philosophical Transactions of the Royal Society A",
+    "volume": "379",
+    "issue": "",
+    "pages": "20200454",
+    "publisher": "Royal Society Publishing",
+    "abstract": "Atmospheric methane removal (eg in situ methane oxidation to carbon dioxide) may be needed to offset continued methane release and limit the global warming contribution of this potent greenhouse gas. Because mitigating most anthropogenic emissions of methane is uncertain this century, and sudden methane releases from the Arctic or elsewhere cannot be excluded, technologies for methane removal or oxidation may be required. Carbon dioxide removal has an increasingly well-established research agenda and technological foundation. No similar framework exists for methane removal. We believe that a research agenda for negative methane emissions—‘removal'or atmospheric methane oxidation—is needed. We outline some considerations for such an agenda here, including a proposed Methane Removal Model Intercomparison Project (MR-MIP).",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 148,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 3
+      },
+      {
+        "year": 2022,
+        "count": 26
+      },
+      {
+        "year": 2023,
+        "count": 36
+      },
+      {
+        "year": 2024,
+        "count": 35
+      },
+      {
+        "year": 2025,
+        "count": 35
+      },
+      {
+        "year": 2026,
+        "count": 8
+      }
+    ]
+  },
+  "tFzHCjejgA0C": {
+    "id": "tFzHCjejgA0C",
+    "title": "The Australian terrestrial carbon budget",
+    "authors": "V Haverd, MR Raupach, PR Briggs, JG Canadell, SJ Davis, RM Law, CP Meyer, GP Peters, C Pickett-Heaps, B Sherman",
+    "publication_date": "2012/9",
+    "journal": "Biogeosciences",
+    "volume": "10",
+    "issue": "",
+    "pages": "851-869",
+    "publisher": "",
+    "abstract": "This paper reports a study of the full carbon (C-CO 2 ) budget of the Australian continent, focussing on 1990–2011 in the context of estimates over two centuries. The work is a contribution to the RECCAP (REgional Carbon Cycle Assessment and Processes) project, as one of numerous regional studies. In constructing the budget, we estimate the following component carbon fluxes: net primary production (NPP); net ecosystem production (NEP); fire; land use change (LUC); riverine export; dust export; harvest (wood, crop and livestock) and fossil fuel emissions (both territorial and non-territorial). Major biospheric fluxes were derived using BIOS2 (Haverd et al., 2012), a fine-spatial-resolution (0.05°) offline modelling environment in which predictions of CABLE (Wang et al., 2011), a sophisticated land surface model with carbon cycle, are constrained by multiple observation types. The mean NEP reveals that climate variability and rising CO 2 contributed 12 ± 24 (1σ error on mean) and 68 ± 15 TgC yr −1 , respectively. However these gains were partially offset by fire and LUC (along with other minor fluxes), which caused net losses of 26 ± 4 TgC yr −1 and 18 ± 7 TgC yr −1 , respectively. The resultant net biome production (NBP) is 36 ± 29 TgC yr −1 , in which the largest contributions to uncertainty are NEP, fire and LUC. This NBP offset fossil fuel emissions (95 ± 6 TgC yr −1 ) by 38 ± 30%. The interannual variability (IAV) in the Australian carbon budget exceeds Australia's total carbon emissions by fossil fuel combustion and is dominated by IAV in NEP. Territorial fossil fuel emissions are significantly smaller than the rapidly growing fossil fuel exports: in …",
+    "journal_link": null,
+    "doi": "10.5194/bg-10-851-2013&amp;title=Biogeosciences+(BG)&amp;volume=10&amp;issue=2&amp;date=2013&amp;spage=851&amp;issn=1726-4189",
+    "total_citations": 146,
+    "citations": [
+      {
+        "year": 2012,
+        "count": 1
+      },
+      {
+        "year": 2013,
+        "count": 9
+      },
+      {
+        "year": 2014,
+        "count": 15
+      },
+      {
+        "year": 2015,
+        "count": 17
+      },
+      {
+        "year": 2016,
+        "count": 20
+      },
+      {
+        "year": 2017,
+        "count": 12
+      },
+      {
+        "year": 2018,
+        "count": 12
+      },
+      {
+        "year": 2019,
+        "count": 6
+      },
+      {
+        "year": 2020,
+        "count": 11
+      },
+      {
+        "year": 2021,
+        "count": 11
+      },
+      {
+        "year": 2022,
+        "count": 13
+      },
+      {
+        "year": 2023,
+        "count": 6
+      },
+      {
+        "year": 2024,
+        "count": 5
+      },
+      {
+        "year": 2025,
+        "count": 7
+      }
+    ]
+  },
+  "CmbFvBriOyMC": {
+    "id": "CmbFvBriOyMC",
+    "title": "Smoke-weather interaction affects extreme wildfires in diverse coastal regions",
+    "authors": "Xin Huang, Ke Ding, Jingyi Liu, Zilin Wang, Rong Tang, Lian Xue, Haikun Wang, Qiang Zhang, Zhe-Min Tan, Congbin Fu, Steven J. Davis, Meinrat O. Andreae, Aijun Ding",
+    "publication_date": "2023/2/3",
+    "journal": "Science",
+    "volume": "379",
+    "issue": "6631",
+    "pages": "457-461",
+    "publisher": "AAAS",
+    "abstract": "Extreme wildfires threaten human lives, air quality, and ecosystems. Meteorology plays a vital role in wildfire behaviors, and the links between wildfires and climate have been widely studied. However, it is not fully clear how fire-weather feedback affects short-term wildfire variability, which undermines our ability to mitigate fire disasters. Here, we show the primacy of synoptic-scale feedback in driving extreme fires in Mediterranean and monsoon climate regimes in the West Coast of the United States and Southeastern Asia. We found that radiative effects of smoke aerosols can modify near-surface wind, air dryness, and rainfall and thus worsen air pollution by enhancing fire emissions and weakening dispersion. The intricate interactions among wildfires, smoke, and weather form a positive feedback loop that substantially increases air pollution exposure.",
+    "journal_link": null,
+    "doi": "10.1126/science.add9843",
+    "total_citations": 141,
+    "citations": [
+      {
+        "year": 2023,
+        "count": 20
+      },
+      {
+        "year": 2024,
+        "count": 54
+      },
+      {
+        "year": 2025,
+        "count": 47
+      },
+      {
+        "year": 2026,
+        "count": 19
+      }
+    ]
+  },
+  "uoeYKOKFegwC": {
+    "id": "uoeYKOKFegwC",
+    "title": "Global patterns of daily CO2 emissions reductions in the first year of COVID-19",
+    "authors": "Zhu Liu, Zhu Deng, Biqing Zhu, Philippe Ciais, Steven J Davis, Jianguang Tan, Robbie M Andrew, Olivier Boucher, Simon Ben Arous, Josep G Canadell, Xinyu Dou, Pierre Friedlingstein, Pierre Gentine, Rui Guo, Chaopeng Hong, Robert B Jackson, Daniel M Kammen, Piyu Ke, Corinne Le Quéré, Crippa Monica, Greet Janssens-Maenhout, Glen P Peters, Katsumasa Tanaka, Yilong Wang, Bo Zheng, Haiwang Zhong, Taochun Sun, Hans Joachim Schellnhuber",
+    "publication_date": "2022/8",
+    "journal": "Nature Geoscience",
+    "volume": "15",
+    "issue": "8",
+    "pages": "615-620",
+    "publisher": "Nature Publishing Group",
+    "abstract": "Day-to-day changes in CO 2 emissions from human activities, in particular fossil-fuel combustion and cement production, reflect a complex balance of influences from seasonality, working days, weather and, most recently, the COVID-19 pandemic. Here, we provide a daily CO 2 emissions dataset for the whole year of 2020, calculated from inventory and near-real-time activity data. We find a global reduction of 6.3% (2,232 MtCO 2 ) in CO 2 emissions compared with 2019. The drop in daily emissions during the first part of the year resulted from reduced global economic activity due to the pandemic lockdowns, including a large decrease in emissions from the transportation sector. However, daily CO 2 emissions gradually recovered towards 2019 levels from late April with the partial reopening of economic activity. Subsequent waves of lockdowns in late 2020 continued to cause smaller CO 2 reductions, primarily in …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 140,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 2
+      },
+      {
+        "year": 2022,
+        "count": 11
+      },
+      {
+        "year": 2023,
+        "count": 30
+      },
+      {
+        "year": 2024,
+        "count": 40
+      },
+      {
+        "year": 2025,
+        "count": 43
+      },
+      {
+        "year": 2026,
+        "count": 12
+      }
+    ]
+  },
+  "kQqwFFzsCTwC": {
+    "id": "kQqwFFzsCTwC",
+    "title": "Impacts of ozone and climate change on yields of perennial crops in California",
+    "authors": "Chaopeng Hong, Nathaniel D. Mueller, Jennifer A. Burney, Amir AghaKouchak Yang Zhang, Frances C. Moore, Yue Qin, Dan Tong, Steven J. Davis",
+    "publication_date": "2020/3/16",
+    "journal": "Nature Food",
+    "volume": "1",
+    "issue": "",
+    "pages": "166-172",
+    "publisher": "Springer Macmillan",
+    "abstract": "Changes in temperature and air pollution affect agricultural productivity, but most relevant research has focused on major annual crops (for example, wheat, maize, soy and rice). In contrast, relatively little is known about the effects of climate change and air quality on perennial crops such as fruits and nuts, which are important to dietary diversity and nutrition, and represent ~38% of California’s agriculture by economic value. Moreover, the adaptive capacity of perennial crops may be limited by their long lifespans and sometimes large establishment costs. Here, on the basis of statistical modelling of historical data and downscaled climate model projections, we jointly assess the impacts of climate and ozone levels on historical and future yields of perennial crops in California. Although the effects of warming to date are not statistically significant for many perennial crops, the yields of most perennials show a significant …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 136,
+    "citations": [
+      {
+        "year": 2020,
+        "count": 4
+      },
+      {
+        "year": 2021,
+        "count": 9
+      },
+      {
+        "year": 2022,
+        "count": 21
+      },
+      {
+        "year": 2023,
+        "count": 30
+      },
+      {
+        "year": 2024,
+        "count": 30
+      },
+      {
+        "year": 2025,
+        "count": 30
+      },
+      {
+        "year": 2026,
+        "count": 10
+      }
+    ]
+  },
+  "oE_QS-WwsdAC": {
+    "id": "oE_QS-WwsdAC",
+    "title": "Effect of strengthened standards on Chinese ironmaking and steelmaking emissions",
+    "authors": "Xin Bo, Min Jia, Xiaoda Xue , Ling Tang , Zhifu Mi , Shouyang Wang , Weigeng Cui, Xiangyu Chang, Jianhui Ruan, Guangxia Dong, Beihai Zhou, Steven J. Davis",
+    "publication_date": "2021/6/24",
+    "journal": "Nature Sustainability",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Macmillan",
+    "abstract": "China has produced roughly half of the world’s steel in recent years, but the country’s iron and steel industry is a major source of air pollutants, especially particulate matter, SO 2 and NO x emissions. To reduce such emissions, China imposed new emission standards in 2015 and promoted ultralow emission standards in 2019. Here we use measurements from China’s continuous emissions monitoring systems (covering 69–91% of national iron and steel production) to develop hourly, facility-level emissions estimates for China’s iron and steel industry. In turn, we use this data to evaluate the emission reductions related to China’s increasingly stringent policies. We find steady declines in emission concentrations at iron- and steelmaking plants since the 2015 standards were implemented. From 2014 to 2018, particulate matter and SO 2 emissions fell by 47% and 42%, respectively, and NO x increased by 3%, even as …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 133,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 15
+      },
+      {
+        "year": 2023,
+        "count": 32
+      },
+      {
+        "year": 2024,
+        "count": 30
+      },
+      {
+        "year": 2025,
+        "count": 42
+      },
+      {
+        "year": 2026,
+        "count": 13
+      }
+    ]
+  },
+  "AubyX3KqGToC": {
+    "id": "AubyX3KqGToC",
+    "title": "Health co-benefits of climate change mitigation depend on strategic power plant retirements and pollution controls",
+    "authors": "Dan Tong, Guannan Geng, Qiang Zhang, Jing Cheng, Xinying Qin, Chaopeng Hong, Kebin He, Steven J. Davis",
+    "publication_date": "2021/11/29",
+    "journal": "Nature Climate Change",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Macmillan",
+    "abstract": "Reducing CO 2 emissions from fossil fuel- and biomass-fired power plants often also reduces air pollution, benefitting both climate and public health. Here, we examine the relationship of climate and health benefits by modelling individual electricity-generating units worldwide across a range of climate–energy policy scenarios. We estimate that ~92% of deaths related to power plant emissions during 2010–2018 occurred in low-income or emerging economies such as China, India and countries in Southeast Asia, and show that such deaths are quite sensitive to future climate–energy trajectories. Yet, minimizing future deaths will also require strategic retirements of super-polluting power plants and deployment of pollution control technologies. These findings underscore the importance of considering public health in designing and implementing climate–energy policies: improved air quality and avoided air pollution …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 129,
+    "citations": [
+      {
+        "year": 2022,
+        "count": 16
+      },
+      {
+        "year": 2023,
+        "count": 29
+      },
+      {
+        "year": 2024,
+        "count": 35
+      },
+      {
+        "year": 2025,
+        "count": 35
+      },
+      {
+        "year": 2026,
+        "count": 12
+      }
+    ]
+  },
+  "dhpJJ7xvgBgC": {
+    "id": "dhpJJ7xvgBgC",
+    "title": "The effect of natural gas supply on US renewable energy and CO2 emissions",
+    "authors": "Christine Shearer, John Bistline, Mason Inman, Steven J Davis",
+    "publication_date": "2014/9/24",
+    "journal": "Environmental Research Letters",
+    "volume": "9",
+    "issue": "",
+    "pages": "094008",
+    "publisher": "IOP",
+    "abstract": "Increased use of natural gas has been promoted as a means of decarbonizing the US power sector, because of superior generator efficiency and lower CO 2 emissions per unit of electricity than coal. We model the effect of different gas supplies on the US power sector and greenhouse gas (GHG) emissions. Across a range of climate policies, we find that abundant natural gas decreases use of both coal and renewable energy technologies in the future. Without a climate policy, overall electricity use also increases as the gas supply increases. With reduced deployment of lower-carbon renewable energies and increased electricity consumption, the effect of higher gas supplies on GHG emissions is small: cumulative emissions 2013–55 in our high gas supply scenario are 2% less than in our low gas supply scenario, when there are no new climate policies and a methane leakage rate of 1.5% is assumed. Assuming …",
+    "journal_link": null,
+    "doi": "10.1088/1748-9326/9/9/094008/pdf",
+    "total_citations": 128,
+    "citations": [
+      {
+        "year": 2014,
+        "count": 6
+      },
+      {
+        "year": 2015,
+        "count": 10
+      },
+      {
+        "year": 2016,
+        "count": 10
+      },
+      {
+        "year": 2017,
+        "count": 10
+      },
+      {
+        "year": 2018,
+        "count": 13
+      },
+      {
+        "year": 2019,
+        "count": 7
+      },
+      {
+        "year": 2020,
+        "count": 14
+      },
+      {
+        "year": 2021,
+        "count": 18
+      },
+      {
+        "year": 2022,
+        "count": 13
+      },
+      {
+        "year": 2023,
+        "count": 8
+      },
+      {
+        "year": 2024,
+        "count": 8
+      },
+      {
+        "year": 2025,
+        "count": 8
+      },
+      {
+        "year": 2026,
+        "count": 1
+      }
+    ]
+  },
+  "PQY3Tb_h0-cC": {
+    "id": "PQY3Tb_h0-cC",
+    "title": "A synergistic approach to air pollution control and carbon neutrality in China can avoid millions of premature deaths annually by 2060",
+    "authors": "Jing Cheng, Dan Tong, Yang Liu, Guannan Geng, Steven J. Davis, Kebin He, Qiang Zhang",
+    "publication_date": "2023/8/18",
+    "journal": "One Earth",
+    "volume": "6",
+    "issue": "8",
+    "pages": "978-989",
+    "publisher": "Springer",
+    "abstract": "China has made significant progress in alleviating air pollution since 2013, but the annual mean fine particulate matter (PM 2.5 ) concentration remains six times higher than current World Health Organization (WHO) guidelines. Since greenhouse gases and air pollutants are often co-emitted, a synergistic approach to climate mitigation and clean air action may deliver considerable health benefits. However, the extent of such benefits and how they vary across time and regions remain unclear. Here, we use an integrated modeling framework to investigate the health effects of co-implementing air pollution and climate policies in China between 2020 and 2060. We find that, together, air pollution control and carbon-neutrality policies can prevent 2.62 (95% confidence interval [CI]: 2.12, 3.15) million premature deaths annually in 2060. End-of-pipe air pollution controls are key to reducing deaths in the short term (2020 …",
+    "journal_link": null,
+    "doi": "10.1016/j.oneear.2023.07.007&amp;title=One+Earth&amp;volume=6&amp;issue=8&amp;date=2023&amp;spage=978&amp;issn=2590-3322",
+    "total_citations": 125,
+    "citations": [
+      {
+        "year": 2024,
+        "count": 38
+      },
+      {
+        "year": 2025,
+        "count": 61
+      },
+      {
+        "year": 2026,
+        "count": 26
+      }
+    ]
+  },
+  "jtOrAYjvdewC": {
+    "id": "jtOrAYjvdewC",
+    "title": "Global fossil carbon emissions rebound to near pre-COVID-19 levels",
+    "authors": "RB Jackson, P Friedlingstein, C LeQuéré, S Abernethy, RM Andrew, JG Canadell, P Ciais, SJ Davis, Z Deng, Z Liu, GP Peters",
+    "publication_date": "2022/3/7",
+    "journal": "Environmental Research Letters",
+    "volume": "17",
+    "issue": "",
+    "pages": "",
+    "publisher": "IOP",
+    "abstract": "Fossil CO 2 emissions in 2021 grew an estimated 4.2% (3.5%–4.8%) to 36.2 billion metric tons compared with 2020, pushing global emissions back close to 2019 levels (36.7 Gt CO 2 ).",
+    "journal_link": null,
+    "doi": "10.1088/1748-9326/ac55b6/meta",
+    "total_citations": 125,
+    "citations": [
+      {
+        "year": 2022,
+        "count": 18
+      },
+      {
+        "year": 2023,
+        "count": 49
+      },
+      {
+        "year": 2024,
+        "count": 28
+      },
+      {
+        "year": 2025,
+        "count": 19
+      },
+      {
+        "year": 2026,
+        "count": 10
+      }
+    ]
+  },
+  "DwFgw5hZUzMC": {
+    "id": "DwFgw5hZUzMC",
+    "title": "Role of climate goals and clean-air policies on reducing future air pollution deaths in China: a modelling study",
+    "authors": "Yang Liu, Dan Tong, Jing Cheng, Steven J Davis, Sha Yu, Brinda Yarlagadda, Leon E Clarke, Michael Brauer, Aaron J Cohen, Haidong Kan, Tao Xue, Qiang Zhang",
+    "publication_date": "2022/2/10",
+    "journal": "The Lancet Planetary Health",
+    "volume": "6",
+    "issue": "2",
+    "pages": "e92-e99",
+    "publisher": "Elsevier",
+    "abstract": "Background Over 3 million people die every year from diseases caused by exposure to outdoor PM 2·5 air pollution, and more than a quarter of these premature deaths occur in China. In addition to clean-air policies that target pollution emissions, climate policies aimed at reducing fossil-fuel CO 2 emissions (eg, to avoid 1·5°C of warming) might also greatly improve air quality and public health. However, no comprehensive accounting of public health outcomes has been done under different energy pathways and local clean-air management decisions in China. We aimed to develop an integrated method for quantifying the health co-benefits from different climate, energy, and clean-air policy scenarios and to assess the relationship between climate and clean-air policies and future health burdens in China, where an ageing population will further exacerbate the effects of air pollution. Methods For this modelling study …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 122,
+    "citations": [
+      {
+        "year": 2022,
+        "count": 11
+      },
+      {
+        "year": 2023,
+        "count": 26
+      },
+      {
+        "year": 2024,
+        "count": 40
+      },
+      {
+        "year": 2025,
+        "count": 30
+      },
+      {
+        "year": 2026,
+        "count": 14
+      }
+    ]
+  },
+  "WTQy_8Ay2UsC": {
+    "id": "WTQy_8Ay2UsC",
+    "title": "Emissions rebound from the COVID-19 pandemic",
+    "authors": "Steven J. Davis, Zhu Liu, Zhu Deng, Biqing Zhu, Piyu Ke, Taochun Sun, Rui Guo, Chaopeng Hong, Bo Zheng, Yilong Wang, Olivier Boucher, Pierre Gentine, Philippe Ciais",
+    "publication_date": "2022/3/31",
+    "journal": "Nature Climate Change",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Macmillan",
+    "abstract": "Global CO 2 emissions in 2021 were only 1% less than the record levels of 2019, driven by increases in power- and industry-related emissions from China and India and a return of the carbon intensity of electricity to pre-pandemic levels. Is this resumed growth in fossil energy, or a final fleeting surge before a long decline?",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 119,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 2
+      },
+      {
+        "year": 2022,
+        "count": 19
+      },
+      {
+        "year": 2023,
+        "count": 29
+      },
+      {
+        "year": 2024,
+        "count": 31
+      },
+      {
+        "year": 2025,
+        "count": 29
+      },
+      {
+        "year": 2026,
+        "count": 9
+      }
+    ]
+  },
+  "-qpA3cGbmHsC": {
+    "id": "-qpA3cGbmHsC",
+    "title": "Net-zero emissions energy systems: What we know and do not know",
+    "authors": "Inês Azevedo, Christopher Bataille, John Bistline, Leon Clarke, Steven Davis",
+    "publication_date": "2021/8/13",
+    "journal": "Energy and Climate Change",
+    "volume": "2",
+    "issue": "",
+    "pages": "100049",
+    "publisher": "Elsevier",
+    "abstract": "Addressing climate change requires ambitious transformations, including ambitious transformations of energy systems. This will likely entail the design and implementation of “net-zero emissions systems,” which are energy systems that emit no net CO 2 and potentially no net greenhouse gases. Interest in net-zero emissions energy systems has grown in recent years as countries, subnational jurisdictions, and other entities set net-zero goals. However, guidance on designing and preparing for these systems, along with their environmental, economic, and social implications, is largely missing. This paper provides a perspective on the current understanding of net-zero emissions systems and guidance for policy- and decision-makers on key characteristics of these systems. We highlight robust insights emerging about net-zero systems and unknowns about technologies, markets, policies, and sociotechnical systems …",
+    "journal_link": null,
+    "doi": "10.1016/j.egycc.2021.100049&amp;title=Energy+and+Climate+Change&amp;volume=2&amp;date=2021&amp;spage=100049&amp;issn=2666-2787",
+    "total_citations": 118,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 2
+      },
+      {
+        "year": 2022,
+        "count": 12
+      },
+      {
+        "year": 2023,
+        "count": 34
+      },
+      {
+        "year": 2024,
+        "count": 32
+      },
+      {
+        "year": 2025,
+        "count": 27
+      },
+      {
+        "year": 2026,
+        "count": 10
+      }
+    ]
+  },
+  "ULOm3_A8WrAC": {
+    "id": "ULOm3_A8WrAC",
+    "title": "Provenance of the Paleogene Colton Formation (Uinta Basin) and Cretaceous–Paleogene provenance evolution in the Utah foreland: Evidence from U-Pb ages of detrital zircons …",
+    "authors": "William R Dickinson, Timothy F Lawton, Mark Pecha, Steven J Davis, George E Gehrels, Richard A Young",
+    "publication_date": "2012/8/1",
+    "journal": "Geosphere",
+    "volume": "8",
+    "issue": "4",
+    "pages": "854-880",
+    "publisher": "Geological Society of America",
+    "abstract": "The fluviodeltaic Colton Formation (Late Paleocene–Early Eocene) forms a lobate depositional system that prograded from the south into the Laramide Uinta Basin of northeastern Utah (United States) with a preserved sediment volume of ∼3000 km 3 and a maximum thickness of ∼1000 m. Joint consideration of detrital zircon ages, paleocurrent trends, and sandstone petrofacies permits an assessment of Colton provenance relations in the context of evolving Cretaceous–Paleogene sedimentation in the Utah foreland. Grains with U-Pb ages younger than 285 Ma derived from the Cordilleran magmatic arc form ∼50% of the detrital zircons in arkosic Colton sand, and were transported ∼750 km to the Uinta Basin from the Mojave segment of the arc by the California paleoriver. Colton sedimentation was the Paleogene culmination of a persistent pattern of Cretaceous sediment transport northward, subparallel to …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 118,
+    "citations": [
+      {
+        "year": 2013,
+        "count": 2
+      },
+      {
+        "year": 2014,
+        "count": 12
+      },
+      {
+        "year": 2015,
+        "count": 12
+      },
+      {
+        "year": 2016,
+        "count": 8
+      },
+      {
+        "year": 2017,
+        "count": 11
+      },
+      {
+        "year": 2018,
+        "count": 16
+      },
+      {
+        "year": 2019,
+        "count": 10
+      },
+      {
+        "year": 2020,
+        "count": 7
+      },
+      {
+        "year": 2021,
+        "count": 11
+      },
+      {
+        "year": 2022,
+        "count": 8
+      },
+      {
+        "year": 2023,
+        "count": 8
+      },
+      {
+        "year": 2024,
+        "count": 5
+      },
+      {
+        "year": 2025,
+        "count": 6
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "7XUxBq3GufIC": {
+    "id": "7XUxBq3GufIC",
+    "title": "Global CO2 uptake by cement from 1930 to 2019",
+    "authors": "Rui Guo, Jiaoyue Wang, Longfei Bing, Dan Tong, Philippe Ciais, Steven J. Davis, Robbie M. Andrew, Fengming Xi, Zhu Liu",
+    "publication_date": "2021/4/30",
+    "journal": "Earth System Science Data",
+    "volume": "13",
+    "issue": "",
+    "pages": "1791-1805",
+    "publisher": "Copernicus Publications",
+    "abstract": "Because of the alkaline nature and high calcium content of cements in general, they serve as a CO 2 -absorbing agent through carbonation processes, resembling silicate weathering in nature. This carbon uptake capacity of cements could abate some of the CO 2 emitted during their production. Given the scale of cement production worldwide (4.10 Gt in 2019), a life-cycle assessment is necessary to determine the actual net carbon impacts of this industry. We adopted a comprehensive analytical model to estimate the amount of CO 2 that had been absorbed from 1930 to 2019 in four types of cement materials, including concrete, mortar, construction waste, and cement kiln dust (CKD). In addition, the process CO 2 emission during the same period based on the same datasets was also estimated. The results show that 21.02 Gt CO 2 (95 % confidence interval, CI: 18.01–24.41 Gt CO 2 ) had been absorbed in the cements produced from 1930 to 2019, with the 2019 annual figure mounting up to 0.89 Gt CO 2 yr −1 (95 % CI: 0.76–1.06 Gt CO 2 ). The cumulative uptake is equivalent to approximately 55 % of the process emission based on our estimation. In particular, China's dominant position in cement production or consumption in recent decades also gives rise to its uptake being the greatest, with a cumulative sink of 6.21 Gt CO 2 (95 % CI: 4.59–8.32 Gt CO 2 ) since 1930. Among the four types of cement materials, mortar is estimated to be the greatest contributor (approximately 59 %) to the total uptake. Potentially, our cement emission and uptake estimation system can be updated annually and modified when necessary for future low …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 117,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 2
+      },
+      {
+        "year": 2022,
+        "count": 24
+      },
+      {
+        "year": 2023,
+        "count": 22
+      },
+      {
+        "year": 2024,
+        "count": 23
+      },
+      {
+        "year": 2025,
+        "count": 32
+      },
+      {
+        "year": 2026,
+        "count": 10
+      }
+    ]
+  },
+  "q7LczdTNAjsC": {
+    "id": "q7LczdTNAjsC",
+    "title": "Economic and biophysical limits to seaweed farming for climate change mitigation",
+    "authors": "Julianne DeAngelo, Benjamin T. Saenz, Isabella B. Arzeno-Soltero, Christina A. Frieder, Matthew C. Long, Joseph Hamman, Kristen A. Davis, Steven J. Davis",
+    "publication_date": "2022/12/23",
+    "journal": "Nature Plants",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer",
+    "abstract": "Net-zero greenhouse gas (GHG) emissions targets are driving interest in opportunities for biomass-based negative emissions and bioenergy, including from marine sources such as seaweed. Yet the biophysical and economic limits to farming seaweed at scales relevant to the global carbon budget have not been assessed in detail. We use coupled seaweed growth and technoeconomic models to estimate the costs of global seaweed production and related climate benefits, systematically testing the relative importance of model parameters. Under our most optimistic assumptions, sinking farmed seaweed to the deep sea to sequester a gigaton of CO 2 per year costs as little as US$480 per tCO 2 on average, while using farmed seaweed for products that avoid a gigaton of CO 2 -equivalent GHG emissions annually could return a profit of $50 per tCO 2 -eq. However, these costs depend on low farming costs, high …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 108,
+    "citations": [
+      {
+        "year": 2022,
+        "count": 2
+      },
+      {
+        "year": 2023,
+        "count": 18
+      },
+      {
+        "year": 2024,
+        "count": 31
+      },
+      {
+        "year": 2025,
+        "count": 41
+      },
+      {
+        "year": 2026,
+        "count": 15
+      }
+    ]
+  },
+  "yNlG6JgpFqoC": {
+    "id": "yNlG6JgpFqoC",
+    "title": "Near-real-time global gridded daily CO2 emissions",
+    "authors": "Xinyu Dou, Yilong Wang, Philippe Ciais, Frédéric Chevallier, Steven J. Davis, Monica Crippa, Greet Janssens-Maenhout, Diego Guizzardi, Efisio Solazzo, Feifan Yan, Da Huo, Zheng Bo, Biqing Zhu, Duo Cui, Piyu Ke, Taochun Sun, Hengqi Wang, Qiang Zhang, Pierre Gentine, Zhu Deng, Zhu Liu",
+    "publication_date": "2021/11/2",
+    "journal": "The Innovation",
+    "volume": "",
+    "issue": "",
+    "pages": "100182",
+    "publisher": "Elsevier",
+    "abstract": "Precise and high-resolution carbon dioxide (CO 2 ) emission data is of great importance in achieving carbon neutrality around the world. Here we present for the first time the near-real-time Global Gridded Daily CO 2 Emissions Dataset (GRACED) from fossil fuel and cement production with a global spatial resolution of 0.1° by 0.1° and a temporal resolution of 1 day. Gridded fossil emissions are computed for different sectors based on the daily national CO 2 emissions from near-real-time dataset (Carbon Monitor), the spatial patterns of point source emission dataset Global Energy Infrastructure Emissions Database (GID), Emission Database for Global Atmospheric Research (EDGAR), and spatiotemporal patters of satellite nitrogen dioxide (NO 2 ) retrievals. Our study on the global CO 2 emissions responds to the growing and urgent need for high-quality, fine-grained, near-real-time CO 2 emissions estimates to support …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 103,
+    "citations": [
+      {
+        "year": 2022,
+        "count": 15
+      },
+      {
+        "year": 2023,
+        "count": 23
+      },
+      {
+        "year": 2024,
+        "count": 21
+      },
+      {
+        "year": 2025,
+        "count": 38
+      },
+      {
+        "year": 2026,
+        "count": 6
+      }
+    ]
+  },
+  "oYwriLWYh5YC": {
+    "id": "oYwriLWYh5YC",
+    "title": "Global climate forcing of aerosols embodied in international trade",
+    "authors": "Jintai Lin, Dan Tong, Steven J. Davis, Ruijing Ni, Xiaoxiao Tan, Da Pan, Hongyan Zhao, Zifeng Lu, David Streets, Tong Feng, Qiang Zhang, Yingying Yan, Yongyun Hu, Jing Li, Zhu Liu, Xujia Jiang, Guannan Geng, Kebin He, Yi Huang, Dabo Guan",
+    "publication_date": "2016/9/5",
+    "journal": "Nature Geoscience",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "International trade separates regions consuming goods and services from regions where goods and related aerosol pollution are produced. Yet the role of trade in aerosol climate forcing attributed to different regions has never been quantified. Here, we contrast the direct radiative forcing of aerosols related to regions’ consumption of goods and services against the forcing due to emissions produced in each region. Aerosols assessed include black carbon, primary organic aerosol, and secondary inorganic aerosols, including sulfate, nitrate and ammonium. We find that global aerosol radiative forcing due to emissions produced in East Asia is much stronger than the forcing related to goods and services ultimately consumed in that region because of its large net export of emissions-intensive goods. The opposite is true for net importers such as Western Europe and North America: global radiative forcing related to …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 103,
+    "citations": [
+      {
+        "year": 2016,
+        "count": 1
+      },
+      {
+        "year": 2017,
+        "count": 8
+      },
+      {
+        "year": 2018,
+        "count": 18
+      },
+      {
+        "year": 2019,
+        "count": 22
+      },
+      {
+        "year": 2020,
+        "count": 8
+      },
+      {
+        "year": 2021,
+        "count": 8
+      },
+      {
+        "year": 2022,
+        "count": 13
+      },
+      {
+        "year": 2023,
+        "count": 7
+      },
+      {
+        "year": 2024,
+        "count": 8
+      },
+      {
+        "year": 2025,
+        "count": 9
+      },
+      {
+        "year": 2026,
+        "count": 1
+      }
+    ]
   }
 }

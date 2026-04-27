@@ -83,6 +83,8 @@ When new papers appear on Steve's Scholar profile or you want to refresh authors
 npm run refresh-scholar
 ```
 
+Or **double-click `refresh-scholar.command`** at the project root — same thing, opens a Terminal window with progress, pauses at the end so you can read the output. Drag a copy or alias to the Desktop for one-click access. Pair with a monthly recurring Calendar event ("Refresh lab publications") and you have the cheapest possible automation.
+
 That runs both stages of the scraper plus the CSV merge. Equivalent to:
 
 ```

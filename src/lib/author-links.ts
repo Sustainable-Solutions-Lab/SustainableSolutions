@@ -87,6 +87,18 @@ function matches(a: ParsedCitation, p: ParsedCitation): boolean {
 }
 
 /**
+ * Convert "Last, First Middle" → "First Middle Last" for display.
+ * "Davis, Steven J."  → "Steven J. Davis"
+ * "Davis, S.J."       → "S.J. Davis"
+ * Tokens that don't fit the pattern (e.g. "et al.") are returned unchanged.
+ */
+export function toNaturalOrder(token: string): string {
+  const m = token.match(/^([^,]+),\s*(.+)$/)
+  if (!m) return token
+  return `${m[2].trim()} ${m[1].trim()}`
+}
+
+/**
  * Split an authors string ("Davis, S.J.; Caldeira, K.; ...") into segments,
  * tagging each one with its matching lab-member slug if any.
  */

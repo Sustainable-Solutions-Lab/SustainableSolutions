@@ -2,7 +2,7 @@
 import type { Publication, Person } from '../lib/types';
 import people from '../data/people.json';
 import scholarDetails from '../../templates/scholar-details.json';
-import { splitAndLinkAuthors } from '../lib/author-links';
+import { splitAndLinkAuthors, toNaturalOrder } from '../lib/author-links';
 import { themeColor, themeLabel } from '../lib/themes';
 import { roleColor } from '../lib/roles';
 import CitationChart from './CitationChart.astro';
@@ -139,13 +139,13 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
               {seg.slug ? (
                 <a
                   href={`/people/${seg.slug}`}
-                  class="font-semibold border-b-0 hover:opacity-70"
+                  class="font-semibold bare"
                   style={`white-space: nowrap; color: ${seg.color ?? 'var(--ink)'};`}
                 >
-                  {seg.text}
+                  {toNaturalOrder(seg.text)}
                 </a>
               ) : (
-                <span style="white-space: nowrap;">{seg.text}</span>
+                <span style="white-space: nowrap;">{toNaturalOrder(seg.text)}</span>
               )}
             </>
           ))}
@@ -192,7 +192,6 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
             </div>
           )}
           <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono uppercase tracking-wider ml-auto">
-            {doiUrl && (<a href={doiUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>DOI</a>)}
             {pub.pdf_url && (<a href={pub.pdf_url} class="text-ink-2 hover:text-ink border-b-0" data-external>PDF</a>)}
             {pub.code_url && (<a href={pub.code_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Code</a>)}
             {pub.brief_url && (<a href={pub.brief_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Brief</a>)}

@@ -133,18 +133,26 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
         </div>
 
         {pub.doi && (
-          <div class="flex items-center gap-4 mt-4 min-h-[60px]">
-            <div
-              class="altmetric-embed"
-              data-badge-popover="right"
-              data-badge-type="medium-donut"
-              data-doi={pub.doi}
-            ></div>
-            <div
-              class="__dimensions_badge_embed__"
-              data-doi={pub.doi}
-              data-style="small_circle"
-            ></div>
+          <div class="flex items-start gap-3 mt-4" style="height: 75px;">
+            {/* Altmetric medium-donut renders at ~64px — scale to 75 (≈1.17×). */}
+            <div style="width: 75px; height: 75px; overflow: hidden;">
+              <div
+                class="altmetric-embed"
+                data-badge-popover="right"
+                data-badge-type="medium-donut"
+                data-doi={pub.doi}
+                style="transform: scale(1.171875); transform-origin: top left;"
+              ></div>
+            </div>
+            {/* Dimensions small_circle renders at ~32px — scale to 75 (≈2.34×). */}
+            <div style="width: 75px; height: 75px; overflow: hidden;">
+              <div
+                class="__dimensions_badge_embed__"
+                data-doi={pub.doi}
+                data-style="small_circle"
+                style="transform: scale(2.34375); transform-origin: top left;"
+              ></div>
+            </div>
           </div>
         )}
 

@@ -5,6 +5,7 @@ import PublicationItem from '../../components/PublicationItem.astro'
 import people from '../../data/people.json'
 import publications from '../../data/publications.json'
 import type { Person, Publication } from '../../lib/types'
+import { splitAndLinkAuthors } from '../../lib/author-links'
 
 export async function getStaticPaths() {
   const { default: people } = await import('../../data/people.json')
@@ -16,8 +17,11 @@ export async function getStaticPaths() {
 
 const { person } = Astro.props as { person: Person }
 
+const peopleArr = people as Person[]
 const personPubs = (publications as Publication[])
-  .filter((p) => (p.lab_authors ?? []).includes(person.slug))
+  .filter((p) =>
+    splitAndLinkAuthors(p.authors ?? '', peopleArr).some((s) => s.slug === person.slug),
+  )
   .sort((a, b) => b.year - a.year || (b.month ?? 0) - (a.month ?? 0))
 
 // Optional Markdown bio: src/content/people/<slug>.md

@@ -4,6 +4,7 @@ import PublicationItem from '../components/PublicationItem.astro';
 import publications from '../data/publications.json';
 import people from '../data/people.json';
 import type { Publication, Person } from '../lib/types';
+import { splitAndLinkAuthors } from '../lib/author-links';
 
 const all = (publications as Publication[])
   .slice()
@@ -12,12 +13,18 @@ const all = (publications as Publication[])
 const years = [...new Set(all.map((p) => p.year))].sort((a, b) => b - a);
 const themes = [...new Set(all.flatMap((p) => p.themes ?? []))].sort();
 
-// Lab-author filter options: any slug that appears in at least one publication's
-// lab_authors AND has a matching row in the People sheet.
-const taggedSlugs = new Set(all.flatMap((p) => p.lab_authors ?? []));
+// Lab-author filter options: any lab member detected in at least one
+// publication's authors string. Auto-derived from author-name matching so
+// the Sheet's lab_authors column is no longer required to populate this.
 const peopleArr = people as Person[];
+const detectedSlugs = new Set<string>();
+for (const pub of all) {
+  for (const seg of splitAndLinkAuthors(pub.authors ?? '', peopleArr)) {
+    if (seg.slug) detectedSlugs.add(seg.slug);
+  }
+}
 const labAuthorOptions = peopleArr
-  .filter((p) => taggedSlugs.has(p.slug))
+  .filter((p) => detectedSlugs.has(p.slug))
   .sort((a, b) => a.name.localeCompare(b.name));
 
 const total = all.length;

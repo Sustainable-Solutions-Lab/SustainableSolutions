@@ -325,16 +325,23 @@ function buildMergedRow(auto, manual, counts) {
     themes = guessThemes(`${auto.title} ${auto.abstract}`)
     if (themes) counts.autoTheme++
   }
+  // Auto fields prefer Scholar but fall back to whatever the user has put in
+  // the sheet — so a CrossRef-looked-up DOI / authors row survives future
+  // refreshes when Scholar still can't reach the paper's detail page.
+  const sheetFallback = (autoValue, manualValue) => {
+    if (autoValue !== '' && autoValue != null) return autoValue
+    return manualValue ?? ''
+  }
   return {
-    authors: auto.authors,
-    title: auto.title,
-    journal: auto.journal,
-    year: auto.year,
-    month: auto.month,
-    volume_issue: auto.volume_issue,
-    pages: auto.pages,
-    doi: auto.doi,
-    url: auto.url,
+    authors: sheetFallback(auto.authors, manual?.authors),
+    title: sheetFallback(auto.title, manual?.title),
+    journal: sheetFallback(auto.journal, manual?.journal),
+    year: sheetFallback(auto.year, manual?.year),
+    month: sheetFallback(auto.month, manual?.month),
+    volume_issue: sheetFallback(auto.volume_issue, manual?.volume_issue),
+    pages: sheetFallback(auto.pages, manual?.pages),
+    doi: sheetFallback(auto.doi, manual?.doi),
+    url: sheetFallback(auto.url, manual?.url),
     featured: manual?.featured || 'FALSE',
     ignore: manual?.ignore || '',
     themes,
@@ -345,7 +352,7 @@ function buildMergedRow(auto, manual, counts) {
     ppt_url: manual?.ppt_url || '',
     press_url: manual?.press_url || '',
     image_filename: manual?.image_filename || '',
-    abstract: auto.abstract,
+    abstract: sheetFallback(auto.abstract, manual?.abstract),
   }
 }
 

@@ -40,26 +40,43 @@ function fixSubscripts(s) {
     .trim()
 }
 
-// ── Author reformatter (handles both initials-first and full-name input). ──
+// ── Author reformatter ──
+//
+// Output format: "Last, FirstFull M." — preserves the full first given name
+// (so "Yang" and "Yuxin" remain distinct in author lists) while compressing
+// middle/later given names to single initials.
+//
+// Handles two inputs:
+//   - Initials-first ("SJ Davis") → no full first available; emits "Davis, S.J."
+//   - Full-name ("Steven J. Davis") → emits "Davis, Steven J."
+//
+// Truncation marker "..." → "et al."
 function reformatAuthor(name) {
   const trimmed = name.trim()
   if (!trimmed || trimmed === '...') return 'et al.'
   const tokens = trimmed.split(/\s+/)
   if (tokens.length === 1) return trimmed
+
+  // Initials-only first token (Scholar's bare-master "SJ Davis" form)
   if (/^[A-Z]+$/.test(tokens[0])) {
     const initials = tokens[0]
     const last = tokens.slice(1).join(' ')
     return `${last}, ${initials.split('').join('.')}.`
   }
+
+  // Full-name form: keep first given as-is, compress later givens to initials
   const last = tokens[tokens.length - 1]
   const givens = tokens.slice(0, -1)
-  const initials = givens
-    .filter((g) => g.length > 0 && g !== '.')
-    .map((g) => g.replace(/\./g, '')[0]?.toUpperCase())
+  if (givens.length === 0) return last
+  const first = givens[0].replace(/\.$/, '')
+  const middles = givens
+    .slice(1)
+    .map((g) => g.replace(/\./g, ''))
     .filter(Boolean)
-    .map((c) => c + '.')
-    .join('')
-  return initials ? `${last}, ${initials}` : last
+    .map((g) => g[0].toUpperCase() + '.')
+    .join(' ')
+  const formatted = middles ? `${first} ${middles}` : first
+  return `${last}, ${formatted}`
 }
 
 function reformatAuthors(authorsStr) {

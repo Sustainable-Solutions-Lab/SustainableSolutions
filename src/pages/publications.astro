@@ -95,6 +95,20 @@ const total = all.length;
       )}
 
       <label class="flex items-center gap-2 text-sm">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Sort</span>
+        <select
+          id="pub-sort"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
+          style="border-radius: var(--radius-sm);"
+        >
+          <option value="date">Most recent</option>
+          <option value="total-citations">Total citations</option>
+          <option value="citations-per-year">Citations / year</option>
+          <option value="recent-citations">Recent citations (3 yr)</option>
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
         <input id="pub-featured" type="checkbox" class="accent-cardinal" />
         <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Featured only</span>
       </label>
@@ -125,6 +139,7 @@ const total = all.length;
     const yearSel = document.getElementById('pub-year');
     const themeSel = document.getElementById('pub-theme');
     const authorSel = document.getElementById('pub-author');
+    const sortSel = document.getElementById('pub-sort');
     const feat = document.getElementById('pub-featured');
     const list = document.getElementById('pub-list');
     const empty = document.getElementById('pub-empty');
@@ -133,6 +148,22 @@ const total = all.length;
 
     const items = Array.from(list.querySelectorAll('[data-pub]'));
     const total = items.length;
+
+    const sortKey = (li) => {
+      const k = sortSel?.value ?? 'date';
+      if (k === 'date') {
+        return -(parseInt(li.dataset.year || '0', 10) * 100 + parseInt(li.dataset.month || '0', 10));
+      }
+      if (k === 'total-citations')      return -parseFloat(li.dataset.totalCitations || '0');
+      if (k === 'citations-per-year')   return -parseFloat(li.dataset.citationsPerYear || '0');
+      if (k === 'recent-citations')     return -parseFloat(li.dataset.recentCitations || '0');
+      return 0;
+    };
+
+    const applySort = () => {
+      const sorted = [...items].sort((a, b) => sortKey(a) - sortKey(b));
+      for (const li of sorted) list.appendChild(li);
+    };
 
     const apply = () => {
       const q = (search?.value ?? '').trim().toLowerCase();
@@ -159,9 +190,24 @@ const total = all.length;
       if (empty) empty.hidden = visible !== 0;
     };
 
+    // Pre-fill the Author select from `?author=<slug>` so /publications?author=X
+    // arrives pre-filtered (used by the "see all" link on people detail pages).
+    const params = new URLSearchParams(window.location.search);
+    const authorParam = params.get('author');
+    if (authorParam && authorSel) {
+      const opt = Array.from(authorSel.options).find((o) => o.value === authorParam);
+      if (opt) authorSel.value = authorParam;
+    }
+    const sortParam = params.get('sort');
+    if (sortParam && sortSel) sortSel.value = sortParam;
+
     [search, yearSel, themeSel, authorSel, feat].forEach((el) => {
       el?.addEventListener('input', apply);
       el?.addEventListener('change', apply);
     });
+    sortSel?.addEventListener('change', applySort);
+
+    applySort();
+    apply();
   })();
 </script>

@@ -6,6 +6,7 @@ import people from '../../data/people.json'
 import publications from '../../data/publications.json'
 import type { Person, Publication } from '../../lib/types'
 import { splitAndLinkAuthors } from '../../lib/author-links'
+import scholarDetails from '../../../templates/scholar-details.json'
 
 export async function getStaticPaths() {
   const { default: people } = await import('../../data/people.json')
@@ -23,6 +24,31 @@ const personPubs = (publications as Publication[])
     splitAndLinkAuthors(p.authors ?? '', peopleArr).some((s) => s.slug === person.slug),
   )
   .sort((a, b) => b.year - a.year || (b.month ?? 0) - (a.month ?? 0))
+
+// Build a {DOI → total_citations} lookup for picking "most cited" papers.
+const totalsByDoi = new Map<string, number>()
+for (const detail of Object.values(scholarDetails as Record<string, any>)) {
+  if (detail?.doi && typeof detail?.total_citations === 'number') {
+    totalsByDoi.set(detail.doi, detail.total_citations)
+  }
+}
+
+// Featured 4: 2 most recent + 2 most cited (deduped). Falls back to fewer
+// if the person has fewer than 4 pubs total.
+const recent = personPubs.slice(0, 2)
+const byCitations = [...personPubs].sort((a, b) => {
+  const aCit = (a.doi && totalsByDoi.get(a.doi)) ?? 0
+  const bCit = (b.doi && totalsByDoi.get(b.doi)) ?? 0
+  return bCit - aCit
+})
+const featuredPubs: Publication[] = [...recent]
+for (const p of byCitations) {
+  if (featuredPubs.length >= 4) break
+  if (!featuredPubs.some((f) => f.doi === p.doi && p.doi)) featuredPubs.push(p)
+  else if (!featuredPubs.includes(p)) featuredPubs.push(p)
+}
+const displayPubs = featuredPubs.slice(0, 4)
+const hasMorePubs = personPubs.length > displayPubs.length
 
 // Optional Markdown bio: src/content/people/<slug>.md
 let BioContent: any = null
@@ -144,12 +170,26 @@ const initials = person.name
     </dl>
 
     {
-      personPubs.length > 0 && (
+      displayPubs.length > 0 && (
         <section class="mt-16">
-          <p class="eyebrow mb-4">PUBLICATIONS</p>
+          <p class="eyebrow mb-4">
+            PUBLICATIONS
+            {personPubs.length > displayPubs.length && (
+              <span class="text-ink-3"> · {displayPubs.length} of {personPubs.length}</span>
+            )}
+          </p>
           <ul class="list-none p-0 m-0">
-            {personPubs.map((pub) => <PublicationItem pub={pub} />)}
+            {displayPubs.map((pub) => <PublicationItem pub={pub} />)}
           </ul>
+          {
+            hasMorePubs && (
+              <p class="mt-6">
+                <a href={`/publications?author=${person.slug}`} class="font-mono text-xs uppercase tracking-wider">
+                  See all {personPubs.length} publications →
+                </a>
+              </p>
+            )
+          }
         </section>
       )
     }

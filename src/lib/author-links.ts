@@ -10,12 +10,19 @@ import type { Person } from './types'
 
 export interface ParsedCitation {
   last: string
-  initials: string[] // lowercased single chars, e.g. ['s', 'j']
+  /** Each given name is preserved as either a single-letter initial ("s")
+   *  or the full lowercased name ("steven"). Distinguishing the two lets
+   *  us disambiguate "Chen, Yang" from "Chen, Yuxin" — same last name and
+   *  same initial, but different full first names. */
+  givens: string[]
 }
 
 /**
- * Parse a single citation token like "Davis, S.J." / "Davis, S." /
- * "Davis, Steven J." into { last, initials[] }.
+ * Parse a single citation token like:
+ *   "Davis, S.J."        → { last: "davis", givens: ["s","j"] }
+ *   "Davis, S."          → { last: "davis", givens: ["s"] }
+ *   "Davis, Steven J."   → { last: "davis", givens: ["steven","j"] }
+ *   "Chen, Yang"         → { last: "chen",  givens: ["yang"] }
  *
  * Returns null if the token doesn't fit the "Last, given" shape.
  */
@@ -23,48 +30,58 @@ export function parseCitationToken(token: string): ParsedCitation | null {
   const m = token.match(/^([^,]+),\s*(.+?)\.?$/)
   if (!m) return null
   const last = m[1].trim().toLowerCase()
-  const initials = m[2]
+  const givens = m[2]
     .split(/[\s.\-]+/)
+    .map((t) => t.trim())
     .filter(Boolean)
-    .map((t) => t[0]?.toLowerCase())
-    .filter(Boolean) as string[]
-  return { last, initials }
+    .map((t) => t.toLowerCase())
+  return { last, givens }
 }
 
 /**
- * Parse a person's display name like "Steven J. Davis" or "Yuxin Chen"
- * into { last, initials[] }.
- *
- * Last-name-first formats ("Davis, Steven J.") aren't expected here — Person
- * objects always carry the natural-order display name.
+ * Parse a person's display name like "Steven J. Davis" or "Yuxin Chen".
+ *   "Steven J. Davis"   → { last: "davis", givens: ["steven","j"] }
+ *   "Yuxin Chen"        → { last: "chen",  givens: ["yuxin"] }
  */
 export function parsePersonName(name: string): ParsedCitation | null {
   const tokens = name.trim().split(/\s+/).filter(Boolean)
   if (tokens.length < 2) return null
   const last = tokens[tokens.length - 1].toLowerCase()
-  const initials = tokens
+  const givens = tokens
     .slice(0, -1)
-    .map((t) => t.replace(/\./g, '')[0]?.toLowerCase())
-    .filter(Boolean) as string[]
-  return { last, initials }
+    .map((t) => t.replace(/\./g, '').toLowerCase())
+    .filter(Boolean)
+  return { last, givens }
 }
 
 /**
- * Match if last names are equal AND author's initials are a non-empty prefix
- * of the person's initials.
+ * Match author citation against a person.
  *
- *   "Davis, S."     matches "Steven J. Davis"  (S prefix of S.J.)
- *   "Davis, S.J."   matches "Steven J. Davis"  (full match)
- *   "Davis, S.M."   does NOT match (M ≠ J)
- *   "Davis, K."     does NOT match (K ≠ S)
- *   "Davis"         does NOT match (no initials)
+ * Rules per given (in order):
+ *   - If author's given is a single letter (initial only): require it to
+ *     equal the first letter of person's corresponding given.
+ *   - If author's given is a full name AND person's is too: require exact
+ *     equality (case-insensitive). This disambiguates "Yang" vs "Yuxin".
+ *   - If author's given is full and person's is initial only (rare): match
+ *     by first letter.
+ *
+ * Author can have FEWER givens than person (the citation may omit a middle
+ * initial). Author may not have MORE — that would expand the person's name.
  */
 function matches(a: ParsedCitation, p: ParsedCitation): boolean {
   if (a.last !== p.last) return false
-  if (a.initials.length === 0) return false
-  if (a.initials.length > p.initials.length) return false
-  for (let i = 0; i < a.initials.length; i++) {
-    if (a.initials[i] !== p.initials[i]) return false
+  if (a.givens.length === 0) return false
+  if (a.givens.length > p.givens.length) return false
+  for (let i = 0; i < a.givens.length; i++) {
+    const ag = a.givens[i]
+    const pg = p.givens[i]
+    if (ag.length === 1) {
+      if (pg[0] !== ag[0]) return false
+    } else if (pg.length === 1) {
+      if (ag[0] !== pg[0]) return false
+    } else {
+      if (ag !== pg) return false
+    }
   }
   return true
 }

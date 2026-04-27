@@ -27,6 +27,18 @@ for (const detail of Object.values(scholarDetails as Record<string, any>)) {
 const citationsForPub = pub.doi ? citationsByDoi.get(pub.doi) ?? null : null;
 const totalCitationsForPub = pub.doi ? totalsByDoi.get(pub.doi) ?? null : null;
 
+// Sort scores. Used by the publications page's Sort dropdown via data-* attrs.
+const currentYear = new Date().getFullYear();
+const totalCitationsScore = totalCitationsForPub ?? 0;
+const yearsSincePub = Math.max(currentYear - pub.year + 1, 1);
+const citationsPerYearScore =
+  totalCitationsForPub != null ? totalCitationsForPub / yearsSincePub : 0;
+const recent3yrScore = citationsForPub
+  ? citationsForPub
+      .filter((c) => c.year >= currentYear - 2)
+      .reduce((sum, c) => sum + (c.count || 0), 0)
+  : 0;
+
 const doiUrl = pub.url ?? (pub.doi ? `https://doi.org/${pub.doi}` : null);
 
 // Auto-detect lab members in the authors string (matches by last name +
@@ -72,9 +84,13 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
   class:list={['relative', isFeatured ? 'py-6' : 'py-6 border-b border-rule']}
   data-pub
   data-year={pub.year}
+  data-month={pub.month ?? 0}
   data-themes={(pub.themes ?? []).join(',')}
   data-lab-authors={detectedLabSlugs.join(',')}
   data-featured={String(pub.featured)}
+  data-total-citations={totalCitationsScore}
+  data-citations-per-year={citationsPerYearScore.toFixed(3)}
+  data-recent-citations={recent3yrScore}
   data-search={searchBlob}
 >
   {isFeatured ? (

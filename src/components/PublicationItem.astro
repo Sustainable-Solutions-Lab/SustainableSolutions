@@ -133,29 +133,26 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
         </div>
 
         {pub.doi && (
-          <div class="flex items-start gap-2 mt-4" style="height: 25px;">
-            {/* Altmetric medium-donut renders at ~64px — scale to 25 (≈0.39×).
-                Transform sits on a separate wrapper so the embed script can't
-                override the inline style on the badge div itself. */}
-            <div style="width: 25px; height: 25px; overflow: hidden;">
-              <div style="width: 64px; height: 64px; transform: scale(0.390625); transform-origin: top left;">
-                <div
-                  class="altmetric-embed"
-                  data-badge-popover="right"
-                  data-badge-type="medium-donut"
-                  data-doi={pub.doi}
-                ></div>
-              </div>
+          <div class="flex items-start gap-2 mt-4">
+            {/* CSS `zoom` actually shrinks layout box + visual rendering, and
+                applies to whatever the embed script injects (unlike transform,
+                which the embed scripts can clobber). Native sizes:
+                  Altmetric medium-donut ~64px → zoom 25/64 = 0.391
+                  Dimensions small_circle ~32px → zoom 25/32 = 0.781   */}
+            <div style="zoom: 0.390625;">
+              <div
+                class="altmetric-embed"
+                data-badge-popover="right"
+                data-badge-type="medium-donut"
+                data-doi={pub.doi}
+              ></div>
             </div>
-            {/* Dimensions small_circle renders at ~32px — scale to 25 (≈0.78×). */}
-            <div style="width: 25px; height: 25px; overflow: hidden;">
-              <div style="width: 32px; height: 32px; transform: scale(0.78125); transform-origin: top left;">
-                <div
-                  class="__dimensions_badge_embed__"
-                  data-doi={pub.doi}
-                  data-style="small_circle"
-                ></div>
-              </div>
+            <div style="zoom: 0.78125;">
+              <div
+                class="__dimensions_badge_embed__"
+                data-doi={pub.doi}
+                data-style="small_circle"
+              ></div>
             </div>
           </div>
         )}

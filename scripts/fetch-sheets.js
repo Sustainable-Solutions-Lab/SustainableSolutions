@@ -73,13 +73,45 @@ function parseCsv(text) {
   return rows.filter((r) => r.some((cell) => cell.trim() !== ''));
 }
 
+// Heal known UTF-8 → Mac Roman / Windows-1252 double-encoding mojibake.
+// Happens when a CSV opens in a tool that mis-detects encoding and the
+// resulting characters get re-encoded into the Sheet. Mappings reverse
+// the most common dash / quote / ellipsis / subscript cases.
+function fixMojibake(s) {
+  if (!s) return s;
+  return s
+    // Mac Roman triple-bytes (en/em dash, smart quotes, ellipsis, subscripts)
+    .replace(/‚Äì/g, '–')   // ‚Äì → –  (en dash)
+    .replace(/‚Äî/g, '—')   // ‚Äî → —  (em dash)
+    .replace(/‚Äú/g, '“')   // ‚Äú → "
+    .replace(/‚Äù/g, '”')   // ‚Äù → "
+    .replace(/‚Äò/g, '‘')   // ‚Äò → '
+    .replace(/‚Äô/g, '’')   // ‚Äô → '
+    .replace(/‚Ä¶/g, '…')   // ‚Ä¶ → …
+    .replace(/‚°°/g, '₂')   // ‚°° → ₂
+    .replace(/‚°É/g, '₃')   // ‚°É → ₃
+    .replace(/‚°Ñ/g, '₄')   // ‚°Ñ → ₄
+    // Windows-1252 triple-bytes (same originals, different decode)
+    .replace(/â€“/g, '–')   // â€" → –
+    .replace(/â€”/g, '—')   // â€" → —
+    .replace(/â€œ/g, '“')   // â€œ → "
+    .replace(/â€/g, '”')   // â€<U+009D> → "
+    .replace(/â€˜/g, '‘')   // â€˜ → '
+    .replace(/â€™/g, '’')   // â€™ → '
+    .replace(/â€¦/g, '…')   // â€¦ → …
+    .replace(/â‚‚/g, '₂')   // â‚‚ → ₂
+    // Single-byte (degree sign, nbsp)
+    .replace(/Â°/g, '°')          // Â° → °
+    .replace(/Â /g, ' ');         // Â<nbsp> → nbsp
+}
+
 function rowsToObjects(rows) {
   if (rows.length === 0) return [];
   const headers = rows[0].map((h) => h.trim());
   return rows.slice(1).map((r) => {
     const obj = {};
     headers.forEach((h, i) => {
-      obj[h] = (r[i] ?? '').trim();
+      obj[h] = fixMojibake((r[i] ?? '').trim());
     });
     return obj;
   });

@@ -40,14 +40,6 @@ const total = all.length;
       Reverse chronological. Filter by theme, year, or featured status; search
       across titles, authors, and journals.
     </p>
-    <p class="font-mono text-xs uppercase tracking-wider mt-3 m-0 text-ink-3">
-      Lab authors:
-      <span style={`color: ${ROLE_COLORS.student}; font-weight: 600;`}>Student</span>
-      <span class="dot">·</span>
-      <span style={`color: ${ROLE_COLORS.postdoc}; font-weight: 600;`}>Postdoc</span>
-      <span class="dot">·</span>
-      <span style={`color: ${ROLE_COLORS.staff}; font-weight: 600;`}>Staff</span>
-    </p>
   </section>
 
   <section class="container-content pb-24">
@@ -124,7 +116,16 @@ const total = all.length;
         <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Featured only</span>
       </label>
 
-      <span id="pub-count" class="ml-auto font-mono text-xs text-ink-3">
+      <span class="ml-auto font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">
+        Roles:
+        <span style={`color: ${ROLE_COLORS.student}; font-weight: 600;`}>Student</span>
+        <span class="dot">·</span>
+        <span style={`color: ${ROLE_COLORS.postdoc}; font-weight: 600;`}>Postdoc</span>
+        <span class="dot">·</span>
+        <span style={`color: ${ROLE_COLORS.staff}; font-weight: 600;`}>Staff</span>
+      </span>
+
+      <span id="pub-count" class="font-mono text-xs text-ink-3 ml-auto md:ml-4">
         {total} of {total}
       </span>
     </div>

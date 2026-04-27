@@ -18,6 +18,11 @@ export type Person = {
   scholar_url: string | null;
   orcid: string | null;
   cv_url: string | null;
+  // DOIs of publications to feature on the person's active-member card. If
+  // blank, the card falls back to most-cited (notable) and most-recent
+  // (recent) papers detected on the person's authorship.
+  notable_pub_doi: string | null;
+  recent_pub_doi: string | null;
 };
 
 export type Publication = {

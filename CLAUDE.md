@@ -273,6 +273,8 @@ off-screen otherwise.
 | N      | scholar_url       | Text                                           | Optional. Google Scholar profile URL           |
 | O      | orcid             | Text                                           | Optional. ORCID iD (`0000-0002-…` form)        |
 | P      | cv_url            | Text                                           | Optional. CV link (Google Drive, etc.)         |
+| Q      | notable_pub_doi   | Text                                           | DOI of the paper to feature as "Notable work". Falls back to most-cited if blank. |
+| R      | recent_pub_doi    | Text                                           | DOI of the paper to feature as "Recent work". Falls back to most-recent if blank. |
 
 ### Tab: `News`
 

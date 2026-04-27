@@ -31,7 +31,15 @@ const initials = person.name
 
 const orcidUrl = person.orcid ? `https://orcid.org/${person.orcid}` : null;
 
-// Notable work — pick the person's featured paper if any, else the most-cited.
+// Notable + Recent work — sheet-driven by DOI, with fallbacks.
+//
+//   notable_pub_doi  → resolve from the person's matched papers; else the
+//                      person's most-cited paper (Scholar total_citations).
+//   recent_pub_doi   → resolve similarly; else the person's most-recent paper
+//                      (year then month, descending).
+//
+// If both columns resolve to the same paper (e.g., one DOI set, the other
+// fallback picks the same one), Recent is hidden so we don't duplicate.
 const totalsByDoi = new Map<string, number>();
 for (const detail of Object.values(scholarDetails as Record<string, any>)) {
   if (detail?.doi && typeof detail?.total_citations === 'number') {
@@ -41,16 +49,35 @@ for (const detail of Object.values(scholarDetails as Record<string, any>)) {
 const personPubs = (publications as Publication[]).filter((p) =>
   splitAndLinkAuthors(p.authors ?? '', [person]).some((s) => s.slug === person.slug),
 );
-const notable: Publication | null =
-  personPubs.find((p) => p.featured) ??
-  [...personPubs].sort((a, b) => {
-    const aC = (a.doi && totalsByDoi.get(a.doi)) ?? 0;
-    const bC = (b.doi && totalsByDoi.get(b.doi)) ?? 0;
-    return bC - aC;
-  })[0] ??
-  null;
-const notableCitations = notable?.doi ? totalsByDoi.get(notable.doi) ?? null : null;
-const notableUrl = notable?.url ?? (notable?.doi ? `https://doi.org/${notable.doi}` : null);
+const personPubsByDoi = new Map<string, Publication>();
+for (const p of personPubs) if (p.doi) personPubsByDoi.set(p.doi.toLowerCase(), p);
+
+function resolveExplicit(doi: string | null): Publication | null {
+  if (!doi) return null;
+  return personPubsByDoi.get(doi.trim().toLowerCase()) ?? null;
+}
+const mostCited = [...personPubs].sort((a, b) => {
+  const aC = (a.doi && totalsByDoi.get(a.doi)) ?? 0;
+  const bC = (b.doi && totalsByDoi.get(b.doi)) ?? 0;
+  return bC - aC;
+})[0] ?? null;
+const mostRecent = [...personPubs].sort((a, b) =>
+  (b.year - a.year) || ((b.month ?? 0) - (a.month ?? 0)),
+)[0] ?? null;
+
+const notable: Publication | null = resolveExplicit(person.notable_pub_doi) ?? mostCited;
+let recent: Publication | null = resolveExplicit(person.recent_pub_doi) ?? mostRecent;
+if (recent && notable && recent.doi && notable.doi && recent.doi === notable.doi) {
+  recent = null;
+}
+
+function pubMeta(pub: Publication) {
+  const citations = pub.doi ? totalsByDoi.get(pub.doi) ?? null : null;
+  const url = pub.url ?? (pub.doi ? `https://doi.org/${pub.doi}` : null);
+  return { citations, url };
+}
+const notableMeta = notable ? pubMeta(notable) : null;
+const recentMeta = recent ? pubMeta(recent) : null;
 ---
 
 <article
@@ -74,27 +101,54 @@ const notableUrl = notable?.url ?? (notable?.doi ? `https://doi.org/${notable.do
       </p>
     )}
 
-    {notable && (
-      <div class="mt-4 pt-4 border-t border-rule">
-        <p class="eyebrow m-0 mb-1">NOTABLE WORK</p>
-        <p class="font-serif m-0" style="font-size: 16px; line-height: 1.3;">
-          {notableUrl ? (
-            <a href={notableUrl} class="border-b-0 hover:underline" data-external>{notable.title}</a>
-          ) : (
-            notable.title
-          )}
-        </p>
-        <p class="font-mono text-xs text-ink-3 mt-1 m-0">
-          <em class="not-italic">{notable.journal}</em>
-          <span class="dot">·</span>
-          {notable.year}
-          {notableCitations != null && (
-            <>
+    {(notable || recent) && (
+      <div class="mt-4 pt-4 border-t border-rule grid sm:grid-cols-2 gap-x-6 gap-y-4">
+        {notable && notableMeta && (
+          <div class="min-w-0">
+            <p class="eyebrow m-0 mb-1">NOTABLE WORK</p>
+            <p class="font-serif m-0" style="font-size: 16px; line-height: 1.3;">
+              {notableMeta.url ? (
+                <a href={notableMeta.url} class="border-b-0 hover:underline" data-external>{notable.title}</a>
+              ) : (
+                notable.title
+              )}
+            </p>
+            <p class="font-mono text-xs text-ink-3 mt-1 m-0">
+              <em class="not-italic">{notable.journal}</em>
               <span class="dot">·</span>
-              {notableCitations.toLocaleString()} citations
-            </>
-          )}
-        </p>
+              {notable.year}
+              {notableMeta.citations != null && (
+                <>
+                  <span class="dot">·</span>
+                  {notableMeta.citations.toLocaleString()} citations
+                </>
+              )}
+            </p>
+          </div>
+        )}
+        {recent && recentMeta && (
+          <div class="min-w-0">
+            <p class="eyebrow m-0 mb-1">RECENT WORK</p>
+            <p class="font-serif m-0" style="font-size: 16px; line-height: 1.3;">
+              {recentMeta.url ? (
+                <a href={recentMeta.url} class="border-b-0 hover:underline" data-external>{recent.title}</a>
+              ) : (
+                recent.title
+              )}
+            </p>
+            <p class="font-mono text-xs text-ink-3 mt-1 m-0">
+              <em class="not-italic">{recent.journal}</em>
+              <span class="dot">·</span>
+              {recent.year}
+              {recentMeta.citations != null && (
+                <>
+                  <span class="dot">·</span>
+                  {recentMeta.citations.toLocaleString()} citations
+                </>
+              )}
+            </p>
+          </div>
+        )}
       </div>
     )}
 

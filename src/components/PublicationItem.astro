@@ -90,9 +90,9 @@ const heroHash = [...(pub.doi || pub.title || '')].reduce(
 const heroAccent = spectralColors[heroHash % spectralColors.length];
 
 // Theme color stripe — primary theme drives the left-edge color on
-// non-featured cards. Falls back to muted ink if no themes tagged.
+// non-featured cards. Falls back to neutral gray if no themes tagged.
 const pubThemes = pub.themes ?? [];
-const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var(--rule-strong)';
+const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var(--ink-4)';
 ---
 
 <li

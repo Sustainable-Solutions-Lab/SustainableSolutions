@@ -212,13 +212,19 @@ const THEME_KEYWORDS = {
     /\bwildfire/i, /\bsmoke\b/i, /\bair pollution\b/i, /\bparticulate\b/i,
     /\bpm\s?2\.5\b/i, /\bozone\b/i,
   ],
-  'solutions': [
-    /\bmitigation\b/i, /\bsequestration\b/i, /\bcarbon (capture|removal)/i,
-    /\bnegative emissions\b/i, /\bbeccs\b/i, /\bcdr\b/i, /\bdac\b/i,
-    /\boffset/i, /\babatement\b/i, /\bscenario\b/i, /\bpathway\b/i,
-    /\bcarbon (sink|stock)/i, /\bafforestation\b/i, /\breforestation\b/i,
-    /\bnature[-\s]based\b/i,
-  ],
+}
+
+// Themes that used to be auto-guessed but have been retired. Stripped from
+// existing sheet rows on the next refresh so they disappear from the site.
+const RETIRED_THEMES = new Set(['solutions'])
+
+function cleanThemes(s) {
+  if (!s) return ''
+  return s
+    .split(',')
+    .map((x) => x.trim())
+    .filter((x) => x && !RETIRED_THEMES.has(x))
+    .join(',')
 }
 
 function guessThemes(text) {
@@ -314,7 +320,7 @@ function buildAuto(masterEntry, details, rawByNorm) {
 
 // ── Merge auto + manual into a single output row ──
 function buildMergedRow(auto, manual, counts) {
-  let themes = (manual?.themes || '').trim()
+  let themes = cleanThemes((manual?.themes || '').trim())
   if (!themes) {
     themes = guessThemes(`${auto.title} ${auto.abstract}`)
     if (themes) counts.autoTheme++
@@ -357,7 +363,7 @@ function buildPassthroughRow(sheetRow) {
     url: sheetRow.url || '',
     featured: sheetRow.featured || 'FALSE',
     ignore: sheetRow.ignore || '',
-    themes: sheetRow.themes || '',
+    themes: cleanThemes(sheetRow.themes || ''),
     lab_authors: sheetRow.lab_authors || '',
     pdf_url: sheetRow.pdf_url || '',
     code_url: sheetRow.code_url || '',

@@ -133,7 +133,12 @@ async function fetchTab(tabName, { env, required }) {
     if (!res.ok) {
       throw new Error(`[fetch-sheets] ${tabName} fetch failed: ${res.status} ${res.statusText}`);
     }
-    text = await res.text();
+    // Force UTF-8 — Google Sheets sometimes serves the published CSV
+    // without a charset in Content-Type, which lets res.text() fall
+    // back to the wrong encoding and produces mojibake on Unicode
+    // characters like CO₂ (E2 82 82 → "â‚‚" in Latin-1).
+    const buf = await res.arrayBuffer();
+    text = new TextDecoder('utf-8').decode(buf);
     source = 'sheet';
   } else {
     const fallback = resolve(TEMPLATES_DIR, `${tabName}.csv`);

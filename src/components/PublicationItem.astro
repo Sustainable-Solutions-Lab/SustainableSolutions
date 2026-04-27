@@ -258,11 +258,15 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
           <>
             {i > 0 && '; '}
             {seg.slug ? (
-              <a href={`/people/${seg.slug}`} class="font-semibold text-ink border-b-0 hover:opacity-70">
-                {seg.text}
+              <a
+                href={`/people/${seg.slug}`}
+                class="font-semibold bare"
+                style={`white-space: nowrap; color: ${seg.color ?? 'var(--ink)'};`}
+              >
+                {toNaturalOrder(seg.text)}
               </a>
             ) : (
-              seg.text
+              <span style="white-space: nowrap;">{toNaturalOrder(seg.text)}</span>
             )}
           </>
         ))}

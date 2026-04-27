@@ -13,6 +13,10 @@ export type Person = {
   joined_date: string | null;
   left_date: string | null;
   order: number;
+  // Optional contact / profile links (active members make heaviest use)
+  email: string | null;
+  scholar_url: string | null;
+  orcid: string | null;
 };
 
 export type Publication = {

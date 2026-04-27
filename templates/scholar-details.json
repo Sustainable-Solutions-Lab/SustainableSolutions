@@ -2658,5 +2658,617 @@
         "count": 9
       }
     ]
+  },
+  "CLhUwle04lcC": {
+    "id": "CLhUwle04lcC",
+    "title": "Carbon Monitor, a near-real-time daily dataset of global CO2 emission from fossil fuel and cement production",
+    "authors": "Zhu Liu, Philippe Ciais, Zhu Deng, Steven J. Davis, Bo Zheng, Yilong Wang, Duo Cui, Biqing Zhu, Xinyu Dou, Piyu Ke, Taochun Sun, Rui Guo, Haiwang Zhong, Olivier Boucher, François-Marie Bréon, Chenxi Lu, Runtao Guo, Jinjun Xue, Eulalie Boucher, Katsumasa Tanaka, Frédéric Chevallier",
+    "publication_date": "2020/11/9",
+    "journal": "Scientific Data",
+    "volume": "7",
+    "issue": "",
+    "pages": "392",
+    "publisher": "Springer Macmillan",
+    "abstract": "We constructed a near-real-time daily CO 2 emission dataset, the Carbon Monitor, to monitor the variations in CO 2 emissions from fossil fuel combustion and cement production since January 1, 2019, at the national level, with near-global coverage on a daily basis and the potential to be frequently updated. Daily CO 2 emissions are estimated from a diverse range of activity data, including the hourly to daily electrical power generation data of 31 countries, monthly production data and production indices of industry processes of 62 countries/regions, and daily mobility data and mobility indices for the ground transportation of 416 cities worldwide. Individual flight location data and monthly data were utilized for aviation and maritime transportation sector estimates. In addition, monthly fuel consumption data corrected for the daily air temperature of 206 countries were used to estimate the emissions from commercial and …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 304,
+    "citations": [
+      {
+        "year": 2020,
+        "count": 5
+      },
+      {
+        "year": 2021,
+        "count": 37
+      },
+      {
+        "year": 2022,
+        "count": 51
+      },
+      {
+        "year": 2023,
+        "count": 55
+      },
+      {
+        "year": 2024,
+        "count": 65
+      },
+      {
+        "year": 2025,
+        "count": 69
+      },
+      {
+        "year": 2026,
+        "count": 16
+      }
+    ]
+  },
+  "SgM-ki2adj0C": {
+    "id": "SgM-ki2adj0C",
+    "title": "Relevance of methodological choices for accounting of land use change carbon fluxes",
+    "authors": "Eberhard Hansis, Steven J. Davis, Julia Pongratz",
+    "publication_date": "2015/7/21",
+    "journal": "Global Biogeochemical Cycles",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "Accounting for carbon fluxes from land use and land cover change (LULCC) generally requires choosing from multiple options of how to attribute the fluxes to regions and to LULCC activities. Applying a newly developed and spatially explicit bookkeeping model BLUE (bookkeeping of land use emissions), we quantify LULCC fluxes and attribute them to land use activities and countries by a range of different accounting methods. We present results with respect to a Kyoto Protocol‐like “commitment” accounting period, using land use emissions of 2008–2012 as an example scenario. We assess the effect of accounting methods that vary (1) the temporal evolution of carbon stocks, (2) the state of the carbon stocks at the beginning of the period, (3) the temporal attribution of carbon fluxes during the period, and (4) treatment of LULCC fluxes that occurred prior to the beginning of the period. We show that the …",
+    "journal_link": null,
+    "doi": "10.1002/2014GB004997",
+    "total_citations": 290,
+    "citations": [
+      {
+        "year": 2014,
+        "count": 2
+      },
+      {
+        "year": 2015,
+        "count": 3
+      },
+      {
+        "year": 2016,
+        "count": 6
+      },
+      {
+        "year": 2017,
+        "count": 10
+      },
+      {
+        "year": 2018,
+        "count": 19
+      },
+      {
+        "year": 2019,
+        "count": 16
+      },
+      {
+        "year": 2020,
+        "count": 25
+      },
+      {
+        "year": 2021,
+        "count": 39
+      },
+      {
+        "year": 2022,
+        "count": 40
+      },
+      {
+        "year": 2023,
+        "count": 44
+      },
+      {
+        "year": 2024,
+        "count": 34
+      },
+      {
+        "year": 2025,
+        "count": 43
+      },
+      {
+        "year": 2026,
+        "count": 9
+      }
+    ]
+  },
+  "-LHtoeeytlUC": {
+    "id": "-LHtoeeytlUC",
+    "title": "Energy systems in scenarios at net-zero CO2 emissions",
+    "authors": "Julianne DeAngelo, Inês Azevedo, John Bistline, Leon Clarke, Gunnar Luderer, Edward Byers, Steven J. Davis",
+    "publication_date": "2021/10/20",
+    "journal": "Nature Communications",
+    "volume": "12",
+    "issue": "",
+    "pages": "6069",
+    "publisher": "springer",
+    "abstract": "Achieving net-zero CO 2 emissions has become the explicitgoal of many climate-energy policies around the world. Although many studies have assessed net-zero emissions pathways, the common features and tradeoffs of energy systems across global scenarios at the point of net-zero CO 2 emissions have not yet been evaluated. Here, we examine the energy systems of 177 net-zero scenarios and discuss their long-term technological and regional characteristics in the context of current energy policies. We find that, on average, renewable energy sources account for 60% of primary energy at net-zero (compared to ∼14% today), with slightly less than half of that renewable energy derived from biomass. Meanwhile, electricity makes up approximately half of final energy consumed (compared to ∼20% today), highlighting the extent to which solid, liquid, and gaseous fuels remain prevalent in the scenarios even …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 284,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 3
+      },
+      {
+        "year": 2022,
+        "count": 26
+      },
+      {
+        "year": 2023,
+        "count": 69
+      },
+      {
+        "year": 2024,
+        "count": 66
+      },
+      {
+        "year": 2025,
+        "count": 87
+      },
+      {
+        "year": 2026,
+        "count": 31
+      }
+    ]
+  },
+  "KqW5X_olkfQC": {
+    "id": "KqW5X_olkfQC",
+    "title": "Commitment accounting of CO2 emissions",
+    "authors": "Steven J. Davis, Robert H. Socolow",
+    "publication_date": "2014/8/26",
+    "journal": "Environmental Research Letters",
+    "volume": "9",
+    "issue": "",
+    "pages": "084018",
+    "publisher": "IOP",
+    "abstract": "The world not only continues to build new coal-fired power plants, but built more new coal plants in the past decade than in any previous decade. Worldwide, an average of 89 gigawatts per year (GW yr –1 ) of new coal generating capacity was added between 2010 and 2012, 23 GW yr –1 more than in the 2000–2009 time period and 56 GW yr –1 more than in the 1990–1999 time period. Natural gas plants show a similar pattern. Assuming these plants operate for 40 years, the fossil-fuel burning plants built in 2012 will emit approximately 19 billion tons of CO 2 (Gt CO 2 ) over their lifetimes, versus 14 Gt CO 2 actually emitted by all operating fossil fuel power plants in 2012. We find that total committed emissions related to the power sector are growing at a rate of about 4% per year, and reached 307 (with an estimated uncertainty of 192–439) Gt CO 2 in 2012. These facts are not well known in the energy policy community …",
+    "journal_link": null,
+    "doi": "10.1088/1748-9326/9/8/084018/pdf",
+    "total_citations": 279,
+    "citations": [
+      {
+        "year": 2014,
+        "count": 7
+      },
+      {
+        "year": 2015,
+        "count": 16
+      },
+      {
+        "year": 2016,
+        "count": 39
+      },
+      {
+        "year": 2017,
+        "count": 15
+      },
+      {
+        "year": 2018,
+        "count": 32
+      },
+      {
+        "year": 2019,
+        "count": 29
+      },
+      {
+        "year": 2020,
+        "count": 34
+      },
+      {
+        "year": 2021,
+        "count": 36
+      },
+      {
+        "year": 2022,
+        "count": 23
+      },
+      {
+        "year": 2023,
+        "count": 16
+      },
+      {
+        "year": 2024,
+        "count": 15
+      },
+      {
+        "year": 2025,
+        "count": 8
+      },
+      {
+        "year": 2026,
+        "count": 4
+      }
+    ]
+  },
+  "sYWwZaPVD1oC": {
+    "id": "sYWwZaPVD1oC",
+    "title": "Probabilistic estimates of drought impacts on agricultural production",
+    "authors": "Shahrbanou Madadgar, Amir AghaKouchak, Alireza Farahmand, Steven J. Davis",
+    "publication_date": "2017/8/5",
+    "journal": "Geophyscial Research Letters",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "American Geophysical Union",
+    "abstract": "Increases in the severity and frequency of drought in a warming climate may negatively impact agricultural production and food security. Unlike previous studies that have estimated agricultural impacts of climate condition using single‐crop yield distributions, we develop a multivariate probabilistic model that uses projected climatic conditions (e.g., precipitation amount or soil moisture) throughout a growing season to estimate the probability distribution of crop yields. We demonstrate the model by an analysis of the historical period 1980–2012, including the Millennium Drought in Australia (2001–2009). We find that precipitation and soil moisture deficit in dry growing seasons reduced the average annual yield of the five largest crops in Australia (wheat, broad beans, canola, lupine, and barley) by 25–45% relative to the wet growing seasons. Our model can thus produce region‐ and crop‐specific agricultural …",
+    "journal_link": null,
+    "doi": "10.1002/2017GL073606",
+    "total_citations": 272,
+    "citations": [
+      {
+        "year": 2018,
+        "count": 8
+      },
+      {
+        "year": 2019,
+        "count": 16
+      },
+      {
+        "year": 2020,
+        "count": 29
+      },
+      {
+        "year": 2021,
+        "count": 31
+      },
+      {
+        "year": 2022,
+        "count": 35
+      },
+      {
+        "year": 2023,
+        "count": 46
+      },
+      {
+        "year": 2024,
+        "count": 46
+      },
+      {
+        "year": 2025,
+        "count": 46
+      },
+      {
+        "year": 2026,
+        "count": 15
+      }
+    ]
+  },
+  "E2bRg1zSkIsC": {
+    "id": "E2bRg1zSkIsC",
+    "title": "The COVID-19 lockdowns: a window into the Earth System",
+    "authors": "Noah S. Diffenbaugh, Christopher B. Field, Eric A. Appel, Ines L. Azevedo, Dennis D. Baldocchi, Marshall Burke, Jennifer A. Burney, Philippe Ciais, Steven J. Davis, Arlene M. Fiore, Sarah M. Fletcher, Thomas W. Hertel, Daniel E. Horton, Solomon M. Hsiang, Robert B. Jackson, Xiaomeng Jin, Margaret Levi, David B. Lobell, Galen A. McKinley, Frances C. Moore, Anastasia Montgomery, Kari C. Nadeau, Diane E. Pataki, James T. Randerson, Markus Reichstein, Jordan L. Schnell, Sonia I. Seneviratne, Deepti Singh, Allison L. Steiner, Gabrielle Wong-Parodi",
+    "publication_date": "2020/7/29",
+    "journal": "Nature Reviews Earth & Environment",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Macmillan",
+    "abstract": "Restrictions to reduce human interaction have helped to avoid greater suffering and death from the COVID-19 pandemic, but have also created socioeconomic hardship. This disruption is unprecedented in the modern era of global observing networks, pervasive sensing and large-scale tracking of human mobility and behaviour, creating a unique test bed for understanding the Earth System. In this Perspective, we hypothesize the immediate and long-term Earth System responses to COVID-19 along two multidisciplinary cascades: energy, emissions, climate and air quality; and poverty, globalization, food and biodiversity. While short-term impacts are dominated by direct effects arising from reduced human activity, longer-lasting impacts are likely to result from cascading effects of the economic recession on global poverty, green investment and human behaviour. These impacts offer the opportunity for novel insight …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 261,
+    "citations": [
+      {
+        "year": 2020,
+        "count": 10
+      },
+      {
+        "year": 2021,
+        "count": 86
+      },
+      {
+        "year": 2022,
+        "count": 63
+      },
+      {
+        "year": 2023,
+        "count": 44
+      },
+      {
+        "year": 2024,
+        "count": 26
+      },
+      {
+        "year": 2025,
+        "count": 22
+      },
+      {
+        "year": 2026,
+        "count": 8
+      }
+    ]
+  },
+  "R6EwkKsDylYC": {
+    "id": "R6EwkKsDylYC",
+    "title": "Decreases in global beer supply due to extreme drought and heat",
+    "authors": "Wei Xie, Wei Xiong, Jie Pan, Tariq Ali, Qi Cui, Dabo Guan, Jing Meng, Nathaniel D. Mueller, Erda Lin, Steven J. Davis",
+    "publication_date": "2018/10/15",
+    "journal": "Nature Plants",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "springer nature",
+    "abstract": "Beer is the most popular alcoholic beverage in the world by volume consumed, and yields of its main ingredient, barley, decline sharply in periods of extreme drought and heat. Although the frequency and severity of drought and heat extremes increase substantially in range of future climate scenarios by five Earth System Models, the vulnerability of beer supply to such extremes has never been assessed. We couple a process-based crop model (decision support system for agrotechnology transfer) and a global economic model (Global Trade Analysis Project model) to evaluate the effects of concurrent drought and heat extremes projected under a range of future climate scenarios. We find that these extreme events may cause substantial decreases in barley yields worldwide. Average yield losses range from 3% to 17% depending on the severity of the conditions. Decreases in the global supply of barley lead to …",
+    "journal_link": null,
+    "doi": "10.1038/s41477-018-0263-1&amp;title=Nature+Plants&amp;volume=4&amp;issue=11&amp;date=2018&amp;spage=964",
+    "total_citations": 257,
+    "citations": [
+      {
+        "year": 2018,
+        "count": 3
+      },
+      {
+        "year": 2019,
+        "count": 32
+      },
+      {
+        "year": 2020,
+        "count": 35
+      },
+      {
+        "year": 2021,
+        "count": 50
+      },
+      {
+        "year": 2022,
+        "count": 34
+      },
+      {
+        "year": 2023,
+        "count": 28
+      },
+      {
+        "year": 2024,
+        "count": 39
+      },
+      {
+        "year": 2025,
+        "count": 27
+      },
+      {
+        "year": 2026,
+        "count": 8
+      }
+    ]
+  },
+  "bbjcffOLshcC": {
+    "id": "bbjcffOLshcC",
+    "title": "Cost-effective ecological restoration",
+    "authors": "Sarah Kimball, Megan Lulow, Quinn Sorenson, Kathleen Balazs, Yi-Chin Fang, Steven J. Davis, Michael O'Connell, Travis E. Huxman",
+    "publication_date": "2015/8/13",
+    "journal": "Ecological Restoration",
+    "volume": "",
+    "issue": "",
+    "pages": "DOI: 10.1111/rec.12261",
+    "publisher": "",
+    "abstract": "Ecological restoration is a multibillion dollar industry critical for improving degraded habitat. However, most restoration is conducted without clearly defined success measures or analysis of costs. Outcomes are influenced by environmental conditions that vary across space and time, yet such variation is rarely considered in restoration planning. Here, we present a cost‐effectiveness analysis of terrestrial restoration methods to determine how practitioners may restore the highest native plant cover per dollar spent. We recorded costs of 120 distinct methods and described success in terms of native versus non‐native plant germination, growth, cover, and density. We assessed effectiveness using a basic, commonly used metric (% native plant cover) and developed an index of cost‐effectiveness (% native cover per dollar spent on restoration). We then evaluated success of multiple methods, given environmental …",
+    "journal_link": null,
+    "doi": "10.1111/rec.12261",
+    "total_citations": 256,
+    "citations": [
+      {
+        "year": 2016,
+        "count": 9
+      },
+      {
+        "year": 2017,
+        "count": 18
+      },
+      {
+        "year": 2018,
+        "count": 15
+      },
+      {
+        "year": 2019,
+        "count": 23
+      },
+      {
+        "year": 2020,
+        "count": 21
+      },
+      {
+        "year": 2021,
+        "count": 32
+      },
+      {
+        "year": 2022,
+        "count": 24
+      },
+      {
+        "year": 2023,
+        "count": 33
+      },
+      {
+        "year": 2024,
+        "count": 29
+      },
+      {
+        "year": 2025,
+        "count": 36
+      },
+      {
+        "year": 2026,
+        "count": 10
+      }
+    ]
+  },
+  "plAW456RD7MC": {
+    "id": "plAW456RD7MC",
+    "title": "Energy systems",
+    "authors": "Leon Clarke, Yi-Ming Wei, Angel de la Vega Navarro, Amit Garg, Andrea N Hahmann, Smail Khennas, Inês ML Azevedo, Andreas Löschel, Ajay Kumar Singh, Linda Steg, Goran Strbac, Kenchi Wada, Hossein Ameli, Nils Angliviel de La Beaumelle, John Bistline, Edward Byers, Katherine Calvin, Kiran Chawla, Yiyun Ryna Cui, Steven Davis, Julianne DeAngelo, Subash Dhar, Jacqueline Edge, Robert Germeshausen, Mohamad Hejazi, Louise Jeffery, Gokul Iyer, Matti Juhani Koivisto, David McCollum, Matteo Muratori, Gregory Nemet, Omkar Patange, Monica Santillan Vera, Udayan Singh, Benjamin Sovacool, Loreta Stankeviciute, Falko Ueckerdt, Cintia Bertacchi Uvo, Heleen van Soest, Janet Veldstra",
+    "publication_date": "2022",
+    "journal": "",
+    "volume": "",
+    "issue": "",
+    "pages": "613-746",
+    "publisher": "Cambridge University Press",
+    "abstract": "Energy Systems - Welcome to DTU Research Database Skip to main navigation Skip to search Skip to main content Welcome to DTU Research Database Home Welcome to DTU Research Database Logo About DTU Orbit Home Profiles Research units Publications Activities Projects Prizes Press/Media Datasets Search by expertise, name or affiliation Energy Systems Leon Clarke, Yi-Ming Wei, Angel de la Vega Navarro, Amit Garg, Andrea N. Hahmann, Smail Khennas, Inês ML Azevedo, Andreas Löschel, Ajay Kumar Singh, Linda Steg, Goran Strbac, Kenchi Wada, Hossein Ameli, Nils Angliviel de La Beaumelle, John Bistline, Edward Byers, Katherine Calvin, Kiran Chawla, Yiyun (Ryna) Cui, Steven DavisJulianne DeAngelo, Subash Dhar, Jacqueline Edge, Robert Germeshausen, Mohamad Hejazi, Louise Jeffery, Gokul Iyer, Matti Juhani Koivisto, David McCollum, Matteo Muratori, Gregory Nemet, Omkar Patange, …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 250,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 3
+      },
+      {
+        "year": 2022,
+        "count": 9
+      },
+      {
+        "year": 2023,
+        "count": 60
+      },
+      {
+        "year": 2024,
+        "count": 67
+      },
+      {
+        "year": 2025,
+        "count": 87
+      },
+      {
+        "year": 2026,
+        "count": 24
+      }
+    ]
+  },
+  "anDooRL1HQEC": {
+    "id": "anDooRL1HQEC",
+    "title": "Inequality of household consumption and air pollution-related deaths in China",
+    "authors": "Hongyan Zhao, Guannan Geng, Qiang Zhang, Steven J Davis, Xin Li, Yang Liu, Liqun Peng, Meng Li, Bo Zheng, Hong Huo, Lin Zhang, Daven K Henze, Zhifu Mi, Zhu Liu, Dabo Guan, Kebin He",
+    "publication_date": "2019/9/25",
+    "journal": "Nature communications",
+    "volume": "10",
+    "issue": "1",
+    "pages": "4337",
+    "publisher": "Nature Publishing Group UK",
+    "abstract": "Substantial quantities of air pollution and related health impacts are ultimately attributable to household consumption. However, how consumption pattern affects air pollution impacts remains unclear. Here we show, of the 1.08 (0.74–1.42) million premature deaths due to anthropogenic PM 2.5 exposure in China in 2012, 20% are related to household direct emissions through fuel use and 24% are related to household indirect emissions embodied in consumption of goods and services. Income is strongly associated with air pollution-related deaths for urban residents in which health impacts are dominated by indirect emissions. Despite a larger and wealthier urban population, the number of deaths related to rural consumption is higher than that related to urban consumption, largely due to direct emissions from solid fuel combustion in rural China. Our results provide quantitative insight to consumption-based …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 250,
+    "citations": [
+      {
+        "year": 2020,
+        "count": 27
+      },
+      {
+        "year": 2021,
+        "count": 37
+      },
+      {
+        "year": 2022,
+        "count": 59
+      },
+      {
+        "year": 2023,
+        "count": 35
+      },
+      {
+        "year": 2024,
+        "count": 39
+      },
+      {
+        "year": 2025,
+        "count": 36
+      },
+      {
+        "year": 2026,
+        "count": 16
+      }
+    ]
+  },
+  "d6JCS5z0ckYC": {
+    "id": "d6JCS5z0ckYC",
+    "title": "Decarbonizing cement production",
+    "authors": "Paul S. Fennell, Steven J. Davis, Aseel Mohammed",
+    "publication_date": "2021/5/20",
+    "journal": "Joule",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Cell Press",
+    "abstract": "Paul Fennell is a professor of clean energy at the Department of Chemical Engineering, Imperial College London. His work encompasses the decarbonization and re-thinking of industrial processes, including the production of iron and steel and cement manufacture. He also works in the broader field of industrial decarbonization, including synergies between industry and power generation. Steve Davis is a professor of Earth system science and civil and environmental engineering at the University of California, Irvine, where he researches trends and drivers of GHG emissions, net-zero emissions energy systems, and the environmental impacts of energy production, climate change, and international trade. Aseel Mohamed received an MSc in advanced chemical engineering from Imperial College London. Her research focused on investigating the various decarbonization technologies used to capture CO 2 emissions …",
+    "journal_link": null,
+    "doi": "10.1016/j.joule.2021.04.011&amp;title=Joule.&amp;volume=5&amp;issue=6&amp;date=2021&amp;spage=1305&amp;issn=2542-4351",
+    "total_citations": 243,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 6
+      },
+      {
+        "year": 2022,
+        "count": 28
+      },
+      {
+        "year": 2023,
+        "count": 59
+      },
+      {
+        "year": 2024,
+        "count": 65
+      },
+      {
+        "year": 2025,
+        "count": 67
+      },
+      {
+        "year": 2026,
+        "count": 17
+      }
+    ]
+  },
+  "lPDSu1ZU3VAC": {
+    "id": "lPDSu1ZU3VAC",
+    "title": "Flexibility and intensity of global water use",
+    "authors": "Yue Qin, Nathaniel D. Mueller, Stefan Siebert, Robert B. Jackson, Amir AghaKouchak, Julie B. Zimmerman, Dan Tong, Chaopeng Hong, Steven J. Davis",
+    "publication_date": "2019/6/3",
+    "journal": "Nature Sustainability",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Macmillan",
+    "abstract": "Water stress is often evaluated by scarcity: the share of available water supply being consumed by humans. However, some consumptive uses of water are more or less flexible than others, depending on the costs or effects associated with their curtailment. Here, we estimate the share of global water consumption over the period 1980–2016 from the relatively inflexible demands of irrigating perennial crops, cooling thermal power plants, storing water in reservoirs and supplying basic water for humans and livestock. We then construct a water stress index that integrates the share of runoff being consumed (scarcity), the share of consumption in these inflexible categories (flexibility) and the historical variability of runoff weighted by storage capacity (variability), and use our index to evaluate the trends in water stress of global major river basins on six continents. We find that the 10% most stressed basins encompass ~19 …",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 233,
+    "citations": [
+      {
+        "year": 2019,
+        "count": 4
+      },
+      {
+        "year": 2020,
+        "count": 24
+      },
+      {
+        "year": 2021,
+        "count": 25
+      },
+      {
+        "year": 2022,
+        "count": 34
+      },
+      {
+        "year": 2023,
+        "count": 42
+      },
+      {
+        "year": 2024,
+        "count": 49
+      },
+      {
+        "year": 2025,
+        "count": 45
+      },
+      {
+        "year": 2026,
+        "count": 8
+      }
+    ]
   }
 }

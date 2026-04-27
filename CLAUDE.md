@@ -259,6 +259,9 @@ All sheets live in a single Google Spreadsheet titled "SSL Site Content" with on
 | J      | joined_date       | Date (YYYY-MM)                                 |                                                |
 | K      | left_date         | Date (YYYY-MM)                                 | Empty for current                              |
 | L      | order             | Integer                                        | Sort order within their section; lower = first |
+| M      | email             | Text                                           | Optional. Becomes a `mailto:` link             |
+| N      | scholar_url       | Text                                           | Optional. Google Scholar profile URL           |
+| O      | orcid             | Text                                           | Optional. ORCID iD (`0000-0002-…` form)        |
 
 ### Tab: `News`
 

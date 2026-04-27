@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PersonCard from '../../components/PersonCard.astro';
+import ActiveMemberCard from '../../components/ActiveMemberCard.astro';
 import people from '../../data/people.json';
 import type { Person } from '../../lib/types';
 
@@ -76,22 +77,35 @@ const filterChips = [
   </div>
 
   {
-    visibleSections.map(({ id, label, members }) => (
-      <section
-        id={id}
-        data-people-group={id}
-        class="container-content pb-12"
-      >
-        <p class="eyebrow mb-4">{label.toUpperCase()}</p>
-        <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0">
-          {members.map((person) => (
-            <li>
-              <PersonCard person={person} />
-            </li>
-          ))}
-        </ul>
-      </section>
-    ))
+    visibleSections.map(({ id, label, members }) => {
+      const isActive = id === 'current' || id === 'ciu';
+      return (
+        <section
+          id={id}
+          data-people-group={id}
+          class="container-content pb-12"
+        >
+          <p class="eyebrow mb-4">{label.toUpperCase()}</p>
+          {isActive ? (
+            <ul class="flex flex-col gap-4 list-none p-0">
+              {members.map((person) => (
+                <li>
+                  <ActiveMemberCard person={person} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <ul class="grid sm:grid-cols-2 gap-4 list-none p-0">
+              {members.map((person) => (
+                <li>
+                  <PersonCard person={person} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      );
+    })
   }
 </BaseLayout>
 

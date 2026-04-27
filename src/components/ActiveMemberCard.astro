@@ -1,0 +1,87 @@
+---
+import type { Person } from '../lib/types';
+
+interface Props {
+  person: Person;
+}
+
+const { person } = Astro.props;
+const detailHref = `/people/${person.slug}`;
+const sectionLabel =
+  person.unit === 'ciu' ? 'CONCEPTUAL INVESTIGATIONS UNIT' : 'CURRENT';
+
+// Spectral letter-avatar fallback (same hash as PersonCard for visual continuity)
+const spectralColors = [
+  'var(--spectral-2)', 'var(--spectral-3)', 'var(--spectral-4)',
+  'var(--spectral-9)', 'var(--spectral-10)', 'var(--spectral-11)',
+];
+const hash = [...person.slug].reduce((a, c) => a + c.charCodeAt(0), 0);
+const avatarBg = spectralColors[hash % spectralColors.length];
+const initials = person.name
+  .split(/\s+/)
+  .filter((s) => /^[A-Z]/.test(s) && s.length > 1)
+  .slice(0, 2)
+  .map((s) => s[0])
+  .join('');
+
+const orcidUrl = person.orcid ? `https://orcid.org/${person.orcid}` : null;
+---
+
+<article
+  class="grid md:grid-cols-[1fr_240px] gap-6 p-6 border border-rule bg-paper"
+  style="border-radius: var(--radius-md);"
+>
+  <div class="min-w-0">
+    <p class="eyebrow m-0 mb-2">
+      <span class="cardinal-dot"></span>{sectionLabel}
+    </p>
+
+    <h3 class="m-0">
+      <a href={detailHref} class="border-b-0 hover:underline">{person.name}</a>
+    </h3>
+
+    <p class="text-ink-2 mt-2 m-0 text-sm">{person.role}</p>
+
+    {person.bio_short && (
+      <p class="mt-4 text-sm text-ink m-0" style="line-height: 1.5;">
+        {person.bio_short}
+      </p>
+    )}
+
+    <div class="flex flex-wrap gap-x-5 gap-y-1 mt-4 text-xs font-mono uppercase tracking-wider">
+      <a href={detailHref} class="text-ink-2 hover:text-ink border-b-0">Profile →</a>
+      {person.email && (
+        <a href={`mailto:${person.email}`} class="text-ink-2 hover:text-ink border-b-0">Email</a>
+      )}
+      {person.personal_url && (
+        <a href={person.personal_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Website</a>
+      )}
+      {person.scholar_url && (
+        <a href={person.scholar_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Scholar</a>
+      )}
+      {orcidUrl && (
+        <a href={orcidUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>ORCID</a>
+      )}
+    </div>
+  </div>
+
+  <a href={detailHref} class="bare block shrink-0" style="line-height: 0;">
+    {person.photo_filename ? (
+      <img
+        src={`/people/${person.photo_filename}`}
+        alt={person.name}
+        loading="lazy"
+        class="w-full object-cover border border-rule"
+        style="aspect-ratio: 1 / 1; border-radius: var(--radius-md);"
+      />
+    ) : (
+      <div
+        aria-hidden="true"
+        class="flex items-center justify-center font-mono text-paper select-none"
+        style={`width: 100%; aspect-ratio: 1/1; background: ${avatarBg}; border-radius: var(--radius-md); font-size: 64px;`}
+      >
+        {initials || '·'}
+      </div>
+    )}
+  </a>
+</article>

@@ -4,6 +4,7 @@ import people from '../data/people.json';
 import scholarDetails from '../../templates/scholar-details.json';
 import { splitAndLinkAuthors } from '../lib/author-links';
 import { themeColor, themeLabel } from '../lib/themes';
+import { roleColor } from '../lib/roles';
 import CitationChart from './CitationChart.astro';
 
 interface Props {
@@ -44,7 +45,15 @@ const doiUrl = pub.url ?? (pub.doi ? `https://doi.org/${pub.doi}` : null);
 
 // Auto-detect lab members in the authors string (matches by last name +
 // initials prefix, so "Davis, S." or "Davis, S.J." both link to Steve).
-const authorSegments = splitAndLinkAuthors(pub.authors ?? '', people as Person[]);
+const peopleArr = people as Person[];
+const peopleBySlug = new Map(peopleArr.map((p) => [p.slug, p]));
+const authorSegments = splitAndLinkAuthors(pub.authors ?? '', peopleArr).map((seg) => {
+  const person = seg.slug ? peopleBySlug.get(seg.slug) ?? null : null;
+  return {
+    ...seg,
+    color: person ? roleColor(person.role) : null,
+  };
+});
 const detectedLabSlugs = Array.from(
   new Set(authorSegments.filter((s) => s.slug).map((s) => s.slug as string)),
 );
@@ -128,11 +137,15 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
             <>
               {i > 0 && '; '}
               {seg.slug ? (
-                <a href={`/people/${seg.slug}`} class="font-semibold text-ink border-b-0 hover:opacity-70">
+                <a
+                  href={`/people/${seg.slug}`}
+                  class="font-semibold border-b-0 hover:opacity-70"
+                  style={`white-space: nowrap; color: ${seg.color ?? 'var(--ink)'};`}
+                >
                   {seg.text}
                 </a>
               ) : (
-                seg.text
+                <span style="white-space: nowrap;">{seg.text}</span>
               )}
             </>
           ))}

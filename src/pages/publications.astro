@@ -5,6 +5,7 @@ import publications from '../data/publications.json';
 import people from '../data/people.json';
 import type { Publication, Person } from '../lib/types';
 import { splitAndLinkAuthors } from '../lib/author-links';
+import { ROLE_COLORS } from '../lib/roles';
 
 const all = (publications as Publication[])
   .slice()
@@ -38,11 +39,20 @@ const total = all.length;
       Reverse chronological. Filter by theme, year, or featured status; search
       across titles, authors, and journals.
     </p>
+    <p class="font-mono text-xs uppercase tracking-wider mt-3 m-0 text-ink-3">
+      Lab authors:
+      <span style={`color: ${ROLE_COLORS.student}; font-weight: 600;`}>Student</span>
+      <span class="dot">·</span>
+      <span style={`color: ${ROLE_COLORS.postdoc}; font-weight: 600;`}>Postdoc</span>
+      <span class="dot">·</span>
+      <span style={`color: ${ROLE_COLORS.staff}; font-weight: 600;`}>Staff</span>
+    </p>
   </section>
 
   <section class="container-content pb-24">
     <div
-      class="flex flex-wrap items-center gap-4 py-4 mb-2 border-y border-rule"
+      class="flex flex-wrap items-center gap-4 py-4 mb-2 border-y border-rule bg-paper sticky z-20"
+      style="top: 56px;"
       role="search"
     >
       <label class="flex items-center gap-2 text-sm">

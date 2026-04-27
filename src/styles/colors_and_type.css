@@ -379,6 +379,17 @@ a.bare:hover {
   margin-bottom: 0;
 }
 
+/* Altmetric and Dimensions badge embeds inject their own <a> tags. The
+   global a{border-bottom} rule turns those into underlined boxes which
+   doesn't match the badge aesthetic. Strip the underline inside both. */
+.altmetric-embed a,
+.altmetric-embed a:hover,
+.__dimensions_badge_embed__ a,
+.__dimensions_badge_embed__ a:hover {
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
 /* External-link arrow */
 a[data-external]::after,
 a.ext::after {

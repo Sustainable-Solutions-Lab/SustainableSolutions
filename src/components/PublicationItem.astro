@@ -148,45 +148,45 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
           <p class="font-mono text-xs text-ink-3 mt-3 m-0">{citationTail}</p>
         )}
 
-        <div class="flex flex-wrap gap-x-5 gap-y-1 mt-4 text-xs font-mono uppercase tracking-wider">
-          {doiUrl && (<a href={doiUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>DOI</a>)}
-          {pub.pdf_url && (<a href={pub.pdf_url} class="text-ink-2 hover:text-ink border-b-0" data-external>PDF</a>)}
-          {pub.code_url && (<a href={pub.code_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Code</a>)}
-          {pub.brief_url && (<a href={pub.brief_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Brief</a>)}
-          {pub.ppt_url && (<a href={pub.ppt_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Slides</a>)}
-          {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
+        {/* Single horizontal row: chart · badges · action links (matches
+            the non-featured card; cleaner than three stacked rows). */}
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
+          {citationsForPub && (
+            <div class="shrink-0">
+              <CitationChart citations={citationsForPub} total={totalCitationsForPub} />
+            </div>
+          )}
+          {pub.doi && (
+            <div class="flex items-start gap-2 shrink-0">
+              {/* Altmetric ~64px native → zoom 25/64 = 0.391 (renders ~25px). */}
+              <div style="zoom: 0.390625;">
+                <div
+                  class="altmetric-embed"
+                  data-badge-popover="right"
+                  data-badge-type="medium-donut"
+                  data-doi={pub.doi}
+                ></div>
+              </div>
+              {/* Dimensions ~32px native → zoom 17/32 = 0.531 (renders ~17px,
+                  8px smaller than Altmetric to compensate for visual weight). */}
+              <div style="zoom: 0.53125;">
+                <div
+                  class="__dimensions_badge_embed__"
+                  data-doi={pub.doi}
+                  data-style="small_circle"
+                ></div>
+              </div>
+            </div>
+          )}
+          <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono uppercase tracking-wider ml-auto">
+            {doiUrl && (<a href={doiUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>DOI</a>)}
+            {pub.pdf_url && (<a href={pub.pdf_url} class="text-ink-2 hover:text-ink border-b-0" data-external>PDF</a>)}
+            {pub.code_url && (<a href={pub.code_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Code</a>)}
+            {pub.brief_url && (<a href={pub.brief_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Brief</a>)}
+            {pub.ppt_url && (<a href={pub.ppt_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Slides</a>)}
+            {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
+          </div>
         </div>
-
-        {pub.doi && (
-          <div class="flex items-start gap-2 mt-4">
-            {/* CSS `zoom` actually shrinks layout box + visual rendering, and
-                applies to whatever the embed script injects (unlike transform,
-                which the embed scripts can clobber). Native sizes:
-                  Altmetric medium-donut ~64px → zoom 25/64 = 0.391
-                  Dimensions small_circle ~32px → zoom 25/32 = 0.781   */}
-            <div style="zoom: 0.390625;">
-              <div
-                class="altmetric-embed"
-                data-badge-popover="right"
-                data-badge-type="medium-donut"
-                data-doi={pub.doi}
-              ></div>
-            </div>
-            <div style="zoom: 0.78125;">
-              <div
-                class="__dimensions_badge_embed__"
-                data-doi={pub.doi}
-                data-style="small_circle"
-              ></div>
-            </div>
-          </div>
-        )}
-
-        {citationsForPub && (
-          <div class="mt-3">
-            <CitationChart citations={citationsForPub} total={totalCitationsForPub} />
-          </div>
-        )}
       </div>
 
       {heroImageUrl ? (
@@ -273,7 +273,7 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
                 data-doi={pub.doi}
               ></div>
             </div>
-            <div style="zoom: 0.78125;">
+            <div style="zoom: 0.53125;">
               <div
                 class="__dimensions_badge_embed__"
                 data-doi={pub.doi}

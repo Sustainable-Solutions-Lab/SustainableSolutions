@@ -1,6 +1,9 @@
 ---
-import type { Person } from '../lib/types';
+import type { Person, Publication } from '../lib/types';
 import { roleColor } from '../lib/roles';
+import { splitAndLinkAuthors } from '../lib/author-links';
+import publications from '../data/publications.json';
+import scholarDetails from '../../templates/scholar-details.json';
 
 interface Props {
   person: Person;
@@ -27,6 +30,27 @@ const initials = person.name
   .join('');
 
 const orcidUrl = person.orcid ? `https://orcid.org/${person.orcid}` : null;
+
+// Notable work — pick the person's featured paper if any, else the most-cited.
+const totalsByDoi = new Map<string, number>();
+for (const detail of Object.values(scholarDetails as Record<string, any>)) {
+  if (detail?.doi && typeof detail?.total_citations === 'number') {
+    totalsByDoi.set(detail.doi, detail.total_citations);
+  }
+}
+const personPubs = (publications as Publication[]).filter((p) =>
+  splitAndLinkAuthors(p.authors ?? '', [person]).some((s) => s.slug === person.slug),
+);
+const notable: Publication | null =
+  personPubs.find((p) => p.featured) ??
+  [...personPubs].sort((a, b) => {
+    const aC = (a.doi && totalsByDoi.get(a.doi)) ?? 0;
+    const bC = (b.doi && totalsByDoi.get(b.doi)) ?? 0;
+    return bC - aC;
+  })[0] ??
+  null;
+const notableCitations = notable?.doi ? totalsByDoi.get(notable.doi) ?? null : null;
+const notableUrl = notable?.url ?? (notable?.doi ? `https://doi.org/${notable.doi}` : null);
 ---
 
 <article
@@ -48,6 +72,30 @@ const orcidUrl = person.orcid ? `https://orcid.org/${person.orcid}` : null;
       <p class="mt-4 text-sm text-ink m-0" style="line-height: 1.5;">
         {person.bio_short}
       </p>
+    )}
+
+    {notable && (
+      <div class="mt-4 pt-4 border-t border-rule">
+        <p class="eyebrow m-0 mb-1">NOTABLE WORK</p>
+        <p class="font-serif m-0" style="font-size: 16px; line-height: 1.3;">
+          {notableUrl ? (
+            <a href={notableUrl} class="border-b-0 hover:underline" data-external>{notable.title}</a>
+          ) : (
+            notable.title
+          )}
+        </p>
+        <p class="font-mono text-xs text-ink-3 mt-1 m-0">
+          <em class="not-italic">{notable.journal}</em>
+          <span class="dot">·</span>
+          {notable.year}
+          {notableCitations != null && (
+            <>
+              <span class="dot">·</span>
+              {notableCitations.toLocaleString()} citations
+            </>
+          )}
+        </p>
+      </div>
     )}
 
     <div class="flex flex-wrap gap-x-5 gap-y-1 mt-4 text-xs font-mono uppercase tracking-wider">

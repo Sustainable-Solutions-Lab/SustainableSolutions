@@ -1,0 +1,55 @@
+name: Scholar refresh
+
+# Refresh Google Scholar metadata + citation charts on a schedule.
+#
+# CAVEAT: Scholar is hostile to bots and rate-limits aggressively. Even with a
+# 30s polite delay, GitHub-Actions runners (whose IPs Scholar probably already
+# knows) often get HTTP 429 on most requests. The script is resumable, so a
+# partial-success run still saves whatever it managed to fetch — over time
+# repeated runs gradually fill in gaps. Don't expect every run to be useful;
+# expect *some* runs to be useful.
+#
+# Manual trigger from the Actions tab is also fine if you want to force a refresh.
+
+on:
+  schedule:
+    # 09:00 UTC on the 1st of every month (~02:00 PST)
+    - cron: '0 9 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Scholar scraper (slow, polite)
+        env:
+          SCHOLAR_DELAY: '30000'
+        run: |
+          # Each step uses `|| true` so a partial scrape still updates the
+          # cache files. The script writes after every paper.
+          node scripts/scrape-scholar.js master  || true
+          node scripts/scrape-scholar.js details || true
+          node scripts/scholar-to-csv.js         || true
+
+      - name: Commit refreshed data (if anything changed)
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add templates/scholar-master.json \
+                  templates/scholar-details.json \
+                  templates/publications-from-scholar.csv
+          if git diff --cached --quiet; then
+            echo 'No Scholar data changes to commit.'
+            exit 0
+          fi
+          git commit -m 'chore: refresh Scholar data (automated monthly)'
+          git push

@@ -77,19 +77,42 @@ Sheet-driven. Each row in the **Publications** tab is one citation. Filtered by 
 
 ### Refreshing rich metadata from Google Scholar
 
-When new papers appear on Steve's Scholar profile or you want to refresh authors / abstracts / DOIs / citation charts:
+When new papers appear on Steve's Scholar profile or you want to refresh authors / abstracts / DOIs / citation charts / journal URLs, the one-shot:
 
 ```
-node scripts/scrape-scholar.js master    # quick — just the profile listing
-node scripts/scrape-scholar.js details   # ~6 minutes for 100 papers; resumable
-node scripts/scholar-to-csv.js           # merge → templates/publications-from-scholar.csv
+npm run refresh-scholar
 ```
 
-The `details` stage hits Scholar at most once per paper (3-second polite delay). Scholar **will rate-limit** if you fire too fast or run repeatedly in a short window — when that happens you'll see HTTP 429 errors. The script is resumable: rerun a few hours later and it skips IDs already saved in `templates/scholar-details.json`.
+That runs both stages of the scraper plus the CSV merge. Equivalent to:
 
-`scholar-to-csv.js` writes `templates/publications-from-scholar.csv`. Open it, copy the rows you want, paste into the Publications Sheet. Authors get reformatted from full-name style to `Last, F.M.` to match the schema; chemical formulas (CO₂, CH₄, etc.) get Unicode subscripts.
+```
+node scripts/scrape-scholar.js          # master + details, both stages
+node scripts/scholar-to-csv.js          # merge → templates/publications-from-scholar.csv
+```
 
-The scraped citation chart per paper is stored in `templates/scholar-details.json`. It's loaded at build time and renders as a small SVG sparkline below the badges on featured publication cards (when the DOI matches).
+The `details` stage hits Scholar at most once per paper. Default polite delay is 10 s — override with `SCHOLAR_DELAY=20000` etc. Scholar **will rate-limit** if it sees too many requests from a single IP — HTTP 429 errors. The script is resumable: rerun a few hours later (or from a different network) and it skips IDs already saved in `templates/scholar-details.json`.
+
+`scholar-to-csv.js` writes `templates/publications-from-scholar.csv`. Open it, copy the rows you want, paste into the Publications Sheet. Authors get reformatted from full-name style to `Last, FirstFull M.` (preserves full first names so the matcher disambiguates `Chen, Yang` vs `Chen, Yuxin`); chemical formulas (CO₂, CH₄, etc.) get Unicode subscripts.
+
+The scraped citation chart per paper is stored in `templates/scholar-details.json`. It's loaded at build time and renders as a small SVG sparkline alongside the Altmetric and Dimensions badges on each publication card (when the DOI matches).
+
+#### Re-fetching to backfill a missing field
+
+If a scraper bugfix added support for a new detail field after some papers were already cached (e.g., the `journal_link` extractor was fixed), the cached entries don't get re-fetched on rerun (resume-aware). To force a re-fetch only for entries missing one specific field:
+
+```
+RESCRAPE_MISSING_FIELD=journal_link node scripts/scrape-scholar.js details
+```
+
+Cached entries that already have `journal_link` skip; ones missing it re-fetch.
+
+#### Monthly automation (GitHub Actions)
+
+`.github/workflows/scholar-refresh.yml` runs the scraper on the 1st of every month at 09:00 UTC and commits any new data straight back to `main`. Also triggers manually from the **Actions** tab on GitHub.
+
+Reality check: GitHub Actions runners share IPs with many other scrapers, and Scholar rate-limits them aggressively. Most automated runs will get a wave of HTTP 429s after the first few requests. The script writes after every successful paper, so even a partial run is useful — and over many months the 429-throttled gaps fill in. Don't expect every run to finish; expect *some* runs to make progress.
+
+If reliable automation matters more than zero-cost infrastructure, the move would be to a paid scraping service (SerpAPI / ScraperAPI) called from the same workflow.
 
 ### Filling missing metadata from a DOI (Crossref)
 

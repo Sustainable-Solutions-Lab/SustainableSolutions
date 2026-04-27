@@ -96,10 +96,15 @@ function extractDetail(html, master) {
     fields[decodeHtml(f[1].trim())] = f[2]
   }
 
-  // Journal link (which often contains the DOI for many publishers)
+  // Journal link — the publisher URL Scholar links to from the paper's title.
+  // Match any <a> element that has gsc_oci_title_link as a class or id, since
+  // the attribute order isn't fixed in Scholar's HTML.
   let journalLink = null
-  const linkM = html.match(/<a id="gsc_oci_title_link" href="([^"]+)"/)
-  if (linkM) journalLink = decodeHtml(linkM[1])
+  const tagM = html.match(/<a [^>]*\bgsc_oci_title_link\b[^>]*>/)
+  if (tagM) {
+    const hrefM = tagM[0].match(/href="([^"]+)"/)
+    if (hrefM) journalLink = decodeHtml(hrefM[1])
+  }
 
   // DOI: extract from journal link or anywhere on the page.
   // Pattern: 10.<4-9 digits>/<rest until quote, space, or angle bracket>
@@ -187,9 +192,22 @@ async function runDetails() {
     details = JSON.parse(await readFile(DETAILS_OUT, 'utf8'))
   } catch {}
 
-  const todo = master.filter((p) => !details[p.id])
+  // Two modes:
+  //   - default: skip any paper already in details cache (resume).
+  //   - RESCRAPE_MISSING_FIELD=foo: also re-fetch any cached paper whose
+  //     `foo` field is null/empty. Used to backfill new fields after a
+  //     scraper bugfix (e.g., journal_link) without losing the cache.
+  const refreshField = process.env.RESCRAPE_MISSING_FIELD ?? null
+  const todo = master.filter((p) => {
+    const cached = details[p.id]
+    if (!cached) return true
+    if (refreshField && !cached[refreshField]) return true
+    return false
+  })
+  const cachedKept = master.length - todo.length
   console.log(
-    `[scrape-scholar] details: ${todo.length} papers to fetch (${master.length - todo.length} already cached)`,
+    `[scrape-scholar] details: ${todo.length} papers to fetch (${cachedKept} cache-fresh)` +
+      (refreshField ? ` — refreshing entries missing field "${refreshField}"` : ''),
   )
 
   let n = 0

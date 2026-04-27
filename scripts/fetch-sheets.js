@@ -73,36 +73,151 @@ function parseCsv(text) {
   return rows.filter((r) => r.some((cell) => cell.trim() !== ''));
 }
 
-// Heal known UTF-8 → Mac Roman / Windows-1252 double-encoding mojibake.
-// Happens when a CSV opens in a tool that mis-detects encoding and the
-// resulting characters get re-encoded into the Sheet. Mappings reverse
-// the most common dash / quote / ellipsis / subscript cases.
+// ── Systematic UTF-8 → Mac Roman / Win-1252 mojibake healing ─────────────────
+//
+// Mojibake happens when UTF-8 bytes get decoded as a single-byte legacy
+// encoding (Mac Roman or Win-1252) and the resulting characters get re-encoded
+// as UTF-8. To reverse: re-encode each char as the legacy encoding's byte,
+// then decode the resulting bytes as UTF-8 strict. If valid → mojibake fixed.
+
+// Mac Roman 0x80–0xFF → Unicode codepoint. ASCII (0x00–0x7F) is identical.
+const MAC_ROMAN = [
+  /* 80 */ 0x00C4, 0x00C5, 0x00C7, 0x00C9, 0x00D1, 0x00D6, 0x00DC, 0x00E1,
+  /* 88 */ 0x00E0, 0x00E2, 0x00E4, 0x00E3, 0x00E5, 0x00E7, 0x00E9, 0x00E8,
+  /* 90 */ 0x00EA, 0x00EB, 0x00ED, 0x00EC, 0x00EE, 0x00EF, 0x00F1, 0x00F3,
+  /* 98 */ 0x00F2, 0x00F4, 0x00F6, 0x00F5, 0x00FA, 0x00F9, 0x00FB, 0x00FC,
+  /* A0 */ 0x2020, 0x00B0, 0x00A2, 0x00A3, 0x00A7, 0x2022, 0x00B6, 0x00DF,
+  /* A8 */ 0x00AE, 0x00A9, 0x2122, 0x00B4, 0x00A8, 0x2260, 0x00C6, 0x00D8,
+  /* B0 */ 0x221E, 0x00B1, 0x2264, 0x2265, 0x00A5, 0x00B5, 0x2202, 0x2211,
+  /* B8 */ 0x220F, 0x03C0, 0x222B, 0x00AA, 0x00BA, 0x03A9, 0x00E6, 0x00F8,
+  /* C0 */ 0x00BF, 0x00A1, 0x00AC, 0x221A, 0x0192, 0x2248, 0x2206, 0x00AB,
+  /* C8 */ 0x00BB, 0x2026, 0x00A0, 0x00C0, 0x00C3, 0x00D5, 0x0152, 0x0153,
+  /* D0 */ 0x2013, 0x2014, 0x201C, 0x201D, 0x2018, 0x2019, 0x00F7, 0x25CA,
+  /* D8 */ 0x00FF, 0x0178, 0x2044, 0x20AC, 0x2039, 0x203A, 0xFB01, 0xFB02,
+  /* E0 */ 0x2021, 0x00B7, 0x201A, 0x201E, 0x2030, 0x00C2, 0x00CA, 0x00C1,
+  /* E8 */ 0x00CB, 0x00C8, 0x00CD, 0x00CE, 0x00CF, 0x00CC, 0x00D3, 0x00D4,
+  /* F0 */ 0xF8FF, 0x00D2, 0x00DA, 0x00DB, 0x00D9, 0x0131, 0x02C6, 0x02DC,
+  /* F8 */ 0x00AF, 0x02D8, 0x02D9, 0x02DA, 0x00B8, 0x02DD, 0x02DB, 0x02C7,
+];
+
+// Win-1252 0x80–0x9F differs from Latin-1; 0xA0–0xFF identical to Latin-1.
+const WIN1252_HIGH = [
+  /* 80 */ 0x20AC, null,   0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
+  /* 88 */ 0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, null,   0x017D, null,
+  /* 90 */ null,   0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
+  /* 98 */ 0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, null,   0x017E, 0x0178,
+];
+
+const MAC_BY_CP = new Map();
+MAC_ROMAN.forEach((cp, i) => MAC_BY_CP.set(cp, 0x80 + i));
+
+const WIN_BY_CP = new Map();
+WIN1252_HIGH.forEach((cp, i) => { if (cp != null) WIN_BY_CP.set(cp, 0x80 + i); });
+for (let b = 0xA0; b <= 0xFF; b++) WIN_BY_CP.set(b, b);
+
+// Re-encode the string as the legacy encoding, then decode UTF-8 strict.
+// Returns null if any char doesn't fit the encoding or the bytes don't form
+// valid UTF-8 — both signal "this isn't mojibake of that flavor".
+function tryUndoMojibake(s, encMap) {
+  const bytes = [];
+  for (const ch of s) {
+    const cp = ch.codePointAt(0);
+    if (cp == null) return null;
+    if (cp < 0x80) {
+      bytes.push(cp);
+      continue;
+    }
+    const b = encMap.get(cp);
+    if (b == null) return null;
+    bytes.push(b);
+  }
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(bytes));
+  } catch {
+    return null;
+  }
+}
+
+// Static substring replacements for mixed strings the algorithmic pass can't
+// fully handle (when only some characters are mojibake'd).
+const STATIC_REPLACEMENTS = [
+  // Mac Roman: originals starting with 0xE2 byte → "‚..." prefix
+  [/‚Äì/g, '–'], [/‚Äî/g, '—'],
+  [/‚Äú/g, '“'], [/‚Äù/g, '”'],
+  [/‚Äò/g, '‘'], [/‚Äô/g, '’'],
+  [/‚Ä¶/g, '…'], [/‚Ä¢/g, '•'],
+  [/‚ÇÄ/g, '₀'], [/‚ÇÅ/g, '₁'], [/‚ÇÇ/g, '₂'], [/‚ÇÉ/g, '₃'],
+  [/‚ÇÑ/g, '₄'], [/‚ÇÖ/g, '₅'], [/‚ÇÜ/g, '₆'], [/‚Çá/g, '₇'],
+  [/‚Çà/g, '₈'], [/‚Çâ/g, '₉'],
+  // Mac Roman: Latin accents (originals starting with 0xC3 byte → "√...")
+  [/√©/g, 'é'], [/√®/g, 'è'], [/√™/g, 'ê'], [/√´/g, 'ë'],
+  [/√†/g, 'à'], [/√°/g, 'á'], [/√¢/g, 'â'], [/√§/g, 'ä'],
+  [/√≠/g, 'í'], [/√¨/g, 'ì'], [/√Æ/g, 'î'], [/√Ø/g, 'ï'],
+  [/√≥/g, 'ó'], [/√≤/g, 'ò'], [/√¥/g, 'ô'], [/√∂/g, 'ö'],
+  [/√∫/g, 'ú'], [/√π/g, 'ù'], [/√ª/g, 'û'], [/√º/g, 'ü'],
+  [/√±/g, 'ñ'], [/√ß/g, 'ç'], [/√∏/g, 'ø'],
+  // Mac Roman: 0xC2 byte → "¬..." prefix
+  [/¬°/g, '¡'], [/¬®/g, '¨'], [/¬©/g, '©'], [/¬™/g, '™'],
+  [/¬∞/g, '°'], [/¬±/g, '±'], [/¬µ/g, 'µ'],
+  // Mac Roman Greek (0xCE byte → "Œ..." prefix)
+  [/Œ±/g, 'α'], [/Œ≤/g, 'β'], [/Œ≥/g, 'γ'], [/Œ¥/g, 'δ'], [/Œµ/g, 'ε'],
+  [/œÉ/g, 'σ'],
+  // Win-1252: 0xC2/0xC3 → "Ã..." or "Â..." prefix
+  [/â€“/g, '–'], [/â€”/g, '—'],
+  [/â€œ/g, '“'], [/â€/g, '”'],
+  [/â€˜/g, '‘'], [/â€™/g, '’'],
+  [/â€¦/g, '…'], [/â€¢/g, '•'],
+  [/â‚‚/g, '₂'], [/â‚ƒ/g, '₃'], [/â‚„/g, '₄'],
+  [/Â°/g, '°'], [/Â±/g, '±'], [/Â /g, ' '],
+  [/Ã©/g, 'é'], [/Ã¨/g, 'è'], [/Ãª/g, 'ê'], [/Ã«/g, 'ë'],
+  [/Ã /g, 'à'], [/Ã¡/g, 'á'], [/Ã¢/g, 'â'],
+  [/Ã±/g, 'ñ'], [/Ã§/g, 'ç'],
+  [/Ã³/g, 'ó'], [/Ã²/g, 'ò'], [/Ã´/g, 'ô'], [/Ã¶/g, 'ö'],
+  [/Ãº/g, 'ú'], [/Ã¼/g, 'ü'],
+];
+
+// Common chemistry abbreviations where Scholar HTML wraps the digit in a
+// span; stripping tags leaves "CO" + " " + "2" → "CO 2". Restore subscript.
+const SUBSCRIPT_FIXES = [
+  [/\bCO\s*2\b/g, 'CO₂'], [/\bCO\s*3\b/g, 'CO₃'],
+  [/\bCH\s*4\b/g, 'CH₄'], [/\bCH\s*2\b/g, 'CH₂'],
+  [/\bN\s*2\s*O\b/g, 'N₂O'],
+  [/\bH\s*2\s*O\b/g, 'H₂O'], [/\bH\s*2\b/g, 'H₂'],
+  [/\bSO\s*2\b/g, 'SO₂'], [/\bSO\s*3\b/g, 'SO₃'],
+  [/\bNO\s*2\b/g, 'NO₂'], [/\bNO\s*x\b/gi, 'NOₓ'],
+  [/\bO\s*3\b/g, 'O₃'],
+  [/\bN\s*2\b/g, 'N₂'], [/\bO\s*2\b/g, 'O₂'],
+  [/\bPM\s*2\.5\b/g, 'PM₂.₅'], [/\bPM\s*10\b/g, 'PM₁₀'],
+];
+
 function fixMojibake(s) {
   if (!s) return s;
-  return s
-    // Mac Roman triple-bytes (en/em dash, smart quotes, ellipsis, subscripts)
-    .replace(/‚Äì/g, '–')   // ‚Äì → –  (en dash)
-    .replace(/‚Äî/g, '—')   // ‚Äî → —  (em dash)
-    .replace(/‚Äú/g, '“')   // ‚Äú → "
-    .replace(/‚Äù/g, '”')   // ‚Äù → "
-    .replace(/‚Äò/g, '‘')   // ‚Äò → '
-    .replace(/‚Äô/g, '’')   // ‚Äô → '
-    .replace(/‚Ä¶/g, '…')   // ‚Ä¶ → …
-    .replace(/‚°°/g, '₂')   // ‚°° → ₂
-    .replace(/‚°É/g, '₃')   // ‚°É → ₃
-    .replace(/‚°Ñ/g, '₄')   // ‚°Ñ → ₄
-    // Windows-1252 triple-bytes (same originals, different decode)
-    .replace(/â€“/g, '–')   // â€" → –
-    .replace(/â€”/g, '—')   // â€" → —
-    .replace(/â€œ/g, '“')   // â€œ → "
-    .replace(/â€/g, '”')   // â€<U+009D> → "
-    .replace(/â€˜/g, '‘')   // â€˜ → '
-    .replace(/â€™/g, '’')   // â€™ → '
-    .replace(/â€¦/g, '…')   // â€¦ → …
-    .replace(/â‚‚/g, '₂')   // â‚‚ → ₂
-    // Single-byte (degree sign, nbsp)
-    .replace(/Â°/g, '°')          // Â° → °
-    .replace(/Â /g, ' ');         // Â<nbsp> → nbsp
+
+  // 1. If the whole string looks like it could be uniform mojibake (every
+  //    non-ASCII char fits in Mac Roman or Win-1252), try the algorithmic
+  //    reverse. A successful UTF-8 strict decode is strong evidence.
+  if (/[‚√Œ¬ÂÃ]/.test(s)) {
+    const macFix = tryUndoMojibake(s, MAC_BY_CP);
+    if (macFix != null && macFix !== s) {
+      s = macFix;
+    } else {
+      const winFix = tryUndoMojibake(s, WIN_BY_CP);
+      if (winFix != null && winFix !== s) s = winFix;
+    }
+  }
+
+  // 2. Static substring replacements for mixed strings (some clean UTF-8,
+  //    some mojibake) — the algorithmic pass rejects these.
+  for (const [re, replacement] of STATIC_REPLACEMENTS) {
+    s = s.replace(re, replacement);
+  }
+
+  // 3. Subscript word-form fixes (CO 2 → CO₂ etc.).
+  for (const [re, replacement] of SUBSCRIPT_FIXES) {
+    s = s.replace(re, replacement);
+  }
+
+  return s;
 }
 
 function rowsToObjects(rows) {

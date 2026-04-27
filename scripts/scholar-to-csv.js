@@ -3,9 +3,14 @@
 // Generate a paste-into-sheet CSV that merges fresh Google Scholar data with
 // the user's manual columns from the live Publications sheet. Auto-fields
 // (authors, title, journal, year, doi, abstract, …) are overwritten from
-// Scholar; manual fields (featured, brief_url, ppt_url, press_url,
+// Scholar; manual fields (featured, ignore, brief_url, ppt_url, press_url,
 // image_filename, pdf_url, code_url, lab_authors) are preserved by DOI key.
 // Themes are auto-guessed if the sheet cell is blank, preserved if not.
+//
+// Output row order matches the live sheet's row order (so the user's sort is
+// preserved through paste-wholesale). New Scholar papers not yet in the sheet
+// are appended at the end. If no live sheet is available, output is in
+// Scholar's display order.
 //
 // Inputs:
 //   templates/scholar-master.json   — display-order paper list
@@ -45,10 +50,15 @@ const RAW_IN = resolve('templates/scholar-raw.json')
 const CSV_OUT = resolve('templates/publications-from-scholar.csv')
 const JSON_OUT = resolve('templates/publications-from-scholar.json')
 
+// Column order — abstract is last (it's bulky and pushes other columns
+// off-screen in the sheet). Manual flags (featured, ignore) and themes come
+// after the auto-managed bibliographic fields, before the URLs.
 const HEADERS = [
   'authors', 'title', 'journal', 'year', 'month', 'volume_issue', 'pages',
-  'doi', 'url', 'pdf_url', 'code_url', 'themes', 'lab_authors',
-  'featured', 'press_url', 'abstract', 'image_filename', 'brief_url', 'ppt_url',
+  'doi', 'url',
+  'featured', 'ignore', 'themes', 'lab_authors',
+  'pdf_url', 'code_url', 'brief_url', 'ppt_url', 'press_url', 'image_filename',
+  'abstract',
 ]
 
 // ── RFC-4180-ish CSV parse (matches scripts/fetch-sheets.js) ──
@@ -99,14 +109,6 @@ function fixSubscripts(s) {
 //
 // Output: "Last, First M." Drops "et al." / "..." tokens entirely (the user
 // wants every author shown — partial lists are better than fake completion).
-//
-// Inputs handled:
-//   "Steven J. Davis"  → "Davis, Steven J."     (full-name form)
-//   "SJ Davis"         → "Davis, S.J."          (initials-first form)
-//   "et al."           → null (dropped)
-//   "..."              → null (dropped)
-//   garbage like "et al. Benoit G." → null (dropped — better than rendering
-//   "al., Benoit G.")
 function isTruncationToken(s) {
   if (!s) return true
   const t = s.trim().toLowerCase().replace(/[.,]/g, '')
@@ -117,18 +119,15 @@ function reformatAuthor(name) {
   const trimmed = name.trim()
   if (!trimmed || isTruncationToken(trimmed)) return null
   const tokens = trimmed.split(/\s+/)
-  if (tokens.length === 1) return null  // bare "Smith" with no given name — skip
-  // Guard: any internal token that looks like "et" / "al." poisons the segment
+  if (tokens.length === 1) return null
   if (tokens.some(isTruncationToken)) return null
 
-  // Initials-first ("SJ Davis")
   if (/^[A-Z]+$/.test(tokens[0])) {
     const initials = tokens[0]
     const last = tokens.slice(1).join(' ')
     return `${last}, ${initials.split('').join('.')}.`
   }
 
-  // Full-name form: keep first given as-is, compress later givens to initials.
   const last = tokens[tokens.length - 1]
   const givens = tokens.slice(0, -1)
   const first = givens[0].replace(/\.$/, '')
@@ -186,9 +185,6 @@ function normalizeTitle(t) {
 }
 
 // ── Theme classifier ──
-// Multi-label, keyword-based. A theme is included if it scores ≥ 2 keyword
-// matches in the title+abstract. If nothing scores ≥ 2, the single
-// highest-scoring theme (≥ 1) is used. Empty string if nothing matches.
 const THEME_KEYWORDS = {
   'energy-systems': [
     /\bdecarboniz/i, /\bnet[-\s]?zero\b/i, /\brenewable/i, /\bsolar\b/i, /\bwind\b/i,
@@ -269,6 +265,110 @@ async function fetchSheet(envName) {
   }
 }
 
+// ── Auto-row builder (Scholar fields only) ──
+function buildAuto(masterEntry, details, rawByNorm) {
+  const m = masterEntry
+  const d = details[m.id]
+  if (d) {
+    const { year, month } = parseDate(d.publication_date)
+    const url = d.journal_link ?? (d.doi ? `https://doi.org/${d.doi}` : '')
+    return {
+      _source: 'detail',
+      authors: reformatAuthors(d.authors),
+      title: fixSubscripts(d.title || m.title),
+      journal: d.journal || '',
+      year: year || '',
+      month: month || '',
+      volume_issue: buildVolumeIssue(d.volume, d.issue),
+      pages: d.pages || '',
+      doi: d.doi || '',
+      url,
+      abstract: fixSubscripts(d.abstract || ''),
+    }
+  }
+  const r = rawByNorm.get(normalizeTitle(m.title))
+  if (r) {
+    const v = parseVenue(r.venue)
+    return {
+      _source: 'raw',
+      authors: reformatAuthors(r.authors),
+      title: fixSubscripts(r.title),
+      journal: v.journal,
+      year: r.year || '',
+      month: '',
+      volume_issue: v.volume_issue,
+      pages: v.pages,
+      doi: r.doi || '',
+      url: r.doi ? `https://doi.org/${r.doi}` : '',
+      abstract: '',
+    }
+  }
+  return {
+    _source: 'minimal',
+    authors: '',
+    title: fixSubscripts(m.title),
+    journal: '', year: '', month: '', volume_issue: '', pages: '',
+    doi: '', url: '', abstract: '',
+  }
+}
+
+// ── Merge auto + manual into a single output row ──
+function buildMergedRow(auto, manual, counts) {
+  let themes = (manual?.themes || '').trim()
+  if (!themes) {
+    themes = guessThemes(`${auto.title} ${auto.abstract}`)
+    if (themes) counts.autoTheme++
+  }
+  return {
+    authors: auto.authors,
+    title: auto.title,
+    journal: auto.journal,
+    year: auto.year,
+    month: auto.month,
+    volume_issue: auto.volume_issue,
+    pages: auto.pages,
+    doi: auto.doi,
+    url: auto.url,
+    featured: manual?.featured || 'FALSE',
+    ignore: manual?.ignore || '',
+    themes,
+    lab_authors: (manual?.lab_authors || '').trim() || 'steve-davis',
+    pdf_url: manual?.pdf_url || '',
+    code_url: manual?.code_url || '',
+    brief_url: manual?.brief_url || '',
+    ppt_url: manual?.ppt_url || '',
+    press_url: manual?.press_url || '',
+    image_filename: manual?.image_filename || '',
+    abstract: auto.abstract,
+  }
+}
+
+// ── Sheet-only row passthrough (paper in sheet, no Scholar match) ──
+function buildPassthroughRow(sheetRow) {
+  return {
+    authors: sheetRow.authors || '',
+    title: sheetRow.title || '',
+    journal: sheetRow.journal || '',
+    year: sheetRow.year || '',
+    month: sheetRow.month || '',
+    volume_issue: sheetRow.volume_issue || '',
+    pages: sheetRow.pages || '',
+    doi: sheetRow.doi || '',
+    url: sheetRow.url || '',
+    featured: sheetRow.featured || 'FALSE',
+    ignore: sheetRow.ignore || '',
+    themes: sheetRow.themes || '',
+    lab_authors: sheetRow.lab_authors || '',
+    pdf_url: sheetRow.pdf_url || '',
+    code_url: sheetRow.code_url || '',
+    brief_url: sheetRow.brief_url || '',
+    ppt_url: sheetRow.ppt_url || '',
+    press_url: sheetRow.press_url || '',
+    image_filename: sheetRow.image_filename || '',
+    abstract: sheetRow.abstract || '',
+  }
+}
+
 // ── Main ──
 async function main() {
   const master = JSON.parse(await readFile(MASTER_IN, 'utf8'))
@@ -279,146 +379,50 @@ async function main() {
   const rawByNorm = new Map()
   for (const r of raw) rawByNorm.set(normalizeTitle(r.title), r)
 
-  // Live sheet → manual-field lookup
+  // Build all auto entries up front
+  const autos = master.map((m) => buildAuto(m, details, rawByNorm))
+  const autoByDoi = new Map()
+  const autoByTitle = new Map()
+  for (const a of autos) {
+    if (a.doi) autoByDoi.set(a.doi.toLowerCase(), a)
+    if (a.title) autoByTitle.set(normalizeTitle(a.title), a)
+  }
+
   const sheetRows = await fetchSheet('SHEET_PUBLICATIONS_CSV')
-  const sheetByDoi = new Map()
-  const sheetByTitle = new Map()
-  const sheetSeen = new Set()
-  if (sheetRows) {
-    for (const r of sheetRows) {
-      const doi = (r.doi || '').trim().toLowerCase()
-      if (doi) sheetByDoi.set(doi, r)
-      if (r.title) sheetByTitle.set(normalizeTitle(r.title), r)
+  const counts = { detail: 0, raw: 0, minimal: 0, sheetOnly: 0, autoTheme: 0, newScholar: 0 }
+  for (const a of autos) counts[a._source]++
+
+  const out = []
+  const usedAutos = new Set()
+
+  if (sheetRows && sheetRows.length > 0) {
+    console.log(`[scholar-to-csv] merging with ${sheetRows.length} sheet rows (preserving sheet order)`)
+    // Iterate sheet in sheet order — preserves the user's chosen sort.
+    for (const sheetRow of sheetRows) {
+      if (!sheetRow.title?.trim() && !sheetRow.doi?.trim()) continue
+      const doi = (sheetRow.doi || '').trim().toLowerCase()
+      let auto = doi ? autoByDoi.get(doi) : null
+      if (!auto && sheetRow.title) auto = autoByTitle.get(normalizeTitle(sheetRow.title))
+
+      if (auto && !usedAutos.has(auto)) {
+        usedAutos.add(auto)
+        out.push(buildMergedRow(auto, sheetRow, counts))
+      } else {
+        // No Scholar match — preserve the sheet row as-is. (In-press papers,
+        // book chapters, anything the user added manually.)
+        counts.sheetOnly++
+        out.push(buildPassthroughRow(sheetRow))
+      }
     }
-    console.log(`[scholar-to-csv] merging with ${sheetRows.length} sheet rows`)
+    // Append Scholar papers not yet in the sheet (newly published)
+    for (const a of autos) {
+      if (usedAutos.has(a)) continue
+      counts.newScholar++
+      out.push(buildMergedRow(a, null, counts))
+    }
   } else {
     console.log('[scholar-to-csv] no sheet merge (SHEET_PUBLICATIONS_CSV not set or fetch failed)')
-  }
-
-  function findSheetMatch(doi, title) {
-    if (doi) {
-      const m = sheetByDoi.get(doi.trim().toLowerCase())
-      if (m) return m
-    }
-    if (title) {
-      const m = sheetByTitle.get(normalizeTitle(title))
-      if (m) return m
-    }
-    return null
-  }
-
-  function buildAuto(m) {
-    const d = details[m.id]
-    if (d) {
-      const { year, month } = parseDate(d.publication_date)
-      const url = d.journal_link ?? (d.doi ? `https://doi.org/${d.doi}` : '')
-      return {
-        source: 'detail',
-        authors: reformatAuthors(d.authors),
-        title: fixSubscripts(d.title || m.title),
-        journal: d.journal || '',
-        year: year || '',
-        month: month || '',
-        volume_issue: buildVolumeIssue(d.volume, d.issue),
-        pages: d.pages || '',
-        doi: d.doi || '',
-        url,
-        abstract: fixSubscripts(d.abstract || ''),
-      }
-    }
-    const r = rawByNorm.get(normalizeTitle(m.title))
-    if (r) {
-      const v = parseVenue(r.venue)
-      return {
-        source: 'raw',
-        authors: reformatAuthors(r.authors),
-        title: fixSubscripts(r.title),
-        journal: v.journal,
-        year: r.year || '',
-        month: '',
-        volume_issue: v.volume_issue,
-        pages: v.pages,
-        doi: r.doi || '',
-        url: r.doi ? `https://doi.org/${r.doi}` : '',
-        abstract: '',
-      }
-    }
-    return {
-      source: 'minimal',
-      authors: '',
-      title: fixSubscripts(m.title),
-      journal: '', year: '', month: '', volume_issue: '', pages: '',
-      doi: '', url: '', abstract: '',
-    }
-  }
-
-  const counts = { detail: 0, raw: 0, minimal: 0, sheetOnly: 0, autoTheme: 0 }
-  const out = []
-
-  for (const m of master) {
-    const auto = buildAuto(m)
-    counts[auto.source]++
-
-    const manual = findSheetMatch(auto.doi, auto.title)
-    if (manual) sheetSeen.add(manual)
-
-    let themes = (manual?.themes || '').trim()
-    if (!themes) {
-      themes = guessThemes(`${auto.title} ${auto.abstract}`)
-      if (themes) counts.autoTheme++
-    }
-
-    out.push({
-      authors: auto.authors,
-      title: auto.title,
-      journal: auto.journal,
-      year: auto.year,
-      month: auto.month,
-      volume_issue: auto.volume_issue,
-      pages: auto.pages,
-      doi: auto.doi,
-      url: auto.url,
-      pdf_url: manual?.pdf_url || '',
-      code_url: manual?.code_url || '',
-      themes,
-      lab_authors: (manual?.lab_authors || '').trim() || 'steve-davis',
-      featured: manual?.featured || 'FALSE',
-      press_url: manual?.press_url || '',
-      abstract: auto.abstract,
-      image_filename: manual?.image_filename || '',
-      brief_url: manual?.brief_url || '',
-      ppt_url: manual?.ppt_url || '',
-    })
-  }
-
-  // Append sheet rows that aren't in Scholar (in-press, book chapters, etc.)
-  if (sheetRows) {
-    for (const r of sheetRows) {
-      if (sheetSeen.has(r)) continue
-      if (!r.title?.trim()) continue
-      counts.sheetOnly++
-      out.push({
-        authors: r.authors || '',
-        title: r.title,
-        journal: r.journal || '',
-        year: r.year || '',
-        month: r.month || '',
-        volume_issue: r.volume_issue || '',
-        pages: r.pages || '',
-        doi: r.doi || '',
-        url: r.url || '',
-        pdf_url: r.pdf_url || '',
-        code_url: r.code_url || '',
-        themes: r.themes || '',
-        lab_authors: r.lab_authors || '',
-        featured: r.featured || 'FALSE',
-        press_url: r.press_url || '',
-        abstract: r.abstract || '',
-        image_filename: r.image_filename || '',
-        brief_url: r.brief_url || '',
-        ppt_url: r.ppt_url || '',
-      })
-    }
+    for (const a of autos) out.push(buildMergedRow(a, null, counts))
   }
 
   const csvRows = [HEADERS, ...out.map((r) => HEADERS.map((h) => r[h]))]
@@ -428,11 +432,12 @@ async function main() {
 
   console.log('')
   console.log(`[scholar-to-csv] wrote ${out.length} rows`)
-  console.log(`  rich (from scholar-details):   ${counts.detail}`)
-  console.log(`  raw  (from scholar-raw):       ${counts.raw}`)
-  console.log(`  minimal (title only):          ${counts.minimal}`)
-  console.log(`  sheet-only (preserved as-is):  ${counts.sheetOnly}`)
-  console.log(`  auto-guessed themes:           ${counts.autoTheme}`)
+  console.log(`  rich (from scholar-details):    ${counts.detail}`)
+  console.log(`  raw  (from scholar-raw):        ${counts.raw}`)
+  console.log(`  minimal (title only):           ${counts.minimal}`)
+  console.log(`  new since last sheet refresh:   ${counts.newScholar}`)
+  console.log(`  sheet-only (preserved as-is):   ${counts.sheetOnly}`)
+  console.log(`  auto-guessed themes:            ${counts.autoTheme}`)
   console.log('')
   console.log(`  CSV:  ${CSV_OUT}`)
   console.log(`  JSON: ${JSON_OUT}`)

@@ -221,27 +221,37 @@ All sheets live in a single Google Spreadsheet titled "SSL Site Content" with on
 
 ### Tab: `Publications`
 
+Most columns are auto-populated by `scripts/scholar-to-csv.js` from Google
+Scholar — the user maintains only the manual columns (featured, ignore,
+brief_url, ppt_url, press_url, image_filename, pdf_url, code_url) and may
+override auto-guessed themes. The script preserves these by DOI on every
+refresh, so paste-the-whole-CSV-into-the-sheet is a safe workflow.
+
+`abstract` is intentionally rightmost — long prose pushes other columns
+off-screen otherwise.
+
 | Column | Name              | Type / Format                                  | Notes                                          |
 |--------|-------------------|------------------------------------------------|------------------------------------------------|
-| A      | authors           | Text, semicolon-separated                      | "Davis, S.; Caldeira, K.; Field, C."           |
-| B      | title             | Text                                           |                                                |
-| C      | journal           | Text                                           |                                                |
-| D      | year              | Integer                                        |                                                |
-| E      | month             | Integer (1–12)                                 | Optional                                       |
-| F      | volume_issue      | Text                                           | "16(1)" or blank                               |
-| G      | pages             | Text                                           |                                                |
-| H      | doi               | Text                                           | Just the DOI, not full URL                     |
-| I      | url               | Text                                           | Optional override; defaults to doi.org/{doi}   |
-| J      | pdf_url           | Text                                           | Optional                                       |
-| K      | code_url          | Text                                           | Replication code link                          |
-| L      | themes            | Text, comma-separated                          | "energy-systems, trade"                        |
-| M      | lab_authors       | Text, comma-separated                          | Slugs matching People sheet `slug` column      |
-| N      | featured          | Boolean (TRUE/FALSE)                           |                                                |
-| O      | press_url         | Text                                           | Optional press coverage link                   |
-| P      | abstract          | Text                                           | 2–3 sentences shown on featured cards          |
-| Q      | image_filename    | Text                                           | Hero image, in `/public/publications/`         |
-| R      | brief_url         | Text                                           | Research brief link                            |
-| S      | ppt_url           | Text                                           | Slides link                                    |
+| A      | authors           | Text, semicolon-separated                      | Auto from Scholar. "Davis, Steven J.; …"       |
+| B      | title             | Text                                           | Auto from Scholar                              |
+| C      | journal           | Text                                           | Auto from Scholar                              |
+| D      | year              | Integer                                        | Auto from Scholar                              |
+| E      | month             | Integer (1–12)                                 | Auto from Scholar; optional                    |
+| F      | volume_issue      | Text                                           | Auto. "16(1)" or blank                         |
+| G      | pages             | Text                                           | Auto from Scholar                              |
+| H      | doi               | Text                                           | Auto. Just the DOI, not full URL               |
+| I      | url               | Text                                           | Auto. Journal-page URL, falls back to doi.org  |
+| J      | featured          | Boolean (TRUE/FALSE)                           | Manual                                         |
+| K      | ignore            | Boolean (TRUE/FALSE) or "IGNORE"               | Manual. Hides the row from the site.           |
+| L      | themes            | Text, comma-separated                          | Auto-guessed if blank; user override preserved |
+| M      | lab_authors       | Text, comma-separated                          | Manual; slugs matching People sheet            |
+| N      | pdf_url           | Text                                           | Manual                                         |
+| O      | code_url          | Text                                           | Manual; replication code link                  |
+| P      | brief_url         | Text                                           | Manual; research brief link                    |
+| Q      | ppt_url           | Text                                           | Manual; slides link                            |
+| R      | press_url         | Text                                           | Manual; press coverage link                    |
+| S      | image_filename    | Text                                           | Manual; hero image in `/public/publications/`  |
+| T      | abstract          | Text                                           | Auto from Scholar; rightmost (bulky)           |
 
 ### Tab: `People`
 

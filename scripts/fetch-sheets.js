@@ -334,6 +334,16 @@ async function resolvePeoplePhotos(records) {
   return { records: updated, autoMatched };
 }
 
+// Treat any truthy non-"false"/"no" value in the `ignore` column as a hide
+// signal. So "TRUE", "IGNORE", "yes", "hide" all hide the row; "", "FALSE",
+// "no", "0" keep it visible.
+function isIgnored(v) {
+  if (v === true) return true;
+  if (v === false || v == null) return false;
+  const s = String(v).trim().toLowerCase();
+  return s !== '' && s !== 'false' && s !== 'no' && s !== '0';
+}
+
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
   for (const [name, spec] of Object.entries(tabs)) {
@@ -344,6 +354,12 @@ async function main() {
         const { records: r2, autoMatched } = await resolvePeoplePhotos(records);
         records = r2;
         if (autoMatched > 0) extra = ` (auto-matched ${autoMatched} photo${autoMatched === 1 ? '' : 's'} by slug)`;
+      }
+      if (name === 'publications') {
+        const before = records.length;
+        records = records.filter((r) => !isIgnored(r.ignore));
+        const hidden = before - records.length;
+        if (hidden > 0) extra += ` (hid ${hidden} ignore=TRUE row${hidden === 1 ? '' : 's'})`;
       }
       const out = resolve(OUT_DIR, `${name}.json`);
       await writeFile(out, JSON.stringify(records, null, 2));

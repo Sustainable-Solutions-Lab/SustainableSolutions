@@ -1,6 +1,6 @@
-slug,name,role,unit,status,photo_filename,current_position,personal_url,bio_short,joined_date,left_date,order,email,scholar_url,orcid
-steve-davis,Steven J. Davis,"Director, Professor of Earth System Science",main,current,,,https://earth.stanford.edu/people/steven-davis,Studies the unavoidable environmental tradeoffs of energy and food systems.,2024-01,,1,sjdavis@stanford.edu,https://scholar.google.com/citations?user=QP6TMv8AAAAJ,0000-0002-9338-0844
-sample-postdoc,Sample Postdoc,Postdoctoral Scholar,main,current,,,,Working on energy-system decarbonization pathways.,2025-09,,10,,,
-sample-phd,Sample PhD Student,PhD Student,main,current,,,,Investigating land-use change and carbon storage.,2025-09,,20,,,
-sample-ciu,Sample CIU Member,Visiting Researcher,ciu,current,,,,Concept-stage work on trade and embodied emissions.,2026-01,,30,,,
-sample-alum,Sample Alumna,Former Postdoctoral Scholar,main,alumni,,"Assistant Professor, MIT",https://example.edu,,2022-09,2025-07,40,,,
+slug,name,role,unit,status,photo_filename,current_position,personal_url,bio_short,joined_date,left_date,order,email,scholar_url,orcid,cv_url
+steve-davis,Steven J. Davis,"Director, Professor of Earth System Science",main,current,,,https://earth.stanford.edu/people/steven-davis,Studies the unavoidable environmental tradeoffs of energy and food systems.,2024-01,,1,sjdavis@stanford.edu,https://scholar.google.com/citations?user=QP6TMv8AAAAJ,0000-0002-9338-0844,
+sample-postdoc,Sample Postdoc,Postdoctoral Scholar,main,current,,,,Working on energy-system decarbonization pathways.,2025-09,,10,,,,
+sample-phd,Sample PhD Student,PhD Student,main,current,,,,Investigating land-use change and carbon storage.,2025-09,,20,,,,
+sample-ciu,Sample CIU Member,Visiting Researcher,ciu,current,,,,Concept-stage work on trade and embodied emissions.,2026-01,,30,,,,
+sample-alum,Sample Alumna,Former Postdoctoral Scholar,main,alumni,,"Assistant Position, MIT",https://example.edu,,2022-09,2025-07,40,,,,

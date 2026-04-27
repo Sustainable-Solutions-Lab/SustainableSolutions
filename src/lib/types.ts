@@ -17,6 +17,7 @@ export type Person = {
   email: string | null;
   scholar_url: string | null;
   orcid: string | null;
+  cv_url: string | null;
 };
 
 export type Publication = {

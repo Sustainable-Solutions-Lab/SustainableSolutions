@@ -262,6 +262,7 @@ All sheets live in a single Google Spreadsheet titled "SSL Site Content" with on
 | M      | email             | Text                                           | Optional. Becomes a `mailto:` link             |
 | N      | scholar_url       | Text                                           | Optional. Google Scholar profile URL           |
 | O      | orcid             | Text                                           | Optional. ORCID iD (`0000-0002-…` form)        |
+| P      | cv_url            | Text                                           | Optional. CV link (Google Drive, etc.)         |
 
 ### Tab: `News`
 

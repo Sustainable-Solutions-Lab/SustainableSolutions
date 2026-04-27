@@ -100,6 +100,9 @@ const notableUrl = notable?.url ?? (notable?.doi ? `https://doi.org/${notable.do
 
     <div class="flex flex-wrap gap-x-5 gap-y-1 mt-4 text-xs font-mono uppercase tracking-wider">
       <a href={detailHref} class="text-ink-2 hover:text-ink border-b-0">Profile →</a>
+      {person.cv_url && (
+        <a href={person.cv_url} class="text-ink-2 hover:text-ink border-b-0" data-external>CV</a>
+      )}
       {person.email && (
         <a href={`mailto:${person.email}`} class="text-ink-2 hover:text-ink border-b-0">Email</a>
       )}

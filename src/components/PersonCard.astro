@@ -68,14 +68,14 @@ const nowRole = commaIdx === -1 ? '' : cp.slice(commaIdx + 1).trim();
       <p class="text-ink-3 text-sm leading-tight mt-1 line-clamp-2">{person.role}</p>
       {
         isAlum && nowInstitution && (
-          <p class="text-ink-3 text-xs mt-1 font-mono uppercase tracking-wider line-clamp-1" style="line-height: 1.15;">
+          <p class="text-ink-3 text-xs mt-2 font-mono uppercase tracking-wider truncate" style="line-height: 1;">
             Now: {nowInstitution}{nowRole ? ',' : ''}
           </p>
         )
       }
       {
         isAlum && nowRole && (
-          <p class="text-ink-3 text-xs font-mono uppercase tracking-wider line-clamp-1" style="line-height: 1.15; margin-top: 0;">
+          <p class="text-ink-3 text-xs font-mono uppercase tracking-wider truncate" style="line-height: 1; margin-top: 1px;">
             {nowRole}
           </p>
         )

@@ -12,7 +12,7 @@ const all = (publications as Publication[])
   .slice()
   .sort((a, b) => b.year - a.year || (b.month ?? 0) - (a.month ?? 0));
 
-const years = [...new Set(all.map((p) => p.year))].sort((a, b) => b - a);
+const years = [...new Set(all.map((p) => p.year).filter((y): y is number => typeof y === 'number' && !!y))].sort((a, b) => b - a);
 const themes = [...new Set(all.flatMap((p) => p.themes ?? []))].sort();
 
 // Lab-author filter options: any lab member detected in at least one

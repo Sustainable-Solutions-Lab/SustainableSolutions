@@ -231,7 +231,7 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
       class="pl-4"
       style={`border-left: 4px solid ${primaryThemeColor};`}
     >
-      <p class="eyebrow m-0 mb-1">
+      <p class="eyebrow m-0 mb-1" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
         <em class="not-italic">{pub.journal}</em>
         <span class="dot">·</span>
         {pub.year}

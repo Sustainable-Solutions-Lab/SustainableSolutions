@@ -82,6 +82,16 @@
   --warn:        var(--spectral-3);  /* orange */
   --info:        var(--spectral-10); /* blue */
 
+  /* Dynamic theme palette — used by themes.ts for user-added theme slugs.
+     Light-mode versions are deliberately darker than the raw Spectral
+     palette so they read on the cream paper background; dark mode keeps
+     the lighter Spectral palette which sings against the deep-navy bg. */
+  --theme-dyn-1: var(--spectral-11);  /* purple — dark in both modes */
+  --theme-dyn-2: var(--spectral-1);   /* wine — dark in both modes */
+  --theme-dyn-3: #B8702C;             /* burnt sienna (light mode) */
+  --theme-dyn-4: #4A8A4F;             /* forest green (light mode) */
+  --theme-dyn-5: #6E8A1F;             /* olive (light mode) */
+
   /* Type families */
   --font-serif:  'Tiempos Headline', 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
   --font-sans:   'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
@@ -175,6 +185,12 @@
   --accent:    var(--accent-brand);
   --focus:     var(--accent-brand);
 
+  /* Dynamic theme palette in dark mode reverts to the lighter Spectral
+     shades, which read well against the deep-navy background. */
+  --theme-dyn-3: var(--spectral-4);  /* light orange */
+  --theme-dyn-4: var(--spectral-8);  /* light green */
+  --theme-dyn-5: var(--spectral-7);  /* yellow-green */
+
   --shadow-pop:
     0 1px 2px rgba(0, 0, 0, 0.4),
     0 8px 24px rgba(0, 0, 0, 0.5);
@@ -183,6 +199,16 @@
 /* ---------- Base ---------------------------------------------------------- */
 
 * { box-sizing: border-box; }
+
+/* Altmetric and Dimensions badges render dark text on a transparent
+   background. In dark mode that's invisible — give the badge container a
+   white circular backing so the embedded text reads. The radius matches
+   the visible badge (round). */
+[data-theme="dark"] .altmetric-embed,
+[data-theme="dark"] .__dimensions_badge_embed__ {
+  background: #fff;
+  border-radius: 50%;
+}
 
 html {
   font-size: 16px;

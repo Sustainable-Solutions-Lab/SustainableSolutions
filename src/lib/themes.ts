@@ -22,10 +22,16 @@ export const THEME_LABELS: Record<string, string> = {
   'impacts':        'Impacts',
 }
 
-// Spectral indices unused by the curated themes that still have legible
-// contrast on the cream paper background. Skips 5 (yellow) and 6 (pale
-// yellow), which are too light for text and thin borders.
-const DYNAMIC_PALETTE_INDICES = [11, 1, 4, 8, 7]
+// Mode-aware dynamic palette. The actual hex values live in
+// colors_and_type.css and adapt per [data-theme]: darker variants for
+// light mode (so they read on cream), Spectral palette for dark mode.
+const DYNAMIC_PALETTE_VARS = [
+  'var(--theme-dyn-1)',  // purple
+  'var(--theme-dyn-2)',  // wine
+  'var(--theme-dyn-3)',  // burnt sienna ↔ light orange
+  'var(--theme-dyn-4)',  // forest green ↔ light green
+  'var(--theme-dyn-5)',  // olive ↔ yellow-green
+]
 
 function hashSlug(slug: string): number {
   let h = 0
@@ -37,12 +43,11 @@ function hashSlug(slug: string): number {
 }
 
 /** Color for a theme slug. Curated themes get their assigned palette color;
- *  any other slug gets a deterministic Spectral color (stable across builds
- *  because it's a pure function of the slug). */
+ *  any other slug gets a deterministic, mode-aware color (stable across
+ *  builds because it's a pure function of the slug). */
 export function themeColor(slug: string): string {
   if (slug in THEME_COLORS) return THEME_COLORS[slug]
-  const idx = DYNAMIC_PALETTE_INDICES[hashSlug(slug) % DYNAMIC_PALETTE_INDICES.length]
-  return `var(--spectral-${idx})`
+  return DYNAMIC_PALETTE_VARS[hashSlug(slug) % DYNAMIC_PALETTE_VARS.length]
 }
 
 /** Display label for a theme slug. Curated themes use their hand-written

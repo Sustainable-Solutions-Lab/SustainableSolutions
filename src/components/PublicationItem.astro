@@ -29,6 +29,12 @@ for (const detail of Object.values(scholarDetails as Record<string, any>)) {
 const citationsForPub = pub.doi ? citationsByDoi.get(pub.doi) ?? null : null;
 const totalCitationsForPub = pub.doi ? totalsByDoi.get(pub.doi) ?? null : null;
 
+// Gate the impact row (citation chart + Altmetric/Dimensions badges) on a
+// minimum citation count. Newer/uncited papers don't get a near-empty chart
+// and an empty pair of badges screaming for attention.
+const IMPACT_THRESHOLD = 100;
+const showImpact = (totalCitationsForPub ?? 0) >= IMPACT_THRESHOLD;
+
 // Sort scores. Used by the publications page's Sort dropdown via data-* attrs.
 const currentYear = new Date().getFullYear();
 const totalCitationsScore = totalCitationsForPub ?? 0;
@@ -135,15 +141,9 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
         <p class="text-ink-2 mt-2 text-sm m-0">
           {authorSegments.map((seg, i) => (
             <>
-              {i > 0 && '; '}
+              {i > 0 && ', '}
               {seg.slug ? (
-                <a
-                  href={`/people/${seg.slug}`}
-                  class="font-semibold bare"
-                  style={`white-space: nowrap; color: ${seg.color ?? 'var(--ink)'};`}
-                >
-                  {toNaturalOrder(seg.text)}
-                </a>
+                <a href={`/people/${seg.slug}`} class="font-semibold bare" style={`white-space: nowrap; color: ${seg.color ?? 'var(--ink)'};`}>{toNaturalOrder(seg.text)}</a>
               ) : (
                 <span style="white-space: nowrap;">{toNaturalOrder(seg.text)}</span>
               )}
@@ -164,12 +164,12 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
         {/* Single horizontal row: chart · badges · action links (matches
             the non-featured card; cleaner than three stacked rows). */}
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
-          {citationsForPub && (
+          {showImpact && citationsForPub && (
             <div class="shrink-0">
               <CitationChart citations={citationsForPub} total={totalCitationsForPub} />
             </div>
           )}
-          {pub.doi && (
+          {showImpact && pub.doi && (
             <div class="flex items-start gap-2 shrink-0">
               {/* Altmetric ~64px native → zoom 25/64 = 0.391 (renders ~25px). */}
               <div style="zoom: 0.390625;">
@@ -256,15 +256,9 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
       <p class="text-ink-2 mt-2 text-sm m-0">
         {authorSegments.map((seg, i) => (
           <>
-            {i > 0 && '; '}
+            {i > 0 && ', '}
             {seg.slug ? (
-              <a
-                href={`/people/${seg.slug}`}
-                class="font-semibold bare"
-                style={`white-space: nowrap; color: ${seg.color ?? 'var(--ink)'};`}
-              >
-                {toNaturalOrder(seg.text)}
-              </a>
+              <a href={`/people/${seg.slug}`} class="font-semibold bare" style={`white-space: nowrap; color: ${seg.color ?? 'var(--ink)'};`}>{toNaturalOrder(seg.text)}</a>
             ) : (
               <span style="white-space: nowrap;">{toNaturalOrder(seg.text)}</span>
             )}
@@ -274,12 +268,12 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
 
       {/* Single horizontal row: chart · badges · action links. Wraps on narrow screens. */}
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3">
-        {citationsForPub && (
+        {showImpact && citationsForPub && (
           <div class="shrink-0">
             <CitationChart citations={citationsForPub} total={totalCitationsForPub} />
           </div>
         )}
-        {pub.doi && (
+        {showImpact && pub.doi && (
           <div class="flex items-start gap-2 shrink-0">
             <div style="zoom: 0.390625;">
               <div

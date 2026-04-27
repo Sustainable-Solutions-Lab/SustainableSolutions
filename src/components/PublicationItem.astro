@@ -3,6 +3,7 @@ import type { Publication, Person } from '../lib/types';
 import people from '../data/people.json';
 import scholarDetails from '../../templates/scholar-details.json';
 import { splitAndLinkAuthors } from '../lib/author-links';
+import { themeColor, themeLabel } from '../lib/themes';
 import CitationChart from './CitationChart.astro';
 
 interface Props {
@@ -78,6 +79,11 @@ const heroHash = [...(pub.doi || pub.title || '')].reduce(
   0,
 );
 const heroAccent = spectralColors[heroHash % spectralColors.length];
+
+// Theme color stripe — primary theme drives the left-edge color on
+// non-featured cards. Falls back to muted ink if no themes tagged.
+const pubThemes = pub.themes ?? [];
+const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var(--rule-strong)';
 ---
 
 <li
@@ -209,14 +215,21 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
       )}
     </article>
   ) : (
-    <>
-      <div class="flex items-baseline justify-between gap-4 mb-2">
-        <p class="eyebrow m-0">
-          <em class="not-italic">{pub.journal}</em>
-          <span class="dot">·</span>
-          {pub.year}
-        </p>
-      </div>
+    <div
+      class="pl-4"
+      style={`border-left: 4px solid ${primaryThemeColor};`}
+    >
+      <p class="eyebrow m-0 mb-1">
+        <em class="not-italic">{pub.journal}</em>
+        <span class="dot">·</span>
+        {pub.year}
+        {pubThemes.map((t) => (
+          <>
+            <span class="dot">·</span>
+            <span style={`color: ${themeColor(t)};`}>{themeLabel(t).toUpperCase()}</span>
+          </>
+        ))}
+      </p>
 
       <h3 class="m-0">
         {doiUrl ? (
@@ -243,18 +256,41 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
         ))}
       </p>
 
-      {citationTail && (
-        <p class="font-mono text-xs text-ink-3 mt-2 m-0">{citationTail}</p>
-      )}
-
-      <div class="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs font-mono uppercase tracking-wider">
-        {doiUrl && (<a href={doiUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>DOI</a>)}
-        {pub.pdf_url && (<a href={pub.pdf_url} class="text-ink-2 hover:text-ink border-b-0" data-external>PDF</a>)}
-        {pub.code_url && (<a href={pub.code_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Code</a>)}
-        {pub.brief_url && (<a href={pub.brief_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Brief</a>)}
-        {pub.ppt_url && (<a href={pub.ppt_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Slides</a>)}
-        {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
+      {/* Single horizontal row: chart · badges · action links. Wraps on narrow screens. */}
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3">
+        {citationsForPub && (
+          <div class="shrink-0">
+            <CitationChart citations={citationsForPub} total={totalCitationsForPub} />
+          </div>
+        )}
+        {pub.doi && (
+          <div class="flex items-start gap-2 shrink-0">
+            <div style="zoom: 0.390625;">
+              <div
+                class="altmetric-embed"
+                data-badge-popover="right"
+                data-badge-type="medium-donut"
+                data-doi={pub.doi}
+              ></div>
+            </div>
+            <div style="zoom: 0.78125;">
+              <div
+                class="__dimensions_badge_embed__"
+                data-doi={pub.doi}
+                data-style="small_circle"
+              ></div>
+            </div>
+          </div>
+        )}
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono uppercase tracking-wider ml-auto">
+          {doiUrl && (<a href={doiUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>DOI</a>)}
+          {pub.pdf_url && (<a href={pub.pdf_url} class="text-ink-2 hover:text-ink border-b-0" data-external>PDF</a>)}
+          {pub.code_url && (<a href={pub.code_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Code</a>)}
+          {pub.brief_url && (<a href={pub.brief_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Brief</a>)}
+          {pub.ppt_url && (<a href={pub.ppt_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Slides</a>)}
+          {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
+        </div>
       </div>
-    </>
+    </div>
   )}
 </li>

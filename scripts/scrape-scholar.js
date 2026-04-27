@@ -26,9 +26,10 @@ const USER_ID = 'QP6TMv8AAAAJ'
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
   'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
-const DELAY_MS = 3000
+const DELAY_MS = parseInt(process.env.SCHOLAR_DELAY ?? '10000', 10)
 
-const MASTER_URL = `https://scholar.google.com/citations?user=${USER_ID}&hl=en&cstart=0&pagesize=100`
+const masterUrl = (cstart) =>
+  `https://scholar.google.com/citations?user=${USER_ID}&hl=en&cstart=${cstart}&pagesize=100`
 const detailUrl = (paperId) =>
   `https://scholar.google.com/citations?view_op=view_citation&hl=en&user=${USER_ID}&citation_for_view=${USER_ID}:${paperId}`
 
@@ -149,11 +150,29 @@ function extractDetail(html, master) {
 
 // ── Stages ─────────────────────────────────────────────────────────────────
 async function runMaster() {
-  const html = await fetchHtml(MASTER_URL)
-  const papers = extractMaster(html)
-  if (papers.length === 0) throw new Error('No papers found on master profile.')
-  await writeFile(MASTER_OUT, JSON.stringify(papers, null, 2))
-  console.log(`[scrape-scholar] master: wrote ${papers.length} papers → ${MASTER_OUT}`)
+  // Paginate through the profile in chunks of 100. Stop when a page returns
+  // fewer than 100 — that's the last page.
+  const all = []
+  const seen = new Set()
+  let cstart = 0
+  while (true) {
+    const html = await fetchHtml(masterUrl(cstart))
+    const page = extractMaster(html)
+    let added = 0
+    for (const p of page) {
+      if (seen.has(p.id)) continue
+      seen.add(p.id)
+      all.push(p)
+      added++
+    }
+    console.log(`[scrape-scholar] master: cstart=${cstart}  +${added} (total ${all.length})`)
+    if (page.length < 100 || added === 0) break
+    cstart += 100
+    await wait(DELAY_MS)
+  }
+  if (all.length === 0) throw new Error('No papers found on master profile.')
+  await writeFile(MASTER_OUT, JSON.stringify(all, null, 2))
+  console.log(`[scrape-scholar] master: wrote ${all.length} papers → ${MASTER_OUT}`)
 }
 
 async function runDetails() {

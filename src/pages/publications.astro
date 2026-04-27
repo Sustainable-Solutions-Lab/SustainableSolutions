@@ -6,6 +6,7 @@ import people from '../data/people.json';
 import type { Publication, Person } from '../lib/types';
 import { splitAndLinkAuthors } from '../lib/author-links';
 import { ROLE_COLORS } from '../lib/roles';
+import { themeLabel } from '../lib/themes';
 
 const all = (publications as Publication[])
   .slice()
@@ -86,7 +87,7 @@ const total = all.length;
           style="border-radius: var(--radius-sm);"
         >
           <option value="">All</option>
-          {themes.map((t) => <option value={t}>{t}</option>)}
+          {themes.map((t) => <option value={t}>{themeLabel(t)}</option>)}
         </select>
       </label>
 

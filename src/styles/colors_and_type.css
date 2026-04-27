@@ -201,13 +201,13 @@
 * { box-sizing: border-box; }
 
 /* Altmetric and Dimensions badges render dark text on a transparent
-   background. In dark mode that's invisible — give the badge container a
-   white circular backing so the embedded text reads. The radius matches
-   the visible badge (round). */
+   background. In dark mode that's invisible — paint a white circle behind
+   them sized to 90% of the container (10% smaller than the badge itself,
+   so the colored donut ring still peeks past the backing). Radial gradient
+   keeps the bg circular without affecting layout. */
 [data-theme="dark"] .altmetric-embed,
 [data-theme="dark"] .__dimensions_badge_embed__ {
-  background: #fff;
-  border-radius: 50%;
+  background: radial-gradient(circle closest-side, #fff 90%, transparent 91%);
 }
 
 html {

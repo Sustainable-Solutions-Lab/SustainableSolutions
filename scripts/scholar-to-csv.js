@@ -325,23 +325,27 @@ function buildMergedRow(auto, manual, counts) {
     themes = guessThemes(`${auto.title} ${auto.abstract}`)
     if (themes) counts.autoTheme++
   }
-  // Auto fields prefer Scholar but fall back to whatever the user has put in
-  // the sheet — so a CrossRef-looked-up DOI / authors row survives future
-  // refreshes when Scholar still can't reach the paper's detail page.
-  const sheetFallback = (autoValue, manualValue) => {
-    if (autoValue !== '' && autoValue != null) return autoValue
-    return manualValue ?? ''
+  // Sheet always wins. Scholar only fills cells that are blank in the sheet.
+  // The mental model: the sheet is the source of truth; Scholar populates
+  // what the user hasn't touched yet. To force a re-fill from Scholar for a
+  // specific cell, clear it in the sheet.
+  const preferSheet = (autoValue, manualValue) => {
+    if (manualValue !== '' && manualValue != null) {
+      const s = String(manualValue).trim()
+      if (s !== '') return manualValue
+    }
+    return autoValue ?? ''
   }
   return {
-    authors: sheetFallback(auto.authors, manual?.authors),
-    title: sheetFallback(auto.title, manual?.title),
-    journal: sheetFallback(auto.journal, manual?.journal),
-    year: sheetFallback(auto.year, manual?.year),
-    month: sheetFallback(auto.month, manual?.month),
-    volume_issue: sheetFallback(auto.volume_issue, manual?.volume_issue),
-    pages: sheetFallback(auto.pages, manual?.pages),
-    doi: sheetFallback(auto.doi, manual?.doi),
-    url: sheetFallback(auto.url, manual?.url),
+    authors: preferSheet(auto.authors, manual?.authors),
+    title: preferSheet(auto.title, manual?.title),
+    journal: preferSheet(auto.journal, manual?.journal),
+    year: preferSheet(auto.year, manual?.year),
+    month: preferSheet(auto.month, manual?.month),
+    volume_issue: preferSheet(auto.volume_issue, manual?.volume_issue),
+    pages: preferSheet(auto.pages, manual?.pages),
+    doi: preferSheet(auto.doi, manual?.doi),
+    url: preferSheet(auto.url, manual?.url),
     featured: manual?.featured || 'FALSE',
     ignore: manual?.ignore || '',
     themes,
@@ -352,7 +356,7 @@ function buildMergedRow(auto, manual, counts) {
     ppt_url: manual?.ppt_url || '',
     press_url: manual?.press_url || '',
     image_filename: manual?.image_filename || '',
-    abstract: sheetFallback(auto.abstract, manual?.abstract),
+    abstract: preferSheet(auto.abstract, manual?.abstract),
   }
 }
 

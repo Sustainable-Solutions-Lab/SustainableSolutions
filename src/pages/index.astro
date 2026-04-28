@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ScopeMatrix from '../components/ScopeMatrix.astro';
 import featured from '../data/featured.json';
 import publications from '../data/publications.json';
 import type { FeaturedItem, Publication } from '../lib/types';
@@ -54,6 +55,10 @@ const cards = items.map((it) => {
       sustainable solutions.
     </p>
   </section>
+
+  <hr class="border-rule" />
+
+  <ScopeMatrix />
 
   <hr class="border-rule" />
 

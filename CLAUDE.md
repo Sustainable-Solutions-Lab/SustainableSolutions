@@ -250,8 +250,9 @@ off-screen otherwise.
 | P      | brief_url         | Text                                           | Manual; research brief link                    |
 | Q      | ppt_url           | Text                                           | Manual; slides link                            |
 | R      | press_url         | Text                                           | Manual; press coverage link                    |
-| S      | image_filename    | Text                                           | Manual; hero image in `/public/publications/`  |
-| T      | abstract          | Text                                           | Auto from Scholar; rightmost (bulky)           |
+| S      | image_filename    | Text                                           | Manual; hero image in `/public/publications/` or `/public/images/` |
+| T      | summary           | Text                                           | Manual; one-sentence summary shown on featured cards |
+| U      | abstract          | Text                                           | Auto from Scholar; rightmost (bulky)           |
 
 ### Tab: `People`
 

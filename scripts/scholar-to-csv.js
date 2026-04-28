@@ -58,7 +58,7 @@ const HEADERS = [
   'doi', 'url',
   'featured', 'ignore', 'themes', 'lab_authors',
   'pdf_url', 'code_url', 'brief_url', 'ppt_url', 'press_url', 'image_filename',
-  'abstract',
+  'summary', 'abstract',
 ]
 
 // ── RFC-4180-ish CSV parse (matches scripts/fetch-sheets.js) ──
@@ -381,6 +381,7 @@ function buildMergedRow(auto, manual, counts) {
     ppt_url: manual?.ppt_url || '',
     press_url: manual?.press_url || '',
     image_filename: manual?.image_filename || '',
+    summary: manual?.summary || '',
     abstract: preferSheet(auto.abstract, manual?.abstract),
   }
 }
@@ -407,6 +408,7 @@ function buildPassthroughRow(sheetRow) {
     ppt_url: sheetRow.ppt_url || '',
     press_url: sheetRow.press_url || '',
     image_filename: sheetRow.image_filename || '',
+    summary: sheetRow.summary || '',
     abstract: sheetRow.abstract || '',
   }
 }

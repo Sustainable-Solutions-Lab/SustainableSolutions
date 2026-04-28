@@ -43,6 +43,7 @@ export type Publication = {
   press_url: string | null;
   // Optional richer-card columns — used for featured publications.
   abstract: string | null;
+  summary: string | null;         // one-sentence summary, shown on featured cards
   image_filename: string | null;  // hero image, lives at /public/publications/
   brief_url: string | null;       // research brief link
   ppt_url: string | null;         // slides link

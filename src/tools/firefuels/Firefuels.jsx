@@ -160,29 +160,38 @@ export default function Firefuels({ companion = null }) {
           (Was previously fixed top:0 which slid under the site nav and made
           the title appear cut off.) */}
       <header
-        className="flex md:hidden shrink-0 items-center px-3 bg-paper border-b border-rule relative z-30"
-        style={{ height: 56 }}
+        className="flex md:hidden shrink-0 items-center px-3 py-3 bg-paper border-b border-rule relative z-30"
       >
-        <div className="flex items-baseline gap-3 min-w-0">
-          {config.eyebrow && (
+        <div className="flex flex-col min-w-0 gap-1">
+          <div className="flex items-baseline gap-3 min-w-0">
+            {config.eyebrow && (
+              <span
+                className="font-mono shrink-0"
+                style={{
+                  fontSize: '10px',
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  color: 'var(--ink-3)',
+                }}
+              >
+                {config.eyebrow}
+              </span>
+            )}
             <span
-              className="font-mono shrink-0"
-              style={{
-                fontSize: '10px',
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                color: 'var(--ink-3)',
-              }}
+              className="font-serif text-ink truncate"
+              style={{ fontSize: '22px', fontWeight: 600, lineHeight: 1.1 }}
             >
-              {config.eyebrow}
+              {config.title}
             </span>
+          </div>
+          {config.summary && (
+            <p
+              className="text-ink-2 m-0 truncate"
+              style={{ fontSize: '12px', lineHeight: 1.3 }}
+            >
+              {config.summary}
+            </p>
           )}
-          <span
-            className="font-serif text-ink truncate"
-            style={{ fontSize: '22px', fontWeight: 600, lineHeight: 1.1 }}
-          >
-            {config.title}
-          </span>
         </div>
 
         <div className="flex-1" />
@@ -237,7 +246,7 @@ export default function Firefuels({ companion = null }) {
           <div
             className="block md:hidden absolute z-10"
             style={{
-              bottom: 90,
+              bottom: 70,
               right: 10,
               width: 160,
               background: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.75)',
@@ -286,8 +295,8 @@ export default function Firefuels({ companion = null }) {
       <div
         className="block md:hidden fixed left-0 right-0 z-[21] bg-paper border-b border-rule overflow-y-auto px-4 pt-3 pb-4"
         style={{
-          top: 112,
-          maxHeight: 'calc(100dvh - 112px)',
+          top: 124,
+          maxHeight: 'calc(100dvh - 124px)',
           transform: mobilePanelOpen ? 'translateY(0)' : 'translateY(-110%)',
           transition: 'transform 0.18s ease',
         }}
@@ -366,7 +375,7 @@ export default function Firefuels({ companion = null }) {
       <div
         className="block md:hidden fixed left-0 right-0 bottom-0"
         style={{
-          top: 112,
+          top: 124,
           background: 'rgba(0,0,0,0.52)',
           zIndex: 20,
           opacity: mobilePanelOpen ? 1 : 0,

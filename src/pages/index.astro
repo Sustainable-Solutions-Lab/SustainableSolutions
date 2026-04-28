@@ -48,12 +48,12 @@ const cards = items.map((it) => ({
         Add rows to the <code>Featured</code> tab in the Google Sheet to populate this section.
       </p>
     ) : (
-      <ul class="list-none p-0 m-0 grid md:grid-cols-3 gap-6">
+      <ul class="list-none p-0 m-0 grid md:grid-cols-3 gap-6 auto-rows-fr">
         {cards.map((it) => (
-          <li class="m-0 p-0">
+          <li class="m-0 p-0 h-full">
             <a
               href={it.link}
-              class="block bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
+              class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
               style="border-radius: var(--radius-md); overflow: hidden;"
               data-external={it.isExternal ? '' : null}
             >
@@ -62,17 +62,17 @@ const cards = items.map((it) => ({
                   src={it.imgUrl}
                   alt={it.title}
                   loading="lazy"
-                  class="block w-full object-cover"
+                  class="block w-full object-cover shrink-0"
                   style="aspect-ratio: 16/10;"
                 />
               ) : (
                 <div
                   aria-hidden="true"
-                  class="block w-full"
+                  class="block w-full shrink-0"
                   style="aspect-ratio: 16/10; background: var(--paper-2); border-bottom: 1px solid var(--rule);"
                 ></div>
               )}
-              <div class="p-5">
+              <div class="p-5 flex-1">
                 <p class="eyebrow m-0 mb-2">{(it.type ?? '').toString().toUpperCase()}</p>
                 <h3 class="m-0">{it.title}</h3>
                 {it.blurb && (

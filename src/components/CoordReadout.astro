@@ -6,10 +6,17 @@
 <div
   data-coord-readout
   aria-hidden="true"
-  class="fixed bottom-3 left-3 z-40 font-mono text-xs text-ink-3 select-none pointer-events-none"
+  class="fixed bottom-3 left-3 z-40 font-mono text-xs text-ink-3 select-none pointer-events-none px-2 py-1 backdrop-blur-md border border-rule"
+  style="border-radius: var(--radius-sm); background: rgba(248, 248, 232, 0.78);"
 >
   X,Y: <span data-coord-x>0000</span>,<span data-coord-y>0000</span>
 </div>
+
+<style>
+  :global([data-theme="dark"]) [data-coord-readout] {
+    background: rgba(12, 12, 28, 0.78) !important;
+  }
+</style>
 
 <script is:inline>
   (function () {

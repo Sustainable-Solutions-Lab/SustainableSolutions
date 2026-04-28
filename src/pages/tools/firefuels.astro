@@ -18,7 +18,7 @@ const companionUrl = companion?.url ?? (companion?.doi ? `https://doi.org/${comp
   hideFooter={true}
 >
   {companion && (
-    <div class="container-content pt-4 pb-3">
+    <div class="container-content pt-3 pb-2">
       <p class="font-mono text-xs text-ink-3 m-0 uppercase tracking-wider">
         Companion paper ·
         {companionUrl ? (
@@ -32,10 +32,10 @@ const companionUrl = companion?.url ?? (companion?.doi ? `https://doi.org/${comp
     </div>
   )}
 
-  <section class="pb-8" aria-label="Interactive map">
+  <section aria-label="Interactive map">
     <div
-      class="firefuels-frame border-y border-rule"
-      style="height: min(80vh, 800px); width: 100%; overflow: hidden; background: var(--paper-2);"
+      class="firefuels-frame border-t border-rule"
+      style="width: 100%; overflow: hidden; background: var(--paper-2);"
     >
       <Firefuels client:only="react" />
     </div>
@@ -43,6 +43,11 @@ const companionUrl = companion?.url ?? (companion?.doi ? `https://doi.org/${comp
 </BaseLayout>
 
 <style is:global>
-  .firefuels-frame { position: relative; }
+  /* Map fills the viewport from where it starts down to the bottom edge.
+     Subtracts the sticky nav (56 px) and the companion-paper strip (~36 px)
+     so the page ends precisely at the map's bottom. The body itself
+     doesn't scroll on this page; the map sidebar has its own scroll. */
+  body:has(.firefuels-frame) { overflow: hidden; }
+  .firefuels-frame { position: relative; height: calc(100vh - 92px); }
   .firefuels-frame > * { width: 100%; height: 100%; }
 </style>

@@ -83,6 +83,7 @@ export function ZipInput({ baseUrl, dispatch, currentZip }) {
           disabled={isLoading}
           className={[
             'block w-full bg-paper-2 text-ink pl-2 pr-8 py-1 font-mono text-[13px]',
+            'placeholder:text-ink-4',
             'focus:outline-none focus:border-ink',
             'border',
             isError ? 'border-[var(--negative)]' : 'border-rule',

@@ -27,3 +27,5 @@ design-system.bin
 .vscode/
 .idea/
 *.swp
+dist-zips/
+templates/ca-zip-codes-geo.min.json

@@ -54,6 +54,7 @@ export const Actions = {
   SELECT_CELL:         'SELECT_CELL',
   DESELECT_CELL:       'DESELECT_CELL',
   SET_DRAWN_CIRCLE:    'SET_DRAWN_CIRCLE',   // { circle: DrawnCircle | null }
+  SET_DRAWN_POLYGON:   'SET_DRAWN_POLYGON',  // { polygon: { zip, geometry } | null }
   SET_AGGREGATE_STATS: 'SET_AGGREGATE_STATS',// { stats: AggregateStats | null }
   SET_PERCENTILE:      'SET_PERCENTILE',     // { low, high }
   TOGGLE_AREA_TOOL:    'TOGGLE_AREA_TOOL',
@@ -77,6 +78,7 @@ export const initialState = {
   },
   selectedCell: null,
   drawnCircle: null,
+  drawnPolygon: null,
   aggregateStats: null,
   percentileRange: { low: 0, high: 100 },
   colorScheme: 'dark',

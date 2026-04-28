@@ -15,7 +15,12 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Actions } from '../../contracts/events.js'
-import { haversineKm, featuresWithinCircle, computeAggregateStats } from '../../lib/area-stats.js'
+import {
+  haversineKm,
+  featuresWithinCircle,
+  featuresWithinPolygon,
+  computeAggregateStats,
+} from '../../lib/area-stats.js'
 import { LAYER_IDS } from '../../lib/use-map-layer.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 
@@ -23,6 +28,9 @@ const CIRCLE_SOURCE_ID = 'area-circle'
 const CIRCLE_MASK_LAYER_ID = 'area-circle-mask'
 const CIRCLE_FILL_LAYER_ID = 'area-circle-fill'
 const CIRCLE_LINE_LAYER_ID = 'area-circle-line'
+const POLYGON_SOURCE_ID = 'area-polygon'
+const POLYGON_MASK_LAYER_ID = 'area-polygon-mask'
+const POLYGON_LINE_LAYER_ID = 'area-polygon-line'
 const MIN_RADIUS_KM = 5
 const HANDLE_PX = 8
 
@@ -103,6 +111,89 @@ function removeCircleFromMap(map) {
   if (map.getSource(CIRCLE_SOURCE_ID)) map.removeSource(CIRCLE_SOURCE_ID)
 }
 
+// ── Polygon (ZIP) rendering ─────────────────────────────────────────────────
+
+// World-with-hole for an arbitrary polygon. Adds the polygon's outer ring
+// (and any holes) as inner rings of a world rectangle, so everything outside
+// the polygon gets dimmed.
+function worldWithPolygonHole(geometry) {
+  const world = [
+    [-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85],
+  ]
+  let innerRings = []
+  if (geometry.type === 'Polygon') {
+    innerRings = geometry.coordinates.map((ring) => [...ring].reverse())
+  } else if (geometry.type === 'MultiPolygon') {
+    for (const poly of geometry.coordinates) {
+      for (const ring of poly) innerRings.push([...ring].reverse())
+    }
+  }
+  return {
+    type: 'Feature',
+    properties: { _mask: 1 },
+    geometry: { type: 'Polygon', coordinates: [world, ...innerRings] },
+  }
+}
+
+function drawPolygonOnMap(map, geometry, isDark = true) {
+  const poly = { type: 'Feature', properties: {}, geometry }
+  const geojson = { type: 'FeatureCollection', features: [poly, worldWithPolygonHole(geometry)] }
+  const lineColor = circleLineColor(isDark)
+
+  if (map.getSource(POLYGON_SOURCE_ID)) {
+    map.getSource(POLYGON_SOURCE_ID).setData(geojson)
+  } else {
+    map.addSource(POLYGON_SOURCE_ID, { type: 'geojson', data: geojson })
+  }
+
+  if (!map.getLayer(POLYGON_MASK_LAYER_ID)) {
+    map.addLayer({
+      id: POLYGON_MASK_LAYER_ID,
+      type: 'fill',
+      source: POLYGON_SOURCE_ID,
+      filter: ['==', ['get', '_mask'], 1],
+      paint: { 'fill-color': isDark ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.30)' },
+    })
+  } else {
+    map.setPaintProperty(POLYGON_MASK_LAYER_ID, 'fill-color',
+      isDark ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.30)')
+  }
+
+  if (!map.getLayer(POLYGON_LINE_LAYER_ID)) {
+    map.addLayer({
+      id: POLYGON_LINE_LAYER_ID,
+      type: 'line',
+      source: POLYGON_SOURCE_ID,
+      paint: { 'line-color': lineColor, 'line-width': 1.5 },
+    })
+  } else {
+    map.setPaintProperty(POLYGON_LINE_LAYER_ID, 'line-color', lineColor)
+  }
+}
+
+function removePolygonFromMap(map) {
+  if (map.getLayer(POLYGON_LINE_LAYER_ID)) map.removeLayer(POLYGON_LINE_LAYER_ID)
+  if (map.getLayer(POLYGON_MASK_LAYER_ID)) map.removeLayer(POLYGON_MASK_LAYER_ID)
+  if (map.getSource(POLYGON_SOURCE_ID)) map.removeSource(POLYGON_SOURCE_ID)
+}
+
+// Compute [west, south, east, north] for a Polygon or MultiPolygon geometry.
+function polygonBbox(geometry) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  const visit = (ring) => {
+    for (const [x, y] of ring) {
+      if (x < minX) minX = x
+      if (x > maxX) maxX = x
+      if (y < minY) minY = y
+      if (y > maxY) maxY = y
+    }
+  }
+  if (geometry.type === 'Polygon') geometry.coordinates.forEach(visit)
+  else if (geometry.type === 'MultiPolygon')
+    geometry.coordinates.forEach((poly) => poly.forEach(visit))
+  return [minX, minY, maxX, maxY]
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function AreaTool({ map, config, state, dispatch }) {
@@ -172,9 +263,62 @@ export function AreaTool({ map, config, state, dispatch }) {
   // (e.g. switching to "Cheapest Type" while the circle is open)
   useEffect(() => {
     if (!map || !state.areaToolActive) return
+    if (state.drawnPolygon) return  // polygon path computes via its own effect
     const t = setTimeout(computeAndDispatch, 50)
     return () => clearTimeout(t)
-  }, [map, state.areaToolActive, state.activeLayer, state.activeDimensions, computeAndDispatch])
+  }, [map, state.areaToolActive, state.activeLayer, state.activeDimensions, computeAndDispatch, state.drawnPolygon])
+
+  // ── Polygon (ZIP) path ─────────────────────────────────────────────────
+  const computePolygonStats = useCallback(() => {
+    if (!map || !state.drawnPolygon) return
+    const geometry = state.drawnPolygon.geometry
+    const [w, s, e, n] = polygonBbox(geometry)
+    const sw = map.project([w, s])
+    const ne = map.project([e, n])
+    const bbox = [
+      [Math.min(sw.x, ne.x), Math.min(sw.y, ne.y)],
+      [Math.max(sw.x, ne.x), Math.max(sw.y, ne.y)],
+    ]
+    const activeLayers = LAYER_IDS.filter((id) => map.getLayer(id))
+    const features = map.queryRenderedFeatures(bbox, { layers: activeLayers })
+    const filtered = featuresWithinPolygon(features, geometry)
+    const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)
+    const activeVar = getActiveVariable(config, state.activeLayer, state.activeDimensions)
+    const activeVarValues = activeVar
+      ? filtered
+          .map((f) => f.properties?.[activeVar.id])
+          .filter((v) => v != null && (activeVar.type === 'categorical' ? true : !isNaN(v)))
+      : []
+    dispatch({
+      type: Actions.SET_AGGREGATE_STATS,
+      stats: { ...stats, activeVarValues },
+    })
+  }, [map, config, dispatch, state.drawnPolygon, state.activeLayer, state.activeDimensions])
+
+  // Render polygon + zoom to fit + compute stats when drawnPolygon changes.
+  useEffect(() => {
+    if (!map) return
+    if (!state.drawnPolygon) {
+      removePolygonFromMap(map)
+      return
+    }
+    // Drawing a polygon implies the circle path is gone — strip its layers.
+    removeCircleFromMap(map)
+    setHandlePos(null)
+    drawPolygonOnMap(map, state.drawnPolygon.geometry, state.colorScheme === 'dark')
+    const [w, s, e, n] = polygonBbox(state.drawnPolygon.geometry)
+    map.fitBounds([[w, s], [e, n]], { padding: 60, duration: 600, maxZoom: 11 })
+    // Recompute after the fit lands so queryRenderedFeatures sees the new view.
+    const t = setTimeout(computePolygonStats, 700)
+    return () => clearTimeout(t)
+  }, [map, state.drawnPolygon, state.colorScheme, computePolygonStats])
+
+  // Re-run polygon stats when active variable changes
+  useEffect(() => {
+    if (!map || !state.drawnPolygon) return
+    const t = setTimeout(computePolygonStats, 50)
+    return () => clearTimeout(t)
+  }, [map, state.drawnPolygon, state.activeLayer, state.activeDimensions, computePolygonStats])
 
   // ── Re-draw circle when color scheme changes ─────────────────────────────
   useEffect(() => {
@@ -192,12 +336,14 @@ export function AreaTool({ map, config, state, dispatch }) {
     if (!map) return
     if (!state.areaToolActive) {
       removeCircleFromMap(map)
+      removePolygonFromMap(map)
       setHandlePos(null)
       map.getCanvas().style.cursor = ''
-      dispatch({ type: Actions.SET_DRAWN_CIRCLE, circle: null })
       dispatch({ type: Actions.SET_AGGREGATE_STATS, stats: null })
       return
     }
+    // If a ZIP polygon was just set, skip the default-circle initialization.
+    if (state.drawnPolygon) return
     const center = map.getCenter()
     // Scale default radius to current zoom so the circle fits the visible area.
     // Zoom 5 (statewide) → ~50 km; zoom 10 (city) → ~5 km, exponentially interpolated.

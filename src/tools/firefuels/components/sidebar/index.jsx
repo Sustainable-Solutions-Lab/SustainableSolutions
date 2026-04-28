@@ -5,12 +5,14 @@
  * legend, percentile filter, area tool toggle, methods link, lab logo.
  */
 
+import { useState } from 'react'
 import { Actions } from '../../contracts/events.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { LayerTabs } from './layer-tabs.jsx'
 import { DimensionControl } from './dimension-control.jsx'
 import { Legend } from './legend.jsx'
 import { DistributionChart } from './distribution-chart.jsx'
+import { ZipInput } from './zip-input.jsx'
 
 export function Sidebar({ config, state, dispatch, allValues = [], companion = null }) {
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
@@ -151,6 +153,14 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           >
             Regional Data
           </button>
+        )}
+
+        {state.areaToolActive && config.areaTool?.zipsBaseUrl && (
+          <ZipInput
+            baseUrl={config.areaTool.zipsBaseUrl}
+            dispatch={dispatch}
+            currentZip={state.drawnPolygon?.zip ?? null}
+          />
         )}
 
         <button

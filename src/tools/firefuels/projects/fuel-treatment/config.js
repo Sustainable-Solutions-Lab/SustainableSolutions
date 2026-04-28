@@ -511,6 +511,10 @@ const config = {
       'total_benefit_current',
       'min_cost',
     ],
+    // Per-ZIP polygon GeoJSON files (one per California ZIP) live at this
+    // R2 prefix. Built locally with scripts/build-ca-zip-polygons.js, then
+    // uploaded to R2. A 404 on a ZIP means it's outside California.
+    zipsBaseUrl: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/zips/',
   },
 
   // ── Data ─────────────────────────────────────────────────────────────────

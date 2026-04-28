@@ -43,6 +43,52 @@ export function featuresWithinCircle(features, centerLat, centerLng, radiusKm) {
 }
 
 /**
+ * Filter MapLibre rendered features to those whose point lies inside a
+ * polygon (Polygon or MultiPolygon GeoJSON geometry). Used by the ZIP-code
+ * regional-data path; the circle path uses haversine instead.
+ *
+ * @param {Array}  features - GeoJSON Feature[]
+ * @param {object} polygon  - GeoJSON Polygon or MultiPolygon geometry
+ * @returns {Array}
+ */
+export function featuresWithinPolygon(features, polygon) {
+  if (!polygon) return []
+  const rings =
+    polygon.type === 'Polygon'
+      ? [polygon.coordinates]
+      : polygon.type === 'MultiPolygon'
+        ? polygon.coordinates
+        : null
+  if (!rings) return []
+  return features.filter((f) => {
+    const [lng, lat] = f.geometry.coordinates
+    return rings.some((poly) => pointInPolygon(lng, lat, poly))
+  })
+}
+
+// Ray-casting point-in-polygon. `poly` is an array of rings, ring 0 = outer,
+// rings 1..n = holes (excluded). Each ring is an array of [lng, lat].
+function pointInPolygon(lng, lat, poly) {
+  if (!poly || poly.length === 0) return false
+  if (!inRing(lng, lat, poly[0])) return false
+  for (let i = 1; i < poly.length; i++) {
+    if (inRing(lng, lat, poly[i])) return false // in a hole
+  }
+  return true
+}
+
+function inRing(x, y, ring) {
+  let inside = false
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i]
+    const [xj, yj] = ring[j]
+    const intersect = (yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi
+    if (intersect) inside = !inside
+  }
+  return inside
+}
+
+/**
  * Compute mean, median, min, max for a numeric array.
  * Returns null if the array is empty or all values are null/undefined.
  *

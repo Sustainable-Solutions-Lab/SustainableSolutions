@@ -40,13 +40,20 @@ function reducer(state, action) {
     case Actions.DESELECT_CELL:
       return { ...state, selectedCell: null }
     case Actions.SET_DRAWN_CIRCLE:
-      return { ...state, drawnCircle: action.circle }
+      // Setting a circle clears any active ZIP polygon — they're alternative
+      // ways to define the same regional-stats input, only one at a time.
+      return { ...state, drawnCircle: action.circle, drawnPolygon: action.circle ? null : state.drawnPolygon }
+    case Actions.SET_DRAWN_POLYGON:
+      return { ...state, drawnPolygon: action.polygon, drawnCircle: action.polygon ? null : state.drawnCircle }
     case Actions.SET_AGGREGATE_STATS:
       return { ...state, aggregateStats: action.stats }
     case Actions.SET_PERCENTILE:
       return { ...state, percentileRange: { low: action.low, high: action.high } }
     case Actions.TOGGLE_AREA_TOOL:
-      return { ...state, areaToolActive: !state.areaToolActive }
+      // Toggling the tool off clears whatever region was active.
+      return state.areaToolActive
+        ? { ...state, areaToolActive: false, drawnCircle: null, drawnPolygon: null, aggregateStats: null }
+        : { ...state, areaToolActive: true }
     case Actions.TOGGLE_SCHEME:
       return {
         ...state,

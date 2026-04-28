@@ -284,7 +284,7 @@ export function StatsPanel({ drawnCircle, aggregateStats, areaToolActive, active
     <div
       style={{
         position: 'absolute',
-        bottom: 24,
+        bottom: 56,
         left: 24,
         background: panelBg,
         border: `1px solid ${borderColor}`,

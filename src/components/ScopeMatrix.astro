@@ -1,135 +1,224 @@
 ---
-// Compact lab-scope heatmap, two stacked 4×4 grids.
+// Lab-scope heatmap, horizontal layout.
 //
-//   Top    — Mitigation (Spectral-10 blue base)
-//   Bottom — Impacts & Adaptation (Spectral-2 red base)
-//   Columns: Energy · Food · Water · Materials
+// Rows    = human systems        (Energy · Food · Water · Materials · Climate · Health)
+// Columns = response type, in two sections separated by a small gap:
+//             Mitigation:  General · Trade · Corporate · Carbon mgmt
+//             Impacts &
+//             Adaptation:  General · Air pollution · Heat · Drought · Fire · Flooding
 //
-// Reads two structured columns on the Publications sheet:
-//   system    — { energy, food, water, materials } (multi-value)
-//   response  — { mitigation, mitigation:trade, mitigation:corporate,
-//                 mitigation:carbon-management, impacts,
-//                 impacts:air-pollution, impacts:heat, impacts:flooding }
+// Each ROW is colored by its system (each system has its own hue from the
+// Spectral palette). Cell density within a row = paper count, scaled to
+// the maximum count anywhere in that row. Cells with zero papers stay at
+// paper background.
 //
-// A paper that's, say, system=energy,food + response=mitigation,impacts:heat
-// contributes to four cells: (Energy × Mit/General), (Food × Mit/General),
-// (Energy × Imp/Heat), (Food × Imp/Heat). Multi-tag papers spread across
-// every matching cell — the matrix shows breadth, not a partition.
+// Column matching uses prefix rules so subcategory tags (system=energy:
+// electricity, response=impacts:drought, etc.) roll up correctly.
 
 import publications from '../data/publications.json';
 import type { Publication } from '../lib/types';
 
-const COLUMNS = [
-  { key: 'energy',    label: 'Energy' },
-  { key: 'food',      label: 'Food' },
-  { key: 'water',     label: 'Water' },
-  { key: 'materials', label: 'Materials' },
+const SYSTEMS = [
+  { key: 'energy',    label: 'Energy',    color: 'var(--spectral-3)'  }, // orange
+  { key: 'food',      label: 'Food',      color: 'var(--spectral-9)'  }, // green
+  { key: 'water',     label: 'Water',     color: 'var(--spectral-10)' }, // blue
+  { key: 'materials', label: 'Materials', color: 'var(--spectral-11)' }, // purple
+  { key: 'climate',   label: 'Climate',   color: 'var(--spectral-1)'  }, // wine
+  { key: 'health',    label: 'Health',    color: 'var(--spectral-2)'  }, // red
 ] as const;
 
-type Section = {
-  key: 'mitigation' | 'impacts';
-  label: string;
-  base: string;
-  rows: { key: string; label: string; matchValue: string }[];
-};
+const MIT_COLS = [
+  { key: 'general',           label: 'General',     match: 'mitigation' },
+  { key: 'trade',             label: 'Trade',       match: 'mitigation:trade' },
+  { key: 'corporate',         label: 'Corp',        match: 'mitigation:corporate' },
+  { key: 'carbon-management', label: 'C-mgmt',      match: 'mitigation:carbon-management' },
+] as const;
 
-const SECTIONS: Section[] = [
-  {
-    key: 'mitigation',
-    label: 'Mitigation',
-    base: 'var(--spectral-10)',
-    rows: [
-      { key: 'general',           label: 'General',           matchValue: 'mitigation' },
-      { key: 'trade',             label: 'Trade',             matchValue: 'mitigation:trade' },
-      { key: 'corporate',         label: 'Corporate',         matchValue: 'mitigation:corporate' },
-      { key: 'carbon-management', label: 'Carbon mgmt',       matchValue: 'mitigation:carbon-management' },
-    ],
-  },
-  {
-    key: 'impacts',
-    label: 'Impacts & Adaptation',
-    base: 'var(--spectral-2)',
-    rows: [
-      { key: 'general',       label: 'General',       matchValue: 'impacts' },
-      { key: 'air-pollution', label: 'Air pollution', matchValue: 'impacts:air-pollution' },
-      { key: 'heat',          label: 'Heat',          matchValue: 'impacts:heat' },
-      { key: 'flooding',      label: 'Flooding',      matchValue: 'impacts:flooding' },
-    ],
-  },
-];
+const IMP_COLS = [
+  { key: 'general',       label: 'General',  match: 'impacts' },
+  { key: 'air-pollution', label: 'Air',      match: 'impacts:air-pollution' },
+  { key: 'heat',          label: 'Heat',     match: 'impacts:heat' },
+  { key: 'drought',       label: 'Drought',  match: 'impacts:drought' },
+  { key: 'fire',          label: 'Fire',     match: 'impacts:fire' },
+  { key: 'flooding',      label: 'Flood',    match: 'impacts:flooding' },
+] as const;
 
 const pubs = publications as Publication[];
 
-const cellCount: Record<string, number> = {};
-const sectionMax: Record<string, number> = {};
-for (const sec of SECTIONS) {
-  let secMax = 0;
-  for (const col of COLUMNS) {
-    for (const row of sec.rows) {
-      let n = 0;
-      for (const p of pubs) {
-        const sys = (p.system ?? []) as string[];
-        const resp = (p.response ?? []) as string[];
-        if (sys.includes(col.key) && resp.includes(row.matchValue)) n++;
-      }
-      cellCount[`${sec.key}|${row.key}|${col.key}`] = n;
-      if (n > secMax) secMax = n;
-    }
+function axisMatches(values: string[], target: string): boolean {
+  for (const v of values) {
+    if (v === target) return true;
+    if (v.startsWith(target + ':')) return true;
   }
-  sectionMax[sec.key] = secMax;
+  return false;
 }
 
-function cellBg(secKey: string, base: string, count: number): string {
-  const max = sectionMax[secKey] || 1;
+const cellCount: Record<string, number> = {};
+const rowMax: Record<string, number> = {};
+for (const sys of SYSTEMS) {
+  let m = 0;
+  for (const col of [...MIT_COLS, ...IMP_COLS]) {
+    let n = 0;
+    for (const p of pubs) {
+      const s = (p.system ?? []) as string[];
+      const r = (p.response ?? []) as string[];
+      if (axisMatches(s, sys.key) && axisMatches(r, col.match)) n++;
+    }
+    cellCount[`${sys.key}|${col.key}`] = n;
+    if (n > m) m = n;
+  }
+  rowMax[sys.key] = m;
+}
+
+function cellBg(systemKey: string, base: string, count: number): string {
+  const max = rowMax[systemKey] || 1;
   if (!count) return 'var(--paper)';
-  const opacity = 0.15 + (count / max) * 0.78;
+  const opacity = 0.18 + (count / max) * 0.78;
   return `color-mix(in oklab, ${base} ${(opacity * 100).toFixed(0)}%, var(--paper))`;
 }
 ---
 
-<div class="scope-matrix-mini" aria-label="Scope of lab publications">
-  {SECTIONS.map((sec) => (
-    <div class="scope-section" data-section={sec.key}>
-      {sec.rows.flatMap((row) =>
-        COLUMNS.map((col) => {
-          const count = cellCount[`${sec.key}|${row.key}|${col.key}`] ?? 0;
+<figure class="scope-matrix" aria-label="Where the lab works: rows = human systems, columns = type of response">
+  <div class="scope-matrix-grid">
+    {/* Header row 1 — section labels */}
+    <div class="cell-blank"></div>
+    <div class="section-header section-mitigation">Mitigation</div>
+    <div class="section-gap"></div>
+    <div class="section-header section-impacts">Impacts &amp; Adaptation</div>
+
+    {/* Header row 2 — column labels */}
+    <div class="cell-blank"></div>
+    <div class="col-headers col-headers-mit">
+      {MIT_COLS.map((c) => <div class="col-label">{c.label}</div>)}
+    </div>
+    <div class="section-gap"></div>
+    <div class="col-headers col-headers-imp">
+      {IMP_COLS.map((c) => <div class="col-label">{c.label}</div>)}
+    </div>
+
+    {/* Data rows: one per system */}
+    {SYSTEMS.flatMap((sys) => [
+      <div class="row-label" style={`color: ${sys.color};`}>{sys.label}</div>,
+      <div class="cells cells-mit">
+        {MIT_COLS.map((c) => {
+          const count = cellCount[`${sys.key}|${c.key}`] ?? 0;
           return (
             <div
-              class="scope-cell-mini"
-              style={`background-color: ${cellBg(sec.key, sec.base, count)};`}
-              title={`${col.label} × ${sec.label}: ${row.label} · ${count} paper${count === 1 ? '' : 's'}`}
+              class="cell"
+              style={`background-color: ${cellBg(sys.key, sys.color, count)};`}
+              title={`${sys.label} × ${c.label}: ${count} paper${count === 1 ? '' : 's'}`}
             ></div>
           );
-        }),
-      )}
-    </div>
-  ))}
-</div>
+        })}
+      </div>,
+      <div class="section-gap"></div>,
+      <div class="cells cells-imp">
+        {IMP_COLS.map((c) => {
+          const count = cellCount[`${sys.key}|${c.key}`] ?? 0;
+          return (
+            <div
+              class="cell"
+              style={`background-color: ${cellBg(sys.key, sys.color, count)};`}
+              title={`${sys.label} × ${c.label}: ${count} paper${count === 1 ? '' : 's'}`}
+            ></div>
+          );
+        })}
+      </div>,
+    ])}
+  </div>
+
+  <figcaption class="scope-caption">
+    Each row is a human system the lab studies. Cells shade darker as more
+    papers tag that system × response combination. Hover for counts.
+  </figcaption>
+</figure>
 
 <style>
-  .scope-matrix-mini {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    width: 124px;
-    flex: none;
+  .scope-matrix {
+    margin: 0;
+    width: 100%;
   }
-  .scope-section {
+
+  .scope-matrix-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    aspect-ratio: 1 / 1;
-    gap: 2px;
-    padding: 2px;
-    background: var(--rule);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius-sm);
+    /* Row label · Mitigation cells (4 fr) · gap · Impacts cells (6 fr) */
+    grid-template-columns: minmax(56px, max-content) 4fr 6px 6fr;
+    grid-auto-rows: auto;
+    gap: 6px 0;
+    align-items: stretch;
   }
-  .scope-cell-mini {
+
+  /* Section + column headers */
+  .section-header {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-3);
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-mitigation { color: var(--spectral-10); }
+  .section-impacts    { color: var(--spectral-2); }
+
+  .col-headers {
+    display: grid;
+    gap: 1px;
+  }
+  .col-headers-mit { grid-template-columns: repeat(4, 1fr); }
+  .col-headers-imp { grid-template-columns: repeat(6, 1fr); }
+  .col-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-3);
+    text-align: center;
+    padding: 2px 1px 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Row label */
+  .row-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-align: right;
+    padding: 0 8px 0 0;
+    align-self: center;
+    font-weight: 600;
+  }
+
+  /* Cell strips */
+  .cells {
+    display: grid;
+    gap: 1px;
+    height: 22px;
+  }
+  .cells-mit { grid-template-columns: repeat(4, 1fr); }
+  .cells-imp { grid-template-columns: repeat(6, 1fr); }
+  .cell {
     background: var(--paper);
+    border-radius: 1px;
     transition: outline 0.12s ease;
   }
-  .scope-cell-mini:hover {
+  .cell:hover {
     outline: 1.5px solid var(--ink);
     outline-offset: -1px;
+  }
+
+  .section-gap {
+    width: 6px;
+  }
+
+  .scope-caption {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--ink-3);
+    line-height: 1.45;
+    max-width: 60ch;
   }
 </style>

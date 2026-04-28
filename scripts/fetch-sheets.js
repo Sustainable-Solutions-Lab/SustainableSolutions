@@ -4,7 +4,22 @@
 // so dev/CI builds work without a live Sheet.
 
 import { mkdir, writeFile, readFile, readdir } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+
+// Tiny .env loader so `npm run build` locally picks up SHEET_*_CSV from
+// .env. Vercel injects its own env vars and never reads this file.
+function loadDotenv() {
+  const envPath = resolve('.env');
+  if (!existsSync(envPath)) return;
+  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+    const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/);
+    if (m && !process.env[m[1]]) {
+      process.env[m[1]] = m[2].trim().replace(/^['"]|['"]$/g, '');
+    }
+  }
+}
+loadDotenv();
 
 const OUT_DIR = resolve('src/data');
 const TEMPLATES_DIR = resolve('templates');

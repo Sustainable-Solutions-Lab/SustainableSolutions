@@ -3,6 +3,7 @@ import type { Person, Publication } from '../lib/types';
 import { roleColor } from '../lib/roles';
 import { splitAndLinkAuthors } from '../lib/author-links';
 import publications from '../data/publications.json';
+import externalPubs from '../data/external-pubs.json';
 import scholarDetails from '../../templates/scholar-details.json';
 
 interface Props {
@@ -46,15 +47,31 @@ for (const detail of Object.values(scholarDetails as Record<string, any>)) {
     totalsByDoi.set(detail.doi, detail.total_citations);
   }
 }
+// Crossref-fetched external pubs include their own citation counts; fold
+// those in too so Notable/Recent cards from pre-lab work show "X citations".
+for (const ext of externalPubs as Array<{ doi: string; total_citations: number | null }>) {
+  if (ext.doi && typeof ext.total_citations === 'number') {
+    totalsByDoi.set(ext.doi, ext.total_citations);
+  }
+}
+
 const personPubs = (publications as Publication[]).filter((p) =>
   splitAndLinkAuthors(p.authors ?? '', [person]).some((s) => s.slug === person.slug),
 );
 const personPubsByDoi = new Map<string, Publication>();
 for (const p of personPubs) if (p.doi) personPubsByDoi.set(p.doi.toLowerCase(), p);
+// External pubs are keyed only by DOI — they're papers from before the
+// person joined the lab (or otherwise outside the Publications sheet) and
+// shouldn't be matched by author detection.
+const externalByDoi = new Map<string, Publication>();
+for (const ext of externalPubs as Publication[]) {
+  if (ext.doi) externalByDoi.set(ext.doi.toLowerCase(), ext);
+}
 
 function resolveExplicit(doi: string | null): Publication | null {
   if (!doi) return null;
-  return personPubsByDoi.get(doi.trim().toLowerCase()) ?? null;
+  const k = doi.trim().toLowerCase();
+  return personPubsByDoi.get(k) ?? externalByDoi.get(k) ?? null;
 }
 const mostCited = [...personPubs].sort((a, b) => {
   const aC = (a.doi && totalsByDoi.get(a.doi)) ?? 0;

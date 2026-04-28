@@ -1,64 +1,65 @@
 ---
-// Compact lab-scope heatmap.
+// Compact lab-scope heatmap, two stacked 4×4 grids.
 //
-// Two stacked 4×4 grids representing the lab's scope:
-//   • Top section — Mitigation (blue end of Spectral)
-//        rows: General · Trade · Corporate · Carbon mgmt
-//   • Bottom section — Impacts & Adaptation (red end of Spectral)
-//        rows: General · Air pollution · Heat · Flooding
-//   columns (both sections): Energy · Food · Water · Materials
+//   Top    — Mitigation (Spectral-10 blue base)
+//   Bottom — Impacts & Adaptation (Spectral-2 red base)
+//   Columns: Energy · Food · Water · Materials
 //
-// Cell color = section base color (Spectral-10 for mitigation,
-// Spectral-2 for impacts) at opacity scaled by paper count within
-// the section. Empty cells stay paper-colored. Hover surfaces the
-// full label.
+// Reads two structured columns on the Publications sheet:
+//   system    — { energy, food, water, materials } (multi-value)
+//   response  — { mitigation, mitigation:trade, mitigation:corporate,
+//                 mitigation:carbon-management, impacts,
+//                 impacts:air-pollution, impacts:heat, impacts:flooding }
 //
-// Multi-tagged papers contribute to every matching cell — the
-// visual shows breadth, not a partition.
+// A paper that's, say, system=energy,food + response=mitigation,impacts:heat
+// contributes to four cells: (Energy × Mit/General), (Food × Mit/General),
+// (Energy × Imp/Heat), (Food × Imp/Heat). Multi-tag papers spread across
+// every matching cell — the matrix shows breadth, not a partition.
 
 import publications from '../data/publications.json';
 import type { Publication } from '../lib/types';
 
 const COLUMNS = [
-  { key: 'energy',    label: 'Energy',    tags: ['energy', 'electricity'] },
-  { key: 'food',      label: 'Food',      tags: ['food', 'land'] },
-  { key: 'water',     label: 'Water',     tags: ['water'] },
-  { key: 'materials', label: 'Materials', tags: ['materials'] },
+  { key: 'energy',    label: 'Energy' },
+  { key: 'food',      label: 'Food' },
+  { key: 'water',     label: 'Water' },
+  { key: 'materials', label: 'Materials' },
 ] as const;
 
-const SECTIONS = [
+type Section = {
+  key: 'mitigation' | 'impacts';
+  label: string;
+  base: string;
+  rows: { key: string; label: string; matchValue: string }[];
+};
+
+const SECTIONS: Section[] = [
   {
     key: 'mitigation',
     label: 'Mitigation',
-    base: 'var(--spectral-10)',  // blue end
+    base: 'var(--spectral-10)',
     rows: [
-      { key: 'general',     label: 'General',      tags: ['emissions'] },
-      { key: 'trade',       label: 'Trade',        tags: ['trade'] },
-      { key: 'corporate',   label: 'Corporate',    tags: ['corporate'] },
-      { key: 'carbon-mgmt', label: 'Carbon mgmt',  tags: ['carbon management'] },
+      { key: 'general',           label: 'General',           matchValue: 'mitigation' },
+      { key: 'trade',             label: 'Trade',             matchValue: 'mitigation:trade' },
+      { key: 'corporate',         label: 'Corporate',         matchValue: 'mitigation:corporate' },
+      { key: 'carbon-management', label: 'Carbon mgmt',       matchValue: 'mitigation:carbon-management' },
     ],
   },
   {
     key: 'impacts',
     label: 'Impacts & Adaptation',
-    base: 'var(--spectral-2)',  // red end
+    base: 'var(--spectral-2)',
     rows: [
-      { key: 'general',       label: 'General',       tags: ['impacts', 'fire'] },
-      { key: 'air-pollution', label: 'Air pollution', tags: ['air pollution'] },
-      { key: 'heat',          label: 'Heat',          tags: ['heat'] },
-      { key: 'flooding',      label: 'Flooding',      tags: ['flooding'] },
+      { key: 'general',       label: 'General',       matchValue: 'impacts' },
+      { key: 'air-pollution', label: 'Air pollution', matchValue: 'impacts:air-pollution' },
+      { key: 'heat',          label: 'Heat',          matchValue: 'impacts:heat' },
+      { key: 'flooding',      label: 'Flooding',      matchValue: 'impacts:flooding' },
     ],
   },
-] as const;
+];
 
 const pubs = publications as Publication[];
 
-function intersects(a: readonly string[], b: readonly string[]) {
-  for (const x of a) if (b.includes(x)) return true;
-  return false;
-}
-
-// Pre-compute counts per cell, plus the per-section max for opacity scaling.
 const cellCount: Record<string, number> = {};
 const sectionMax: Record<string, number> = {};
 for (const sec of SECTIONS) {
@@ -67,8 +68,9 @@ for (const sec of SECTIONS) {
     for (const row of sec.rows) {
       let n = 0;
       for (const p of pubs) {
-        const themes = (p.themes ?? []) as string[];
-        if (intersects(col.tags, themes) && intersects(row.tags, themes)) n++;
+        const sys = (p.system ?? []) as string[];
+        const resp = (p.response ?? []) as string[];
+        if (sys.includes(col.key) && resp.includes(row.matchValue)) n++;
       }
       cellCount[`${sec.key}|${row.key}|${col.key}`] = n;
       if (n > secMax) secMax = n;
@@ -80,7 +82,6 @@ for (const sec of SECTIONS) {
 function cellBg(secKey: string, base: string, count: number): string {
   const max = sectionMax[secKey] || 1;
   if (!count) return 'var(--paper)';
-  // 0.15 floor so even count=1 cells are faintly visible.
   const opacity = 0.15 + (count / max) * 0.78;
   return `color-mix(in oklab, ${base} ${(opacity * 100).toFixed(0)}%, var(--paper))`;
 }

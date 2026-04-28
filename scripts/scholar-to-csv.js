@@ -56,7 +56,7 @@ const JSON_OUT = resolve('templates/publications-from-scholar.json')
 const HEADERS = [
   'authors', 'title', 'journal', 'year', 'month', 'volume_issue', 'pages',
   'doi', 'url',
-  'featured', 'ignore', 'themes', 'lab_authors',
+  'featured', 'ignore', 'themes', 'system', 'response', 'lab_authors',
   'pdf_url', 'code_url', 'brief_url', 'ppt_url', 'press_url', 'image_filename',
   'summary', 'abstract',
 ]
@@ -380,6 +380,8 @@ function buildMergedRow(auto, manual, counts, localSummaryByDoi) {
     featured: manual?.featured || 'FALSE',
     ignore: manual?.ignore || '',
     themes,
+    system: (manual?.system || '').trim(),
+    response: (manual?.response || '').trim(),
     lab_authors: (manual?.lab_authors || '').trim() || 'steve-davis',
     pdf_url: manual?.pdf_url || '',
     code_url: manual?.code_url || '',
@@ -407,6 +409,8 @@ function buildPassthroughRow(sheetRow) {
     featured: sheetRow.featured || 'FALSE',
     ignore: sheetRow.ignore || '',
     themes: cleanThemes(sheetRow.themes || ''),
+    system: sheetRow.system || '',
+    response: sheetRow.response || '',
     lab_authors: sheetRow.lab_authors || '',
     pdf_url: sheetRow.pdf_url || '',
     code_url: sheetRow.code_url || '',

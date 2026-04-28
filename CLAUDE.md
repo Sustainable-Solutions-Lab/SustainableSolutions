@@ -243,16 +243,18 @@ off-screen otherwise.
 | I      | url               | Text                                           | Auto. Journal-page URL, falls back to doi.org  |
 | J      | featured          | Boolean (TRUE/FALSE)                           | Manual                                         |
 | K      | ignore            | Boolean (TRUE/FALSE) or "IGNORE"               | Manual. Hides the row from the site.           |
-| L      | themes            | Text, comma-separated                          | Auto-guessed if blank; user override preserved |
-| M      | lab_authors       | Text, comma-separated                          | Manual; slugs matching People sheet            |
-| N      | pdf_url           | Text                                           | Manual                                         |
-| O      | code_url          | Text                                           | Manual; replication code link                  |
-| P      | brief_url         | Text                                           | Manual; research brief link                    |
-| Q      | ppt_url           | Text                                           | Manual; slides link                            |
-| R      | press_url         | Text                                           | Manual; press coverage link                    |
-| S      | image_filename    | Text                                           | Manual; hero image in `/public/publications/` or `/public/images/` |
-| T      | summary           | Text                                           | Manual; one-sentence summary shown on featured cards |
-| U      | abstract          | Text                                           | Auto from Scholar; rightmost (bulky)           |
+| L      | themes            | Text, comma-separated                          | Free-form catch-all; auto-guessed if blank.    |
+| M      | system            | Text, comma-separated                          | Manual. Two-axis taxonomy. Allowed values: `energy`, `food`, `water`, `materials`. |
+| N      | response          | Text, comma-separated                          | Manual. Allowed values: `mitigation`, `mitigation:trade`, `mitigation:corporate`, `mitigation:carbon-management`, `impacts`, `impacts:air-pollution`, `impacts:heat`, `impacts:flooding`. |
+| O      | lab_authors       | Text, comma-separated                          | Manual; slugs matching People sheet            |
+| P      | pdf_url           | Text                                           | Manual                                         |
+| Q      | code_url          | Text                                           | Manual; replication code link                  |
+| R      | brief_url         | Text                                           | Manual; research brief link                    |
+| S      | ppt_url           | Text                                           | Manual; slides link                            |
+| T      | press_url         | Text                                           | Manual; press coverage link                    |
+| U      | image_filename    | Text                                           | Manual; hero image in `/public/publications/` or `/public/images/` |
+| V      | summary           | Text                                           | Manual; one-sentence summary shown on featured cards |
+| W      | abstract          | Text                                           | Auto from Scholar; rightmost (bulky)           |
 
 ### Tab: `People`
 

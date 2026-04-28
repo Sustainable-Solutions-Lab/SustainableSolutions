@@ -268,7 +268,12 @@ function coerce(value, key) {
     if (!Number.isNaN(n)) return n;
   }
   // comma-separated lists for known multi-value columns
-  if (key === 'themes' || key === 'lab_authors') {
+  if (
+    key === 'themes' ||
+    key === 'lab_authors' ||
+    key === 'system' ||
+    key === 'response'
+  ) {
     return value.split(',').map((s) => s.trim()).filter(Boolean);
   }
   return value;

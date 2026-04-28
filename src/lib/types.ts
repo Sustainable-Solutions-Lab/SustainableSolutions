@@ -40,6 +40,13 @@ export type Publication = {
   pdf_url: string | null;
   code_url: string | null;
   themes: string[];
+  // Two-axis taxonomy added on top of the free-form themes column.
+  // system   — { energy | food | water | materials } (multi-value)
+  // response — { mitigation | mitigation:trade | mitigation:corporate
+  //              | mitigation:carbon-management | impacts
+  //              | impacts:air-pollution | impacts:heat | impacts:flooding }
+  system: string[];
+  response: string[];
   lab_authors: string[];
   featured: boolean;
   press_url: string | null;

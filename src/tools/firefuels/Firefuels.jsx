@@ -253,17 +253,6 @@ export default function Firefuels({ companion = null }) {
             <MobileLegend variable={activeVariable} allValues={statewideValues} isDark={isDark} />
           </div>
 
-          {/* Lab symbol — clicks back to lab home */}
-          <div className="absolute z-10" style={{ bottom: 40, left: 16 }}>
-            <a href="/" className="bare" style={{ lineHeight: 0, display: 'block' }}>
-              <img
-                src={isDark ? '/LabLogo_light.png' : '/LabLogo_border.png'}
-                alt="Back to Sustainable Solutions Lab"
-                style={{ width: 36, height: 36, objectFit: 'contain' }}
-              />
-            </a>
-          </div>
-
           {/* Regional data stats panel — desktop only */}
           <div className="hidden md:block">
             <StatsPanel

@@ -1,5 +1,5 @@
 import { useReducer, useState, useEffect } from 'react'
-import { Menu, X } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { Actions, initialState } from './contracts/events.js'
@@ -12,6 +12,7 @@ import { LayerTabs } from './components/sidebar/layer-tabs.jsx'
 import { DimensionControl } from './components/sidebar/dimension-control.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
+import { MethodsPanel } from './components/methods-panel.jsx'
 
 // ── Reducer ──────────────────────────────────────────────────────────────────
 
@@ -60,8 +61,7 @@ function reducer(state, action) {
         colorScheme: state.colorScheme === 'dark' ? 'light' : 'dark',
       }
     case Actions.TOGGLE_METHODS:
-      // Methods MDX panel is stubbed in Phase 1 — wired in Phase 2.
-      return { ...state, methodsOpen: false }
+      return { ...state, methodsOpen: !state.methodsOpen }
     default:
       return state
   }
@@ -190,16 +190,18 @@ export default function Firefuels({ companion = null }) {
         <button
           type="button"
           onClick={() => setMobilePanelOpen((o) => !o)}
-          aria-label={mobilePanelOpen ? 'Close controls' : 'Open controls'}
+          aria-label={mobilePanelOpen ? 'Hide controls' : 'Show controls'}
           aria-expanded={mobilePanelOpen}
           className={[
             'flex items-center gap-1 cursor-pointer bg-transparent border-0 px-2 py-1',
-            'font-sans text-[13px] font-bold uppercase tracking-[0.12em]',
+            'font-mono text-xs uppercase tracking-wider hover:text-ink',
             mobilePanelOpen ? 'text-ink' : 'text-ink-3',
           ].join(' ')}
         >
-          {mobilePanelOpen ? <X size={16} strokeWidth={1.5} /> : <Menu size={16} strokeWidth={1.5} />}
-          {mobilePanelOpen ? 'Close' : 'Controls'}
+          <span>{mobilePanelOpen ? 'Hide Controls' : 'Show Controls'}</span>
+          {mobilePanelOpen
+            ? <ChevronUp size={14} strokeWidth={1.75} />
+            : <ChevronDown size={14} strokeWidth={1.75} />}
         </button>
       </header>
 
@@ -268,6 +270,15 @@ export default function Firefuels({ companion = null }) {
               dispatch={dispatch}
             />
           </div>
+
+          {/* Methods overlay — covers the map area when "Read Methods" is clicked. */}
+          {state.methodsOpen && (
+            <MethodsPanel
+              config={config}
+              isDark={isDark}
+              onClose={() => dispatch({ type: Actions.TOGGLE_METHODS })}
+            />
+          )}
         </div>
       </div>
 
@@ -275,35 +286,14 @@ export default function Firefuels({ companion = null }) {
       <div
         className="block md:hidden fixed left-0 right-0 z-[21] bg-paper border-b border-rule overflow-y-auto px-4 pt-3 pb-4"
         style={{
-          top: 68,
-          maxHeight: 'calc(100vh - 68px)',
+          top: 112,
+          maxHeight: 'calc(100dvh - 112px)',
           transform: mobilePanelOpen ? 'translateY(0)' : 'translateY(-110%)',
           transition: 'transform 0.18s ease',
         }}
       >
         <div className="mb-3">
-          <button
-            type="button"
-            onClick={() => setMobileAboutOpen((o) => !o)}
-            className={[
-              'block w-full text-left bg-transparent border-0 cursor-pointer p-0',
-              'font-sans text-[13px] font-bold uppercase tracking-[0.12em]',
-              mobileAboutOpen ? 'text-ink mb-2' : 'text-ink-3 mb-0',
-            ].join(' ')}
-          >
-            About
-          </button>
-          {mobileAboutOpen && (
-            <div
-              dangerouslySetInnerHTML={{ __html: config.description }}
-              className="font-sans text-[11px] text-ink"
-              style={{ lineHeight: 1.5 }}
-            />
-          )}
-        </div>
-
-        <div className="mb-3">
-          <p className="font-sans text-[13px] font-bold uppercase tracking-[0.12em] text-ink-3 mb-2 m-0">
+          <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
             Map
           </p>
           <LayerTabs config={config} state={state} dispatch={dispatch} />
@@ -359,13 +349,24 @@ export default function Firefuels({ companion = null }) {
             </div>
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={() => {
+            dispatch({ type: Actions.TOGGLE_METHODS })
+            setMobilePanelOpen(false)
+          }}
+          className="block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-6 font-sans text-[12px] uppercase tracking-[0.12em] text-ink-3 hover:text-ink"
+        >
+          Read Methods
+        </button>
       </div>
 
       {/* Scrim — grays out map while mobile panel is open */}
       <div
         className="block md:hidden fixed left-0 right-0 bottom-0"
         style={{
-          top: 68,
+          top: 112,
           background: 'rgba(0,0,0,0.52)',
           zIndex: 20,
           opacity: mobilePanelOpen ? 1 : 0,
@@ -374,6 +375,7 @@ export default function Firefuels({ companion = null }) {
         }}
         onClick={() => setMobilePanelOpen(false)}
       />
+
     </div>
   )
 }

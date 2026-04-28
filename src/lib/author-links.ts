@@ -110,7 +110,13 @@ export function splitAndLinkAuthors(
     .map((p) => ({ slug: p.slug, parsed: parsePersonName(p.name) }))
     .filter((x): x is { slug: string; parsed: ParsedCitation } => !!x.parsed)
 
-  return authorsStr
+  // Normalize whitespace before splitting — some sheet cells have hard
+  // returns / tabs / runs of spaces in them which were producing inconsistent
+  // line breaks in the rendered author lists (a name in a nowrap span with
+  // an embedded newline was being broken differently than one without).
+  const cleaned = (authorsStr ?? '').replace(/\s+/g, ' ').trim()
+
+  return cleaned
     .split(/;\s*/)
     .map((s) => s.trim())
     .filter(Boolean)

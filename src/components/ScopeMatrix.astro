@@ -1,31 +1,31 @@
 ---
-// Lab-scope heatmap — vertical layout, sits beside the hero lede.
+// Lab-scope heatmap, reference-style.
 //
-// Columns = systems     (Energy · Food · Water · Materials · Climate · Health)
+// Columns = systems       (Energy · Food · Water · Materials · Climate · Health)
 // Rows    = response type, two sections separated by a section header:
 //             MITIGATION:  General · Trade · Carbon mgmt
 //             IMPACTS &
-//             ADAPTATION:  General · Air · Heat · Drought · Fire · Flood
+//             ADAPTATION:  General · Air pollution · Heat · Drought · Fire · Flooding
 //
-// Each COLUMN uses its system's Spectral hue. Cell saturation scales
-// against the maximum count anywhere in that column — so each system's
-// densest cell hits full saturation, regardless of how busy other
-// systems are.
+// Cell color is mapped from the paper count via the lab's full
+// ColorBrewer Spectral palette: low counts at the cool/green end,
+// high counts at the warm/red end, no-papers cells stay paper.
+// Single global scale (max count anywhere) so absolute density reads
+// across the whole figure.
+//
+// Sub-tag rollup: system=energy:electricity → Energy column, response=
+// impacts:drought → Drought row, etc. (prefix match).
 
 import publications from '../data/publications.json';
 import type { Publication } from '../lib/types';
 
-// Darker, more-saturated hues for Energy and Food than the raw Spectral
-// palette — Spectral-3 (#F46D43) and Spectral-9 (#66C2A5) lose too much
-// punch when mixed with cream paper. The other four use the palette
-// directly because their natural luminance already contrasts well.
 const SYSTEMS = [
-  { key: 'energy',    label: 'Energy',    color: '#C2440E'            }, // burnt orange
-  { key: 'food',      label: 'Food',      color: '#1F7A4D'            }, // forest green
-  { key: 'water',     label: 'Water',     color: 'var(--spectral-10)' }, // blue
-  { key: 'materials', label: 'Materials', color: 'var(--spectral-11)' }, // purple
-  { key: 'climate',   label: 'Climate',   color: 'var(--spectral-1)'  }, // wine
-  { key: 'health',    label: 'Health',    color: 'var(--spectral-2)'  }, // red
+  { key: 'energy',    label: 'Energy'    },
+  { key: 'food',      label: 'Food'      },
+  { key: 'water',     label: 'Water'     },
+  { key: 'materials', label: 'Materials' },
+  { key: 'climate',   label: 'Climate'   },
+  { key: 'health',    label: 'Health'    },
 ] as const;
 
 const MIT_ROWS = [
@@ -54,9 +54,8 @@ function axisMatches(values: string[], target: string): boolean {
 }
 
 const cellCount: Record<string, number> = {};
-const colMax: Record<string, number> = {};
+let globalMax = 0;
 for (const sys of SYSTEMS) {
-  let m = 0;
   for (const row of [...MIT_ROWS, ...IMP_ROWS]) {
     let n = 0;
     for (const p of pubs) {
@@ -65,18 +64,21 @@ for (const sys of SYSTEMS) {
       if (axisMatches(s, sys.key) && axisMatches(r, row.match)) n++;
     }
     cellCount[`${sys.key}|${row.key}`] = n;
-    if (n > m) m = n;
+    if (n > globalMax) globalMax = n;
   }
-  colMax[sys.key] = m;
 }
 
-function cellBg(systemKey: string, base: string, count: number): string {
-  const max = colMax[systemKey] || 1;
+// Sequential Spectral ramp keyed off paper count. Empty cells stay
+// paper-toned (faint, distinct from the data). Counts ramp through the
+// cool-to-warm Spectral spread: low = blue/green end, high = red/wine.
+function cellBg(count: number): string {
   if (!count) return 'var(--paper-2)';
-  // Higher floor (0.32) so even single-paper cells read clearly; max → 1.0
-  // so the densest cell of each column is fully saturated.
-  const opacity = 0.32 + (count / max) * 0.68;
-  return `color-mix(in oklab, ${base} ${(opacity * 100).toFixed(0)}%, var(--paper))`;
+  const t = count / globalMax;
+  // Interpolate idx from 10 (blue, low) → 2 (red, high) across all 9
+  // ramp positions. Bias the curve so even count=1 lands in the green
+  // band (visible) rather than the very-pale yellow.
+  const idx = Math.max(2, Math.min(10, Math.round(10 - t * 8)));
+  return `var(--spectral-${idx})`;
 }
 ---
 
@@ -90,10 +92,10 @@ function cellBg(systemKey: string, base: string, count: number): string {
   </p>
 
   <div class="scope-grid">
-    {/* Column headers — system labels in their own hue */}
+    {/* Column headers — system labels (Inter, title case, no wrap) */}
     <div></div>
     {SYSTEMS.map((s) => (
-      <div class="col-label" style={`color: ${s.color};`}>{s.label}</div>
+      <div class="col-label">{s.label}</div>
     ))}
 
     {/* Mitigation section header */}
@@ -107,7 +109,7 @@ function cellBg(systemKey: string, base: string, count: number): string {
           return (
             <div
               class="cell"
-              style={`background-color: ${cellBg(s.key, s.color, count)};`}
+              style={`background-color: ${cellBg(count)};`}
               title={`${s.label} × Mitigation: ${row.label} · ${count} paper${count === 1 ? '' : 's'}`}
             ></div>
           );
@@ -126,7 +128,7 @@ function cellBg(systemKey: string, base: string, count: number): string {
           return (
             <div
               class="cell"
-              style={`background-color: ${cellBg(s.key, s.color, count)};`}
+              style={`background-color: ${cellBg(count)};`}
               title={`${s.label} × Impacts: ${row.label} · ${count} paper${count === 1 ? '' : 's'}`}
             ></div>
           );
@@ -136,9 +138,11 @@ function cellBg(systemKey: string, base: string, count: number): string {
   </div>
 
   <figcaption class="scope-caption">
-    <em>Each column is a system the lab studies. Hue identifies the
-    system; saturation scales with the number of papers tagged in
-    that cell. Hover for counts.</em>
+    <em>
+      Diverging Spectral palette: cells warm from green/blue (few papers
+      tagged with that system × response) toward red/wine (most papers).
+      Hover for counts.
+    </em>
   </figcaption>
 </figure>
 
@@ -157,36 +161,36 @@ function cellBg(systemKey: string, base: string, count: number): string {
   }
   .scope-headline {
     font-family: var(--font-serif);
-    font-size: 19px;
+    font-size: 22px;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1.15;
     color: var(--ink);
     margin: 0 0 4px;
   }
   .scope-subtitle {
     font-family: var(--font-serif);
-    font-size: 13px;
+    font-size: 14px;
     font-style: italic;
     color: var(--ink-3);
-    margin: 0 0 12px;
+    margin: 0 0 14px;
   }
 
   .scope-grid {
     display: grid;
-    grid-template-columns: minmax(80px, max-content) repeat(6, 1fr);
-    gap: 2px;
+    grid-template-columns: minmax(80px, max-content) repeat(6, minmax(46px, 1fr));
+    gap: 3px;
     align-items: stretch;
   }
 
+  /* Column headers (sans-serif title case, no wrap, more reading-friendly
+     than uppercase mono at this size). */
   .col-label {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 500;
     text-align: center;
-    padding: 0 2px 4px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: var(--ink-2);
+    padding: 0 0 4px;
     white-space: nowrap;
     align-self: end;
   }
@@ -197,28 +201,27 @@ function cellBg(systemKey: string, base: string, count: number): string {
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    margin-top: 4px;
-    padding-bottom: 3px;
+    margin-top: 6px;
+    padding-bottom: 4px;
     border-bottom: 1px solid var(--rule);
   }
   .section-mit { color: var(--spectral-10); }
   .section-imp { color: var(--spectral-2); }
 
   .row-label {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-family: var(--font-sans);
+    font-size: 11px;
     color: var(--ink-2);
     text-align: right;
-    padding-right: 6px;
+    padding-right: 8px;
     align-self: center;
+    white-space: nowrap;
   }
 
   .cell {
     background: var(--paper-2);
-    border-radius: 2px;
-    height: 18px;
+    border-radius: 3px;
+    height: 22px;
     transition: outline 0.12s ease;
   }
   .cell:hover {
@@ -227,11 +230,11 @@ function cellBg(systemKey: string, base: string, count: number): string {
   }
 
   .scope-caption {
-    margin: 12px 0 0;
+    margin: 14px 0 0;
     font-family: var(--font-serif);
     font-size: 12px;
-    line-height: 1.45;
+    line-height: 1.5;
     color: var(--ink-3);
-    max-width: 32ch;
+    max-width: 38ch;
   }
 </style>

@@ -71,11 +71,15 @@ for (const sys of SYSTEMS) {
 // Sequential Spectral ramp across the FULL palette: low counts at
 // Spectral-10 (deep blue), high at Spectral-1 (wine). Empty cells
 // stay paper-toned to read distinctly from the lowest data cells.
+//
+// Log scaling on count: paper distribution is heavy-tailed (one cell
+// has ~5x the others), and linear scaling crushed the long tail into
+// the cool half of the palette. Log spreads the bulk across the full
+// range so cells with 10–25 papers land in the warm/yellow band and
+// the very top still reaches wine.
 function cellBg(count: number): string {
   if (!count) return 'var(--paper-2)';
-  const t = count / globalMax;
-  // 10 → 1 across all 10 palette steps. count=1 (t≈0) lands at 10
-  // (deep blue), count=max lands at 1 (wine). Yellow is the midpoint.
+  const t = Math.log(1 + count) / Math.log(1 + globalMax);
   const idx = Math.max(1, Math.min(10, Math.round(10 - t * 9)));
   return `var(--spectral-${idx})`;
 }

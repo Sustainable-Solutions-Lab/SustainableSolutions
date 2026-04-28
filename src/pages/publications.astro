@@ -44,61 +44,61 @@ const total = all.length;
 
   <section class="container-content pb-24">
     <div
-      class="flex flex-wrap items-center gap-4 py-4 mb-2 border-y border-rule bg-paper sticky z-20"
+      class="flex flex-wrap items-center gap-2 md:gap-4 py-2 md:py-4 mb-2 border-y border-rule bg-paper sticky z-20"
       style="top: 56px;"
       role="search"
     >
-      <label class="flex items-center gap-2 text-sm">
-        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Search</span>
+      <label class="flex items-center gap-2 text-sm flex-1 md:flex-initial min-w-0">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Search</span>
         <input
           id="pub-search"
           type="search"
-          placeholder="Title, author, journal…"
-          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
-          style="border-radius: var(--radius-sm); min-width: 16ch;"
+          placeholder="Search…"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink w-full md:w-auto"
+          style="border-radius: var(--radius-sm); min-width: 0; md:min-width: 16ch;"
         />
       </label>
 
       <label class="flex items-center gap-2 text-sm">
-        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Year</span>
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Year</span>
         <select
           id="pub-year"
           class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
           style="border-radius: var(--radius-sm);"
         >
-          <option value="">All</option>
+          <option value="">All years</option>
           {years.map((y) => <option value={y}>{y}</option>)}
         </select>
       </label>
 
       <label class="flex items-center gap-2 text-sm">
-        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Theme</span>
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Theme</span>
         <select
           id="pub-theme"
           class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
           style="border-radius: var(--radius-sm);"
         >
-          <option value="">All</option>
+          <option value="">All themes</option>
           {themes.map((t) => <option value={t}>{themeLabel(t)}</option>)}
         </select>
       </label>
 
       {labAuthorOptions.length > 0 && (
         <label class="flex items-center gap-2 text-sm">
-          <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Author</span>
+          <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Author</span>
           <select
             id="pub-author"
             class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
             style="border-radius: var(--radius-sm);"
           >
-            <option value="">All</option>
+            <option value="">All authors</option>
             {labAuthorOptions.map((p) => <option value={p.slug}>{p.name}</option>)}
           </select>
         </label>
       )}
 
       <label class="flex items-center gap-2 text-sm">
-        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Sort</span>
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Sort</span>
         <select
           id="pub-sort"
           class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
@@ -113,7 +113,7 @@ const total = all.length;
 
       <label class="flex items-center gap-2 text-sm">
         <input id="pub-featured" type="checkbox" class="accent-cardinal" />
-        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Featured only</span>
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Featured</span>
       </label>
 
       <span class="ml-auto font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">

@@ -13,6 +13,11 @@ export const THEME_COLORS: Record<string, string> = {
   'land-use':       'var(--spectral-9)',  // green
   'trade':          'var(--spectral-10)', // blue
   'impacts':        'var(--spectral-2)',  // red
+  // Domain themes (Steve's editorial mapping)
+  'water':          'var(--spectral-10)', // blue
+  'food':           'var(--spectral-9)',  // green
+  'fire':           'var(--spectral-3)',  // orange
+  'energy':         'var(--spectral-2)',  // red
 }
 
 export const THEME_LABELS: Record<string, string> = {
@@ -20,6 +25,10 @@ export const THEME_LABELS: Record<string, string> = {
   'land-use':       'Land use',
   'trade':          'Trade',
   'impacts':        'Impacts',
+  'water':          'Water',
+  'food':           'Food',
+  'fire':           'Fire',
+  'energy':         'Energy',
 }
 
 // Mode-aware dynamic palette. The actual hex values live in

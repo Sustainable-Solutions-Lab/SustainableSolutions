@@ -243,7 +243,7 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
         <span class="dot">·</span>
         {pub.year}
         {pubThemes.map((t, i) => (
-          <span class:list={['inline', i > 0 && 'hidden md:inline']}>
+          <span class:list={[i > 0 && 'hidden md:inline']}>
             <span class="dot">·</span>
             <span style={`color: ${themeColor(t)};`}>{themeLabel(t).toUpperCase()}</span>
           </span>

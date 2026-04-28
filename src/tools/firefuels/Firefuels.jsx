@@ -69,7 +69,7 @@ function readSiteScheme() {
 
 // ── App ─────────────────────────────────────────────────────────────────────
 
-export default function Firefuels() {
+export default function Firefuels({ companion = null }) {
   const initialScheme = readSiteScheme()
   const [state, dispatch] = useReducer(reducer, { ...initialState, colorScheme: initialScheme })
 
@@ -205,6 +205,7 @@ export default function Firefuels() {
             state={state}
             dispatch={dispatch}
             allValues={statewideValues}
+            companion={companion}
           />
         </div>
 

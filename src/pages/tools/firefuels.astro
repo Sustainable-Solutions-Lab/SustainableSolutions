@@ -6,10 +6,17 @@ import publications from '../../data/publications.json';
 import type { Tool, Publication } from '../../lib/types';
 
 const tool = (tools as Tool[]).find((t) => t.slug === 'firefuels') ?? null;
-const companion = tool?.doi
+const companionPub = tool?.doi
   ? (publications as Publication[]).find((p) => p.doi?.toLowerCase() === tool.doi!.toLowerCase()) ?? null
   : null;
-const companionUrl = companion?.url ?? (companion?.doi ? `https://doi.org/${companion.doi}` : null);
+const companion = companionPub
+  ? {
+      title: companionPub.title,
+      journal: companionPub.journal,
+      year: companionPub.year,
+      url: companionPub.url ?? (companionPub.doi ? `https://doi.org/${companionPub.doi}` : null),
+    }
+  : null;
 ---
 
 <BaseLayout
@@ -17,37 +24,22 @@ const companionUrl = companion?.url ?? (companion?.doi ? `https://doi.org/${comp
   description={tool?.summary}
   hideFooter={true}
 >
-  {companion && (
-    <div class="container-content pt-3 pb-2">
-      <p class="font-mono text-xs text-ink-3 m-0 uppercase tracking-wider">
-        Companion paper ·
-        {companionUrl ? (
-          <a href={companionUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>
-            <em class="not-italic">{companion.journal}</em> · {companion.year}
-          </a>
-        ) : (
-          <span><em class="not-italic">{companion.journal}</em> · {companion.year}</span>
-        )}
-      </p>
-    </div>
-  )}
-
   <section aria-label="Interactive map">
     <div
-      class="firefuels-frame border-t border-rule"
+      class="firefuels-frame"
       style="width: 100%; overflow: hidden; background: var(--paper-2);"
     >
-      <Firefuels client:only="react" />
+      <Firefuels client:only="react" companion={companion} />
     </div>
   </section>
 </BaseLayout>
 
 <style is:global>
-  /* Map fills the viewport from where it starts down to the bottom edge.
-     Subtracts the sticky nav (56 px) and the companion-paper strip (~36 px)
-     so the page ends precisely at the map's bottom. The body itself
-     doesn't scroll on this page; the map sidebar has its own scroll. */
+  /* Map fills the viewport from below the sticky nav (56 px) to the bottom
+     edge — companion paper info now lives in the sidebar's footer area
+     instead of as a strip above the map. The body itself doesn't scroll
+     on this page; the sidebar inside the map keeps its own internal scroll. */
   body:has(.firefuels-frame) { overflow: hidden; }
-  .firefuels-frame { position: relative; height: calc(100vh - 92px); }
+  .firefuels-frame { position: relative; height: calc(100vh - 56px); }
   .firefuels-frame > * { width: 100%; height: 100%; }
 </style>

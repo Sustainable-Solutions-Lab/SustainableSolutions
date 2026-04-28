@@ -76,7 +76,7 @@ function readSiteScheme() {
 
 // ── App ─────────────────────────────────────────────────────────────────────
 
-export default function Firefuels({ companion = null }) {
+export default function Firefuels({ companion = null, display = null }) {
   const initialScheme = readSiteScheme()
   const [state, dispatch] = useReducer(reducer, { ...initialState, colorScheme: initialScheme })
 
@@ -87,7 +87,18 @@ export default function Firefuels({ companion = null }) {
   const [statewideValues, setStatewideValues] = useState([])
   const [opacityP95, setOpacityP95] = useState(null)
 
-  const config = projects[state.projectId]
+  // Sheet-managed display fields (title, eyebrow, summary) override the
+  // hardcoded project config so editing the Tools sheet flows through to
+  // the in-tool sidebar header without code changes.
+  const baseConfig = projects[state.projectId]
+  const config = display
+    ? {
+        ...baseConfig,
+        title: display.title || baseConfig.title,
+        eyebrow: display.eyebrow || baseConfig.eyebrow,
+        summary: display.summary || baseConfig.summary,
+      }
+    : baseConfig
   const isDark = state.colorScheme === 'dark'
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
 

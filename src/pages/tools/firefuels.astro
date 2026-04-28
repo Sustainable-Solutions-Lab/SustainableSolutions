@@ -29,7 +29,11 @@ const companion = companionPub
       class="firefuels-frame"
       style="width: 100%; overflow: hidden; background: var(--paper-2);"
     >
-      <Firefuels client:only="react" companion={companion} />
+      <Firefuels
+        client:only="react"
+        companion={companion}
+        display={tool ? { title: tool.title, eyebrow: tool.eyebrow, summary: tool.summary } : null}
+      />
     </div>
   </section>
 </BaseLayout>

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import { Protocol } from 'pmtiles'
-import { Sun, Moon, Globe } from 'lucide-react'
+import { Globe } from 'lucide-react'
 import { basemapStyle } from './basemap-style.jsx'
 import { addStaticLayers, setGraticuleVisible as applyGraticuleVisibility } from './static-layers.jsx'
 import { useMapLayer } from '../../lib/use-map-layer.js'
@@ -230,31 +230,9 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         }
       `}</style>
       <div className='firemap-map-controls'>
-        {/* Dark/light scheme toggle */}
-        {onToggleScheme && (
-          <button
-            onClick={onToggleScheme}
-            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            style={{
-              width: 48,
-              height: 48,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'transparent',
-              color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.65)',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              userSelect: 'none',
-            }}
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {isDark ? <Sun size={22} strokeWidth={1.5} /> : <Moon size={22} strokeWidth={1.5} />}
-          </button>
-        )}
-
-        {/* Graticule / city labels toggle */}
+        {/* Graticule / city labels toggle (dark/light is driven by the
+            site-wide nav toggle now — the in-map sun/moon button was
+            removed for consistency with the rest of the site). */}
         <button
           onClick={handleGraticuleToggle}
           title={graticuleVisible ? 'Hide city labels' : 'Show city labels'}

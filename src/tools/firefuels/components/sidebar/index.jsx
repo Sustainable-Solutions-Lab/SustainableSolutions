@@ -50,7 +50,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 px-3 pt-0 pb-2 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 px-3 pt-0 pb-3 overflow-y-auto overflow-x-hidden">
         {config.summary && (
           <p
             className="text-ink-2 m-0 mb-4"
@@ -58,6 +58,32 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           >
             {config.summary}
           </p>
+        )}
+
+        {companion && (
+          <div className="mb-4">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 m-0 mb-1">
+              Companion paper
+            </p>
+            {companion.url ? (
+              <a
+                href={companion.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink-2 hover:text-ink border-b-0"
+                style={{ fontSize: '13px', lineHeight: 1.4, display: 'block' }}
+              >
+                <em className="not-italic">{companion.journal}</em> · {companion.year}
+              </a>
+            ) : (
+              <span
+                className="text-ink-2"
+                style={{ fontSize: '13px', lineHeight: 1.4, display: 'block' }}
+              >
+                <em className="not-italic">{companion.journal}</em> · {companion.year}
+              </span>
+            )}
+          </div>
         )}
 
         {/* MAP section header — matches publications-page filter labels */}
@@ -143,41 +169,6 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         </button>
       </div>
 
-      {/* Footer — companion paper + SDSS wordmark, pinned to the bottom */}
-      <div className="shrink-0 px-3 py-3 border-t border-rule">
-        {companion && (
-          <div className="mb-3">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 m-0 mb-1">
-              Companion paper
-            </p>
-            {companion.url ? (
-              <a
-                href={companion.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-ink-2 hover:text-ink border-b-0"
-                style={{ fontSize: '13px', lineHeight: 1.4, display: 'block' }}
-              >
-                <em className="not-italic">{companion.journal}</em> · {companion.year}
-              </a>
-            ) : (
-              <span
-                className="text-ink-2"
-                style={{ fontSize: '13px', lineHeight: 1.4, display: 'block' }}
-              >
-                <em className="not-italic">{companion.journal}</em> · {companion.year}
-              </span>
-            )}
-          </div>
-        )}
-        <a href="/" className="bare" style={{ lineHeight: 0, display: 'inline-block' }}>
-          <img
-            src={state.colorScheme === 'dark' ? '/SDSS_brand_white.png' : '/SDSS_brand.png'}
-            alt="Stanford Doerr School of Sustainability"
-            style={{ width: '100%', maxWidth: 200, height: 'auto', objectFit: 'contain' }}
-          />
-        </a>
-      </div>
     </aside>
   )
 }

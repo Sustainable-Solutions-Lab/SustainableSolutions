@@ -109,6 +109,21 @@ export default function Firefuels({ companion = null }) {
       .catch(() => {})
   }, [activeVariable?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Subscribe to the site-level theme attribute so the nav's dark/light
+  // toggle drives the entire tool. The in-map moon/sun button was removed —
+  // the nav button is the only switch.
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const html = document.documentElement
+    const observer = new MutationObserver(() => {
+      const siteIsDark = html.getAttribute('data-theme') === 'dark'
+      const toolIsDark = state.colorScheme === 'dark'
+      if (siteIsDark !== toolIsDark) dispatch({ type: Actions.TOGGLE_SCHEME })
+    })
+    observer.observe(html, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [state.colorScheme])
+
   function handleToggleScheme() {
     const next = state.colorScheme === 'dark' ? 'light' : 'dark'
     dispatch({ type: Actions.TOGGLE_SCHEME })

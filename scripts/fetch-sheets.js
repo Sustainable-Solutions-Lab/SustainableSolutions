@@ -190,8 +190,30 @@ const SUBSCRIPT_FIXES = [
   [/\bPM\s*2\.5\b/g, 'PM₂.₅'], [/\bPM\s*10\b/g, 'PM₁₀'],
 ];
 
+// Decode HTML entities (&amp;, &lt;, &mdash;, &#8211;, &#x2014;, …) so titles
+// and other text fields don't render as raw entity references on the page.
+const NAMED_ENTITIES = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  ndash: '–', mdash: '—', hellip: '…',
+  lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”',
+  copy: '©', reg: '®', trade: '™',
+};
+function decodeHtmlEntities(s) {
+  if (!s) return s;
+  return s.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, ent) => {
+    if (ent[0] === '#') {
+      const hex = ent[1] === 'x' || ent[1] === 'X';
+      const code = hex ? parseInt(ent.slice(2), 16) : parseInt(ent.slice(1), 10);
+      if (Number.isFinite(code) && code > 0) return String.fromCodePoint(code);
+      return match;
+    }
+    return NAMED_ENTITIES[ent.toLowerCase()] ?? match;
+  });
+}
+
 function fixMojibake(s) {
   if (!s) return s;
+  s = decodeHtmlEntities(s);
 
   // 1. If the whole string looks like it could be uniform mojibake (every
   //    non-ASCII char fits in Mac Roman or Win-1252), try the algorithmic

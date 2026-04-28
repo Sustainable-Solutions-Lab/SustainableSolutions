@@ -26,6 +26,26 @@ const RATE_DELAY_MS = 200
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
+// ── HTML entity decoder (Crossref returns titles with raw entities). ──
+const NAMED_ENTITIES = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  ndash: '–', mdash: '—', hellip: '…',
+  lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”',
+  copy: '©', reg: '®', trade: '™',
+}
+function decodeHtmlEntities(s) {
+  if (!s) return s
+  return s.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, ent) => {
+    if (ent[0] === '#') {
+      const hex = ent[1] === 'x' || ent[1] === 'X'
+      const code = hex ? parseInt(ent.slice(2), 16) : parseInt(ent.slice(1), 10)
+      if (Number.isFinite(code) && code > 0) return String.fromCodePoint(code)
+      return match
+    }
+    return NAMED_ENTITIES[ent.toLowerCase()] ?? match
+  })
+}
+
 // ── Crossref response → Publication shape ──
 function authorsFromCrossref(msg) {
   if (!msg.author?.length) return ''
@@ -73,9 +93,9 @@ function pubRecord(msg) {
   const { year, month } = dateFromCrossref(msg)
   return {
     doi: msg.DOI,
-    title: msg.title?.[0] ?? '',
-    authors: authorsFromCrossref(msg),
-    journal: msg['container-title']?.[0] ?? '',
+    title: decodeHtmlEntities(msg.title?.[0] ?? ''),
+    authors: decodeHtmlEntities(authorsFromCrossref(msg)),
+    journal: decodeHtmlEntities(msg['container-title']?.[0] ?? ''),
     year,
     month,
     volume_issue: msg.volume

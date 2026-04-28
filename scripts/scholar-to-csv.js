@@ -90,10 +90,31 @@ function rowsToObjects(rows) {
   return data.map((r) => Object.fromEntries(header.map((h, i) => [h.trim(), r[i] ?? ''])))
 }
 
+// Decode HTML entities (&amp;, &mdash;, &#8211;, &#x2014;, …) so titles
+// scraped from Scholar's HTML don't reach the CSV with raw entity references.
+const NAMED_ENTITIES = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  ndash: '–', mdash: '—', hellip: '…',
+  lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”',
+  copy: '©', reg: '®', trade: '™',
+}
+function decodeHtmlEntities(s) {
+  if (!s) return s
+  return s.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, ent) => {
+    if (ent[0] === '#') {
+      const hex = ent[1] === 'x' || ent[1] === 'X'
+      const code = hex ? parseInt(ent.slice(2), 16) : parseInt(ent.slice(1), 10)
+      if (Number.isFinite(code) && code > 0) return String.fromCodePoint(code)
+      return match
+    }
+    return NAMED_ENTITIES[ent.toLowerCase()] ?? match
+  })
+}
+
 // ── Subscript fix (Scholar separates "CO" + <span>2</span> with a space). ──
 function fixSubscripts(s) {
   if (!s) return s
-  return s
+  return decodeHtmlEntities(s)
     .replace(/\bCO\s*2\b/g, 'CO₂')
     .replace(/\bCH\s*4\b/g, 'CH₄')
     .replace(/\bN\s*2\s*O\b/g, 'N₂O')
@@ -280,9 +301,9 @@ function buildAuto(masterEntry, details, rawByNorm) {
     const url = d.journal_link ?? (d.doi ? `https://doi.org/${d.doi}` : '')
     return {
       _source: 'detail',
-      authors: reformatAuthors(d.authors),
+      authors: reformatAuthors(decodeHtmlEntities(d.authors || '')),
       title: fixSubscripts(d.title || m.title),
-      journal: d.journal || '',
+      journal: decodeHtmlEntities(d.journal || ''),
       year: year || '',
       month: month || '',
       volume_issue: buildVolumeIssue(d.volume, d.issue),
@@ -297,9 +318,9 @@ function buildAuto(masterEntry, details, rawByNorm) {
     const v = parseVenue(r.venue)
     return {
       _source: 'raw',
-      authors: reformatAuthors(r.authors),
+      authors: reformatAuthors(decodeHtmlEntities(r.authors || '')),
       title: fixSubscripts(r.title),
-      journal: v.journal,
+      journal: decodeHtmlEntities(v.journal || ''),
       year: r.year || '',
       month: '',
       volume_issue: v.volume_issue,
@@ -329,10 +350,14 @@ function buildMergedRow(auto, manual, counts) {
   // The mental model: the sheet is the source of truth; Scholar populates
   // what the user hasn't touched yet. To force a re-fill from Scholar for a
   // specific cell, clear it in the sheet.
+  //
+  // Decode HTML entities at the merge layer too so values that were pasted
+  // into the sheet with raw entities (e.g. URLs scraped earlier with &amp;)
+  // are normalized once they round-trip through a refresh.
   const preferSheet = (autoValue, manualValue) => {
     if (manualValue !== '' && manualValue != null) {
       const s = String(manualValue).trim()
-      if (s !== '') return manualValue
+      if (s !== '') return decodeHtmlEntities(String(manualValue))
     }
     return autoValue ?? ''
   }

@@ -34,29 +34,23 @@ export function DimensionControl({ dimension, value, dispatch }) {
 }
 
 function ToggleControl({ dimension, value, onChange }) {
+  // Render as a <select> matching the publications-page filter style — was
+  // previously a row of underlined text buttons. Toggle/dropdown render the
+  // same way now; the type distinction in the config still drives whether
+  // multi-select / radio behavior applies in future.
   return (
-    <div className="flex flex-wrap">
-      {dimension.options.map((option) => {
-        const isActive = option.id === value
-        return (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => onChange(option.id)}
-            className={[
-              'cursor-pointer bg-transparent border-0 py-1 mb-1 mr-[2px] px-[6px]',
-              'font-sans text-[12px] uppercase tracking-[0.12em] whitespace-nowrap',
-              'underline-offset-[3px] transition-colors',
-              isActive
-                ? 'font-bold text-ink underline'
-                : 'font-normal text-ink-3 hover:text-ink no-underline',
-            ].join(' ')}
-          >
-            {option.label}
-          </button>
-        )
-      })}
-    </div>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
+      style={{ borderRadius: 'var(--radius-sm)' }}
+    >
+      {dimension.options.map((option) => (
+        <option key={option.id} value={option.id}>
+          {option.label}
+        </option>
+      ))}
+    </select>
   )
 }
 

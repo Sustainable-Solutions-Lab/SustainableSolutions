@@ -10,7 +10,11 @@
  */
 const config = {
   id: 'fuel-treatment',
-  title: 'Treating Wildfire Fuels',
+  eyebrow: 'INTERACTIVE MAP',
+  title: 'Firefuels',
+  summary: 'Per-km² costs and benefits of wildfire fuel treatment in California.',
+  // Long-form description has moved into projects/fuel-treatment/methods.mdx
+  // (rendered when the user opens "Read Methods").
   description:
     'We\'ve analyzed the costs and benefits of treating (i.e. removing) wildfire fuels under a range of scenarios, and these maps show the net benefits, benefits, and costs in different locations across California depending on the type of treatment and assumed climate (current or 2100 under midrange or high warming). You can also see the breakdown of benefits of avoided damages to property and health (the latter related to transported smoke). For details, see <a href="https://eartharxiv.org/repository/view/9858/" target="_blank" rel="noopener noreferrer"><strong>Cheng et al., Prioritizing wildfire fuel management in California, in review.</strong></a>',
 

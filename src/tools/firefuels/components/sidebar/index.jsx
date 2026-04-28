@@ -5,7 +5,6 @@
  * legend, percentile filter, area tool toggle, methods link, lab logo.
  */
 
-import { useState } from 'react'
 import { Actions } from '../../contracts/events.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { LayerTabs } from './layer-tabs.jsx'
@@ -14,7 +13,6 @@ import { Legend } from './legend.jsx'
 import { DistributionChart } from './distribution-chart.jsx'
 
 export function Sidebar({ config, state, dispatch, allValues = [] }) {
-  const [aboutOpen, setAboutOpen] = useState(false)
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
   const activeDimensionIds = activeLayerConfig?.dimensionIds ?? []
@@ -27,54 +25,39 @@ export function Sidebar({ config, state, dispatch, allValues = [] }) {
       className="relative h-full bg-paper border-r border-rule overflow-x-hidden flex flex-col shrink-0"
       style={{ width: 280, minWidth: 280 }}
     >
-      {/* Header — back link only */}
+      {/* Header — eyebrow + project title (matches the lab's page-title pattern) */}
       <div className="px-3 pt-3 pb-3 shrink-0">
-        <a
-          href="/"
-          className="bare"
-          style={{
-            display: 'inline-block',
-            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-            fontSize: '11px',
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--ink-3)',
-          }}
-        >
-          ← Sustainable Solutions Lab
-        </a>
-      </div>
-
-      {/* Scrollable content */}
-      <div className="flex-1 px-3 pt-1 pb-2 overflow-y-auto overflow-x-hidden">
-        {/* Project title */}
+        {config.eyebrow && (
+          <p
+            className="m-0"
+            style={{
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: '11px',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--ink-3)',
+            }}
+          >
+            {config.eyebrow}
+          </p>
+        )}
         <p
-          className="font-serif text-ink mb-1 m-0"
+          className="font-serif text-ink mt-1 mb-0"
           style={{ fontSize: '22px', fontWeight: 600, lineHeight: 1.28 }}
         >
           {config.title}
         </p>
+      </div>
 
-        {/* About toggle */}
-        <button
-          type="button"
-          onClick={() => setAboutOpen((o) => !o)}
-          className={[
-            'block w-full text-left bg-transparent border-0 cursor-pointer p-0',
-            'font-sans text-[13px] font-bold uppercase tracking-[0.12em] transition-colors',
-            aboutOpen ? 'mb-2 text-ink' : 'mb-3 text-ink-3',
-            'hover:text-ink',
-          ].join(' ')}
-        >
-          About
-        </button>
-
-        {aboutOpen && (
-          <div
-            dangerouslySetInnerHTML={{ __html: config.description }}
-            className="font-sans text-[13px] text-ink mb-3"
-            style={{ lineHeight: 1.5 }}
-          />
+      {/* Scrollable content */}
+      <div className="flex-1 px-3 pt-1 pb-2 overflow-y-auto overflow-x-hidden">
+        {config.summary && (
+          <p
+            className="text-ink-2 m-0 mb-4"
+            style={{ fontSize: '13px', lineHeight: 1.45 }}
+          >
+            {config.summary}
+          </p>
         )}
 
         {/* MAP section header */}

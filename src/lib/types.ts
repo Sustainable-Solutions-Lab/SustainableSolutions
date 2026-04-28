@@ -60,6 +60,18 @@ export type NewsItem = {
   long_form_slug: string | null;
 };
 
+export type Tool = {
+  slug: string;
+  title: string;
+  eyebrow: string | null;       // e.g., "INTERACTIVE MAP", "DATASET", "CODE"
+  summary: string | null;       // one-line card description
+  description: string | null;   // longer prose for the detail page
+  image_filename: string | null;
+  link: string | null;          // internal route or external URL
+  doi: string | null;           // companion publication's DOI
+  order: number;
+};
+
 export type FeaturedItem = {
   order: number;
   title: string;

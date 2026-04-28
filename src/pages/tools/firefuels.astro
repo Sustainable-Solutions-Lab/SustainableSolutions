@@ -1,21 +1,36 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Firefuels from '../../tools/firefuels/Firefuels.jsx';
-import { getEntry, render } from 'astro:content';
+import tools from '../../data/tools.json';
+import publications from '../../data/publications.json';
+import type { Tool, Publication } from '../../lib/types';
 
-const entry = await getEntry('tools', 'firefuels');
-const Content = entry ? (await render(entry)).Content : null;
+const tool = (tools as Tool[]).find((t) => t.slug === 'firefuels') ?? null;
+const companion = tool?.doi
+  ? (publications as Publication[]).find((p) => p.doi?.toLowerCase() === tool.doi!.toLowerCase()) ?? null
+  : null;
+const companionUrl = companion?.url ?? (companion?.doi ? `https://doi.org/${companion.doi}` : null);
 ---
 
 <BaseLayout
-  title={entry?.data.title ?? 'Firefuels'}
-  description={entry?.data.summary}
+  title={tool?.title ?? 'Firefuels'}
+  description={tool?.summary}
 >
   <article class="container-content pt-8 pb-8">
-    {entry?.data.eyebrow && <p class="eyebrow mb-4">{entry.data.eyebrow}</p>}
-    <h1 class="m-0">{entry?.data.title ?? 'Firefuels'}</h1>
-    {entry?.data.summary && (
-      <p class="lede max-w-prose mt-4">{entry.data.summary}</p>
+    {tool?.eyebrow && <p class="eyebrow mb-4">{tool.eyebrow}</p>}
+    <h1 class="m-0">{tool?.title ?? 'Firefuels'}</h1>
+    {tool?.summary && <p class="lede max-w-prose mt-4">{tool.summary}</p>}
+    {companion && (
+      <p class="font-mono text-xs text-ink-3 mt-3 m-0 uppercase tracking-wider">
+        Companion paper ·
+        {companionUrl ? (
+          <a href={companionUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>
+            <em class="not-italic">{companion.journal}</em> · {companion.year}
+          </a>
+        ) : (
+          <span><em class="not-italic">{companion.journal}</em> · {companion.year}</span>
+        )}
+      </p>
     )}
   </article>
 
@@ -28,25 +43,14 @@ const Content = entry ? (await render(entry)).Content : null;
     </div>
   </section>
 
-  {Content && (
+  {tool?.description && (
     <article class="container-prose pb-24">
-      <div class="prose">
-        <Content />
-      </div>
+      <p class="text-ink m-0" style="line-height: 1.6;">{tool.description}</p>
     </article>
   )}
 </BaseLayout>
 
 <style is:global>
-  /* The map fills its frame; the site nav stays visible above. The frame
-     has hairline borders top and bottom to set it off from the surrounding
-     prose. Internal sidebar / controls of the React tool keep working
-     because the frame is the new "viewport" they layout against. */
-  .firefuels-frame {
-    position: relative;
-  }
-  .firefuels-frame > * {
-    width: 100%;
-    height: 100%;
-  }
+  .firefuels-frame { position: relative; }
+  .firefuels-frame > * { width: 100%; height: 100%; }
 </style>

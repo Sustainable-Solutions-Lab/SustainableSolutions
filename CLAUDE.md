@@ -290,6 +290,20 @@ off-screen otherwise.
 | G      | featured          | Boolean (TRUE/FALSE)                           | Show on home page                              |
 | H      | long_form_slug    | Text                                           | If set, links to `/news/[slug]` Markdown post  |
 
+### Tab: `Tools`
+
+| Column | Name              | Type / Format                                  | Notes                                          |
+|--------|-------------------|------------------------------------------------|------------------------------------------------|
+| A      | slug              | Text, lowercase-hyphenated                     | "firefuels" — used in `/tools/<slug>` URL      |
+| B      | title             | Text                                           |                                                |
+| C      | eyebrow           | Text                                           | "INTERACTIVE MAP", "DATASET", "CODE"           |
+| D      | summary           | Text                                           | One-line card description                      |
+| E      | description       | Text                                           | Optional. Longer prose for the detail page     |
+| F      | image_filename    | Text                                           | Hero image, in `/public/tools/` or `/public/images/` |
+| G      | link              | Text                                           | Internal route (`/tools/firefuels`) or external URL |
+| H      | doi               | Text                                           | DOI of the companion publication, optional     |
+| I      | order             | Integer                                        | Sort order on `/tools` (lower = earlier)       |
+
 ### Tab: `Featured`
 
 A small tab (4–6 rows) controlling what appears in the home page "Featured" section. Lets non-developers swap the home page in 30 seconds.

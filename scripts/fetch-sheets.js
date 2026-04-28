@@ -31,6 +31,10 @@ const tabs = {
     env: 'SHEET_FEATURED_CSV',
     required: ['order', 'title', 'type'],
   },
+  tools: {
+    env: 'SHEET_TOOLS_CSV',
+    required: ['slug', 'title'],
+  },
 };
 
 // Tiny RFC-4180-ish CSV parser. Handles quoted fields with embedded commas/newlines.

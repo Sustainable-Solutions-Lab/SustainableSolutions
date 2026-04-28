@@ -1,16 +1,21 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getCollection } from 'astro:content';
+import tools from '../../data/tools.json';
+import publications from '../../data/publications.json';
+import type { Tool, Publication } from '../../lib/types';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const tools = (await getCollection('tools'))
-  .map((t) => t.data)
+const sorted = (tools as Tool[])
+  .slice()
   .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
 
-// Resolve image_filename across /public/tools/ → /public/images/, mirroring
-// the publication-hero resolver. Returns null if the file isn't found.
-function resolveImage(filename: string | null | undefined): string | null {
+const pubsByDoi = new Map<string, Publication>();
+for (const p of publications as Publication[]) {
+  if (p.doi) pubsByDoi.set(p.doi.toLowerCase(), p);
+}
+
+function resolveImage(filename: string | null): string | null {
   if (!filename) return null;
   for (const folder of ['tools', 'images']) {
     if (existsSync(resolve('public', folder, filename))) return `/${folder}/${filename}`;
@@ -18,12 +23,16 @@ function resolveImage(filename: string | null | undefined): string | null {
   return null;
 }
 
-const cards = tools.map((t) => ({
-  ...t,
-  imgUrl: resolveImage(t.image_filename ?? null),
-  href: t.link ?? '#',
-  isExternal: typeof t.link === 'string' && /^https?:\/\//.test(t.link),
-}));
+const cards = sorted.map((t) => {
+  const companion = t.doi ? pubsByDoi.get(t.doi.trim().toLowerCase()) ?? null : null;
+  return {
+    ...t,
+    imgUrl: resolveImage(t.image_filename),
+    href: t.link ?? '#',
+    isExternal: typeof t.link === 'string' && /^https?:\/\//.test(t.link),
+    companion,
+  };
+});
 ---
 
 <BaseLayout title="Tools">
@@ -55,12 +64,15 @@ const cards = tools.map((t) => ({
               />
             )}
             <div class="p-6">
-              {t.eyebrow && (
-                <p class="eyebrow m-0 mb-2">{t.eyebrow}</p>
-              )}
+              {t.eyebrow && <p class="eyebrow m-0 mb-2">{t.eyebrow}</p>}
               <h3 class="m-0">{t.title}</h3>
               {t.summary && (
                 <p class="text-ink-2 text-sm mt-2 m-0">{t.summary}</p>
+              )}
+              {t.companion && (
+                <p class="font-mono text-xs text-ink-3 mt-3 m-0 uppercase tracking-wider">
+                  Companion paper · <em class="not-italic">{t.companion.journal}</em> · {t.companion.year}
+                </p>
               )}
             </div>
           </a>
@@ -69,9 +81,7 @@ const cards = tools.map((t) => ({
     </ul>
 
     {cards.length === 0 && (
-      <p class="text-ink-3 text-sm">
-        No tools yet — add a Markdown file to <code>src/content/tools/</code>.
-      </p>
+      <p class="text-ink-3 text-sm">No tools yet — add a row to the Tools sheet.</p>
     )}
   </section>
 </BaseLayout>

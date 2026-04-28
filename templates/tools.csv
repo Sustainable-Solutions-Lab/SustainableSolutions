@@ -1,0 +1,2 @@
+slug,title,eyebrow,summary,description,image_filename,link,doi,order
+firefuels,Firefuels,INTERACTIVE MAP,Per-km² costs and benefits of wildfire fuel treatment in California.,"A statewide MapLibre + PMTiles visualization of where prescribed-burn and mechanical-thinning fuel treatments would deliver the most net benefit per square kilometer, integrating wildfire risk, suppression cost, and ecological value.",hillfire.jpg,/tools/firefuels,,10

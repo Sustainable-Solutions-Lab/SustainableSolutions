@@ -32,16 +32,7 @@ const people = defineCollection({
   }),
 })
 
-const tools = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/tools' }),
-  schema: z.object({
-    title: z.string(),
-    summary: z.string().optional(),
-    eyebrow: z.string().optional(),       // e.g. "INTERACTIVE MAP", "DATASET", "CODE"
-    image_filename: z.string().optional(),// resolves to /public/tools/, /public/images/
-    link: z.string().optional(),          // internal route or external URL; default /tools/<slug>
-    order: z.number().optional(),
-  }),
-})
+// Tools moved to the Google Sheet (Tools tab) — managed alongside
+// publications/people/news. See CLAUDE.md and templates/tools.csv.
 
-export const collections = { research, news, people, tools }
+export const collections = { research, news, people }

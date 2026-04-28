@@ -1,7 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import featured from '../data/featured.json';
-import type { FeaturedItem } from '../lib/types';
+import publications from '../data/publications.json';
+import type { FeaturedItem, Publication } from '../lib/types';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -9,7 +10,13 @@ const items = (featured as FeaturedItem[])
   .slice()
   .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
 
-// Hero image (top of /public/featured/ → /public/images/ fallback) per item.
+// DOI lookup so a Featured row of type=publication with a `doi` cell can
+// surface the paper's journal/year and link straight to it.
+const pubsByDoi = new Map<string, Publication>();
+for (const p of publications as Publication[]) {
+  if (p.doi) pubsByDoi.set(p.doi.toLowerCase(), p);
+}
+
 function resolveImage(filename: string | null | undefined): string | null {
   if (!filename) return null;
   for (const folder of ['featured', 'images']) {
@@ -18,15 +25,28 @@ function resolveImage(filename: string | null | undefined): string | null {
   return null;
 }
 
-const cards = items.map((it) => ({
-  ...it,
-  imgUrl: resolveImage(it.image_filename),
-  isExternal: typeof it.link === 'string' && /^https?:\/\//.test(it.link),
-}));
+const cards = items.map((it) => {
+  const pub = it.doi ? pubsByDoi.get(it.doi.trim().toLowerCase()) ?? null : null;
+  const link =
+    it.link ||
+    pub?.url ||
+    (it.doi ? `https://doi.org/${it.doi}` : null) ||
+    '#';
+  return {
+    ...it,
+    imgUrl: resolveImage(it.image_filename),
+    pub,
+    href: link,
+    isExternal: typeof link === 'string' && /^https?:\/\//.test(link),
+  };
+});
 ---
 
 <BaseLayout title="Sustainable Solutions Lab" showCoordReadout={true}>
-  <section class="container-content pt-4 pb-4">
+  <section
+    class="container-content flex flex-col justify-center"
+    style="min-height: 320px;"
+  >
     <p class="eyebrow mb-3">
       <span class="cardinal-dot"></span>STANFORD DOERR SCHOOL OF SUSTAINABILITY
     </p>
@@ -52,7 +72,7 @@ const cards = items.map((it) => ({
         {cards.map((it) => (
           <li class="m-0 p-0 h-full">
             <a
-              href={it.link}
+              href={it.href}
               class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
               style="border-radius: var(--radius-md); overflow: hidden;"
               data-external={it.isExternal ? '' : null}
@@ -72,11 +92,18 @@ const cards = items.map((it) => ({
                   style="aspect-ratio: 16/10; background: var(--paper-2); border-bottom: 1px solid var(--rule);"
                 ></div>
               )}
-              <div class="p-5 flex-1">
+              <div class="p-5 flex-1 flex flex-col">
                 <p class="eyebrow m-0 mb-2">{(it.type ?? '').toString().toUpperCase()}</p>
                 <h3 class="m-0">{it.title}</h3>
                 {it.blurb && (
                   <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">{it.blurb}</p>
+                )}
+                {it.pub && (
+                  <p class="font-mono text-xs text-ink-3 mt-3 m-0 uppercase tracking-wider">
+                    <em class="not-italic">{it.pub.journal}</em>
+                    <span class="dot">·</span>
+                    {it.pub.year}
+                  </p>
                 )}
               </div>
             </a>

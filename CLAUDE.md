@@ -315,9 +315,10 @@ A small tab (4–6 rows) controlling what appears in the home page "Featured" se
 | A      | order             | Integer                                        |                                                |
 | B      | title             | Text                                           |                                                |
 | C      | blurb             | Text                                           | 1–2 sentences                                  |
-| D      | image_filename    | Text                                           | In `/public/featured/`                         |
-| E      | link              | Text                                           | Internal or external                           |
+| D      | image_filename    | Text                                           | In `/public/featured/` or `/public/images/`    |
+| E      | link              | Text                                           | Internal or external. Optional when `doi` is set for a publication |
 | F      | type              | Text                                           | "research" / "tool" / "publication" / "news"   |
+| G      | doi               | Text                                           | For `type=publication`. Auto-resolves the link to the paper URL and surfaces journal · year on the card |
 
 ## Build pipeline
 

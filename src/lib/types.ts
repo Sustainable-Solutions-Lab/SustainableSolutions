@@ -79,6 +79,9 @@ export type FeaturedItem = {
   title: string;
   blurb: string;
   image_filename: string | null;
-  link: string;
+  link: string | null;
   type: 'research' | 'tool' | 'publication' | 'news' | string;
+  // Optional. If `type` is "publication", a DOI here resolves the card's
+  // link to the paper's URL and surfaces journal + year on the card.
+  doi: string | null;
 };

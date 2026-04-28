@@ -40,6 +40,13 @@ const companion = companionPub
      instead of as a strip above the map. The body itself doesn't scroll
      on this page; the sidebar inside the map keeps its own internal scroll. */
   body:has(.firefuels-frame) { overflow: hidden; }
-  .firefuels-frame { position: relative; height: calc(100vh - 56px); }
+  .firefuels-frame {
+    position: relative;
+    height: calc(100vh - 56px);
+    /* dvh tracks the actually-visible viewport on iOS Safari (excludes the
+       URL bar when it slides into view), so the map's color bar and in-map
+       controls don't end up hidden behind browser chrome. */
+    height: calc(100dvh - 56px);
+  }
   .firefuels-frame > * { width: 100%; height: 100%; }
 </style>

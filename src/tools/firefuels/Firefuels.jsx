@@ -155,43 +155,31 @@ export default function Firefuels({ companion = null }) {
   const wordmarkSrc = isDark ? '/SDSS_brand_white.png' : '/SDSS_brand.png'
 
   return (
-    <div className="flex flex-col w-full h-screen overflow-hidden bg-paper">
-      {/* ── Mobile header bar ──────────────────────────────────────────── */}
+    <div className="flex flex-col w-full h-full overflow-hidden bg-paper">
+      {/* ── Mobile header bar — sits in the normal flow below the site nav.
+          (Was previously fixed top:0 which slid under the site nav and made
+          the title appear cut off.) */}
       <header
-        className="flex md:hidden fixed top-0 left-0 right-0 items-center px-3 bg-paper border-b border-rule z-30"
-        style={{ height: 68 }}
+        className="flex md:hidden shrink-0 items-center px-3 bg-paper border-b border-rule"
+        style={{ height: 56 }}
       >
-        <div className="flex flex-col" style={{ gap: '3px' }}>
-          <a
-            href="/"
-            className="bare"
-            style={{
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-              fontSize: '10px',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: 'var(--ink-3)',
-              lineHeight: 1,
-              marginBottom: '2px',
-              display: 'inline-block',
-            }}
-          >
-            ← Lab
-          </a>
-          <a
-            href="/"
-            className="bare"
-            style={{ lineHeight: 0, display: 'inline-block' }}
-          >
-            <img
-              src={wordmarkSrc}
-              alt="Stanford Doerr School of Sustainability"
-              style={{ height: 26, width: 'auto', objectFit: 'contain' }}
-            />
-          </a>
+        <div className="flex items-baseline gap-3 min-w-0">
+          {config.eyebrow && (
+            <span
+              className="font-mono shrink-0"
+              style={{
+                fontSize: '10px',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: 'var(--ink-3)',
+              }}
+            >
+              {config.eyebrow}
+            </span>
+          )}
           <span
-            className="font-serif text-ink"
-            style={{ fontSize: '19px', fontWeight: 600, lineHeight: 1 }}
+            className="font-serif text-ink truncate"
+            style={{ fontSize: '22px', fontWeight: 600, lineHeight: 1.1 }}
           >
             {config.title}
           </span>
@@ -214,9 +202,6 @@ export default function Firefuels({ companion = null }) {
           {mobilePanelOpen ? 'Close' : 'Controls'}
         </button>
       </header>
-
-      {/* Spacer for mobile fixed header */}
-      <div className="block md:hidden shrink-0" style={{ height: 68 }} />
 
       {/* ── Content row: sidebar | map ──────────────────────────────────── */}
       <div className="flex-1 flex overflow-hidden relative">
@@ -245,11 +230,12 @@ export default function Firefuels({ companion = null }) {
             opacityP95={opacityP95}
           />
 
-          {/* Mobile color bar */}
+          {/* Mobile color bar — sits above Safari's URL bar (~ 90 px tall on
+              iPhones) and above the in-map attribution strip (~14 px). */}
           <div
             className="block md:hidden absolute z-10"
             style={{
-              bottom: 44,
+              bottom: 110,
               right: 10,
               width: 160,
               background: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.75)',

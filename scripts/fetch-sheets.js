@@ -219,17 +219,24 @@ function fixMojibake(s) {
   if (!s) return s;
   s = decodeHtmlEntities(s);
 
-  // 1. If the whole string looks like it could be uniform mojibake (every
-  //    non-ASCII char fits in Mac Roman or Win-1252), try the algorithmic
-  //    reverse. A successful UTF-8 strict decode is strong evidence.
-  if (/[‚√Œ¬ÂÃ]/.test(s)) {
+  // 1. Iteratively peel mojibake layers. A round-trip through Sheets
+  //    (paste a CSV that already had Mac Roman / Win-1252 mojibake →
+  //    re-encoded → re-exported) can stack two or three layers of
+  //    misinterpretation on top of each other, so we keep retrying
+  //    until a pass produces no further change.
+  for (let iter = 0; iter < 5; iter++) {
+    if (!/[‚√Œ¬ÂÃ]/.test(s)) break;
     const macFix = tryUndoMojibake(s, MAC_BY_CP);
     if (macFix != null && macFix !== s) {
       s = macFix;
-    } else {
-      const winFix = tryUndoMojibake(s, WIN_BY_CP);
-      if (winFix != null && winFix !== s) s = winFix;
+      continue;
     }
+    const winFix = tryUndoMojibake(s, WIN_BY_CP);
+    if (winFix != null && winFix !== s) {
+      s = winFix;
+      continue;
+    }
+    break;
   }
 
   // 2. Static substring replacements for mixed strings (some clean UTF-8,

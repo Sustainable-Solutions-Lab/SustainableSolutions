@@ -5,8 +5,17 @@ const year = new Date().getFullYear();
 <footer class="rule mt-24 border-t border-rule">
   <div class="container-content py-10 grid gap-8 md:grid-cols-3 text-sm">
     <div>
-      <p class="font-serif text-lg leading-snug">Sustainable Solutions Lab</p>
-      <p class="text-ink-3 mt-2">
+      <img
+        class="lab-wordmark-img lab-wordmark-light"
+        src="/logo-sdss-dark.png"
+        alt="Sustainable Solutions Lab"
+      />
+      <img
+        class="lab-wordmark-img lab-wordmark-dark"
+        src="/logo-sdss-light.png"
+        alt="Sustainable Solutions Lab"
+      />
+      <p class="text-ink-3 mt-3">
         Steven J. Davis, Professor of Earth System Science.<br />
         Stanford Doerr School of Sustainability.
       </p>
@@ -35,3 +44,15 @@ const year = new Date().getFullYear();
     </div>
   </div>
 </footer>
+
+<style>
+  .lab-wordmark-img {
+    display: block;
+    height: 44px;
+    width: auto;
+    max-width: 100%;
+  }
+  .lab-wordmark-dark { display: none; }
+  :global([data-theme="dark"]) .lab-wordmark-light { display: none; }
+  :global([data-theme="dark"]) .lab-wordmark-dark { display: block; }
+</style>

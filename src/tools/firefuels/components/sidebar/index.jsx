@@ -177,6 +177,17 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         >
           Read Methods
         </button>
+
+        {/* Lab wordmark — sits at the bottom of the scrollable controls area
+            so it stays visible at the natural end of the panel. Theme-aware
+            swap between dark-on-light and light-on-dark variants. */}
+        <a href="/" className="bare block mt-8 mb-1" style={{ lineHeight: 0 }}>
+          <img
+            src={state.colorScheme === 'dark' ? '/logo-sdss-light.png' : '/logo-sdss-dark.png'}
+            alt="Sustainable Solutions Lab"
+            style={{ width: '100%', maxWidth: 220, height: 'auto', objectFit: 'contain' }}
+          />
+        </a>
       </div>
 
     </aside>

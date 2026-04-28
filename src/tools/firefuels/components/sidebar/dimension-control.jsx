@@ -15,8 +15,8 @@ export function DimensionControl({ dimension, value, dispatch }) {
   }
 
   return (
-    <div className="mb-6">
-      <p className="font-sans text-[13px] font-bold uppercase tracking-[0.12em] text-ink mb-2 m-0">
+    <div className="mb-4">
+      <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
         {dimension.label}
       </p>
 

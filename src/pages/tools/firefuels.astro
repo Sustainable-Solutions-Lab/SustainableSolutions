@@ -15,6 +15,7 @@ const companionUrl = companion?.url ?? (companion?.doi ? `https://doi.org/${comp
 <BaseLayout
   title={tool?.title ?? 'Firefuels'}
   description={tool?.summary}
+  hideFooter={true}
 >
   {companion && (
     <div class="container-content pt-4 pb-3">

@@ -16,8 +16,10 @@ const path = Astro.url.pathname;
     aria-label="Primary"
     class="container-content flex items-center justify-between h-14"
   >
-    <a href="/" class="font-serif text-lg leading-none border-b-0 hover:opacity-70">
-      Sustainable Solutions Lab
+    <a href="/" class="lab-wordmark border-b-0 hover:opacity-70">
+      <img class="lab-logo lab-logo-light" src="/LabLogo_border.png" alt="" aria-hidden="true" />
+      <img class="lab-logo lab-logo-dark"  src="/LabLogo_light.png" alt="" aria-hidden="true" />
+      <span class="font-serif text-lg leading-none">Sustainable Solutions Lab</span>
     </a>
 
     {/* Desktop link list */}
@@ -105,6 +107,29 @@ const path = Astro.url.pathname;
     </ul>
   </div>
 </header>
+
+<style>
+  .lab-wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .lab-logo {
+    height: 28px;
+    width: 28px;
+    display: block;
+    flex: none;
+  }
+  .lab-logo-dark {
+    display: none;
+  }
+  :global([data-theme="dark"]) .lab-logo-light {
+    display: none;
+  }
+  :global([data-theme="dark"]) .lab-logo-dark {
+    display: block;
+  }
+</style>
 
 <script is:inline>
   // Theme toggle — flips data-theme on <html>, persists in localStorage.

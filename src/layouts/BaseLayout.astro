@@ -8,12 +8,14 @@ interface Props {
   title: string;
   description?: string;
   showCoordReadout?: boolean;
+  hideFooter?: boolean;
 }
 
 const {
   title,
   description = 'Sustainable Solutions Lab — Stanford Doerr School of Sustainability. Underexamined questions. Lasting answers.',
   showCoordReadout = false,
+  hideFooter = false,
 } = Astro.props;
 
 const fullTitle = title === 'Sustainable Solutions Lab'
@@ -44,7 +46,7 @@ const fullTitle = title === 'Sustainable Solutions Lab'
     <main id="main">
       <slot />
     </main>
-    <Footer />
+    {!hideFooter && <Footer />}
     {showCoordReadout && <CoordReadout />}
 
     <script is:inline>

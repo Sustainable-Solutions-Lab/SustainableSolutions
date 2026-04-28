@@ -43,7 +43,7 @@ export function Sidebar({ config, state, dispatch, allValues = [] }) {
         )}
         <p
           className="font-serif text-ink mt-1 mb-0"
-          style={{ fontSize: '22px', fontWeight: 600, lineHeight: 1.28 }}
+          style={{ fontSize: '32px', fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.01em' }}
         >
           {config.title}
         </p>
@@ -60,8 +60,8 @@ export function Sidebar({ config, state, dispatch, allValues = [] }) {
           </p>
         )}
 
-        {/* MAP section header */}
-        <p className="font-sans text-[13px] font-bold uppercase tracking-[0.12em] text-ink mb-2 m-0">
+        {/* MAP section header — matches publications-page filter labels */}
+        <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
           Map
         </p>
 

@@ -342,8 +342,11 @@ export function AreaTool({ map, config, state, dispatch }) {
       dispatch({ type: Actions.SET_AGGREGATE_STATS, stats: null })
       return
     }
-    // If a ZIP polygon was just set, skip the default-circle initialization.
+    // If a ZIP polygon is currently active, skip the default-circle init.
+    // When the polygon is cleared (e.g., user clicks the X in the ZIP input),
+    // this effect re-runs without an active polygon and initializes a circle.
     if (state.drawnPolygon) return
+    if (map.getLayer(CIRCLE_LINE_LAYER_ID)) return  // circle already drawn
     const center = map.getCenter()
     // Scale default radius to current zoom so the circle fits the visible area.
     // Zoom 5 (statewide) → ~50 km; zoom 10 (city) → ~5 km, exponentially interpolated.
@@ -356,7 +359,7 @@ export function AreaTool({ map, config, state, dispatch }) {
     const timer = setTimeout(computeAndDispatch, 150)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, state.areaToolActive, dispatch])
+  }, [map, state.areaToolActive, state.drawnPolygon, dispatch])
 
   // ── Keep handle in sync with map pan / zoom ───────────────────────────────
   useEffect(() => {

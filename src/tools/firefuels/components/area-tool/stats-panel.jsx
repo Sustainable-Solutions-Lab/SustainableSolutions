@@ -243,12 +243,14 @@ function StackedBar({ values, variable, isDark }) {
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
-export function StatsPanel({ drawnCircle, aggregateStats, areaToolActive, activeVariable, isDark, dispatch }) {
-  if (!drawnCircle) return null
+export function StatsPanel({ drawnCircle, drawnPolygon, aggregateStats, areaToolActive, activeVariable, isDark, dispatch }) {
+  // Show whenever either a circle or a ZIP polygon is active.
+  if (!drawnCircle && !drawnPolygon) return null
 
   function handleClose() {
     if (areaToolActive) dispatch({ type: Actions.TOGGLE_AREA_TOOL })
     dispatch({ type: Actions.SET_DRAWN_CIRCLE, circle: null })
+    dispatch({ type: Actions.SET_DRAWN_POLYGON, polygon: null })
     dispatch({ type: Actions.SET_AGGREGATE_STATS, stats: null })
   }
 

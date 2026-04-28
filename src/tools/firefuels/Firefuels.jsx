@@ -264,6 +264,7 @@ export default function Firefuels({ companion = null }) {
           <div className="hidden md:block">
             <StatsPanel
               drawnCircle={state.drawnCircle}
+              drawnPolygon={state.drawnPolygon}
               aggregateStats={state.aggregateStats}
               areaToolActive={state.areaToolActive}
               activeVariable={activeVariable}

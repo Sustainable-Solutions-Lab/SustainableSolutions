@@ -16,11 +16,11 @@ const path = Astro.url.pathname;
     aria-label="Primary"
     class="container-content flex items-center justify-between h-14"
   >
-    <a href="/" class="lab-wordmark border-b-0 hover:opacity-70">
+    <div class="lab-wordmark">
       <img class="lab-logo lab-logo-light" src="/LabLogo_border.png" alt="" aria-hidden="true" />
       <img class="lab-logo lab-logo-dark"  src="/LabLogo_light.png" alt="" aria-hidden="true" />
-      <span class="font-serif text-lg leading-none">Sustainable Solutions Lab</span>
-    </a>
+      <a href="/" class="font-serif text-lg leading-none">Sustainable Solutions Lab</a>
+    </div>
 
     {/* Desktop link list */}
     <ul class="hidden md:flex items-center gap-6 text-sm">
@@ -116,7 +116,9 @@ const path = Astro.url.pathname;
   }
   .lab-logo {
     height: 28px;
-    width: 28px;
+    width: auto;       /* preserve native aspect ratio — the light-mode
+                          PNG is 1600×1394, and forcing it to 28×28 was
+                          horizontally squishing it. */
     display: block;
     flex: none;
   }

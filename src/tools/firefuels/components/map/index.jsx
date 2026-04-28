@@ -44,10 +44,17 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     maplibregl.addProtocol('pmtiles', protocol.tile)
 
     const isMobile = window.innerWidth < 768
+    // On mobile, shift the initial center south (~0.6°) so California sits
+    // higher in the visible viewport — leaves less cream space above the
+    // top of the state, which matters when the in-tool header eats some
+    // vertical space.
+    const center = isMobile
+      ? [config.region.center[0], config.region.center[1] - 0.6]
+      : config.region.center
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: basemapStyle(schemeRef.current),
-      center: config.region.center,
+      center,
       zoom: isMobile ? 4.8 : 5,
       minZoom: isMobile ? 4.8 : 5.3,
       maxZoom: 9,

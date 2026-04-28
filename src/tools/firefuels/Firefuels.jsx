@@ -160,7 +160,7 @@ export default function Firefuels({ companion = null }) {
           (Was previously fixed top:0 which slid under the site nav and made
           the title appear cut off.) */}
       <header
-        className="flex md:hidden shrink-0 items-center px-3 bg-paper border-b border-rule"
+        className="flex md:hidden shrink-0 items-center px-3 bg-paper border-b border-rule relative z-30"
         style={{ height: 56 }}
       >
         <div className="flex items-baseline gap-3 min-w-0">
@@ -237,7 +237,7 @@ export default function Firefuels({ companion = null }) {
           <div
             className="block md:hidden absolute z-10"
             style={{
-              bottom: 110,
+              bottom: 90,
               right: 10,
               width: 160,
               background: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.75)',

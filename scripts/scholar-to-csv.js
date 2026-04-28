@@ -340,11 +340,17 @@ function buildAuto(masterEntry, details, rawByNorm) {
 }
 
 // ── Merge auto + manual into a single output row ──
-function buildMergedRow(auto, manual, counts) {
+function buildMergedRow(auto, manual, counts, localSummaryByDoi) {
   let themes = cleanThemes((manual?.themes || '').trim())
   if (!themes) {
     themes = guessThemes(`${auto.title} ${auto.abstract}`)
     if (themes) counts.autoTheme++
+  }
+  // Summary: sheet wins; falls back to a previously-generated local summary
+  // for the same DOI (e.g., from generate-summaries.js before paste).
+  let summary = (manual?.summary || '').trim()
+  if (!summary && auto.doi && localSummaryByDoi) {
+    summary = localSummaryByDoi.get(auto.doi.toLowerCase()) || ''
   }
   // Sheet always wins. Scholar only fills cells that are blank in the sheet.
   // The mental model: the sheet is the source of truth; Scholar populates
@@ -381,7 +387,7 @@ function buildMergedRow(auto, manual, counts) {
     ppt_url: manual?.ppt_url || '',
     press_url: manual?.press_url || '',
     image_filename: manual?.image_filename || '',
-    summary: manual?.summary || '',
+    summary,
     abstract: preferSheet(auto.abstract, manual?.abstract),
   }
 }
@@ -423,6 +429,29 @@ async function main() {
   const rawByNorm = new Map()
   for (const r of raw) rawByNorm.set(normalizeTitle(r.title), r)
 
+  // Preserve summaries that exist in the LOCAL CSV but not yet in the sheet
+  // (they're produced by scripts/generate-summaries.js and only flow to the
+  // sheet via paste). Without this, regenerating from the live sheet would
+  // wipe the just-generated summaries.
+  const localSummaryByDoi = new Map()
+  try {
+    const existing = await readFile(CSV_OUT, 'utf8')
+    const rows = parseCsv(existing)
+    if (rows.length > 1) {
+      const idx = Object.fromEntries(rows[0].map((h, i) => [h.trim(), i]))
+      if (idx.doi != null && idx.summary != null) {
+        for (let i = 1; i < rows.length; i++) {
+          const doi = (rows[i][idx.doi] || '').trim().toLowerCase()
+          const summary = (rows[i][idx.summary] || '').trim()
+          if (doi && summary) localSummaryByDoi.set(doi, summary)
+        }
+        if (localSummaryByDoi.size > 0) {
+          console.log(`[scholar-to-csv] preserving ${localSummaryByDoi.size} local summaries (will be used when sheet is blank for that DOI)`)
+        }
+      }
+    }
+  } catch {}
+
   // Build all auto entries up front
   const autos = master.map((m) => buildAuto(m, details, rawByNorm))
   const autoByDoi = new Map()
@@ -450,7 +479,7 @@ async function main() {
 
       if (auto && !usedAutos.has(auto)) {
         usedAutos.add(auto)
-        out.push(buildMergedRow(auto, sheetRow, counts))
+        out.push(buildMergedRow(auto, sheetRow, counts, localSummaryByDoi))
       } else {
         // No Scholar match — preserve the sheet row as-is. (In-press papers,
         // book chapters, anything the user added manually.)
@@ -462,11 +491,11 @@ async function main() {
     for (const a of autos) {
       if (usedAutos.has(a)) continue
       counts.newScholar++
-      out.push(buildMergedRow(a, null, counts))
+      out.push(buildMergedRow(a, null, counts, localSummaryByDoi))
     }
   } else {
     console.log('[scholar-to-csv] no sheet merge (SHEET_PUBLICATIONS_CSV not set or fetch failed)')
-    for (const a of autos) out.push(buildMergedRow(a, null, counts))
+    for (const a of autos) out.push(buildMergedRow(a, null, counts, localSummaryByDoi))
   }
 
   const csvRows = [HEADERS, ...out.map((r) => HEADERS.map((h) => r[h]))]

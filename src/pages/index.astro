@@ -1,5 +1,28 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import featured from '../data/featured.json';
+import type { FeaturedItem } from '../lib/types';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const items = (featured as FeaturedItem[])
+  .slice()
+  .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+
+// Hero image (top of /public/featured/ → /public/images/ fallback) per item.
+function resolveImage(filename: string | null | undefined): string | null {
+  if (!filename) return null;
+  for (const folder of ['featured', 'images']) {
+    if (existsSync(resolve('public', folder, filename))) return `/${folder}/${filename}`;
+  }
+  return null;
+}
+
+const cards = items.map((it) => ({
+  ...it,
+  imgUrl: resolveImage(it.image_filename),
+  isExternal: typeof it.link === 'string' && /^https?:\/\//.test(it.link),
+}));
 ---
 
 <BaseLayout title="Sustainable Solutions Lab" showCoordReadout={true}>
@@ -19,10 +42,47 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   <section class="container-content py-16">
     <p class="eyebrow mb-6">FEATURED</p>
-    <div class="grid md:grid-cols-3 gap-8 text-sm text-ink-3">
-      <p>Featured items will populate from the <code>Featured</code> sheet tab.</p>
-      <p>Home page is built last per the development sequence in CLAUDE.md.</p>
-      <p>Above the fold will host an interactive component (the firemap or a featured chart).</p>
-    </div>
+
+    {cards.length === 0 ? (
+      <p class="text-ink-3 text-sm">
+        Add rows to the <code>Featured</code> tab in the Google Sheet to populate this section.
+      </p>
+    ) : (
+      <ul class="list-none p-0 m-0 grid md:grid-cols-3 gap-6">
+        {cards.map((it) => (
+          <li class="m-0 p-0">
+            <a
+              href={it.link}
+              class="block bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
+              style="border-radius: var(--radius-md); overflow: hidden;"
+              data-external={it.isExternal ? '' : null}
+            >
+              {it.imgUrl ? (
+                <img
+                  src={it.imgUrl}
+                  alt={it.title}
+                  loading="lazy"
+                  class="block w-full object-cover"
+                  style="aspect-ratio: 16/10;"
+                />
+              ) : (
+                <div
+                  aria-hidden="true"
+                  class="block w-full"
+                  style="aspect-ratio: 16/10; background: var(--paper-2); border-bottom: 1px solid var(--rule);"
+                ></div>
+              )}
+              <div class="p-5">
+                <p class="eyebrow m-0 mb-2">{(it.type ?? '').toString().toUpperCase()}</p>
+                <h3 class="m-0">{it.title}</h3>
+                {it.blurb && (
+                  <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">{it.blurb}</p>
+                )}
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
   </section>
 </BaseLayout>

@@ -1,23 +1,21 @@
 ---
-// Lab-scope heatmap.
+// Compact lab-scope heatmap.
 //
-// Reads publications.json, classifies each paper's themes into
-// (a) human-system themes (rows) and (b) problem-type themes (cols),
-// and counts each unique (system, problem) intersection. A paper
-// tagged with N systems and M problems contributes to all N×M cells —
-// the matrix shows BREADTH of focus, not a partition. Cross-cutting
-// themes (trade, materials, carbon management) appear as a strip
-// beneath the matrix.
+// 6×4 grid of small colored squares — rows = human systems (energy,
+// food, water, land, materials, fire), columns = problem types
+// (emissions, impacts, air pollution, heat). Color comes from the
+// lab's ColorBrewer Spectral palette, scaled by count. Labels are
+// hover-only; the visual sits next to the hero lede as a small
+// orientation glyph rather than a fully-labeled chart.
 //
-// Counts come straight from the live Publications sheet via the
-// build pipeline; updating tags in the sheet refreshes the matrix.
+// Multi-tagged papers contribute to every matching cell, so the
+// matrix shows breadth of focus rather than a strict partition.
 
 import publications from '../data/publications.json';
 import type { Publication } from '../lib/types';
 
 const SYSTEMS = ['energy', 'food', 'water', 'land', 'materials', 'fire'] as const;
 const PROBLEMS = ['emissions', 'impacts', 'air pollution', 'heat'] as const;
-const CROSS_CUTTING = ['trade', 'carbon management'] as const;
 
 const SYSTEM_LABEL: Record<string, string> = {
   energy: 'Energy',
@@ -33,191 +31,73 @@ const PROBLEM_LABEL: Record<string, string> = {
   'air pollution': 'Air pollution',
   heat: 'Heat',
 };
-const CROSS_LABEL: Record<string, string> = {
-  trade: 'Trade',
-  'carbon management': 'Carbon mgmt',
-};
 
 const pubs = publications as Publication[];
 
-// Build matrix: every cell (system, problem) → count of unique papers
-// tagged with both a member of that row's system AND that column's problem.
-const matrix = new Map<string, number>();
 const cellPapers = new Map<string, number>();
-const crossCounts = new Map<string, number>();
-let totalPapersTouched = 0;
-
 for (const p of pubs) {
   const themes = (p.themes ?? []) as string[];
   const sys = themes.filter((t) => (SYSTEMS as readonly string[]).includes(t));
   const prob = themes.filter((t) => (PROBLEMS as readonly string[]).includes(t));
-  const cross = themes.filter((t) => (CROSS_CUTTING as readonly string[]).includes(t));
-
-  if (sys.length || prob.length || cross.length) totalPapersTouched++;
-
   for (const s of sys) {
     for (const pr of prob) {
       const k = `${s}|${pr}`;
       cellPapers.set(k, (cellPapers.get(k) ?? 0) + 1);
     }
   }
-  for (const c of cross) {
-    crossCounts.set(c, (crossCounts.get(c) ?? 0) + 1);
-  }
 }
 
 let maxCell = 0;
 for (const v of cellPapers.values()) if (v > maxCell) maxCell = v;
-let maxCross = 0;
-for (const v of crossCounts.values()) if (v > maxCross) maxCross = v;
 
-function cellOpacity(count: number): number {
-  if (!maxCell || !count) return 0;
-  // Linearize between 0.08 (faintly visible) and 0.92.
-  return 0.08 + (count / maxCell) * 0.84;
+// Map count → Spectral palette index (1..11). Reverse the palette so
+// high counts read as cool/dark (purple) and low counts as warm/light
+// (red-orange), matching scientific-viz convention for sequential data.
+function spectralVar(count: number): string {
+  if (!maxCell || !count) return 'transparent';
+  const t = count / maxCell;       // 0..1
+  // Map t into 11 bins; reverse so low count = spectral-2, high = spectral-10.
+  const idx = Math.max(2, Math.min(10, Math.round(2 + t * 8)));
+  return `var(--spectral-${idx})`;
 }
-function crossOpacity(count: number): number {
-  if (!maxCross || !count) return 0;
-  return 0.1 + (count / maxCross) * 0.8;
-}
-
-// Encode the row/col extremes as data attributes so the script below can
-// build hover tooltips without recomputing.
-const cellsForRender = SYSTEMS.flatMap((s) =>
-  PROBLEMS.map((p) => ({
-    system: s,
-    problem: p,
-    count: cellPapers.get(`${s}|${p}`) ?? 0,
-  })),
-);
 ---
 
-<section class="container-content py-6">
-  <p class="eyebrow mb-3">SCOPE</p>
-  <p class="lede max-w-prose mb-5" style="font-size: 16px; line-height: 1.5;">
-    Where the lab's work sits on two dimensions — the human system involved
-    (rows) and the type of problem at stake (columns). Cell shading is the
-    number of papers tagged with both. Papers can sit in multiple cells.
-  </p>
-
-  <div
-    class="scope-matrix"
-    role="img"
-    aria-label="Heatmap of publications by human-system theme and problem type"
-  >
-    <div class="scope-corner"></div>
-    {PROBLEMS.map((p) => (
-      <div class="scope-col-header">{PROBLEM_LABEL[p]}</div>
-    ))}
-
-    {SYSTEMS.map((s) => (
-      <>
-        <div class="scope-row-header">{SYSTEM_LABEL[s]}</div>
-        {PROBLEMS.map((p) => {
-          const count = cellPapers.get(`${s}|${p}`) ?? 0;
-          const op = cellOpacity(count);
-          return (
-            <div
-              class="scope-cell"
-              style={`--cell-opacity: ${op};`}
-              data-count={count}
-              title={`${count} paper${count === 1 ? '' : 's'} · ${SYSTEM_LABEL[s]} × ${PROBLEM_LABEL[p]}`}
-            >
-              <span class="scope-cell-count">{count > 0 ? count : ''}</span>
-            </div>
-          );
-        })}
-      </>
-    ))}
-  </div>
-
-  <div class="scope-cross mt-3 flex flex-wrap gap-2">
-    <span class="font-mono text-xs uppercase tracking-wider text-ink-3 mr-1 self-center">
-      Cross-cutting:
-    </span>
-    {CROSS_CUTTING.map((c) => {
-      const count = crossCounts.get(c) ?? 0;
-      const op = crossOpacity(count);
+<div class="scope-matrix-mini" aria-label="Scope of lab publications by human-system theme and problem type">
+  {SYSTEMS.flatMap((s) =>
+    PROBLEMS.map((p) => {
+      const count = cellPapers.get(`${s}|${p}`) ?? 0;
       return (
-        <span
-          class="scope-cross-pill"
-          style={`--pill-opacity: ${op};`}
-        >
-          {CROSS_LABEL[c]} · {count}
-        </span>
+        <div
+          class="scope-cell-mini"
+          style={`background-color: ${spectralVar(count)};`}
+          title={`${SYSTEM_LABEL[s]} × ${PROBLEM_LABEL[p]} · ${count} paper${count === 1 ? '' : 's'}`}
+        ></div>
       );
-    })}
-  </div>
-</section>
+    }),
+  )}
+</div>
 
 <style>
-  .scope-matrix {
+  .scope-matrix-mini {
     display: grid;
-    grid-template-columns: minmax(80px, max-content) repeat(4, minmax(70px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(6, 1fr);
     gap: 2px;
+    padding: 2px;
     background: var(--rule);
-    padding: 1px;
     border: 1px solid var(--rule);
     border-radius: var(--radius-sm);
-    overflow: hidden;
+    /* Compact size — sits beside the hero lede as a glyph, not a chart. */
+    width: 140px;
+    aspect-ratio: 4 / 6;
+    flex: none;
   }
-  .scope-corner {
+  .scope-cell-mini {
     background: var(--paper);
-  }
-  .scope-col-header,
-  .scope-row-header {
-    background: var(--paper);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--ink-3);
-    padding: 8px 10px;
-    display: flex;
-    align-items: center;
-  }
-  .scope-col-header {
-    justify-content: center;
-    text-align: center;
-  }
-  .scope-row-header {
-    justify-content: flex-end;
-    text-align: right;
-  }
-  .scope-cell {
-    background-color: color-mix(in oklab, var(--cardinal) calc(var(--cell-opacity, 0) * 100%), var(--paper));
-    aspect-ratio: 16 / 9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: outline 0.12s ease;
   }
-  .scope-cell:hover {
-    outline: 2px solid var(--ink);
-    outline-offset: -2px;
-  }
-  .scope-cell-count {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink);
-    /* Mix-blend ensures the digit reads on both pale and saturated cells. */
-    mix-blend-mode: multiply;
-  }
-  :global([data-theme="dark"]) .scope-cell-count {
-    mix-blend-mode: screen;
-    color: var(--paper);
-  }
-
-  .scope-cross-pill {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background-color: color-mix(in oklab, var(--cardinal) calc(var(--pill-opacity, 0) * 100%), var(--paper));
-    border: 1px solid var(--rule);
-    color: var(--ink);
+  .scope-cell-mini:hover {
+    outline: 1.5px solid var(--ink);
+    outline-offset: -1px;
   }
 </style>

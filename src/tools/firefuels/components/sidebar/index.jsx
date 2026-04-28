@@ -151,7 +151,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                 : 'font-normal text-ink-3',
             ].join(' ')}
           >
-            Regional Data
+            Region Focus
           </button>
         )}
 
@@ -167,7 +167,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           type="button"
           onClick={() => dispatch({ type: Actions.TOGGLE_METHODS })}
           className={[
-            'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-1',
+            'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-4',
             'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
             'transition-colors hover:text-ink',
             state.methodsOpen

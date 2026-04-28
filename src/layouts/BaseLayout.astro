@@ -58,5 +58,24 @@ const fullTitle = title === 'Sustainable Solutions Lab'
         if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
       })();
     </script>
+    <script is:inline>
+      // External links (marked with data-external) open in a new tab with
+      // safe rel attributes. Single place to enforce the convention so every
+      // page picks it up automatically — author code only needs the data-
+      // attribute.
+      (function () {
+        function tagExternals() {
+          for (const a of document.querySelectorAll('a[data-external]')) {
+            if (!a.target) a.target = '_blank';
+            if (!a.rel)    a.rel    = 'noopener noreferrer';
+          }
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', tagExternals);
+        } else {
+          tagExternals();
+        }
+      })();
+    </script>
   </body>
 </html>

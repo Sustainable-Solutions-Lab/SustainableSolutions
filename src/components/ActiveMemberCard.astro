@@ -186,6 +186,12 @@ const recentMeta = recent ? pubMeta(recent) : null;
       {orcidUrl && (
         <a href={orcidUrl} class="text-ink-2 hover:text-ink border-b-0" data-external>ORCID</a>
       )}
+      {person.linkedin_url && (
+        <a href={person.linkedin_url} class="text-ink-2 hover:text-ink border-b-0" data-external>LinkedIn</a>
+      )}
+      {person.github_url && (
+        <a href={person.github_url} class="text-ink-2 hover:text-ink border-b-0" data-external>GitHub</a>
+      )}
     </div>
   </div>
 

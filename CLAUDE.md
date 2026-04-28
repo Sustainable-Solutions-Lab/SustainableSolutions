@@ -276,6 +276,8 @@ off-screen otherwise.
 | P      | cv_url            | Text                                           | Optional. CV link (Google Drive, etc.)         |
 | Q      | notable_pub_doi   | Text                                           | DOI of the paper to feature as "Notable work". Falls back to most-cited if blank. |
 | R      | recent_pub_doi    | Text                                           | DOI of the paper to feature as "Recent work". Falls back to most-recent if blank. |
+| S      | linkedin_url      | Text                                           | Optional. LinkedIn profile URL                 |
+| T      | github_url        | Text                                           | Optional. GitHub profile URL                   |
 
 ### Tab: `News`
 

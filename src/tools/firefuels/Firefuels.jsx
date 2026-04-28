@@ -1,4 +1,4 @@
-import { useReducer, useState, useEffect } from 'react'
+import { useReducer, useState, useEffect, useMemo } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -90,15 +90,22 @@ export default function Firefuels({ companion = null, display = null }) {
   // Sheet-managed display fields (title, eyebrow, summary) override the
   // hardcoded project config so editing the Tools sheet flows through to
   // the in-tool sidebar header without code changes.
+  // Memoized so the spread doesn't produce a fresh object on every render —
+  // downstream effects use `config` as a useEffect dep and would otherwise
+  // re-run forever (which was causing continuous map flashing).
   const baseConfig = projects[state.projectId]
-  const config = display
-    ? {
-        ...baseConfig,
-        title: display.title || baseConfig.title,
-        eyebrow: display.eyebrow || baseConfig.eyebrow,
-        summary: display.summary || baseConfig.summary,
-      }
-    : baseConfig
+  const displayTitle = display?.title ?? null
+  const displayEyebrow = display?.eyebrow ?? null
+  const displaySummary = display?.summary ?? null
+  const config = useMemo(() => {
+    if (!displayTitle && !displayEyebrow && !displaySummary) return baseConfig
+    return {
+      ...baseConfig,
+      title: displayTitle || baseConfig.title,
+      eyebrow: displayEyebrow || baseConfig.eyebrow,
+      summary: displaySummary || baseConfig.summary,
+    }
+  }, [baseConfig, displayTitle, displayEyebrow, displaySummary])
   const isDark = state.colorScheme === 'dark'
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
 

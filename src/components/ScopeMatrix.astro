@@ -15,13 +15,17 @@
 import publications from '../data/publications.json';
 import type { Publication } from '../lib/types';
 
+// Darker, more-saturated hues for Energy and Food than the raw Spectral
+// palette — Spectral-3 (#F46D43) and Spectral-9 (#66C2A5) lose too much
+// punch when mixed with cream paper. The other four use the palette
+// directly because their natural luminance already contrasts well.
 const SYSTEMS = [
-  { key: 'energy',    label: 'Energy',    color: 'var(--spectral-3)'  },
-  { key: 'food',      label: 'Food',      color: 'var(--spectral-9)'  },
-  { key: 'water',     label: 'Water',     color: 'var(--spectral-10)' },
-  { key: 'materials', label: 'Materials', color: 'var(--spectral-11)' },
-  { key: 'climate',   label: 'Climate',   color: 'var(--spectral-1)'  },
-  { key: 'health',    label: 'Health',    color: 'var(--spectral-2)'  },
+  { key: 'energy',    label: 'Energy',    color: '#C2440E'            }, // burnt orange
+  { key: 'food',      label: 'Food',      color: '#1F7A4D'            }, // forest green
+  { key: 'water',     label: 'Water',     color: 'var(--spectral-10)' }, // blue
+  { key: 'materials', label: 'Materials', color: 'var(--spectral-11)' }, // purple
+  { key: 'climate',   label: 'Climate',   color: 'var(--spectral-1)'  }, // wine
+  { key: 'health',    label: 'Health',    color: 'var(--spectral-2)'  }, // red
 ] as const;
 
 const MIT_ROWS = [
@@ -69,8 +73,9 @@ for (const sys of SYSTEMS) {
 function cellBg(systemKey: string, base: string, count: number): string {
   const max = colMax[systemKey] || 1;
   if (!count) return 'var(--paper-2)';
-  // 0.18 floor → 1.0 at max so the densest cell of each column hits full saturation.
-  const opacity = 0.18 + (count / max) * 0.82;
+  // Higher floor (0.32) so even single-paper cells read clearly; max → 1.0
+  // so the densest cell of each column is fully saturated.
+  const opacity = 0.32 + (count / max) * 0.68;
   return `color-mix(in oklab, ${base} ${(opacity * 100).toFixed(0)}%, var(--paper))`;
 }
 ---

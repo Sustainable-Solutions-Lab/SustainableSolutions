@@ -49,13 +49,15 @@ const cards = items.map((it) => {
       <span class="cardinal-dot"></span>STANFORD DOERR SCHOOL OF SUSTAINABILITY
     </p>
     <h1 class="display">Underexamined questions.<br />Lasting answers.</h1>
-    <p class="lede max-w-prose mt-4">
-      Our lab is dedicated to understanding the unavoidable environmental tradeoffs
-      of energy, food, and material security, and to prioritizing the most
-      sustainable solutions.
-    </p>
-    <div class="mt-8" style="max-width: 720px;">
-      <ScopeMatrix />
+    <div class="mt-6 flex flex-col md:flex-row md:items-start gap-8 md:gap-12">
+      <p class="lede max-w-prose m-0 flex-1">
+        Our lab is dedicated to understanding the unavoidable environmental tradeoffs
+        of energy, food, and material security, and to prioritizing the most
+        sustainable solutions.
+      </p>
+      <div class="md:flex-none w-full md:w-auto" style="max-width: 320px;">
+        <ScopeMatrix />
+      </div>
     </div>
   </section>
 

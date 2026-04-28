@@ -68,16 +68,15 @@ for (const sys of SYSTEMS) {
   }
 }
 
-// Sequential Spectral ramp keyed off paper count. Empty cells stay
-// paper-toned (faint, distinct from the data). Counts ramp through the
-// cool-to-warm Spectral spread: low = blue/green end, high = red/wine.
+// Sequential Spectral ramp across the FULL palette: low counts at
+// Spectral-10 (deep blue), high at Spectral-1 (wine). Empty cells
+// stay paper-toned to read distinctly from the lowest data cells.
 function cellBg(count: number): string {
   if (!count) return 'var(--paper-2)';
   const t = count / globalMax;
-  // Interpolate idx from 10 (blue, low) → 2 (red, high) across all 9
-  // ramp positions. Bias the curve so even count=1 lands in the green
-  // band (visible) rather than the very-pale yellow.
-  const idx = Math.max(2, Math.min(10, Math.round(10 - t * 8)));
+  // 10 → 1 across all 10 palette steps. count=1 (t≈0) lands at 10
+  // (deep blue), count=max lands at 1 (wine). Yellow is the midpoint.
+  const idx = Math.max(1, Math.min(10, Math.round(10 - t * 9)));
   return `var(--spectral-${idx})`;
 }
 ---
@@ -141,13 +140,11 @@ function cellBg(count: number): string {
     ))}
   </div>
 
-  <figcaption class="scope-caption">
-    <em>
-      Diverging Spectral palette: cells warm from green/blue (few papers
-      tagged with that system × response) toward red/wine (most papers).
-      Hover for counts.
-    </em>
-  </figcaption>
+  <div class="scope-colorbar">
+    <span class="colorbar-end">Few</span>
+    <div class="colorbar-gradient" aria-hidden="true"></div>
+    <span class="colorbar-end colorbar-end-high">Many</span>
+  </div>
 </figure>
 
 <style>
@@ -235,12 +232,35 @@ function cellBg(count: number): string {
     outline-offset: -1px;
   }
 
-  .scope-caption {
-    margin: 14px 0 0;
-    font-family: var(--font-serif);
-    font-size: 12px;
-    line-height: 1.5;
+  .scope-colorbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .colorbar-end {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
     color: var(--ink-3);
-    max-width: 100%;
+    flex: none;
+  }
+  .colorbar-gradient {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(
+      to right,
+      var(--spectral-10) 0%,
+      var(--spectral-9) 14%,
+      var(--spectral-8) 28%,
+      var(--spectral-7) 42%,
+      var(--spectral-5) 56%,
+      var(--spectral-4) 70%,
+      var(--spectral-3) 84%,
+      var(--spectral-2) 92%,
+      var(--spectral-1) 100%
+    );
   }
 </style>

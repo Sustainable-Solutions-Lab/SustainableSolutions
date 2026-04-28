@@ -6,6 +6,8 @@ import { splitAndLinkAuthors, toNaturalOrder } from '../lib/author-links';
 import { themeColor, themeLabel } from '../lib/themes';
 import { roleColor } from '../lib/roles';
 import CitationChart from './CitationChart.astro';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 interface Props {
   pub: Publication;
@@ -76,10 +78,19 @@ if (pub.volume_issue) citationParts.push(pub.volume_issue);
 if (pub.pages) citationParts.push(pub.pages.replace(/-/g, '–'));
 const citationTail = citationParts.join(', ');
 
-// Featured cards get a hero block. If image_filename is set, use it.
-// Otherwise: typographic placeholder with a stable Spectral-color stripe.
+// Featured cards get a hero block. If image_filename is set, look for the
+// file in /public/publications/ first, then /public/images/ as a fallback,
+// so the generic shared-images folder also works for pub heroes. Falls back
+// to the typographic placeholder if the file isn't found in either spot.
 const isFeatured = !!pub.featured;
-const heroImageUrl = pub.image_filename ? `/publications/${pub.image_filename}` : null;
+function resolveHeroUrl(filename: string | null | undefined): string | null {
+  if (!filename) return null;
+  for (const folder of ['publications', 'images']) {
+    if (existsSync(resolve('public', folder, filename))) return `/${folder}/${filename}`;
+  }
+  return null;
+}
+const heroImageUrl = resolveHeroUrl(pub.image_filename);
 
 const spectralColors = [
   'var(--spectral-2)',

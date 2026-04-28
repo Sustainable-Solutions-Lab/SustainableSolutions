@@ -1,31 +1,52 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Firefuels from '../../tools/firefuels/Firefuels.jsx';
+import { getEntry, render } from 'astro:content';
+
+const entry = await getEntry('tools', 'firefuels');
+const Content = entry ? (await render(entry)).Content : null;
 ---
 
 <BaseLayout
-  title="Firefuels"
-  description="Per-km² costs and benefits of wildfire fuel treatment in California."
+  title={entry?.data.title ?? 'Firefuels'}
+  description={entry?.data.summary}
 >
-  <div class="firefuels-host">
-    <Firefuels client:only="react" />
-  </div>
+  <article class="container-content pt-8 pb-8">
+    {entry?.data.eyebrow && <p class="eyebrow mb-4">{entry.data.eyebrow}</p>}
+    <h1 class="m-0">{entry?.data.title ?? 'Firefuels'}</h1>
+    {entry?.data.summary && (
+      <p class="lede max-w-prose mt-4">{entry.data.summary}</p>
+    )}
+  </article>
+
+  <section class="pb-8" aria-label="Interactive map">
+    <div
+      class="firefuels-frame border-y border-rule"
+      style="height: min(80vh, 800px); width: 100%; overflow: hidden; background: var(--paper-2);"
+    >
+      <Firefuels client:only="react" />
+    </div>
+  </section>
+
+  {Content && (
+    <article class="container-prose pb-24">
+      <div class="prose">
+        <Content />
+      </div>
+    </article>
+  )}
 </BaseLayout>
 
 <style is:global>
-  /* Firefuels takes over the viewport: hide the site nav so the tool's own
-     header bar is the only chrome. The site footer is also suppressed since
-     the tool fills the screen. Use the back-to-tools link in the tool's UI. */
-  body:has(.firefuels-host) > header,
-  body:has(.firefuels-host) > footer {
-    display: none;
+  /* The map fills its frame; the site nav stays visible above. The frame
+     has hairline borders top and bottom to set it off from the surrounding
+     prose. Internal sidebar / controls of the React tool keep working
+     because the frame is the new "viewport" they layout against. */
+  .firefuels-frame {
+    position: relative;
   }
-  body:has(.firefuels-host) {
-    overflow: hidden;
-  }
-  .firefuels-host {
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
+  .firefuels-frame > * {
+    width: 100%;
+    height: 100%;
   }
 </style>

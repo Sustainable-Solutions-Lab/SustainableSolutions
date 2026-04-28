@@ -1,0 +1,64 @@
+---
+// Auto-generated detail page for any tool whose Markdown lives in
+// src/content/tools/<slug>.md and that does NOT have a hand-written
+// .astro file alongside (those win via Astro's static-route precedence
+// and are listed in CUSTOM_PAGES below).
+//
+// Renders: BaseLayout frame · eyebrow / title / summary · hero image
+// · Markdown body. Use this for datasets, code releases, and any
+// tool that doesn't need a bespoke React layout.
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection, render } from 'astro:content';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+export async function getStaticPaths() {
+  // Slugs that have their own hand-written .astro page take precedence and
+  // must NOT be emitted here, or Astro will error on duplicate routes.
+  const customPages = new Set(['firefuels']);
+  const tools = await getCollection('tools');
+  return tools
+    .filter((t) => !customPages.has(t.id))
+    .map((t) => ({ params: { slug: t.id }, props: { entry: t } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+function resolveImage(filename: string | null | undefined): string | null {
+  if (!filename) return null;
+  for (const folder of ['tools', 'images']) {
+    if (existsSync(resolve('public', folder, filename))) return `/${folder}/${filename}`;
+  }
+  return null;
+}
+const imgUrl = resolveImage(entry.data.image_filename);
+---
+
+<BaseLayout title={entry.data.title} description={entry.data.summary}>
+  <article class="container-content pt-8 pb-8">
+    {entry.data.eyebrow && <p class="eyebrow mb-4">{entry.data.eyebrow}</p>}
+    <h1 class="m-0">{entry.data.title}</h1>
+    {entry.data.summary && (
+      <p class="lede max-w-prose mt-4">{entry.data.summary}</p>
+    )}
+  </article>
+
+  {imgUrl && (
+    <section class="container-content pb-8">
+      <img
+        src={imgUrl}
+        alt={entry.data.title}
+        class="block w-full border border-rule"
+        style="aspect-ratio: 16/9; object-fit: cover; border-radius: var(--radius-md);"
+      />
+    </section>
+  )}
+
+  <article class="container-prose pb-24">
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+</BaseLayout>

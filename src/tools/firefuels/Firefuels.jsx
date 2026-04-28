@@ -242,14 +242,16 @@ export default function Firefuels({ companion = null }) {
           />
 
           {/* Mobile color bar — sits above Safari's URL bar (~ 90 px tall on
-              iPhones) and above the in-map attribution strip (~14 px). */}
+              iPhones) and above the in-map attribution strip (~14 px). Bg
+              uses the design-system paper color with transparency so it
+              blends with the surrounding map background. */}
           <div
             className="block md:hidden absolute z-10"
             style={{
-              bottom: 70,
+              bottom: 55,
               right: 10,
               width: 160,
-              background: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.75)',
+              background: isDark ? 'rgba(12, 12, 28, 0.92)' : 'rgba(248, 248, 232, 0.92)',
               borderRadius: 4,
               padding: '6px 8px',
             }}

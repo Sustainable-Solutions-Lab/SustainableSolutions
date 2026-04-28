@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { X, CornerDownLeft } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
 
 export function ZipInput({ baseUrl, dispatch, currentZip }) {
@@ -67,50 +67,52 @@ export function ZipInput({ baseUrl, dispatch, currentZip }) {
       >
         Or by ZIP
       </label>
-      <div className="flex gap-1">
-        <div className="relative flex-1 min-w-0">
-          <input
-            id="firefuels-zip-input"
-            type="text"
-            inputMode="numeric"
-            maxLength={5}
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value.replace(/\D/g, '').slice(0, 5))
-              if (status === 'error') setStatus('idle')
-            }}
-            onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
-            placeholder="94305"
-            disabled={isLoading}
-            className={[
-              'block w-full bg-paper-2 text-ink py-1 font-mono text-[13px]',
-              'focus:outline-none focus:border-ink',
-              'border',
-              isError ? 'border-[var(--negative)]' : 'border-rule',
-              hasActive ? 'pl-2 pr-7' : 'px-2',
-            ].join(' ')}
-            style={{ borderRadius: 'var(--radius-sm)' }}
-            aria-invalid={isError}
-          />
-          {hasActive && (
-            <button
-              type="button"
-              onClick={clear}
-              aria-label="Clear ZIP and return to circle mode"
-              className="absolute top-1/2 -translate-y-1/2 right-1 text-ink-3 hover:text-ink bg-transparent border-0 cursor-pointer p-1 leading-none"
-            >
-              <X size={14} strokeWidth={1.75} />
-            </button>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={submit}
+      <div className="relative">
+        <input
+          id="firefuels-zip-input"
+          type="text"
+          inputMode="numeric"
+          maxLength={5}
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value.replace(/\D/g, '').slice(0, 5))
+            if (status === 'error') setStatus('idle')
+          }}
+          onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
+          placeholder="94305"
           disabled={isLoading}
-          className="font-mono text-[12px] uppercase tracking-[0.12em] text-ink-3 hover:text-ink bg-transparent border-0 cursor-pointer px-2"
-        >
-          {isLoading ? '…' : 'Go'}
-        </button>
+          className={[
+            'block w-full bg-paper-2 text-ink pl-2 pr-8 py-1 font-mono text-[13px]',
+            'focus:outline-none focus:border-ink',
+            'border',
+            isError ? 'border-[var(--negative)]' : 'border-rule',
+          ].join(' ')}
+          style={{ borderRadius: 'var(--radius-sm)' }}
+          aria-invalid={isError}
+        />
+        {/* Right-edge icon: clear (X) when a ZIP is active, return-key arrow
+            otherwise to cue that pressing Enter / clicking submits. */}
+        {hasActive ? (
+          <button
+            type="button"
+            onClick={clear}
+            aria-label="Clear ZIP and return to circle mode"
+            className="absolute top-1/2 -translate-y-1/2 right-1 text-ink-3 hover:text-ink bg-transparent border-0 cursor-pointer p-1 leading-none"
+          >
+            <X size={14} strokeWidth={1.75} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={submit}
+            disabled={isLoading}
+            aria-label="Look up ZIP"
+            title="Press Return"
+            className="absolute top-1/2 -translate-y-1/2 right-1 text-ink-3 hover:text-ink bg-transparent border-0 cursor-pointer p-1 leading-none disabled:opacity-50"
+          >
+            <CornerDownLeft size={14} strokeWidth={1.75} />
+          </button>
+        )}
       </div>
     </div>
   )

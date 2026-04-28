@@ -37,6 +37,10 @@ const tools = defineCollection({
   schema: z.object({
     title: z.string(),
     summary: z.string().optional(),
+    eyebrow: z.string().optional(),       // e.g. "INTERACTIVE MAP", "DATASET", "CODE"
+    image_filename: z.string().optional(),// resolves to /public/tools/, /public/images/
+    link: z.string().optional(),          // internal route or external URL; default /tools/<slug>
+    order: z.number().optional(),
   }),
 })
 

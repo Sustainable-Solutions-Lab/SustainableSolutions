@@ -1,5 +1,29 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const tools = (await getCollection('tools'))
+  .map((t) => t.data)
+  .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+
+// Resolve image_filename across /public/tools/ → /public/images/, mirroring
+// the publication-hero resolver. Returns null if the file isn't found.
+function resolveImage(filename: string | null | undefined): string | null {
+  if (!filename) return null;
+  for (const folder of ['tools', 'images']) {
+    if (existsSync(resolve('public', folder, filename))) return `/${folder}/${filename}`;
+  }
+  return null;
+}
+
+const cards = tools.map((t) => ({
+  ...t,
+  imgUrl: resolveImage(t.image_filename ?? null),
+  href: t.link ?? '#',
+  isExternal: typeof t.link === 'string' && /^https?:\/\//.test(t.link),
+}));
 ---
 
 <BaseLayout title="Tools">
@@ -11,13 +35,43 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     </p>
   </section>
 
-  <section class="container-content pb-24 grid md:grid-cols-2 gap-px bg-rule border border-rule">
-    <a href="/tools/firefuels" class="block bg-paper p-6 hover:bg-paper-2 border-b-0">
-      <p class="eyebrow mb-2">INTERACTIVE MAP</p>
-      <h3 class="m-0">Firefuels</h3>
-      <p class="text-ink-2 text-sm mt-2">
-        Per-km² costs and benefits of wildfire fuel treatment in California.
+  <section class="container-content pb-24">
+    <ul class="list-none p-0 m-0 grid md:grid-cols-2 gap-6">
+      {cards.map((t) => (
+        <li class="m-0 p-0">
+          <a
+            href={t.href}
+            class="block bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
+            style="border-radius: var(--radius-md); overflow: hidden;"
+            data-external={t.isExternal ? '' : null}
+          >
+            {t.imgUrl && (
+              <img
+                src={t.imgUrl}
+                alt={t.title}
+                loading="lazy"
+                class="block w-full object-cover"
+                style="aspect-ratio: 16/10;"
+              />
+            )}
+            <div class="p-6">
+              {t.eyebrow && (
+                <p class="eyebrow m-0 mb-2">{t.eyebrow}</p>
+              )}
+              <h3 class="m-0">{t.title}</h3>
+              {t.summary && (
+                <p class="text-ink-2 text-sm mt-2 m-0">{t.summary}</p>
+              )}
+            </div>
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    {cards.length === 0 && (
+      <p class="text-ink-3 text-sm">
+        No tools yet — add a Markdown file to <code>src/content/tools/</code>.
       </p>
-    </a>
+    )}
   </section>
 </BaseLayout>

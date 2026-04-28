@@ -1,96 +1,127 @@
 ---
 // Compact lab-scope heatmap.
 //
-// 6×4 grid of small colored squares — rows = human systems (energy,
-// food, water, land, materials, fire), columns = problem types
-// (emissions, impacts, air pollution, heat). Color comes from the
-// lab's ColorBrewer Spectral palette, scaled by count. Labels are
-// hover-only; the visual sits next to the hero lede as a small
-// orientation glyph rather than a fully-labeled chart.
+// Two stacked 4×4 grids representing the lab's scope:
+//   • Top section — Mitigation (blue end of Spectral)
+//        rows: General · Trade · Corporate · Carbon mgmt
+//   • Bottom section — Impacts & Adaptation (red end of Spectral)
+//        rows: General · Air pollution · Heat · Flooding
+//   columns (both sections): Energy · Food · Water · Materials
 //
-// Multi-tagged papers contribute to every matching cell, so the
-// matrix shows breadth of focus rather than a strict partition.
+// Cell color = section base color (Spectral-10 for mitigation,
+// Spectral-2 for impacts) at opacity scaled by paper count within
+// the section. Empty cells stay paper-colored. Hover surfaces the
+// full label.
+//
+// Multi-tagged papers contribute to every matching cell — the
+// visual shows breadth, not a partition.
 
 import publications from '../data/publications.json';
 import type { Publication } from '../lib/types';
 
-const SYSTEMS = ['energy', 'food', 'water', 'land', 'materials', 'fire'] as const;
-const PROBLEMS = ['emissions', 'impacts', 'air pollution', 'heat'] as const;
+const COLUMNS = [
+  { key: 'energy',    label: 'Energy',    tags: ['energy', 'electricity'] },
+  { key: 'food',      label: 'Food',      tags: ['food', 'land'] },
+  { key: 'water',     label: 'Water',     tags: ['water'] },
+  { key: 'materials', label: 'Materials', tags: ['materials'] },
+] as const;
 
-const SYSTEM_LABEL: Record<string, string> = {
-  energy: 'Energy',
-  food: 'Food',
-  water: 'Water',
-  land: 'Land',
-  materials: 'Materials',
-  fire: 'Fire',
-};
-const PROBLEM_LABEL: Record<string, string> = {
-  emissions: 'Emissions',
-  impacts: 'Impacts',
-  'air pollution': 'Air pollution',
-  heat: 'Heat',
-};
+const SECTIONS = [
+  {
+    key: 'mitigation',
+    label: 'Mitigation',
+    base: 'var(--spectral-10)',  // blue end
+    rows: [
+      { key: 'general',     label: 'General',      tags: ['emissions'] },
+      { key: 'trade',       label: 'Trade',        tags: ['trade'] },
+      { key: 'corporate',   label: 'Corporate',    tags: ['corporate'] },
+      { key: 'carbon-mgmt', label: 'Carbon mgmt',  tags: ['carbon management'] },
+    ],
+  },
+  {
+    key: 'impacts',
+    label: 'Impacts & Adaptation',
+    base: 'var(--spectral-2)',  // red end
+    rows: [
+      { key: 'general',       label: 'General',       tags: ['impacts', 'fire'] },
+      { key: 'air-pollution', label: 'Air pollution', tags: ['air pollution'] },
+      { key: 'heat',          label: 'Heat',          tags: ['heat'] },
+      { key: 'flooding',      label: 'Flooding',      tags: ['flooding'] },
+    ],
+  },
+] as const;
 
 const pubs = publications as Publication[];
 
-const cellPapers = new Map<string, number>();
-for (const p of pubs) {
-  const themes = (p.themes ?? []) as string[];
-  const sys = themes.filter((t) => (SYSTEMS as readonly string[]).includes(t));
-  const prob = themes.filter((t) => (PROBLEMS as readonly string[]).includes(t));
-  for (const s of sys) {
-    for (const pr of prob) {
-      const k = `${s}|${pr}`;
-      cellPapers.set(k, (cellPapers.get(k) ?? 0) + 1);
-    }
-  }
+function intersects(a: readonly string[], b: readonly string[]) {
+  for (const x of a) if (b.includes(x)) return true;
+  return false;
 }
 
-let maxCell = 0;
-for (const v of cellPapers.values()) if (v > maxCell) maxCell = v;
+// Pre-compute counts per cell, plus the per-section max for opacity scaling.
+const cellCount: Record<string, number> = {};
+const sectionMax: Record<string, number> = {};
+for (const sec of SECTIONS) {
+  let secMax = 0;
+  for (const col of COLUMNS) {
+    for (const row of sec.rows) {
+      let n = 0;
+      for (const p of pubs) {
+        const themes = (p.themes ?? []) as string[];
+        if (intersects(col.tags, themes) && intersects(row.tags, themes)) n++;
+      }
+      cellCount[`${sec.key}|${row.key}|${col.key}`] = n;
+      if (n > secMax) secMax = n;
+    }
+  }
+  sectionMax[sec.key] = secMax;
+}
 
-// Map count → Spectral palette index (1..11). Reverse the palette so
-// high counts read as cool/dark (purple) and low counts as warm/light
-// (red-orange), matching scientific-viz convention for sequential data.
-function spectralVar(count: number): string {
-  if (!maxCell || !count) return 'transparent';
-  const t = count / maxCell;       // 0..1
-  // Map t into 11 bins; reverse so low count = spectral-2, high = spectral-10.
-  const idx = Math.max(2, Math.min(10, Math.round(2 + t * 8)));
-  return `var(--spectral-${idx})`;
+function cellBg(secKey: string, base: string, count: number): string {
+  const max = sectionMax[secKey] || 1;
+  if (!count) return 'var(--paper)';
+  // 0.15 floor so even count=1 cells are faintly visible.
+  const opacity = 0.15 + (count / max) * 0.78;
+  return `color-mix(in oklab, ${base} ${(opacity * 100).toFixed(0)}%, var(--paper))`;
 }
 ---
 
-<div class="scope-matrix-mini" aria-label="Scope of lab publications by human-system theme and problem type">
-  {SYSTEMS.flatMap((s) =>
-    PROBLEMS.map((p) => {
-      const count = cellPapers.get(`${s}|${p}`) ?? 0;
-      return (
-        <div
-          class="scope-cell-mini"
-          style={`background-color: ${spectralVar(count)};`}
-          title={`${SYSTEM_LABEL[s]} × ${PROBLEM_LABEL[p]} · ${count} paper${count === 1 ? '' : 's'}`}
-        ></div>
-      );
-    }),
-  )}
+<div class="scope-matrix-mini" aria-label="Scope of lab publications">
+  {SECTIONS.map((sec) => (
+    <div class="scope-section" data-section={sec.key}>
+      {sec.rows.flatMap((row) =>
+        COLUMNS.map((col) => {
+          const count = cellCount[`${sec.key}|${row.key}|${col.key}`] ?? 0;
+          return (
+            <div
+              class="scope-cell-mini"
+              style={`background-color: ${cellBg(sec.key, sec.base, count)};`}
+              title={`${col.label} × ${sec.label}: ${row.label} · ${count} paper${count === 1 ? '' : 's'}`}
+            ></div>
+          );
+        }),
+      )}
+    </div>
+  ))}
 </div>
 
 <style>
   .scope-matrix-mini {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 124px;
+    flex: none;
+  }
+  .scope-section {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(6, 1fr);
+    aspect-ratio: 1 / 1;
     gap: 2px;
     padding: 2px;
     background: var(--rule);
     border: 1px solid var(--rule);
     border-radius: var(--radius-sm);
-    /* Compact size — sits beside the hero lede as a glyph, not a chart. */
-    width: 140px;
-    aspect-ratio: 4 / 6;
-    flex: none;
   }
   .scope-cell-mini {
     background: var(--paper);

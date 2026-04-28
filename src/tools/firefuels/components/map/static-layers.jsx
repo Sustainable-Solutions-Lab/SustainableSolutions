@@ -289,12 +289,14 @@ export function addStaticLayers(map, scheme) {
     'text-halo-width': 1.8,
   }
 
+  // minzoom thresholds shifted ~1 step lower so each zoom level shows
+  // roughly double the number of cities than the previous tuning.
   const cityRanks = [
-    { id: 'city-labels-r1', rank: 1, minzoom: 5,   size: 11 },
-    { id: 'city-labels-r2', rank: 2, minzoom: 5.5, size: 10 },
-    { id: 'city-labels-r3', rank: 3, minzoom: 6.5, size: 10 },
-    { id: 'city-labels-r4', rank: 4, minzoom: 7.5, size: 10 },
-    { id: 'city-labels-r5', rank: 5, minzoom: 8.5, size: 10 },
+    { id: 'city-labels-r1', rank: 1, minzoom: 4,   size: 11 },
+    { id: 'city-labels-r2', rank: 2, minzoom: 4.8, size: 10 },
+    { id: 'city-labels-r3', rank: 3, minzoom: 5.5, size: 10 },
+    { id: 'city-labels-r4', rank: 4, minzoom: 6.5, size: 10 },
+    { id: 'city-labels-r5', rank: 5, minzoom: 7.5, size: 10 },
   ]
 
   for (const { id, rank, minzoom, size } of cityRanks) {

@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import tools from '../../data/tools.json';
 import publications from '../../data/publications.json';
 import type { Tool, Publication } from '../../lib/types';
+import { totalCitations } from '../../lib/citations';
 import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -25,12 +26,16 @@ function resolveImage(filename: string | null): string | null {
 
 const cards = sorted.map((t) => {
   const companion = t.doi ? pubsByDoi.get(t.doi.trim().toLowerCase()) ?? null : null;
+  const companionUrl = companion?.url ?? (companion?.doi ? `https://doi.org/${companion.doi}` : null);
+  const companionCitations = companion ? totalCitations(companion) : 0;
   return {
     ...t,
     imgUrl: resolveImage(t.image_filename),
     href: t.link ?? '#',
     isExternal: typeof t.link === 'string' && /^https?:\/\//.test(t.link),
     companion,
+    companionUrl,
+    companionCitations,
   };
 });
 
@@ -161,37 +166,71 @@ const cornerstoneLogo = resolveCornerstoneLogo();
           );
         }
 
-        // Default tool card: image hero + single href wrapping the whole card.
+        // Default tool card: <article> with inline links so the companion
+        // paper title can be a link of its own (nested <a> tags aren't
+        // allowed). Image and title both link to the tool's own page.
         return (
           <li class="m-0 p-0 h-full">
-            <a
-              href={t.href}
-              class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
-              style="border-radius: var(--radius-md); overflow: hidden;"
-              data-external={t.isExternal ? '' : null}
+            <article
+              class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors overflow-hidden"
+              style="border-radius: var(--radius-md);"
             >
               {t.imgUrl && (
-                <img
-                  src={t.imgUrl}
-                  alt={t.title}
-                  loading="lazy"
-                  class="block w-full object-cover"
-                  style="aspect-ratio: 16/10;"
-                />
+                <a
+                  href={t.href}
+                  class="block border-b-0"
+                  data-external={t.isExternal ? '' : null}
+                >
+                  <img
+                    src={t.imgUrl}
+                    alt={t.title}
+                    loading="lazy"
+                    class="block w-full object-cover"
+                    style="aspect-ratio: 16/10;"
+                  />
+                </a>
               )}
               <div class="p-6 flex-1 flex flex-col">
                 {t.eyebrow && <p class="eyebrow m-0 mb-2">{t.eyebrow}</p>}
-                <h3 class="m-0">{t.title}</h3>
+                <h3 class="m-0">
+                  <a
+                    href={t.href}
+                    class="border-b-0 hover:underline"
+                    data-external={t.isExternal ? '' : null}
+                  >
+                    {t.title}
+                  </a>
+                </h3>
                 {t.summary && (
                   <p class="text-ink-2 text-sm mt-2 m-0">{t.summary}</p>
                 )}
                 {t.companion && (
-                  <p class="font-mono text-xs text-ink-3 mt-auto pt-3 m-0 uppercase tracking-wider">
-                    Companion paper · <em class="not-italic">{t.companion.journal}</em> · {t.companion.year}
-                  </p>
+                  <div class="mt-auto pt-4 border-t border-rule">
+                    <p class="eyebrow m-0 mb-1">COMPANION PAPER</p>
+                    <p class="font-serif m-0" style="font-size: 16px; line-height: 1.3;">
+                      {t.companionUrl ? (
+                        <a href={t.companionUrl} class="border-b-0 hover:underline" data-external>
+                          {t.companion.title}
+                        </a>
+                      ) : (
+                        t.companion.title
+                      )}
+                    </p>
+                    <p class="font-mono text-xs text-ink-3 mt-1 m-0">
+                      <em class="not-italic">{t.companion.journal}</em>
+                      <span class="dot">·</span>
+                      {t.companion.year}
+                      {t.companionCitations > 0 && (
+                        <>
+                          <span class="dot">·</span>
+                          {t.companionCitations.toLocaleString()} citations
+                        </>
+                      )}
+                    </p>
+                  </div>
                 )}
               </div>
-            </a>
+            </article>
           </li>
         );
       })}

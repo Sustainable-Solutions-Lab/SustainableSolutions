@@ -1,11 +1,9 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PublicationItem from '../../components/PublicationItem.astro';
-import PersonCard from '../../components/PersonCard.astro';
 import publications from '../../data/publications.json';
-import people from '../../data/people.json';
 import researchData from '../../data/research.json';
-import type { Publication, Person } from '../../lib/types';
+import type { Publication } from '../../lib/types';
 import { totalCitations, recentCitations } from '../../lib/citations';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -13,7 +11,6 @@ import { resolve } from 'node:path';
 const accent = 'var(--cardinal)';
 
 const pubs = publications as Publication[];
-const peopleArr = people as Person[];
 
 // Sheet-driven copy: Research tab → row with slug='conceptual'.
 const researchRow = (researchData as Array<{
@@ -48,16 +45,6 @@ const heroUrl = resolveHeroUrl(researchRow?.hero_image);
 const conceptualPubs = pubs
   .filter((p) => p.conceptual === true)
   .sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || (b.month ?? 0) - (a.month ?? 0));
-
-// CIU members — current first, alumni second; both ordered by `order`.
-const ciuPeople = peopleArr
-  .filter((p) => p.unit === 'ciu')
-  .sort((a, b) => {
-    if (a.status !== b.status) return a.status === 'current' ? -1 : 1;
-    return (a.order ?? 999) - (b.order ?? 999);
-  });
-const ciuCurrent = ciuPeople.filter((p) => p.status === 'current');
-const ciuAlumni = ciuPeople.filter((p) => p.status === 'alumni');
 
 // Stats strip
 const RECENT_YEARS = 3;
@@ -186,41 +173,6 @@ const maxYearCount = Math.max(...yearSeries.map((y) => y.count), 1);
       </p>
     )}
   </section>
-
-  <hr class="border-rule" />
-
-  {/* Members */}
-  {ciuPeople.length > 0 && (
-    <section class="container-content pt-8 pb-8">
-      <p class="eyebrow mb-4">THE UNIT</p>
-
-      {ciuCurrent.length > 0 && (
-        <>
-          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 mt-0 mb-3">Current</p>
-          <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 list-none p-0 m-0 mb-6">
-            {ciuCurrent.map((p) => (
-              <li class="m-0 p-0">
-                <PersonCard person={p} />
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {ciuAlumni.length > 0 && (
-        <>
-          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 mt-2 mb-3">Alumni</p>
-          <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 list-none p-0 m-0">
-            {ciuAlumni.map((p) => (
-              <li class="m-0 p-0">
-                <PersonCard person={p} />
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </section>
-  )}
 
   <hr class="border-rule" />
 

@@ -53,6 +53,9 @@ function axisMatches(values: string[], target: string): boolean {
   return false;
 }
 
+// Key on row.match (which is unique) rather than row.key — MIT and IMP
+// both have a "general" sub-row, and keying on row.key collided so the
+// IMP general count silently overwrote the MIT general count.
 const cellCount: Record<string, number> = {};
 let globalMax = 0;
 for (const sys of SYSTEMS) {
@@ -63,7 +66,7 @@ for (const sys of SYSTEMS) {
       const r = (p.response ?? []) as string[];
       if (axisMatches(s, sys.key) && axisMatches(r, row.match)) n++;
     }
-    cellCount[`${sys.key}|${row.key}`] = n;
+    cellCount[`${sys.key}|${row.match}`] = n;
     if (n > globalMax) globalMax = n;
   }
 }
@@ -108,7 +111,7 @@ function cellBg(count: number): string {
       <>
         <div class="row-label">{row.label}</div>
         {SYSTEMS.map((s) => {
-          const count = cellCount[`${s.key}|${row.key}`] ?? 0;
+          const count = cellCount[`${s.key}|${row.match}`] ?? 0;
           return (
             <a
               class="cell"
@@ -129,7 +132,7 @@ function cellBg(count: number): string {
       <>
         <div class="row-label">{row.label}</div>
         {SYSTEMS.map((s) => {
-          const count = cellCount[`${s.key}|${row.key}`] ?? 0;
+          const count = cellCount[`${s.key}|${row.match}`] ?? 0;
           return (
             <a
               class="cell"

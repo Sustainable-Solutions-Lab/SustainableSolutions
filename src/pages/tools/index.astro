@@ -76,26 +76,48 @@ const cornerstoneLogo = resolveCornerstoneLogo();
           style="border-radius: var(--radius-md);"
         >
           <div
-            class="relative flex items-center justify-center"
-            style="
-              aspect-ratio: 16 / 10;
-              background: linear-gradient(
-                90deg,
-                var(--spectral-1)  0%,
-                var(--spectral-3)  18%,
-                var(--spectral-5)  36%,
-                var(--spectral-7)  54%,
-                var(--spectral-9)  72%,
-                var(--spectral-10) 88%,
-                var(--spectral-11) 100%
-              );
-            "
+            class="relative flex items-center justify-center bg-paper-2"
+            style="aspect-ratio: 16 / 10;"
           >
-            {/* Soft paper overlay so the logo / title reads cleanly on the gradient. */}
+            {/*
+              Decaying-bar histogram in the lab's full Spectral palette —
+              eleven bars, each in spectral-1…11, heights stepping down
+              left to right. preserveAspectRatio="none" stretches them
+              edge-to-edge regardless of card width.
+            */}
+            <svg
+              viewBox="0 0 110 100"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              class="absolute inset-0 w-full h-full block"
+            >
+              {[
+                { h: 100, c: 'var(--spectral-1)' },
+                { h:  92, c: 'var(--spectral-2)' },
+                { h:  84, c: 'var(--spectral-3)' },
+                { h:  76, c: 'var(--spectral-4)' },
+                { h:  68, c: 'var(--spectral-5)' },
+                { h:  60, c: 'var(--spectral-6)' },
+                { h:  52, c: 'var(--spectral-7)' },
+                { h:  44, c: 'var(--spectral-8)' },
+                { h:  36, c: 'var(--spectral-9)' },
+                { h:  28, c: 'var(--spectral-10)' },
+                { h:  20, c: 'var(--spectral-11)' },
+              ].map((b, i) => (
+                <rect
+                  x={i * 10}
+                  y={100 - b.h}
+                  width={9}
+                  height={b.h}
+                  fill={b.c}
+                />
+              ))}
+            </svg>
+            {/* Soft paper overlay tames the bars so the logo reads cleanly on top. */}
             <div
               aria-hidden="true"
               class="absolute inset-0"
-              style="background: color-mix(in oklab, var(--paper) 30%, transparent);"
+              style="background: color-mix(in oklab, var(--paper) 35%, transparent);"
             ></div>
             {cornerstoneLogo ? (
               <img

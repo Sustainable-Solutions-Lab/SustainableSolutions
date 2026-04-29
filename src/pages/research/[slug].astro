@@ -1,28 +1,85 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PublicationItem from '../../components/PublicationItem.astro';
+import publications from '../../data/publications.json';
+import type { Publication } from '../../lib/types';
+import { SYSTEMS, systemMatches } from '../../lib/systems';
 
 export function getStaticPaths() {
-  return [
-    { params: { slug: 'energy-systems' }, props: { title: 'Energy systems' } },
-    { params: { slug: 'land-use' }, props: { title: 'Land use' } },
-    { params: { slug: 'trade' }, props: { title: 'Trade' } },
-    { params: { slug: 'impacts' }, props: { title: 'Impacts' } },
-  ];
+  return SYSTEMS.map((s) => ({
+    params: { slug: s.slug },
+    props: { system: s },
+  }));
 }
 
-const { title } = Astro.props;
+const { system } = Astro.props;
+const pubs = (publications as Publication[])
+  .filter((p) => systemMatches(p.system, system.slug))
+  .sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || (b.month ?? 0) - (a.month ?? 0));
+
+// Sub-system tags actually present in the data (e.g. energy:electricity).
+// Surfaces granularity to readers without us having to enumerate sub-keys.
+const subSystems = Array.from(
+  new Set(
+    pubs
+      .flatMap((p) => p.system ?? [])
+      .filter((v) => v.startsWith(system.slug + ':'))
+      .map((v) => v.split(':').slice(1).join(':'))
+  ),
+).sort();
 ---
 
-<BaseLayout title={title}>
-  <article class="container-prose py-16">
-    <p class="eyebrow mb-4">RESEARCH THEME</p>
-    <h1>{title}</h1>
-    <p class="lede mt-4">
-      Theme prose lives in <code>src/content/research/{Astro.params.slug}.md</code>
-      and renders here.
+<BaseLayout title={`Research · ${system.title}`}>
+  <section class="container-content pt-8 pb-6">
+    <p class="eyebrow mb-4">
+      <a href="/research" class="border-b-0 hover:text-ink">RESEARCH</a>
+      <span class="dot">›</span>
+      SYSTEM
     </p>
-    <p class="text-ink-3">
-      Auto-generated list of papers tagged with this theme will appear below.
+    <h1>{system.title}</h1>
+    <p class="lede max-w-prose mt-4">{system.summary}</p>
+
+    {subSystems.length > 0 && (
+      <p class="font-mono text-xs uppercase tracking-wider text-ink-3 mt-4">
+        Sub-areas:
+        {subSystems.map((sub, i) => (
+          <>
+            {i > 0 && <span class="dot">·</span>}
+            <span class="text-ink-2">{sub.replace(/-/g, ' ')}</span>
+          </>
+        ))}
+      </p>
+    )}
+  </section>
+
+  {/* Placeholder prose section — replace with real research narrative. */}
+  <section class="container-prose pb-10">
+    <p class="text-ink-3 italic">
+      Research narrative for the {system.title.toLowerCase()} system goes here.
     </p>
-  </article>
+  </section>
+
+  <hr class="border-rule" />
+
+  <section class="container-content pt-8 pb-24">
+    <div class="flex items-baseline justify-between mb-4">
+      <p class="eyebrow m-0">
+        Papers in this system <span class="text-ink-3">· {pubs.length}</span>
+      </p>
+      <a
+        href={`/publications?system=${encodeURIComponent(system.slug)}`}
+        class="font-mono text-xs uppercase tracking-wider text-ink-3 hover:text-ink border-b-0"
+      >
+        Filter on publications page →
+      </a>
+    </div>
+
+    {pubs.length === 0 ? (
+      <p class="text-ink-3 text-sm">No publications tagged with this system yet.</p>
+    ) : (
+      <ul class="list-none p-0 m-0">
+        {pubs.map((pub) => <PublicationItem pub={pub} />)}
+      </ul>
+    )}
+  </section>
 </BaseLayout>

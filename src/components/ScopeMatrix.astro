@@ -210,7 +210,7 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
               data-recent-cites={cellRecentCites[k] ?? 0}
               data-recent-papers={cellRecentPapers[k] ?? 0}
               data-label={cellLabel}
-              title={`${cellLabel} · ${labelPapers(papers)} · click to filter`}
+              title={`${cellLabel} · ${labelPapers(papers)}`}
               aria-label={`${cellLabel} — ${labelPapers(papers)}`}
             ></a>
           );
@@ -239,7 +239,7 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
               data-recent-cites={cellRecentCites[k] ?? 0}
               data-recent-papers={cellRecentPapers[k] ?? 0}
               data-label={cellLabel}
-              title={`${cellLabel} · ${labelPapers(papers)} · click to filter`}
+              title={`${cellLabel} · ${labelPapers(papers)}`}
               aria-label={`${cellLabel} — ${labelPapers(papers)}`}
             ></a>
           );
@@ -485,7 +485,7 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
         cell.style.backgroundColor = cellBg(v, sortedList);
         const label = cell.dataset.label || '';
         cell.setAttribute('aria-label', label + ' — ' + format(v));
-        cell.setAttribute('title', label + ' · ' + format(v) + ' · click to filter');
+        cell.setAttribute('title', label + ' · ' + format(v));
       });
       buttons.forEach(function (b) {
         const active = b.dataset.mode === mode;

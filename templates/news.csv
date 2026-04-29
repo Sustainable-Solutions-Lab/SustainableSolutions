@@ -1,4 +1,88 @@
-date,title,summary,type,link,image_filename,featured,long_form_slug
-2026-04-10,New paper in Nature Sustainability,"Our new analysis of stranded power-plant assets is out in Nature Sustainability.",paper,https://doi.org/10.1038/s41893-026-00000-0,,TRUE,
-2026-03-22,"Davis named AAAS Fellow",Steve was elected as a 2026 Fellow of the American Association for the Advancement of Science.,award,https://www.aaas.org/fellows,,TRUE,
-2026-02-15,Talk at AGU Fall Meeting,"Steve presented our recent work on land-use change and carbon storage.",talk,https://agu.confex.com/agu/sample,,FALSE,
+date,title,summary,type,link,image_filename,featured,long_form_slug,doi,system,topic,source
+2026-01-01,Another way companies majorly undercount their emissions,,press,https://heatmap.news/sustainability/scope-3-emissions-undercount,,FALSE,,,,,Heatmap
+2025-08-08,Popular E.P.A. Database Is in Limbo Amid Science Cuts,,press,https://www.nytimes.com/2025/08/08/climate/epa-database-useeio-greenhousegases.html,,FALSE,,,,,New York Times
+2025-01-01,A net-zero world will have fewer trade wars,,press,https://heatmap.news/energy/net-zero-trade-risk,,FALSE,,,,,Heatmap
+2024-01-01,"To save the climate, let’s consider making food without farms",,op-ed,https://www.ciphernews.com/articles/to-save-the-climate-lets-considermaking-food-without-farms/,,FALSE,,,,,Cipher
+2023-11-14,"The Toll of Climate Disasters Is Rising. But a U.S. Report Has Good News, Too",,press,https://www.nytimes.com/2023/11/14/climate/bidennational-climate-assessment.html,,FALSE,,,,,New York Times
+2023-03-02,Carbon emissions from boreal forest fires rose in 2021,,press,https://www.washingtonpost.com/national/climate-change-wildfires-drought-carbonboreal-forest/2023/03/02/97d551d4-b92d-11ed-b0df-8ca14de679ad_story.html,,FALSE,,10.1126/science.ade0805,"health,climate",impacts,Washington Post
+2023-03-02,"Boreal forests could be a planet-warming ‘time bomb’ as wildfires expand, says new study",,press,https://www.cnn.com/2023/03/02/world/boreal-forest-firesstudy-climate-scn-intl/index.html,,FALSE,,10.1126/science.ade0805,"health,climate",impacts,CNN
+2023-01-01,The Foods the World Will Lose to Climate Change,,press,https://www.wired.com/story/the-foods-the-world-will-lose-to-climate-change/,,FALSE,,,,,WIRED
+2023-01-01,A glimpse of optimism on climate change,,op-ed,https://thehill.com/opinion/energy-environment/4323570-arare-glimpse-of-optimism-on-climate-change/,,FALSE,,,,,The Hill
+2023-01-01,Concrete Has a Big Carbon Footprint. Can Green Tech Fix It?,,press,https://www.wsj.com/science/environment/green-concrete-carbon-dioxideemissions-storage-c70c0a2b,,FALSE,,,,,Wall Street Journal
+2023-01-01,Startup Series: Watershed,,press,https://www.mcjcollective.com/my-climate-journey-podcast/watershed,,FALSE,,,,,My Climate Journey (podcast)
+2023-01-01,Northern forests released a record amount of carbon dioxide in 2021,,press,https://www.newscientist.com/article/2362504-northern-forests-releaseda-record-amount-of-carbon-dioxide-in-2021/,,FALSE,,10.1126/science.ade0805,"health,climate",impacts,New Scientist
+2023-01-01,"Wildfires in boreal forests release record levels of carbon, satellite study shows",,press,https://www.ft.com/content/1a24a66d-854a-4c32-859bb1ef4203e96a,,FALSE,,10.1126/science.ade0805,"health,climate",impacts,Financial Times
+2023-01-01,Net-zero aviation needs up to $1 trillion in carbon offsets by 2050,,press,https://www.newscientist.com/article/2356840-net-zero-aviation-needs-upto-1-trillion-in-carbon-offsets-by-2050/,,FALSE,,10.1038/s41893-022-01046-9,energy:transportation,mitigation,New Scientist
+2022-05-20,The Climate Threat Hidden in Your Hamburger,,press,https://www.bloomberg.com/news/articles/2022-05-20/measuring-carbon-emissionsfrom-imported-beef-palm-oil,,FALSE,,,,,Bloomberg
+2022-04-10,We Are Wasting Time on These Climate Debates. The Next Steps Are Clear,,op-ed,https://www.nytimes.com/2022/04/10/opinion/environment/ipcc-report-climatechange-debates.html,,FALSE,,,,,New York Times
+2022-01-01,Cement carbon dioxide emissions quietly double in 20 years,,press,https://apnews.com/article/climate-science-china-pollution3d97642acbb07fca7540edca38448266,,FALSE,,10.1016/j.joule.2023.01.013,,,Associated Press
+2021-03-08,How Bad Was 2020 for Tourism? Look at the Numbers,,press,https://www.nytimes.com/2021/03/08/travel/covid-pandemictourism-data.html,,FALSE,,,,,New York Times
+2021-01-01,Carbon emissions rapidly rebounded following COVID pandemic dip,,press,http://go.nature.com/3gNIrkF,,FALSE,,,,,Nature
+2021-01-01,Companies hoping to grow carbon-sucking kelp may be rushing ahead of the science,,press,http://bit.ly/3LAdkaa,,FALSE,,,,,MIT Technology Review
+2020-12-03,Coal’s endgame: The dirtiest fossil fuel is on the back foot,,press,https://www.economist.com/briefing/2020/12/03/the-dirtiest-fossil-fuel-is-on-the-backfoot,,FALSE,,,,,The Economist
+2020-01-01,"California Wildfires Killed 106 People Two Years Ago. Researchers Say the Smoke Killed 3,652",,press,https://www.kqed.org/science/1971666/californiawildfires-killed-106-people-two-years-ago-researchers-say-the-smoke-killed-3652,,FALSE,,,,,KQED
+2020-01-01,Why a Historic Emissions Drop from COVID Is No Cause to Celebrate,,press,https://www.scientificamerican.com/article/why-a-historicemissions-drop-from-covid-is-no-cause-to-celebrate/,,FALSE,,10.1038/nclimate2800,energy,mitigation:trade,Scientific American
+2020-01-01,New Study Casts Doubt On The Climate Benefits Of Natural Gas Power Plants,,press,https://www.huffpost.com/entry/gas-bridgefuel_n_5f7f74f0c5b664e5babb0ea8,,FALSE,,,,,Huffington Post
+2020-01-01,"In an Odd Twist, Cleaner Air in China May Mean a Warmer Earth",,press,https://www.wired.com/story/in-an-odd-twist-cleaner-air-in-china-may-mean-awarmer-earth/,,FALSE,,,,,WIRED
+2020-01-01,How the coronavirus pandemic slashed carbon emissions – in five graphs,,press,https://www.nature.com/articles/d41586-020-01497-0,,FALSE,,,,,Nature
+2020-01-01,"For richer or poorer: coronavirus, cheap oil test climate vows",,press,https://www.reuters.com/article/us-health-coronavirus-climate-analysisidUKKBN20Z0PD,,FALSE,,,,,Reuter
+2019-01-01,Is Nuclear Power Worth the Risk?,,press,https://www.newyorker.com/news/dispatch/is-nuclear-power-worth-the-risk,,FALSE,,,,,The New Yorker
+2019-01-01,Global Carbon Emissions Continue To Rise Despite Efforts To Cut Them,,press,https://n.pr/2LmsmlU,,FALSE,,,,,All Things Considered (NPR)
+2019-01-01,We have too many fossil-fuel power plants to meet climate goals,,press,https://on.natgeo.com/320Ovxw,,FALSE,,,,,National Geographic
+2019-01-01,"To meet Paris climate targets, some power plants may need to take an early retirement",,press,https://lat.ms/2LyyskH,,FALSE,,,,,Los Angeles Times
+2019-01-01,We’ve already built too many power plants and cars to prevent 1.5 ˚C of warming,,press,https://bit.ly/2J0IvgG,,FALSE,,,,,MIT Technology Review
+2018-01-01,Trouble Brewing? Climate Change Closes In on Beer Drinkers,,press,https://goo.gl/8fGP3L,,FALSE,,,,,Scientific American
+2018-01-01,Global warming to leave us crying in our costlier beer,,press,https://goo.gl/zN9J2r,,FALSE,,,,,Associated Press
+2018-01-01,"You’ve Heard of Outsourced Jobs, but Outsourced Pollution? It’s Real, and Tough to Tally Up",,press,https://goo.gl/oMqVeH,,FALSE,,,,,New York Times
+2018-01-01,"At this rate, it’s going to take nearly 400 years to transform the energy system",,press,https://goo.gl/gMkmPh,,FALSE,,,,,MIT Technology Review
+2017-01-01,"India’s Rising Temperatures Are Already Deadly, Study Shows",,press,https://apnews.com/cd86d634c5e54902b5fbe4a1404c6beb,,FALSE,,,,,New York Times
+2017-01-01,India’s planned coal plants could ‘single-handedly jeopardise’ 1.5°C target,,press,https://goo.gl/93EcGG,,FALSE,,,,,Carbon Brief
+2017-01-01,India's Energy Landscape Is Rapidly Changing,,press,https://goo.gl/lcxPSR,,FALSE,,,,,Scientific American
+2017-01-01,Airborne particles cause more than 3m early deaths a year,,press,https://goo.gl/Poiyk8,,FALSE,,,,,The Economist
+2017-01-01,Dirty air from global trade kills at home and abroad,,press,https://goo.gl/vdK4v6,,FALSE,,,,,Associated Press
+2017-01-01,,,press,https://goo.gl/9Xp6sK,,FALSE,,,,,"USA Today,”How your cheap Chinese-made products may be killi"
+2017-01-01,"Western demand for goods from China is killing 100,000 a year",,press,https://goo.gl/t06mbE,,FALSE,,,,,New Scientist
+2017-01-01,Thousands of pollution deaths worldwide linked to western consumers – study,,press,https://goo.gl/atp5nV,,FALSE,,,,,The Guardian
+2016-01-01,Concrete as a Carbon Sink?,,press,https://goo.gl/BMiV6B,,FALSE,,,,,Architect Magazine
+2016-01-01,Cement soaks up greenhouse gases,,press,https://goo.gl/h6UmNf,,FALSE,,,,,Science
+2016-01-01,,,press,http://www.sacbee.com/opinion/oped/soapbox/article113340678.html,,FALSE,,,,,Sacramento Bee “This should be California’s next step on cli
+2016-01-01,Today’s Energy System Could Blow Paris Climate Goals,,press,https://goo.gl/YyGFNx,,FALSE,,,,,New York Times
+2016-01-01,Scientists Just Say No to ‘Chemtrails’ Conspiracy Theory,,press,http://goo.gl/tn2slI,,FALSE,,,,,New York Times
+2016-01-01,Scientists Published An Article On ‘Chemtrails’ (They Aren’t Real),,press,http://goo.gl/jO2mSq,,FALSE,,,,,Forbes
+2016-01-01,Annoyed Scientists Publish Study on Chemtrail Conspiracy Theories,,press,http://goo.gl/IUtgFQ,,FALSE,,,,,Motherboard (Vice)
+2016-01-01,Scientists disprove airplane ‘chemtrail’ theory,,press,http://goo.gl/M5hE9q,,FALSE,,,,,USA Today
+2016-01-01,,,press,http://goo.gl/2BPcb5,,FALSE,,,,,"NPR, Marketplace, “Can you grow the economy without adding p"
+2015-01-01,"Geoengineering a ‘Risky’ Bet, Scientists Warn Negotiators",,press,http://goo.gl/KWumMV,,FALSE,,,,,Climate Central
+2015-01-01,,,press,http://goo.gl/wswu1O,,FALSE,,,,,"NPR, Marketplace, “Shell pulls out of Arctic. For how long?”"
+2015-01-01,Cheap Goods from China Have High Carbon Cost,,press,http://goo.gl/kSCbP0,,FALSE,,,,,Scientific American
+2015-01-01,China’s Exports Are Closely Linked to Its Emissions,,press,http://goo.gl/74Xqx8,,FALSE,,,,,Sinosphere (New York Times blog)
+2015-01-01,China’s Carbon Dioxide Emissions May Have Been Overstated by More Than 10%,,press,http://goo.gl/b4CqmP,,FALSE,,,,,New York Times
+2015-01-01,How Far Does Obama's Clean Power Plan Go in Slowing Climate Change?,,press,http://goo.gl/TTrvuG,,FALSE,,,,,Scientific American
+2015-01-01,Climate Mission Impossible: Scientists Say Fossil Fuels Must Go Untapped,,press,http://goo.gl/le7JvT,,FALSE,,,,,National Geographic
+2014-08-28,Accounting for the Expanding Carbon Shadow from Coal-Burning Plants,,press,https://dotearth.blogs.nytimes.com/2014/08/28/accounting-for-the-expanding-carbonshadow-from-coal-burning-plants/,,FALSE,,,,,Dot Earth (New York Times blog)
+2014-01-21,,,press,https://www.marketplace.org/2014/01/21/american-pollution-made-china/,,FALSE,,,,,"NPR, Marketplace, “American pollution: Made in China”:"
+2014-01-01,Natural Gas Offers Little Benefit in Fight against Global Warming,,press,http://goo.gl/w8LWOQ,,FALSE,,,,,Scientific American
+2014-01-01,"Abundant natural gas may do little to reduce U.S. emissions, study suggests",,press,http://goo.gl/6A62g0,,FALSE,,,,,Science
+2014-01-01,"Natural gas won’t save us from global warming, study confirms",,press,http://goo.gl/4tHZYf,,FALSE,,,,,The Washington Post
+2014-01-01,New Reports Offer Clearest Picture Yet of Rising Greenhouse Gas Emissions,,press,http://goo.gl/CRpdXw,,FALSE,,,,,National Geographic
+2014-01-01,"Tons of emissions from power plants are already locked in, study says",,press,http://goo.gl/CrGIVt,,FALSE,,,,,National Geographic
+2014-01-01,"Time to focus on committed, not current, carbon emissions, study argues",,press,http://goo.gl/mYGuVG,,FALSE,,,,,Science
+2014-01-01,"Beef pollutes more than pork, poultry, study says",,press,http://wapo.st/1lmPXgA,,FALSE,,,,,Washington Post
+2014-01-01,Climate scientists have a beef with beef,,press,http://fw.to/Sb7iSmR,,FALSE,,,,,Los Angeles Times
+2014-01-01,,,press,https://www.wsj.com/articles/BL-CJB-20459,,FALSE,,,,,"Wall Street Journal, “U.S. Consumers Contribute, Not a Littl"
+2014-01-01,Study: Pollution from Chinese factories is harming air quality on U.S. West Coast,,press,http://wapo.st/1eNDP3P,,FALSE,,,,,Washington Post
+2014-01-01,"China's industry exporting air pollution to U.S., study says",,press,http://lat.ms/1h2YdRH,,FALSE,,,,,Los Angeles Times
+2013-01-01,China is testing out cap-and-trade—but will it actually work?,,press,http://wapo.st/1nL7wbb,,FALSE,,,,,Washington Post
+2013-01-01,Climate Study Highlights Wedge Issue,,press,http://www.sciencemag.org/content/339/6116/128,,FALSE,,,,,Science
+2013-01-01,Policy: Carbon emissions in China’s trade,,press,https://www.nature.com/articles/nclimate1967,,FALSE,,,,,Nature Climate Change
+2013-01-01,China’s rich provinces outsource emissions to less developed areas,,press,https://www.theguardian.com/environment/2013/jun/10/chinaprovinces-outsource-emissions,,FALSE,,10.1073/pnas.1107409108,energy,mitigation:trade,The Guardian
+2013-01-01,,,press,http://bbc.in/1mrM0Nd,,FALSE,,,,,"BBC, ”China outsources carbon emissions to poorer areas,” Me"
+2013-01-01,Human Society Must Reduce Carbon Emissions to ‘Near Zero’ by 2060 or Face Catastrophic Climate Change,,press,https://www.vice.com/en/article/wnnyj9/to-prevent-catastrophic-climate-changehuman-society-must-emit-no-carbon-at-all-by-2060,,FALSE,,,,,VICE
+2011-01-01,Groundbreaking data tracks carbon emissions back to their source,,press,http://bit.ly/1ht0M3Z,,FALSE,,,,,The Guardian
+2011-01-01,Carbon: What price simplicity?,,press,http://bbc.in/1cndoW2,,FALSE,,,,,BBC
+2011-01-01,Attributing carbon emissions,,press,http://bit.ly/1e59kpU,,FALSE,,,,,Nature Climate Change
+2010-06-14,,,press,https://science.time.com/2010/06/14/industrial-farming-slows-climate-change/,,FALSE,,,,,TIME Magazine “Industrial Farming Slows Climate Change?” Bry
+2010-03-08,Counting ‘Outsourced’ Greenhouse Gas Emissions,,press,https://green.blogs.nytimes.com//2010/03/08/counting-outsourced-greenhouse-gasemissions/,,FALSE,,10.1073/pnas.0907050107,,,New York Times
+2010-01-01,Trading Down: Industry’s move from the rich to the poor world is confusing the carbon accounts,,press,http://econ.st/1j948qd,,FALSE,,,,,The Economist
+2010-01-01,,,press,http://n.pr/1feoVbd,,FALSE,,,,,"NPR, All Things Considered, “For Developing Nations, Exports"
+2010-01-01,Carbon Emissions Not at Doomsday Level…Yet,,press,http://wrd.cm/1m6Wo9p,,FALSE,,,,,Wired Magazine

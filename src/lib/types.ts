@@ -62,11 +62,17 @@ export type NewsItem = {
   date: string;
   title: string;
   summary: string;
-  type: 'paper' | 'press' | 'talk' | 'award' | 'other' | string;
+  type: 'paper' | 'press' | 'op-ed' | 'talk' | 'award' | 'other' | string;
   link: string | null;
   image_filename: string | null;
   featured: boolean;
   long_form_slug: string | null;
+  // Press items often refer to a specific publication. Setting `doi` lets
+  // the news card surface the companion paper and inherit system/topic.
+  doi: string | null;
+  system: string[];     // multi-value, comma-separated in sheet
+  topic: string[];      // multi-value, comma-separated in sheet (matrix "response")
+  source: string | null;  // outlet name shown as the eyebrow (e.g. "New York Times")
 };
 
 export type Tool = {

@@ -1,20 +1,178 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import news from '../../data/news.json';
+import publications from '../../data/publications.json';
+import type { NewsItem, Publication } from '../../lib/types';
+import { SYSTEMS } from '../../lib/systems';
+
+// Canonicalize a date cell to ISO "YYYY-MM-DD" for sorting + display.
+// Accepts:  2024-03-15, 3/15/2024, 3/15/24, 03/15/2024  (and missing day forms)
+function toIsoDate(d: string | null | undefined): string {
+  if (!d) return '';
+  const s = String(d).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/);
+  if (m) {
+    const day = m[3] ?? '01';
+    return `${m[1]}-${m[2].padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (m) {
+    let yr = parseInt(m[3], 10);
+    if (yr < 100) yr += yr >= 50 ? 1900 : 2000;
+    return `${yr}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+  }
+  return s; // unrecognized — sort as-is
+}
+
+// Sort reverse-chronologically. Items with bad/missing dates sink last.
+const items = (news as NewsItem[])
+  .slice()
+  .filter((n) => n.title)
+  .map((n) => ({ ...n, date: toIsoDate(n.date) }))
+  .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+
+const pubsByDoi = new Map<string, Publication>();
+for (const p of publications as Publication[]) {
+  if (p.doi) pubsByDoi.set(p.doi.toLowerCase(), p);
+}
+
+const systemBySlug = new Map(SYSTEMS.map((s) => [s.slug, s]));
+
+function responseColor(r: string): string {
+  if (r === 'mitigation') return 'var(--spectral-10)';
+  if (r === 'impacts') return 'var(--spectral-2)';
+  return 'var(--ink-3)';
+}
+function topLevels(values: string[] | undefined): string[] {
+  return Array.from(new Set((values ?? []).map((v) => v.split(':')[0])));
+}
+
+// Per-card derivations: companion paper (when doi set), system/topic
+// (item's own first, else inherited from companion), primary stripe color.
+const cards = items.map((n) => {
+  const companion = n.doi ? pubsByDoi.get(n.doi.trim().toLowerCase()) ?? null : null;
+  const sys = (n.system && n.system.length > 0)
+    ? n.system
+    : ((companion?.system ?? []) as string[]);
+  const topic = (n.topic && n.topic.length > 0)
+    ? n.topic
+    : ((companion?.response ?? []) as string[]);
+  const topSys = topLevels(sys);
+  const topTopic = topLevels(topic);
+  const primary = topSys[0] ? systemBySlug.get(topSys[0]) ?? null : null;
+  const stripe = primary?.color ?? 'var(--ink-4)';
+  return { n, companion, topSys, topTopic, stripe };
+});
+
+function sourceLabel(n: NewsItem): string {
+  const s = n.source ?? '';
+  return s ? s.toUpperCase() : (n.type ? String(n.type).toUpperCase() : 'NEWS');
+}
+function dateLabel(d: string): string {
+  if (!d) return '';
+  const m = d.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?/);
+  if (!m) return d;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const month = months[parseInt(m[2], 10) - 1] ?? m[2];
+  const day = m[3] ? ` ${parseInt(m[3], 10)}` : '';
+  return `${month}${day} ${m[1]}`;
+}
+
+const total = cards.length;
 ---
 
 <BaseLayout title="News">
-  <section class="container-content pt-8 pb-8">
+  <section class="container-content pt-8 pb-6">
     <p class="eyebrow mb-4">NEWS</p>
-    <h1>Recent</h1>
+    <h1>Press, papers, and milestones</h1>
     <p class="lede max-w-prose mt-4">
-      Papers, talks, awards, and press. Reverse chronological.
+      Reverse-chronological. Press coverage of our work, paper releases, op-eds,
+      talks, and lab milestones.
     </p>
   </section>
 
   <section class="container-content pb-24">
-    <p class="text-ink-3 text-sm">
-      List will populate from <code>src/data/news.json</code> (short items) and
-      <code>src/content/news/*.md</code> (long-form posts).
+    {total === 0 ? (
+      <p class="text-ink-3 text-sm">No news items yet — add rows to the News tab in the sheet.</p>
+    ) : (
+      <ul class="list-none p-0 m-0">
+        {cards.map(({ n, companion, topSys, topTopic, stripe }) => {
+          const isExternal = !!n.link && /^https?:\/\//.test(n.link);
+          const companionUrl = companion
+            ? (companion.url ?? (companion.doi ? `https://doi.org/${companion.doi}` : null))
+            : null;
+          return (
+            <li class="m-0 p-0 py-5 border-b border-rule">
+              <article class="pl-4" style={`border-left: 4px solid ${stripe};`}>
+                <p class="eyebrow m-0 mb-1">
+                  <span class="text-ink-2">{sourceLabel(n)}</span>
+                  <span class="dot">·</span>
+                  <span class="text-ink-3">{dateLabel(n.date)}</span>
+                  {n.type && n.type !== 'press' && n.source && String(n.type).toUpperCase() !== sourceLabel(n) && (
+                    <>
+                      <span class="dot">·</span>
+                      <span style={`color: ${n.type === 'op-ed' ? 'var(--cardinal)' : 'var(--ink-3)'};`}>{String(n.type).toUpperCase()}</span>
+                    </>
+                  )}
+                  {topSys.map((s) => {
+                    const meta = systemBySlug.get(s);
+                    if (!meta) return null;
+                    return (
+                      <>
+                        <span class="dot">·</span>
+                        <span style={`color: ${meta.color};`}>{meta.title.toUpperCase()}</span>
+                      </>
+                    );
+                  })}
+                  {topTopic.map((t) => (
+                    <>
+                      <span class="dot">·</span>
+                      <span style={`color: ${responseColor(t)};`}>{t.toUpperCase()}</span>
+                    </>
+                  ))}
+                </p>
+
+                <h3 class="m-0" style="font-size: 19px; line-height: 1.3;">
+                  {n.link ? (
+                    <a
+                      href={n.link}
+                      class="border-b-0 hover:underline"
+                      data-external={isExternal ? '' : null}
+                    >{n.title}</a>
+                  ) : (
+                    n.title
+                  )}
+                </h3>
+
+                {n.summary && (
+                  <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">
+                    {n.summary}
+                  </p>
+                )}
+
+                {companion && (
+                  <p class="font-mono text-xs text-ink-3 mt-2 m-0">
+                    Companion paper:
+                    {companionUrl ? (
+                      <a href={companionUrl} class="text-ink-2 hover:text-ink border-b-0 ml-1" data-external>
+                        <em class="not-italic">{companion.title}</em>
+                      </a>
+                    ) : (
+                      <em class="not-italic ml-1">{companion.title}</em>
+                    )}
+                    <span class="dot">·</span>
+                    {companion.journal} · {companion.year}
+                  </p>
+                )}
+              </article>
+            </li>
+          );
+        })}
+      </ul>
+    )}
+
+    <p class="font-mono text-xs text-ink-3 mt-4 m-0 uppercase tracking-wider">
+      {total} item{total === 1 ? '' : 's'}
     </p>
   </section>
 </BaseLayout>

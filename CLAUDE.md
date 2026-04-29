@@ -288,11 +288,15 @@ off-screen otherwise.
 | A      | date              | Date (YYYY-MM-DD)                              |                                                |
 | B      | title             | Text                                           |                                                |
 | C      | summary           | Text                                           | 1–2 sentences                                  |
-| D      | type              | Text                                           | "paper" / "press" / "talk" / "award" / "other" |
+| D      | type              | Text                                           | "paper" / "press" / "op-ed" / "talk" / "award" / "other" |
 | E      | link              | Text                                           | URL                                            |
 | F      | image_filename    | Text                                           | Optional, in `/public/news/`                   |
 | G      | featured          | Boolean (TRUE/FALSE)                           | Show on home page                              |
 | H      | long_form_slug    | Text                                           | If set, links to `/news/[slug]` Markdown post  |
+| I      | doi               | Text                                           | DOI of the companion publication for press items. When set, the card surfaces the paper and inherits its system/topic if blank. |
+| J      | system            | Text, comma-separated                          | Same vocabulary as Publications (`energy`, `food`, …). Inherits from companion publication when blank. |
+| K      | topic             | Text, comma-separated                          | Same vocabulary as Publications `response` (e.g. `mitigation:trade`, `impacts:fire`). Inherits from companion when blank. |
+| L      | source            | Text                                           | Outlet name (e.g. "New York Times", "Heatmap"). Used as the eyebrow on press cards. |
 
 ### Tab: `Tools`
 

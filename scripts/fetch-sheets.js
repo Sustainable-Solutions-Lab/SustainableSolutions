@@ -298,7 +298,8 @@ function coerce(value, key) {
     key === 'themes' ||
     key === 'lab_authors' ||
     key === 'system' ||
-    key === 'response'
+    key === 'response' ||
+    key === 'topic'
   ) {
     return value.split(',').map((s) => s.trim()).filter(Boolean);
   }

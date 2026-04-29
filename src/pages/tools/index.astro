@@ -70,7 +70,7 @@ const cornerstoneLogo = resolveCornerstoneLogo();
         with logo overlay (or serif title fallback). Three external links
         in the footer go to website / Zenodo community / GitHub org.
       */}
-      <li class="m-0 p-0 md:col-span-2">
+      <li class="m-0 p-0">
         <article
           class="block bg-paper border border-rule overflow-hidden"
           style="border-radius: var(--radius-md);"
@@ -78,7 +78,7 @@ const cornerstoneLogo = resolveCornerstoneLogo();
           <div
             class="relative flex items-center justify-center"
             style="
-              aspect-ratio: 16 / 5;
+              aspect-ratio: 16 / 10;
               background: linear-gradient(
                 90deg,
                 var(--spectral-1)  0%,
@@ -101,12 +101,12 @@ const cornerstoneLogo = resolveCornerstoneLogo();
               <img
                 src={cornerstoneLogo}
                 alt="Cornerstone"
-                class="relative block max-h-20 md:max-h-24 max-w-[60%]"
+                class="relative block max-w-[70%] max-h-[55%]"
               />
             ) : (
               <p
                 class="relative font-serif m-0"
-                style="font-size: clamp(36px, 6vw, 64px); color: var(--ink); letter-spacing: -0.02em;"
+                style="font-size: clamp(32px, 5vw, 56px); color: var(--ink); letter-spacing: -0.02em;"
               >
                 Cornerstone
               </p>
@@ -116,9 +116,10 @@ const cornerstoneLogo = resolveCornerstoneLogo();
             <p class="eyebrow m-0 mb-2">INITIATIVE</p>
             <h3 class="m-0">Cornerstone</h3>
             <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">
-              An open-data initiative the lab participates in. Description goes
-              here — replace this paragraph with one that captures Cornerstone's
-              mission and the lab's role.
+              Open sustainability data for businesses, governments, and
+              researchers. Cornerstone is bringing USEEIO and CEDA — the two
+              most widely used Scope 3 emissions models — under one roof, with
+              the goal of merging them into a single global open MRIO standard.
             </p>
             <div class="flex flex-wrap gap-x-5 gap-y-1 mt-4 font-mono text-xs uppercase tracking-wider">
               <a

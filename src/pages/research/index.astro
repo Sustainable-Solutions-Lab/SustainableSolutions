@@ -5,7 +5,6 @@ import people from '../../data/people.json';
 import type { Publication, Person } from '../../lib/types';
 import { SYSTEMS, systemMatches } from '../../lib/systems';
 import { totalCitations } from '../../lib/citations';
-import { splitAndLinkAuthors } from '../../lib/author-links';
 
 const pubs = publications as Publication[];
 const peopleArr = people as Person[];
@@ -55,15 +54,10 @@ const topicCards = TOPICS.map((t) => {
 });
 
 // ── Approach cards (Conceptual / Data-driven) ────────────────────────────────
-const ciuSlugs = new Set(peopleArr.filter((p) => p.unit === 'ciu').map((p) => p.slug));
-function isConceptual(pub: Publication): boolean {
-  for (const seg of splitAndLinkAuthors(pub.authors ?? '', peopleArr)) {
-    if (seg.slug && ciuSlugs.has(seg.slug)) return true;
-  }
-  return false;
-}
-const conceptualPubs = pubs.filter(isConceptual);
-const dataDrivenPubs = pubs.filter((p) => !isConceptual(p));
+// Tagged manually in the Publications sheet's `conceptual` column (TRUE/FALSE).
+// Default false = data-driven.
+const conceptualPubs = pubs.filter((p) => p.conceptual === true);
+const dataDrivenPubs = pubs.filter((p) => p.conceptual !== true);
 const conceptualCites = conceptualPubs.reduce((s, p) => s + totalCitations(p), 0);
 const dataDrivenCites = dataDrivenPubs.reduce((s, p) => s + totalCitations(p), 0);
 const ciuMembers = peopleArr.filter((p) => p.unit === 'ciu').length;
@@ -75,7 +69,7 @@ const approachCards = [
     summary:
       `Theory-first work led by the lab's Conceptual Investigations Unit — ${ciuMembers} affiliated researcher${ciuMembers === 1 ? '' : 's'} synthesizing across the data-driven projects below.`,
     color: 'var(--cardinal)',
-    href: '/publications?approach=ciu',
+    href: '/publications?approach=conceptual',
     count: conceptualPubs.length,
     cites: conceptualCites,
     eyebrow: 'CONCEPTUAL · CIU',
@@ -86,7 +80,7 @@ const approachCards = [
     summary:
       'Empirical and modeling work that quantifies emissions, impacts, and pathways across the systems and topics above.',
     color: 'var(--ink-2)',
-    href: '/publications?approach=non-ciu',
+    href: '/publications?approach=data-driven',
     count: dataDrivenPubs.length,
     cites: dataDrivenCites,
     eyebrow: 'DATA-DRIVEN',

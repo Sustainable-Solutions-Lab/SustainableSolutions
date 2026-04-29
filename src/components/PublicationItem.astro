@@ -100,10 +100,10 @@ const detectedLabSlugs = Array.from(
   new Set(authorSegments.filter((s) => s.slug).map((s) => s.slug as string)),
 );
 
-// CIU = any detected author belongs to the Conceptual Investigations Unit.
-// Used by the /publications "Approach" filter and the /research methods card.
-const ciuSlugs = new Set(peopleArr.filter((p) => p.unit === 'ciu').map((p) => p.slug));
-const isCiu = detectedLabSlugs.some((s) => ciuSlugs.has(s));
+// Conceptual vs. data-driven — explicit sheet tag (`conceptual` column,
+// TRUE/FALSE). Default false = data-driven. Drives the Approach filter on
+// /publications and the Conceptual card on /research.
+const isConceptual = pub.conceptual === true;
 
 // Search blob — concatenated lowercase string the client-side filter greps.
 const searchBlob = [pub.authors, pub.title, pub.journal, String(pub.year)]
@@ -156,7 +156,7 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
   data-system={(pub.system ?? []).join(',')}
   data-response={(pub.response ?? []).join(',')}
   data-lab-authors={detectedLabSlugs.join(',')}
-  data-ciu={String(isCiu)}
+  data-conceptual={String(isConceptual)}
   data-featured={String(pub.featured)}
   data-total-citations={totalCitationsScore}
   data-citations-per-year={citationsPerYearScore.toFixed(3)}

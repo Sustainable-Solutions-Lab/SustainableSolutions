@@ -141,8 +141,8 @@ const total = all.length;
           style="border-radius: var(--radius-sm);"
         >
           <option value="">All approaches</option>
-          <option value="ciu">Conceptual (CIU)</option>
-          <option value="non-ciu">Data-driven</option>
+          <option value="conceptual">Conceptual</option>
+          <option value="data-driven">Data-driven</option>
         </select>
       </label>
 
@@ -262,6 +262,8 @@ const total = all.length;
       const sys = systemSel?.value ?? '';
       const top = topicSel?.value ?? '';
       const ap = approachSel?.value ?? '';
+      // Approach filter values match the dropdown option values: 'conceptual'
+      // matches data-conceptual="true"; 'data-driven' matches "false".
       const a = authorSel?.value ?? '';
       const f = feat?.checked ?? false;
 
@@ -270,8 +272,11 @@ const total = all.length;
         const sysVals = (li.dataset.system ?? '').split(',').filter(Boolean);
         const respVals = (li.dataset.response ?? '').split(',').filter(Boolean);
         const labAuthors = (li.dataset.labAuthors ?? '').split(',').filter(Boolean);
-        const ciu = li.dataset.ciu === 'true';
-        const okApproach = !ap || (ap === 'ciu' && ciu) || (ap === 'non-ciu' && !ciu);
+        const conceptual = li.dataset.conceptual === 'true';
+        const okApproach =
+          !ap ||
+          (ap === 'conceptual' && conceptual) ||
+          (ap === 'data-driven' && !conceptual);
         const ok =
           (!q || (li.dataset.search ?? '').includes(q)) &&
           (!y || li.dataset.year === y) &&
@@ -306,11 +311,16 @@ const total = all.length;
     setSelectIfPresent(sortSel,      params.get('sort'));
     setSelectIfPresent(systemSel,    (params.get('system') ?? '').trim());
     setSelectIfPresent(topicSel,     (params.get('response') ?? '').trim());
-    // ?ciu=true → Conceptual; ?ciu=false → Data-driven; ?approach=ciu / non-ciu also works
-    const approachParam = params.get('approach') ?? (
-      params.get('ciu') === 'true' ? 'ciu' :
-      params.get('ciu') === 'false' ? 'non-ciu' : null
-    );
+    // ?approach=conceptual|data-driven. Legacy aliases: ?ciu=true|false and
+    // ?approach=ciu|non-ciu both map to the new values for backward-compat.
+    const rawApproach = params.get('approach') ?? '';
+    const ciuParam = params.get('ciu');
+    const approachParam =
+      rawApproach === 'ciu' ? 'conceptual' :
+      rawApproach === 'non-ciu' ? 'data-driven' :
+      rawApproach ||
+      (ciuParam === 'true' ? 'conceptual' :
+       ciuParam === 'false' ? 'data-driven' : null);
     setSelectIfPresent(approachSel, approachParam);
 
     [search, yearSel, systemSel, topicSel, approachSel, authorSel, feat].forEach((el) => {

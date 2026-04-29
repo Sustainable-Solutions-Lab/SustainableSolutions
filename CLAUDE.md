@@ -246,6 +246,7 @@ off-screen otherwise.
 | L      | themes            | Text, comma-separated                          | Free-form catch-all; auto-guessed if blank.    |
 | M      | system            | Text, comma-separated                          | Manual. Two-axis taxonomy. Allowed values: `energy`, `food`, `water`, `materials`. |
 | N      | response          | Text, comma-separated                          | Manual. Allowed values: `mitigation`, `mitigation:trade`, `mitigation:corporate`, `mitigation:carbon-management`, `impacts`, `impacts:air-pollution`, `impacts:heat`, `impacts:flooding`. |
+| —      | conceptual        | Boolean (TRUE/FALSE)                           | Manual. TRUE = conceptual / synthesis / theory-first work (often by CIU members); blank or FALSE = data-driven (default). Drives the Conceptual card on `/research` and the Approach filter on `/publications`. Add anywhere in the sheet — fetch-sheets reads by header name. |
 | O      | lab_authors       | Text, comma-separated                          | Manual; slugs matching People sheet            |
 | P      | pdf_url           | Text                                           | Manual                                         |
 | Q      | code_url          | Text                                           | Manual; replication code link                  |

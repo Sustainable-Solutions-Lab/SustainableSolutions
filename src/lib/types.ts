@@ -47,6 +47,11 @@ export type Publication = {
   //              | impacts:air-pollution | impacts:heat | impacts:flooding }
   system: string[];
   response: string[];
+  // Conceptual vs. data-driven methodology. Tagged manually in the sheet
+  // (Publications tab → `conceptual` column, TRUE/FALSE). Default false =
+  // data-driven; flip to TRUE to surface the paper under /research's
+  // Conceptual card and the publications page's Approach=Conceptual filter.
+  conceptual: boolean;
   lab_authors: string[];
   featured: boolean;
   press_url: string | null;

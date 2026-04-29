@@ -137,7 +137,7 @@ function cellBg(count: number): string {
     ))}
 
     <div class="section-label section-imp" style={`grid-row: span ${IMP_ROWS.length};`}>
-      Impacts &amp; adaptation
+      Impacts &amp;<br />adaptation
     </div>
 
     {IMP_ROWS.map((row) => (
@@ -157,12 +157,14 @@ function cellBg(count: number): string {
         })}
       </>
     ))}
-  </div>
 
-  <div class="scope-colorbar">
-    <span class="colorbar-end">Few</span>
-    <div class="colorbar-gradient" aria-hidden="true"></div>
-    <span class="colorbar-end colorbar-end-high">Many</span>
+    {/* Colorbar lives inside the grid so it spans the system-cell
+        columns only, not the spine + row-label gutter to its left. */}
+    <div class="scope-colorbar">
+      <span class="colorbar-end">Few</span>
+      <div class="colorbar-gradient" aria-hidden="true"></div>
+      <span class="colorbar-end colorbar-end-high">Many</span>
+    </div>
   </div>
 </figure>
 
@@ -198,7 +200,7 @@ function cellBg(count: number): string {
   .scope-grid {
     display: grid;
     grid-template-columns:
-      18px                                /* spine: rotated section label */
+      28px                                /* spine: rotated section label (room for 2 lines) */
       minmax(80px, max-content)           /* row labels */
       repeat(6, minmax(46px, 1fr));       /* system cells */
     gap: 3px;
@@ -218,7 +220,8 @@ function cellBg(count: number): string {
     align-self: end;
   }
 
-  /* Rotated spine label: bottom-to-top, vertically centered against its rows. */
+  /* Rotated spine label: bottom-to-top, vertically centered against its rows.
+     Allows manual <br/> for multi-line labels (e.g. "Impacts & adaptation"). */
   .section-label {
     grid-column: 1;
     font-family: var(--font-mono);
@@ -231,7 +234,8 @@ function cellBg(count: number): string {
     display: flex;
     align-items: center;
     justify-content: center;
-    white-space: nowrap;
+    line-height: 1.2;
+    text-align: center;
   }
   .section-mit { color: var(--spectral-10); }
   .section-imp { color: var(--spectral-2); }
@@ -260,6 +264,7 @@ function cellBg(count: number): string {
   }
 
   .scope-colorbar {
+    grid-column: 3 / -1;                  /* under the cells, not under labels */
     display: flex;
     align-items: center;
     gap: 8px;

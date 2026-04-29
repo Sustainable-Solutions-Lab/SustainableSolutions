@@ -160,7 +160,7 @@ const maxYearCount = Math.max(...yearSeries.map((y) => y.count), 1);
 
   {/* Narrative prose — sheet-driven via the Research tab's `narrative`
       column. Falls back to a placeholder when blank. */}
-  <section class="container-prose pb-10">
+  <section class="container-prose pb-4">
     {narrativeParagraphs.length > 0 ? (
       narrativeParagraphs.map((p) => (
         <p class="text-ink mt-0 mb-4" style="line-height: 1.6;">{p}</p>
@@ -177,7 +177,7 @@ const maxYearCount = Math.max(...yearSeries.map((y) => y.count), 1);
   <hr class="border-rule" />
 
   {/* Selected conceptual publications */}
-  <section class="container-content pt-8 pb-24">
+  <section class="container-content pt-4 pb-24">
     <div class="flex items-baseline justify-between mb-4 gap-4 flex-wrap">
       <p class="eyebrow m-0">
         Conceptual papers <span class="text-ink-3">· {conceptualPubs.length}</span>

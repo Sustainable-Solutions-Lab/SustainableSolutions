@@ -64,15 +64,49 @@ const cornerstoneLogo = resolveCornerstoneLogo();
   </section>
 
   <section class="container-content pb-24">
-    <ul class="list-none p-0 m-0 grid md:grid-cols-2 gap-6">
+    <ul class="list-none p-0 m-0 grid md:grid-cols-2 gap-6 auto-rows-fr">
+      {cards.map((t) => (
+        <li class="m-0 p-0 h-full">
+          <a
+            href={t.href}
+            class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
+            style="border-radius: var(--radius-md); overflow: hidden;"
+            data-external={t.isExternal ? '' : null}
+          >
+            {t.imgUrl && (
+              <img
+                src={t.imgUrl}
+                alt={t.title}
+                loading="lazy"
+                class="block w-full object-cover"
+                style="aspect-ratio: 16/10;"
+              />
+            )}
+            <div class="p-6 flex-1 flex flex-col">
+              {t.eyebrow && <p class="eyebrow m-0 mb-2">{t.eyebrow}</p>}
+              <h3 class="m-0">{t.title}</h3>
+              {t.summary && (
+                <p class="text-ink-2 text-sm mt-2 m-0">{t.summary}</p>
+              )}
+              {t.companion && (
+                <p class="font-mono text-xs text-ink-3 mt-auto pt-3 m-0 uppercase tracking-wider">
+                  Companion paper · <em class="not-italic">{t.companion.journal}</em> · {t.companion.year}
+                </p>
+              )}
+            </div>
+          </a>
+        </li>
+      ))}
+
       {/*
-        Cornerstone initiative — full-width card, spectral-gradient hero
-        with logo overlay (or serif title fallback). Three external links
-        in the footer go to website / Zenodo community / GitHub org.
+        Cornerstone initiative — placed after the sheet-driven cards so
+        Firefuels (and any future tools) lead the list. Spectral-bar
+        hero with logo overlay; three external links in the footer go
+        to website / Zenodo community / GitHub org.
       */}
-      <li class="m-0 p-0">
+      <li class="m-0 p-0 h-full">
         <article
-          class="block bg-paper border border-rule overflow-hidden"
+          class="flex flex-col h-full bg-paper border border-rule overflow-hidden"
           style="border-radius: var(--radius-md);"
         >
           <div
@@ -134,8 +168,8 @@ const cornerstoneLogo = resolveCornerstoneLogo();
               </p>
             )}
           </div>
-          <div class="p-6">
-            <p class="eyebrow m-0 mb-2">INITIATIVE</p>
+          <div class="p-6 flex-1 flex flex-col">
+            <p class="eyebrow m-0 mb-2">OPEN DATA INITIATIVE</p>
             <h3 class="m-0">Cornerstone</h3>
             <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">
               Open sustainability data for businesses, governments, and
@@ -166,39 +200,6 @@ const cornerstoneLogo = resolveCornerstoneLogo();
           </div>
         </article>
       </li>
-
-      {cards.map((t) => (
-        <li class="m-0 p-0">
-          <a
-            href={t.href}
-            class="block bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
-            style="border-radius: var(--radius-md); overflow: hidden;"
-            data-external={t.isExternal ? '' : null}
-          >
-            {t.imgUrl && (
-              <img
-                src={t.imgUrl}
-                alt={t.title}
-                loading="lazy"
-                class="block w-full object-cover"
-                style="aspect-ratio: 16/10;"
-              />
-            )}
-            <div class="p-6">
-              {t.eyebrow && <p class="eyebrow m-0 mb-2">{t.eyebrow}</p>}
-              <h3 class="m-0">{t.title}</h3>
-              {t.summary && (
-                <p class="text-ink-2 text-sm mt-2 m-0">{t.summary}</p>
-              )}
-              {t.companion && (
-                <p class="font-mono text-xs text-ink-3 mt-3 m-0 uppercase tracking-wider">
-                  Companion paper · <em class="not-italic">{t.companion.journal}</em> · {t.companion.year}
-                </p>
-              )}
-            </div>
-          </a>
-        </li>
-      ))}
     </ul>
 
     {cards.length === 0 && (

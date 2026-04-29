@@ -156,10 +156,10 @@ const donutSegments = (() => {
   });
 })();
 
-// ── Stacked cumulative area: per-system mentions accumulated over time ──────
+// ── Stacked annual area: per-system coverage per year ──────────────────────
 // Each card contributes once (under its first top-level system); cards with
 // no system tag fall into an "Unspecified" band so the stack equals the total
-// news count at any point in time.
+// news count for each year.
 const trendYears = (() => {
   const ys = cards.map((c) => parseInt(c.year, 10)).filter((n) => !isNaN(n));
   if (ys.length === 0) return [] as number[];
@@ -184,23 +184,20 @@ const stackMeta: Record<string, { title: string; color: string }> = {};
 for (const s of SYSTEMS) stackMeta[s.slug] = { title: s.title, color: s.color };
 stackMeta[UNSPECIFIED] = { title: 'Unspecified', color: 'var(--ink-4)' };
 
-const cumBySlug = new Map<string, number[]>();
+const annualBySlug = new Map<string, number[]>();
 for (const slug of stackOrder) {
-  let running = 0;
   const arr: number[] = [];
   for (const y of trendYears) {
     const yStr = String(y);
-    const yearCount = cards.filter((c) => c.year === yStr && primarySys(c) === slug).length;
-    running += yearCount;
-    arr.push(running);
+    arr.push(cards.filter((c) => c.year === yStr && primarySys(c) === slug).length);
   }
-  cumBySlug.set(slug, arr);
+  annualBySlug.set(slug, arr);
 }
 
 const trendMax = trendYears.length === 0
   ? 1
   : Math.max(1, ...trendYears.map((_, i) =>
-      stackOrder.reduce((s, slug) => s + (cumBySlug.get(slug)![i] ?? 0), 0),
+      stackOrder.reduce((s, slug) => s + (annualBySlug.get(slug)![i] ?? 0), 0),
     ));
 
 // SVG geometry: 320x140 with small padding for axis labels.
@@ -214,13 +211,13 @@ const innerH = TREND_H - TREND_PAD.t - TREND_PAD.b;
 function bandPolygon(slug: string): string {
   const idx = stackOrder.indexOf(slug);
   if (idx < 0) return '';
-  const cum = cumBySlug.get(slug)!;
-  // Sum of all bands at or below `slug` in the stack — that's the upper edge.
+  // Per-year top = sum of annual counts of all bands at or below this one;
+  // bottom = same, excluding this band.
   const tops: number[] = trendYears.map((_, i) =>
-    stackOrder.slice(0, idx + 1).reduce((s, sl) => s + (cumBySlug.get(sl)![i] ?? 0), 0),
+    stackOrder.slice(0, idx + 1).reduce((s, sl) => s + (annualBySlug.get(sl)![i] ?? 0), 0),
   );
   const bottoms: number[] = trendYears.map((_, i) =>
-    stackOrder.slice(0, idx).reduce((s, sl) => s + (cumBySlug.get(sl)![i] ?? 0), 0),
+    stackOrder.slice(0, idx).reduce((s, sl) => s + (annualBySlug.get(sl)![i] ?? 0), 0),
   );
   const xAt = (i: number) => trendYears.length === 1
     ? TREND_PAD.l + innerW / 2
@@ -237,7 +234,8 @@ const trendBands = stackOrder.map((slug) => ({
   title: stackMeta[slug].title,
   color: stackMeta[slug].color,
   points: bandPolygon(slug),
-  total: cumBySlug.get(slug)![cumBySlug.get(slug)!.length - 1] ?? 0,
+  // Total = sum of this band's annual counts across all years.
+  total: (annualBySlug.get(slug) ?? []).reduce((s, v) => s + v, 0),
 }));
 const grandTotal = trendBands.reduce((s, b) => s + b.total, 0);
 
@@ -278,11 +276,11 @@ const total = cards.length;
             </p>
             <h3 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Where it lands</h3>
             <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
-              Top 5 outlets across {donutTotal} mentions
+              Top 5 outlets across {donutTotal} items
             </p>
             <div class="flex items-center gap-3">
               <svg
-                viewBox="0 0 36 36"
+                viewBox="-2 -2 40 40"
                 role="img"
                 aria-label="Distribution of media coverage by outlet"
                 style="width: 88px; height: 88px; flex: none;"
@@ -318,13 +316,13 @@ const total = cards.length;
             </p>
             <h3 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Drumbeat over time</h3>
             <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
-              Cumulative mentions, stacked by system
+              Annual coverage, stacked by system
             </p>
             <svg
               viewBox={`0 0 ${TREND_W} ${TREND_H}`}
               preserveAspectRatio="none"
               role="img"
-              aria-label={`Cumulative news mentions ${trendYears[0]} to ${trendYears[trendYears.length - 1]} stacked by system`}
+              aria-label={`Annual news coverage ${trendYears[0]} to ${trendYears[trendYears.length - 1]} stacked by system`}
               class="block w-full"
               style={`height: 110px;`}
             >
@@ -335,7 +333,7 @@ const total = cards.length;
                   fill-opacity="0.85"
                   stroke="var(--paper)"
                   stroke-width="0.5"
-                ><title>{b.title}: {b.total} cumulative</title></polygon>
+                ><title>{b.title}: {b.total} items</title></polygon>
               ))}
             </svg>
             <div class="flex justify-between font-mono text-[10px] text-ink-3 mt-0">

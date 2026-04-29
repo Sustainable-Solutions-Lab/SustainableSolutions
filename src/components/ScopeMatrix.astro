@@ -221,7 +221,10 @@ function cellBg(count: number): string {
   }
 
   /* Rotated spine label: bottom-to-top, vertically centered against its rows.
-     Allows manual <br/> for multi-line labels (e.g. "Impacts & adaptation"). */
+     Allows manual <br/> for multi-line labels (e.g. "Impacts & adaptation").
+     The border-left becomes a colored vertical RULE on the visual right
+     after the 180° rotation — runs the full height of its row group so
+     the reader can see which rows belong to which section. */
   .section-label {
     grid-column: 1;
     font-family: var(--font-mono);
@@ -236,9 +239,16 @@ function cellBg(count: number): string {
     justify-content: center;
     line-height: 1.2;
     text-align: center;
+    padding-right: 6px;                  /* gap between rule and label text */
   }
-  .section-mit { color: var(--spectral-10); }
-  .section-imp { color: var(--spectral-2); }
+  .section-mit {
+    color: var(--spectral-10);
+    border-left: 2px solid var(--spectral-10);
+  }
+  .section-imp {
+    color: var(--spectral-2);
+    border-left: 2px solid var(--spectral-2);
+  }
 
   .row-label {
     font-family: var(--font-sans);

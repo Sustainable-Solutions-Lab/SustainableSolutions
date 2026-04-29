@@ -71,19 +71,23 @@ for (const sys of SYSTEMS) {
   }
 }
 
-// Sequential Spectral ramp across the FULL palette: low counts at
-// Spectral-10 (deep blue), high at Spectral-1 (wine). Empty cells
-// stay paper-toned to read distinctly from the lowest data cells.
+// Spectral ramp across the FULL palette: low counts at Spectral-10
+// (deep blue), high at Spectral-1 (wine). Empty cells stay paper-toned.
 //
-// Log scaling on count: paper distribution is heavy-tailed (one cell
-// has ~5x the others), and linear scaling crushed the long tail into
-// the cool half of the palette. Log spreads the bulk across the full
-// range so cells with 10–25 papers land in the warm/yellow band and
-// the very top still reaches wine.
+// Rank-based percentile scaling: the data is heavy-tailed (one cell at
+// ~100, most under 25), so value-based scales (linear and log alike)
+// pile most cells into one half of the palette. Sorting non-zero cells
+// by count and assigning palette positions by rank gives even visual
+// spread regardless of distribution skew, so 1–2-paper cells reliably
+// land at the blue end and the top reaches wine.
+const nonZeroCounts = Object.values(cellCount).filter((n) => n > 0).sort((a, b) => a - b);
+const rankDenom = Math.max(1, nonZeroCounts.length - 1);
 function cellBg(count: number): string {
   if (!count) return 'var(--paper-2)';
-  const t = Math.log(1 + count) / Math.log(1 + globalMax);
-  const idx = Math.max(1, Math.min(10, Math.round(10 - t * 9)));
+  const lower = nonZeroCounts.filter((n) => n < count).length;
+  const equal = nonZeroCounts.filter((n) => n === count).length;
+  const rank = (lower + (equal - 1) / 2) / rankDenom;
+  const idx = Math.max(1, Math.min(10, Math.round(10 - rank * 9)));
   return `var(--spectral-${idx})`;
 }
 ---
@@ -98,14 +102,21 @@ function cellBg(count: number): string {
   </p>
 
   <div class="scope-grid">
-    {/* Column headers — system labels (Inter, title case, no wrap) */}
+    {/* Header row: empty section col + empty row-label col + 6 system labels. */}
+    <div></div>
     <div></div>
     {SYSTEMS.map((s) => (
       <div class="col-label">{s.label}</div>
     ))}
 
-    {/* Mitigation section header */}
-    <div class="section-label section-mit">Mitigation</div>
+    {/*
+      Section labels rotated 90° as a left spine instead of horizontal banners,
+      so every data row sits on the same vertical rhythm. The label spans the
+      height of its rows via grid-row: span N.
+    */}
+    <div class="section-label section-mit" style={`grid-row: span ${MIT_ROWS.length};`}>
+      Mitigation
+    </div>
 
     {MIT_ROWS.map((row) => (
       <>
@@ -125,8 +136,9 @@ function cellBg(count: number): string {
       </>
     ))}
 
-    {/* Impacts section header */}
-    <div class="section-label section-imp">Impacts &amp; Adaptation</div>
+    <div class="section-label section-imp" style={`grid-row: span ${IMP_ROWS.length};`}>
+      Impacts &amp; adaptation
+    </div>
 
     {IMP_ROWS.map((row) => (
       <>
@@ -185,7 +197,10 @@ function cellBg(count: number): string {
 
   .scope-grid {
     display: grid;
-    grid-template-columns: minmax(80px, max-content) repeat(6, minmax(46px, 1fr));
+    grid-template-columns:
+      18px                                /* spine: rotated section label */
+      minmax(80px, max-content)           /* row labels */
+      repeat(6, minmax(46px, 1fr));       /* system cells */
     gap: 3px;
     align-items: stretch;
   }
@@ -203,15 +218,20 @@ function cellBg(count: number): string {
     align-self: end;
   }
 
+  /* Rotated spine label: bottom-to-top, vertically centered against its rows. */
   .section-label {
-    grid-column: 1 / -1;
+    grid-column: 1;
     font-family: var(--font-mono);
     font-size: 10px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-top: 6px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--rule);
+    letter-spacing: 0.14em;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
   }
   .section-mit { color: var(--spectral-10); }
   .section-imp { color: var(--spectral-2); }

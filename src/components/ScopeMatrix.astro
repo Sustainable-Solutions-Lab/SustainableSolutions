@@ -190,7 +190,7 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
       height of its rows via grid-row: span N.
     */}
     <div class="section-label section-mit" style={`grid-row: span ${MIT_ROWS.length};`}>
-      Mitigation
+      <span class="section-label-text">Mitigation</span>
     </div>
 
     {MIT_ROWS.map((row) => (
@@ -218,12 +218,8 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
       </>
     ))}
 
-    {/* Spacer row creates breathing room between Mitigation and Impacts so
-        the rotated labels and their colored rules don't crowd each other. */}
-    <div class="section-spacer" style="grid-column: 1 / -1;" aria-hidden="true"></div>
-
     <div class="section-label section-imp" style={`grid-row: span ${IMP_ROWS.length};`}>
-      Impacts &amp;<br />adaptation
+      <span class="section-label-text">Impacts &amp;<br />adaptation</span>
     </div>
 
     {IMP_ROWS.map((row) => (
@@ -328,7 +324,7 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
   .scope-grid {
     display: grid;
     grid-template-columns:
-      28px                                /* spine: rotated section label (room for 2 lines) */
+      40px                                /* spine: rotated section label + colored rule */
       minmax(80px, max-content)           /* row labels */
       repeat(6, minmax(46px, 1fr));       /* system cells */
     gap: 3px;
@@ -348,14 +344,29 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
     align-self: end;
   }
 
-  /* Rotated spine label: bottom-to-top, vertically centered against its rows.
-     Allows manual <br/> for multi-line labels (e.g. "Impacts & adaptation").
-     The colored rule is a ::before pseudo-element so we can inset its top
-     and bottom — without the inset, the two sections' rules would touch
-     across the grid gap. */
+  /* Spine column: container is NOT rotated, so the colored rule (::before)
+     can sit on its visual right edge with predictable insets. The rotated
+     text lives in a child .section-label-text whose inset reserves space
+     for the rule, preventing the text from overlapping it. */
   .section-label {
     grid-column: 1;
     position: relative;
+  }
+  .section-label::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    right: 4px;
+    width: 2px;
+    background: currentColor;
+  }
+  .section-label-text {
+    position: absolute;
+    inset: 0 14px 0 0;                   /* leave the right edge clear for the rule */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: var(--font-mono);
     font-size: 10px;
     font-weight: 600;
@@ -363,29 +374,11 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
     letter-spacing: 0.14em;
     writing-mode: vertical-rl;
     transform: rotate(180deg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     line-height: 1.2;
     text-align: center;
-    padding-right: 6px;                  /* gap between rule and label text */
-  }
-  .section-label::before {
-    content: '';
-    position: absolute;
-    top: 8px;
-    bottom: 8px;
-    left: 0;                             /* visual right after rotate(180deg) */
-    width: 2px;
-    background: currentColor;
   }
   .section-mit { color: var(--spectral-10); }
   .section-imp { color: var(--spectral-2); }
-
-  /* Empty row pushing Mitigation and Impacts apart in the grid flow. */
-  .section-spacer {
-    height: 10px;
-  }
 
   .row-label {
     font-family: var(--font-sans);

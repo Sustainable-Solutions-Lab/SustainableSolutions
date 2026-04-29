@@ -1,9 +1,10 @@
 ---
-import type { Person, Publication } from '../lib/types';
+import type { Person, Publication, Tool } from '../lib/types';
 import { roleColor } from '../lib/roles';
 import { splitAndLinkAuthors } from '../lib/author-links';
 import publications from '../data/publications.json';
 import externalPubs from '../data/external-pubs.json';
+import tools from '../data/tools.json';
 import scholarDetails from '../../templates/scholar-details.json';
 
 interface Props {
@@ -82,8 +83,41 @@ const mostRecent = [...personPubs].sort((a, b) =>
   (b.year - a.year) || ((b.month ?? 0) - (a.month ?? 0)),
 )[0] ?? null;
 
-const notable: Publication | null = resolveExplicit(person.notable_pub_doi) ?? mostCited;
-let recent: Publication | null = resolveExplicit(person.recent_pub_doi) ?? mostRecent;
+// Tool reference support: a People-sheet cell of the form `tool:<slug>`
+// surfaces a Tools-tab entry (e.g. tool:cornerstone) in the Notable or
+// Recent slot, alongside the existing DOI-based publication path.
+const toolsBySlug = new Map<string, Tool>();
+for (const t of tools as Tool[]) toolsBySlug.set(t.slug, t);
+// Slugs whose own /tools/<slug> page isn't generated (multi-link
+// initiatives etc.) — fall back to /tools for the work link.
+const TOOLS_WITHOUT_DETAIL_PAGE = new Set(['cornerstone']);
+
+function resolveTool(value: string | null): Tool | null {
+  if (!value) return null;
+  const m = value.trim().match(/^tool:(.+)$/i);
+  if (!m) return null;
+  return toolsBySlug.get(m[1].trim()) ?? null;
+}
+function toolUrl(t: Tool): string {
+  if (t.link) return t.link;
+  if (TOOLS_WITHOUT_DETAIL_PAGE.has(t.slug)) return '/tools';
+  return `/tools/${t.slug}`;
+}
+function toolMetaLine(t: Tool): string {
+  if (!t.eyebrow) return '';
+  // "OPEN DATA INITIATIVE" → "Open data initiative" for the mono caption.
+  return t.eyebrow.charAt(0).toUpperCase() + t.eyebrow.slice(1).toLowerCase();
+}
+
+const notableTool = resolveTool(person.notable_pub_doi);
+const recentTool = resolveTool(person.recent_pub_doi);
+
+const notable: Publication | null = notableTool
+  ? null
+  : (resolveExplicit(person.notable_pub_doi) ?? mostCited);
+let recent: Publication | null = recentTool
+  ? null
+  : (resolveExplicit(person.recent_pub_doi) ?? mostRecent);
 if (recent && notable && recent.doi && notable.doi && recent.doi === notable.doi) {
   recent = null;
 }
@@ -118,7 +152,7 @@ const recentMeta = recent ? pubMeta(recent) : null;
       </p>
     )}
 
-    {(notable || recent) && (
+    {(notable || recent || notableTool || recentTool) && (
       <div class="mt-4 pt-4 border-t border-rule grid sm:grid-cols-2 gap-x-6 gap-y-4">
         {notable && notableMeta && (
           <div class="min-w-0">
@@ -143,6 +177,23 @@ const recentMeta = recent ? pubMeta(recent) : null;
             </p>
           </div>
         )}
+        {notableTool && (
+          <div class="min-w-0">
+            <p class="eyebrow m-0 mb-1">NOTABLE WORK</p>
+            <p class="font-serif m-0" style="font-size: 16px; line-height: 1.3;">
+              <a
+                href={toolUrl(notableTool)}
+                class="border-b-0 hover:underline"
+                data-external={toolUrl(notableTool).startsWith('http') ? '' : null}
+              >{notableTool.title}</a>
+            </p>
+            {toolMetaLine(notableTool) && (
+              <p class="font-mono text-xs text-ink-3 mt-1 m-0">
+                {toolMetaLine(notableTool)}
+              </p>
+            )}
+          </div>
+        )}
         {recent && recentMeta && (
           <div class="min-w-0">
             <p class="eyebrow m-0 mb-1">RECENT WORK</p>
@@ -164,6 +215,23 @@ const recentMeta = recent ? pubMeta(recent) : null;
                 </>
               )}
             </p>
+          </div>
+        )}
+        {recentTool && (
+          <div class="min-w-0">
+            <p class="eyebrow m-0 mb-1">RECENT WORK</p>
+            <p class="font-serif m-0" style="font-size: 16px; line-height: 1.3;">
+              <a
+                href={toolUrl(recentTool)}
+                class="border-b-0 hover:underline"
+                data-external={toolUrl(recentTool).startsWith('http') ? '' : null}
+              >{recentTool.title}</a>
+            </p>
+            {toolMetaLine(recentTool) && (
+              <p class="font-mono text-xs text-ink-3 mt-1 m-0">
+                {toolMetaLine(recentTool)}
+              </p>
+            )}
           </div>
         )}
       </div>

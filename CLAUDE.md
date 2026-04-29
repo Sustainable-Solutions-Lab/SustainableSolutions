@@ -334,6 +334,7 @@ Pre-populate with one row per system slug: `energy`, `food`, `water`, `materials
 | B      | title       | Text                                           | Optional override of the code default          |
 | C      | summary     | Text                                           | One-sentence override of the code default; shown on the index card and detail-page lede |
 | D      | hero_image  | Text                                           | Filename in `/public/research/` or `/public/images/`. Detail page falls back to a tinted color band when blank |
+| E      | narrative   | Text (multi-line)                              | Short prose narrative shown below the stats / sparkline strip on the detail page. Use blank lines (Alt/Opt+Enter twice in a sheet cell) to break into paragraphs. Single line breaks within a paragraph collapse to spaces. |
 
 ## Build pipeline
 

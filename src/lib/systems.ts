@@ -23,6 +23,13 @@ export interface System {
    * /public/images/. Falls back to a tinted color band when not set.
    */
   heroImage?: string;
+  /**
+   * Short prose narrative shown on the detail page below the stats /
+   * sparkline strip. Sheet-controlled (`narrative` column). Blank-line-
+   * separated paragraphs render as separate <p> elements; single line
+   * breaks within a paragraph collapse to a space.
+   */
+  narrative?: string;
 }
 
 interface ResearchOverride {
@@ -30,6 +37,7 @@ interface ResearchOverride {
   title?: string | null;
   summary?: string | null;
   hero_image?: string | null;
+  narrative?: string | null;
 }
 
 const overrides = new Map<string, ResearchOverride>(
@@ -84,9 +92,10 @@ export const SYSTEMS: System[] = BASE_SYSTEMS.map((s) => {
   if (!o) return s;
   return {
     ...s,
-    ...(o.title    ? { title: o.title }       : {}),
-    ...(o.summary  ? { summary: o.summary }   : {}),
-    ...(o.hero_image ? { heroImage: o.hero_image } : {}),
+    ...(o.title      ? { title: o.title }           : {}),
+    ...(o.summary    ? { summary: o.summary }       : {}),
+    ...(o.hero_image ? { heroImage: o.hero_image }  : {}),
+    ...(o.narrative  ? { narrative: o.narrative }   : {}),
   };
 });
 

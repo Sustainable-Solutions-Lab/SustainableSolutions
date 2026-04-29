@@ -65,6 +65,14 @@ function resolveHeroUrl(filename: string | null | undefined): string | null {
   return null;
 }
 const heroUrl = resolveHeroUrl(system.heroImage);
+
+// Narrative: sheet-driven, optional. Split on blank lines so the user
+// can paragraph-break inside a single sheet cell (Alt+Enter / Opt+Enter
+// in Google Sheets). Empty narrative falls back to the placeholder.
+const narrativeParagraphs = (system.narrative ?? '')
+  .split(/\n\s*\n/)
+  .map((p) => p.trim())
+  .filter(Boolean);
 ---
 
 <BaseLayout title={`Research · ${system.title}`}>
@@ -179,11 +187,18 @@ const heroUrl = resolveHeroUrl(system.heroImage);
     )}
   </section>
 
-  {/* Placeholder prose section — replace with real research narrative. */}
+  {/* Narrative prose. Sheet-driven via the Research tab's `narrative`
+      column; falls back to a placeholder when blank. */}
   <section class="container-prose pb-10">
-    <p class="text-ink-3 italic">
-      Research narrative for the {system.title.toLowerCase()} system goes here.
-    </p>
+    {narrativeParagraphs.length > 0 ? (
+      narrativeParagraphs.map((p) => (
+        <p class="text-ink mt-0 mb-4" style="line-height: 1.6;">{p}</p>
+      ))
+    ) : (
+      <p class="text-ink-3 italic">
+        Research narrative for the {system.title.toLowerCase()} system goes here.
+      </p>
+    )}
   </section>
 
   <hr class="border-rule" />

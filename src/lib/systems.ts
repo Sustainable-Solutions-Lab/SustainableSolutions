@@ -1,6 +1,13 @@
 // Top-level "systems" axis used by the scope matrix and the research pages.
 // Single source of truth — both /research and /research/[slug] pages read
 // from here so the landing-page card and the detail-page heading stay in sync.
+//
+// Editable fields (title, summary, hero_image) can also be set per-row in
+// the Google Sheet's "Research" tab. Sheet values override the code defaults
+// here when non-empty, so non-developers can update copy + hero images
+// without touching code. Slug + color stay in code.
+
+import researchData from '../data/research.json';
 
 export interface System {
   slug: string;
@@ -11,17 +18,27 @@ export interface System {
    *  the colored band / sparkline / sub-area pill on the detail page. */
   color: string;
   /**
-   * Optional hero image filename. Drop the file into /public/research/
-   * (preferred) or /public/images/ (shared) and put the bare filename
-   * here, e.g. `heroImage: 'energy.jpg'`. Until set, the detail page
-   * falls back to a tinted band in the system's accent color.
+   * Hero image filename. Sheet-controlled — set the `hero_image` column
+   * on the Research tab and drop the file into /public/research/ or
+   * /public/images/. Falls back to a tinted color band when not set.
    */
   heroImage?: string;
 }
 
+interface ResearchOverride {
+  slug: string;
+  title?: string | null;
+  summary?: string | null;
+  hero_image?: string | null;
+}
+
+const overrides = new Map<string, ResearchOverride>(
+  (researchData as ResearchOverride[]).map((r) => [r.slug, r]),
+);
+
 // Each system gets a maximally-distinct Spectral hue so the six index
 // cards read as a qualitative set rather than a gradient.
-export const SYSTEMS: System[] = [
+const BASE_SYSTEMS: System[] = [
   {
     slug: 'energy',
     title: 'Energy',
@@ -59,6 +76,19 @@ export const SYSTEMS: System[] = [
     color: 'var(--spectral-2)',  // red
   },
 ];
+
+// Merge sheet overrides on top of the code defaults. A blank cell in the
+// sheet leaves the code default untouched so partial sheet rows are fine.
+export const SYSTEMS: System[] = BASE_SYSTEMS.map((s) => {
+  const o = overrides.get(s.slug);
+  if (!o) return s;
+  return {
+    ...s,
+    ...(o.title    ? { title: o.title }       : {}),
+    ...(o.summary  ? { summary: o.summary }   : {}),
+    ...(o.hero_image ? { heroImage: o.hero_image } : {}),
+  };
+});
 
 export function getSystem(slug: string): System | undefined {
   return SYSTEMS.find((s) => s.slug === slug);

@@ -322,6 +322,19 @@ A small tab (4–6 rows) controlling what appears in the home page "Featured" se
 | F      | type              | Text                                           | "research" / "tool" / "publication" / "news"   |
 | G      | doi               | Text                                           | For `type=publication`. Auto-resolves the link to the paper URL and surfaces journal · year on the card |
 
+### Tab: `Research`
+
+Editorial overrides for the six research-system pages (`/research/[slug]`). Code (`src/lib/systems.ts`) holds the structural defaults — slug, title, summary, color. Sheet rows let non-developers update the title, summary, or hero image per system without touching code. **Empty cells leave the code default in place**, so partial rows are fine.
+
+Pre-populate with one row per system slug: `energy`, `food`, `water`, `materials`, `climate`, `health`.
+
+| Column | Name        | Type / Format                                  | Notes                                          |
+|--------|-------------|------------------------------------------------|------------------------------------------------|
+| A      | slug        | Text                                           | Required. Must match a system in `src/lib/systems.ts` (`energy` / `food` / `water` / `materials` / `climate` / `health`) |
+| B      | title       | Text                                           | Optional override of the code default          |
+| C      | summary     | Text                                           | One-sentence override of the code default; shown on the index card and detail-page lede |
+| D      | hero_image  | Text                                           | Filename in `/public/research/` or `/public/images/`. Detail page falls back to a tinted color band when blank |
+
 ## Build pipeline
 
 **At build time, Astro runs a script that:**
@@ -423,6 +436,8 @@ SHEET_PUBLICATIONS_CSV=https://docs.google.com/spreadsheets/d/e/.../pub?gid=...&
 SHEET_PEOPLE_CSV=...
 SHEET_NEWS_CSV=...
 SHEET_FEATURED_CSV=...
+SHEET_TOOLS_CSV=...
+SHEET_RESEARCH_CSV=...
 VERCEL_DEPLOY_HOOK_URL=...           # for the Apps Script edit trigger
 ```
 

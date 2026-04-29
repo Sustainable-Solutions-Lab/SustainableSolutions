@@ -50,6 +50,10 @@ const tabs = {
     env: 'SHEET_TOOLS_CSV',
     required: ['slug', 'title'],
   },
+  research: {
+    env: 'SHEET_RESEARCH_CSV',
+    required: ['slug'],
+  },
 };
 
 // Tiny RFC-4180-ish CSV parser. Handles quoted fields with embedded commas/newlines.

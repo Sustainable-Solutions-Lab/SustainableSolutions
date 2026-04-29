@@ -6,14 +6,48 @@ import people from '../data/people.json';
 import type { Publication, Person } from '../lib/types';
 import { splitAndLinkAuthors } from '../lib/author-links';
 import { ROLE_COLORS } from '../lib/roles';
-import { themeLabel } from '../lib/themes';
 
 const all = (publications as Publication[])
   .slice()
   .sort((a, b) => b.year - a.year || (b.month ?? 0) - (a.month ?? 0));
 
 const years = [...new Set(all.map((p) => p.year).filter((y): y is number => typeof y === 'number' && !!y))].sort((a, b) => b - a);
-const themes = [...new Set(all.flatMap((p) => p.themes ?? []))].sort();
+
+// Two-axis filter taxonomy mirroring the home-page scope matrix.
+// System options are top-level only; sub-system tags (e.g. energy:electricity)
+// are folded in via prefix matching, so a paper tagged energy:electricity
+// is found by selecting "Energy". Topic options are grouped by section, with
+// a roll-up "(all)" entry that prefix-matches every sub-topic.
+const SYSTEM_OPTIONS = [
+  { value: 'energy',    label: 'Energy'    },
+  { value: 'food',      label: 'Food'      },
+  { value: 'water',     label: 'Water'     },
+  { value: 'materials', label: 'Materials' },
+  { value: 'climate',   label: 'Climate'   },
+  { value: 'health',    label: 'Health'    },
+];
+
+const TOPIC_GROUPS = [
+  {
+    label: 'Mitigation',
+    options: [
+      { value: 'mitigation',                   label: 'Mitigation (all)' },
+      { value: 'mitigation:trade',             label: 'Trade' },
+      { value: 'mitigation:carbon-management', label: 'Carbon management' },
+    ],
+  },
+  {
+    label: 'Impacts & adaptation',
+    options: [
+      { value: 'impacts',               label: 'Impacts (all)' },
+      { value: 'impacts:air-pollution', label: 'Air pollution' },
+      { value: 'impacts:heat',          label: 'Heat' },
+      { value: 'impacts:drought',       label: 'Drought' },
+      { value: 'impacts:fire',          label: 'Fire' },
+      { value: 'impacts:flooding',      label: 'Flooding' },
+    ],
+  },
+];
 
 // Lab-author filter options: any lab member detected in at least one
 // publication's authors string. Auto-derived from author-name matching so
@@ -44,23 +78,6 @@ const total = all.length;
 
   <section class="container-content pb-24">
     <div
-      id="pub-focus-banner"
-      hidden
-      class="flex items-center gap-2 mb-3 px-3 py-2 bg-paper-2 border border-rule"
-      style="border-radius: var(--radius-sm);"
-    >
-      <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Focus:</span>
-      <span id="pub-focus-label" class="font-sans text-sm text-ink"></span>
-      <button
-        type="button"
-        id="pub-focus-clear"
-        class="ml-auto font-mono text-xs uppercase tracking-wider text-ink-3 hover:text-ink bg-transparent border-0 cursor-pointer"
-      >
-        Clear ×
-      </button>
-    </div>
-
-    <div
       class="flex flex-wrap items-center gap-2 md:gap-4 py-2 md:py-4 mb-2 border-y border-rule bg-paper sticky z-20"
       style="top: 56px;"
       role="search"
@@ -89,14 +106,30 @@ const total = all.length;
       </label>
 
       <label class="flex items-center gap-2 text-sm">
-        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Theme</span>
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">System</span>
         <select
-          id="pub-theme"
+          id="pub-system"
           class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
           style="border-radius: var(--radius-sm);"
         >
-          <option value="">All themes</option>
-          {themes.map((t) => <option value={t}>{themeLabel(t)}</option>)}
+          <option value="">All systems</option>
+          {SYSTEM_OPTIONS.map((s) => <option value={s.value}>{s.label}</option>)}
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Topic</span>
+        <select
+          id="pub-topic"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
+          style="border-radius: var(--radius-sm);"
+        >
+          <option value="">All topics</option>
+          {TOPIC_GROUPS.map((g) => (
+            <optgroup label={g.label}>
+              {g.options.map((o) => <option value={o.value}>{o.label}</option>)}
+            </optgroup>
+          ))}
         </select>
       </label>
 
@@ -166,7 +199,8 @@ const total = all.length;
   (function () {
     const search = document.getElementById('pub-search');
     const yearSel = document.getElementById('pub-year');
-    const themeSel = document.getElementById('pub-theme');
+    const systemSel = document.getElementById('pub-system');
+    const topicSel = document.getElementById('pub-topic');
     const authorSel = document.getElementById('pub-author');
     const sortSel = document.getElementById('pub-sort');
     const feat = document.getElementById('pub-featured');
@@ -194,12 +228,10 @@ const total = all.length;
       for (const li of sorted) list.appendChild(li);
     };
 
-    // URL-driven facet filters (set by clicking a cell in the home-page
-    // scope matrix). Use prefix matching so system=energy also catches
-    // energy:electricity, response=impacts catches impacts:drought, etc.
-    let urlSystem = '';
-    let urlResponse = '';
-
+    // System and Topic dropdowns use prefix matching so System=energy
+    // catches energy:electricity, Topic=mitigation catches mitigation:trade,
+    // etc. The matrix-cell links target ?system=…&response=… and the page
+    // pre-selects both dropdowns from those params on load.
     function axisHasPrefix(values, target) {
       if (!target) return true;
       for (const v of values) {
@@ -213,24 +245,23 @@ const total = all.length;
     const apply = () => {
       const q = (search?.value ?? '').trim().toLowerCase();
       const y = yearSel?.value ?? '';
-      const t = themeSel?.value ?? '';
+      const sys = systemSel?.value ?? '';
+      const top = topicSel?.value ?? '';
       const a = authorSel?.value ?? '';
       const f = feat?.checked ?? false;
 
       let visible = 0;
       for (const li of items) {
-        const themes = (li.dataset.themes ?? '').split(',').filter(Boolean);
         const sysVals = (li.dataset.system ?? '').split(',').filter(Boolean);
         const respVals = (li.dataset.response ?? '').split(',').filter(Boolean);
         const labAuthors = (li.dataset.labAuthors ?? '').split(',').filter(Boolean);
         const ok =
           (!q || (li.dataset.search ?? '').includes(q)) &&
           (!y || li.dataset.year === y) &&
-          (!t || themes.includes(t)) &&
           (!a || labAuthors.includes(a)) &&
           (!f || li.dataset.featured === 'true') &&
-          axisHasPrefix(sysVals, urlSystem) &&
-          axisHasPrefix(respVals, urlResponse);
+          axisHasPrefix(sysVals, sys) &&
+          axisHasPrefix(respVals, top);
         li.hidden = !ok;
         if (ok) visible++;
       }
@@ -239,45 +270,26 @@ const total = all.length;
       if (empty) empty.hidden = visible !== 0;
     };
 
-    // Pre-fill the Author select from `?author=<slug>` so /publications?author=X
-    // arrives pre-filtered (used by the "see all" link on people detail pages).
+    // Pre-fill dropdowns from URL params:
+    //   ?author=<slug>     used by the "see all" link on people detail pages
+    //   ?sort=<key>        deep-link to a particular sort
+    //   ?system=<key>      set by clicking a scope-matrix cell on the home page
+    //   ?response=<value>  set by clicking a scope-matrix cell (topic axis)
+    // The matrix-cell links land here with both system and response set, so
+    // the System and Topic selects come up pre-selected for the clicked
+    // intersection — no separate focus banner.
     const params = new URLSearchParams(window.location.search);
-    const authorParam = params.get('author');
-    if (authorParam && authorSel) {
-      const opt = Array.from(authorSel.options).find((o) => o.value === authorParam);
-      if (opt) authorSel.value = authorParam;
-    }
-    const sortParam = params.get('sort');
-    if (sortParam && sortSel) sortSel.value = sortParam;
+    const setSelectIfPresent = (sel, value) => {
+      if (!sel || !value) return;
+      const opt = Array.from(sel.options).find((o) => o.value === value);
+      if (opt) sel.value = value;
+    };
+    setSelectIfPresent(authorSel, params.get('author'));
+    setSelectIfPresent(sortSel,   params.get('sort'));
+    setSelectIfPresent(systemSel, (params.get('system') ?? '').trim());
+    setSelectIfPresent(topicSel,  (params.get('response') ?? '').trim());
 
-    // Scope-matrix focus filter via ?system=<key>&response=<value>. Both
-    // optional, prefix-matched. Banner shows the active focus + a Clear ×.
-    urlSystem = (params.get('system') ?? '').trim();
-    urlResponse = (params.get('response') ?? '').trim();
-    const banner = document.getElementById('pub-focus-banner');
-    const focusLabel = document.getElementById('pub-focus-label');
-    const focusClear = document.getElementById('pub-focus-clear');
-    if (banner && focusLabel) {
-      const labelParts = [];
-      if (urlSystem) labelParts.push(urlSystem.replace(/:/g, ' / '));
-      if (urlResponse) labelParts.push(urlResponse.replace(/:/g, ' / '));
-      if (labelParts.length) {
-        focusLabel.textContent = labelParts.join(' × ');
-        banner.hidden = false;
-      }
-    }
-    focusClear?.addEventListener('click', () => {
-      urlSystem = '';
-      urlResponse = '';
-      if (banner) banner.hidden = true;
-      const url = new URL(window.location.href);
-      url.searchParams.delete('system');
-      url.searchParams.delete('response');
-      window.history.replaceState({}, '', url.toString());
-      apply();
-    });
-
-    [search, yearSel, themeSel, authorSel, feat].forEach((el) => {
+    [search, yearSel, systemSel, topicSel, authorSel, feat].forEach((el) => {
       el?.addEventListener('input', apply);
       el?.addEventListener('change', apply);
     });

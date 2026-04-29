@@ -23,19 +23,38 @@ export interface ParsedCitation {
  *   "Davis, S."          → { last: "davis", givens: ["s"] }
  *   "Davis, Steven J."   → { last: "davis", givens: ["steven","j"] }
  *   "Chen, Yang"         → { last: "chen",  givens: ["yang"] }
+ *   "Steven J. Davis"    → { last: "davis", givens: ["steven","j"] }   (natural order)
+ *   "Robert J Andres"    → { last: "andres", givens: ["robert","j"] }
  *
- * Returns null if the token doesn't fit the "Last, given" shape.
+ * Returns null if the token doesn't fit either shape.
  */
 export function parseCitationToken(token: string): ParsedCitation | null {
-  const m = token.match(/^([^,]+),\s*(.+?)\.?$/)
-  if (!m) return null
-  const last = m[1].trim().toLowerCase()
-  const givens = m[2]
-    .split(/[\s.\-]+/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((t) => t.toLowerCase())
-  return { last, givens }
+  // Comma-form: "Last, given..."
+  const commaMatch = token.match(/^([^,]+),\s*(.+?)\.?$/)
+  if (commaMatch) {
+    return {
+      last: commaMatch[1].trim().toLowerCase(),
+      givens: commaMatch[2]
+        .split(/[\s.\-]+/)
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .map((t) => t.toLowerCase()),
+    }
+  }
+  // Natural-order fallback: "First Middle Last" with no comma. Last whitespace-
+  // separated token is the surname, the rest are givens. Many publications use
+  // this form (Scholar default, some journals' citation styles).
+  const tokens = token.trim().split(/\s+/).filter(Boolean)
+  if (tokens.length >= 2) {
+    return {
+      last: tokens[tokens.length - 1].toLowerCase(),
+      givens: tokens
+        .slice(0, -1)
+        .map((t) => t.replace(/\./g, '').toLowerCase())
+        .filter(Boolean),
+    }
+  }
+  return null
 }
 
 /**
@@ -79,8 +98,17 @@ function matches(a: ParsedCitation, p: ParsedCitation): boolean {
       if (pg[0] !== ag[0]) return false
     } else if (pg.length === 1) {
       if (ag[0] !== pg[0]) return false
+    } else if (ag === pg) {
+      // exact match — common case
+    } else if (
+      ag.length >= 4 && pg.length >= 4 &&
+      (pg.startsWith(ag) || ag.startsWith(pg))
+    ) {
+      // Nickname-prefix: "Steve" ↔ "Steven", "Cathy" ↔ "Catharine", etc.
+      // Min 4 chars on both sides to avoid spurious short-prefix matches
+      // (e.g. "Sam" → Samuel/Samantha).
     } else {
-      if (ag !== pg) return false
+      return false
     }
   }
   return true

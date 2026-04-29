@@ -65,141 +65,136 @@ const cornerstoneLogo = resolveCornerstoneLogo();
 
   <section class="container-content pb-24">
     <ul class="list-none p-0 m-0 grid md:grid-cols-2 gap-6 auto-rows-fr">
-      {cards.map((t) => (
-        <li class="m-0 p-0 h-full">
-          <a
-            href={t.href}
-            class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
-            style="border-radius: var(--radius-md); overflow: hidden;"
-            data-external={t.isExternal ? '' : null}
-          >
-            {t.imgUrl && (
-              <img
-                src={t.imgUrl}
-                alt={t.title}
-                loading="lazy"
-                class="block w-full object-cover"
-                style="aspect-ratio: 16/10;"
-              />
-            )}
-            <div class="p-6 flex-1 flex flex-col">
-              {t.eyebrow && <p class="eyebrow m-0 mb-2">{t.eyebrow}</p>}
-              <h3 class="m-0">{t.title}</h3>
-              {t.summary && (
-                <p class="text-ink-2 text-sm mt-2 m-0">{t.summary}</p>
-              )}
-              {t.companion && (
-                <p class="font-mono text-xs text-ink-3 mt-auto pt-3 m-0 uppercase tracking-wider">
-                  Companion paper · <em class="not-italic">{t.companion.journal}</em> · {t.companion.year}
-                </p>
-              )}
-            </div>
-          </a>
-        </li>
-      ))}
-
-      {/*
-        Cornerstone initiative — placed after the sheet-driven cards so
-        Firefuels (and any future tools) lead the list. Spectral-bar
-        hero with logo overlay; three external links in the footer go
-        to website / Zenodo community / GitHub org.
-      */}
-      <li class="m-0 p-0 h-full">
-        <article
-          class="flex flex-col h-full bg-paper border border-rule overflow-hidden"
-          style="border-radius: var(--radius-md);"
-        >
-          <div
-            class="relative flex items-center justify-center bg-paper-2"
-            style="aspect-ratio: 16 / 10;"
-          >
-            {/*
-              Decaying-bar histogram in the lab's full Spectral palette —
-              eleven bars, each in spectral-1…11, heights stepping down
-              left to right. preserveAspectRatio="none" stretches them
-              edge-to-edge regardless of card width.
-            */}
-            <svg
-              viewBox="0 0 110 100"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-              class="absolute inset-0 w-full h-full block"
-            >
-              {[
-                { h: 100, c: 'var(--spectral-1)' },
-                { h:  92, c: 'var(--spectral-2)' },
-                { h:  84, c: 'var(--spectral-3)' },
-                { h:  76, c: 'var(--spectral-4)' },
-                { h:  68, c: 'var(--spectral-5)' },
-                { h:  60, c: 'var(--spectral-6)' },
-                { h:  52, c: 'var(--spectral-7)' },
-                { h:  44, c: 'var(--spectral-8)' },
-                { h:  36, c: 'var(--spectral-9)' },
-                { h:  28, c: 'var(--spectral-10)' },
-                { h:  20, c: 'var(--spectral-11)' },
-              ].map((b, i) => (
-                <rect
-                  x={i * 10}
-                  y={100 - b.h}
-                  width={9}
-                  height={b.h}
-                  fill={b.c}
-                />
-              ))}
-            </svg>
-            {/* Soft paper overlay tames the bars so the logo reads cleanly on top. */}
-            <div
-              aria-hidden="true"
-              class="absolute inset-0"
-              style="background: color-mix(in oklab, var(--paper) 35%, transparent);"
-            ></div>
-            {cornerstoneLogo ? (
-              <img
-                src={cornerstoneLogo}
-                alt="Cornerstone"
-                class="relative block max-w-[70%] max-h-[55%]"
-              />
-            ) : (
-              <p
-                class="relative font-serif m-0"
-                style="font-size: clamp(32px, 5vw, 56px); color: var(--ink); letter-spacing: -0.02em;"
+      {cards.map((t) => {
+        // Cornerstone branch: text from the sheet, but render the
+        // spectral-bar hero + logo overlay + three hardcoded external
+        // links instead of the regular image-based card.
+        if (t.slug === 'cornerstone') {
+          return (
+            <li class="m-0 p-0 h-full">
+              <article
+                class="flex flex-col h-full bg-paper border border-rule overflow-hidden"
+                style="border-radius: var(--radius-md);"
               >
-                Cornerstone
-              </p>
-            )}
-          </div>
-          <div class="p-6 flex-1 flex flex-col">
-            <p class="eyebrow m-0 mb-2">OPEN DATA INITIATIVE</p>
-            <h3 class="m-0">Cornerstone</h3>
-            <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">
-              Open sustainability data for businesses, governments, and
-              researchers. Cornerstone is bringing USEEIO and CEDA — the two
-              most widely used Scope 3 emissions models — under one roof, with
-              the goal of merging them into a single global open MRIO standard.
-            </p>
-            <div class="flex flex-wrap gap-x-5 gap-y-1 mt-4 font-mono text-xs uppercase tracking-wider">
-              <a
-                href="https://cornerstonedata.org/"
-                class="text-ink-2 hover:text-ink border-b-0"
-                target="_blank"
-                rel="noopener"
-              >Website ↗</a>
-              <a
-                href="https://zenodo.org/communities/cornerstone-data/records?q=&l=list&p=1&s=10&sort=newest"
-                class="text-ink-2 hover:text-ink border-b-0"
-                target="_blank"
-                rel="noopener"
-              >Zenodo ↗</a>
-              <a
-                href="https://github.com/cornerstone-data"
-                class="text-ink-2 hover:text-ink border-b-0"
-                target="_blank"
-                rel="noopener"
-              >GitHub ↗</a>
-            </div>
-          </div>
-        </article>
-      </li>
+                <div
+                  class="relative flex items-center justify-center bg-paper-2"
+                  style="aspect-ratio: 16 / 10;"
+                >
+                  {/* Decaying-bar histogram in the full Spectral palette. */}
+                  <svg
+                    viewBox="0 0 110 100"
+                    preserveAspectRatio="none"
+                    aria-hidden="true"
+                    class="absolute inset-0 w-full h-full block"
+                  >
+                    {[
+                      { h: 100, c: 'var(--spectral-1)' },
+                      { h:  92, c: 'var(--spectral-2)' },
+                      { h:  84, c: 'var(--spectral-3)' },
+                      { h:  76, c: 'var(--spectral-4)' },
+                      { h:  68, c: 'var(--spectral-5)' },
+                      { h:  60, c: 'var(--spectral-6)' },
+                      { h:  52, c: 'var(--spectral-7)' },
+                      { h:  44, c: 'var(--spectral-8)' },
+                      { h:  36, c: 'var(--spectral-9)' },
+                      { h:  28, c: 'var(--spectral-10)' },
+                      { h:  20, c: 'var(--spectral-11)' },
+                    ].map((b, i) => (
+                      <rect
+                        x={i * 10}
+                        y={100 - b.h}
+                        width={9}
+                        height={b.h}
+                        fill={b.c}
+                      />
+                    ))}
+                  </svg>
+                  <div
+                    aria-hidden="true"
+                    class="absolute inset-0"
+                    style="background: color-mix(in oklab, var(--paper) 35%, transparent);"
+                  ></div>
+                  {cornerstoneLogo ? (
+                    <img
+                      src={cornerstoneLogo}
+                      alt={t.title}
+                      class="relative block max-w-[70%] max-h-[55%]"
+                    />
+                  ) : (
+                    <p
+                      class="relative font-serif m-0"
+                      style="font-size: clamp(32px, 5vw, 56px); color: var(--ink); letter-spacing: -0.02em;"
+                    >
+                      {t.title}
+                    </p>
+                  )}
+                </div>
+                <div class="p-6 flex-1 flex flex-col">
+                  {t.eyebrow && <p class="eyebrow m-0 mb-2">{t.eyebrow}</p>}
+                  <h3 class="m-0">{t.title}</h3>
+                  {t.summary && (
+                    <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">{t.summary}</p>
+                  )}
+                  <div class="flex flex-wrap gap-x-5 gap-y-1 mt-auto pt-4 font-mono text-xs uppercase tracking-wider">
+                    <a
+                      href="https://cornerstonedata.org/"
+                      class="text-ink-2 hover:text-ink border-b-0"
+                      target="_blank"
+                      rel="noopener"
+                    >Website ↗</a>
+                    <a
+                      href="https://zenodo.org/communities/cornerstone-data/records?q=&l=list&p=1&s=10&sort=newest"
+                      class="text-ink-2 hover:text-ink border-b-0"
+                      target="_blank"
+                      rel="noopener"
+                    >Zenodo ↗</a>
+                    <a
+                      href="https://github.com/cornerstone-data"
+                      class="text-ink-2 hover:text-ink border-b-0"
+                      target="_blank"
+                      rel="noopener"
+                    >GitHub ↗</a>
+                  </div>
+                </div>
+              </article>
+            </li>
+          );
+        }
+
+        // Default tool card: image hero + single href wrapping the whole card.
+        return (
+          <li class="m-0 p-0 h-full">
+            <a
+              href={t.href}
+              class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
+              style="border-radius: var(--radius-md); overflow: hidden;"
+              data-external={t.isExternal ? '' : null}
+            >
+              {t.imgUrl && (
+                <img
+                  src={t.imgUrl}
+                  alt={t.title}
+                  loading="lazy"
+                  class="block w-full object-cover"
+                  style="aspect-ratio: 16/10;"
+                />
+              )}
+              <div class="p-6 flex-1 flex flex-col">
+                {t.eyebrow && <p class="eyebrow m-0 mb-2">{t.eyebrow}</p>}
+                <h3 class="m-0">{t.title}</h3>
+                {t.summary && (
+                  <p class="text-ink-2 text-sm mt-2 m-0">{t.summary}</p>
+                )}
+                {t.companion && (
+                  <p class="font-mono text-xs text-ink-3 mt-auto pt-3 m-0 uppercase tracking-wider">
+                    Companion paper · <em class="not-italic">{t.companion.journal}</em> · {t.companion.year}
+                  </p>
+                )}
+              </div>
+            </a>
+          </li>
+        );
+      })}
     </ul>
 
     {cards.length === 0 && (

@@ -11,10 +11,14 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 export async function getStaticPaths() {
-  const customPages = new Set(['firefuels']);
+  // Slugs to skip:
+  //   - 'firefuels'   has its own hand-written /tools/firefuels.astro
+  //   - 'cornerstone' is a multi-link initiative; the index card already
+  //     surfaces website / Zenodo / GitHub, no dedicated detail page.
+  const skip = new Set(['firefuels', 'cornerstone']);
   const tools = (await import('../../data/tools.json')).default as Tool[];
   return tools
-    .filter((t) => t.slug && !customPages.has(t.slug))
+    .filter((t) => t.slug && !skip.has(t.slug))
     .map((t) => ({ params: { slug: t.slug }, props: { tool: t } }));
 }
 

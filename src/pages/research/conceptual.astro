@@ -1,0 +1,200 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PublicationItem from '../../components/PublicationItem.astro';
+import PersonCard from '../../components/PersonCard.astro';
+import publications from '../../data/publications.json';
+import people from '../../data/people.json';
+import type { Publication, Person } from '../../lib/types';
+import { totalCitations, recentCitations } from '../../lib/citations';
+
+const accent = 'var(--cardinal)';
+
+const pubs = publications as Publication[];
+const peopleArr = people as Person[];
+
+// Conceptual pubs come from the Publications sheet's `conceptual` column.
+const conceptualPubs = pubs
+  .filter((p) => p.conceptual === true)
+  .sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || (b.month ?? 0) - (a.month ?? 0));
+
+// CIU members — current first, alumni second; both ordered by `order`.
+const ciuPeople = peopleArr
+  .filter((p) => p.unit === 'ciu')
+  .sort((a, b) => {
+    if (a.status !== b.status) return a.status === 'current' ? -1 : 1;
+    return (a.order ?? 999) - (b.order ?? 999);
+  });
+const ciuCurrent = ciuPeople.filter((p) => p.status === 'current');
+const ciuAlumni = ciuPeople.filter((p) => p.status === 'alumni');
+
+// Stats strip
+const RECENT_YEARS = 3;
+const currentYear = new Date().getFullYear();
+const recentCutoff = currentYear - RECENT_YEARS + 1;
+const totalCitesSum = conceptualPubs.reduce((s, p) => s + totalCitations(p), 0);
+const recentCitesSum = conceptualPubs.reduce((s, p) => s + recentCitations(p, RECENT_YEARS), 0);
+const recentPapersCount = conceptualPubs.filter((p) => typeof p.year === 'number' && p.year >= recentCutoff).length;
+
+// Papers-per-year sparkline.
+const yearCounts = new Map<number, number>();
+for (const p of conceptualPubs) {
+  if (typeof p.year === 'number') yearCounts.set(p.year, (yearCounts.get(p.year) ?? 0) + 1);
+}
+const minYear = yearCounts.size ? Math.min(...yearCounts.keys()) : currentYear;
+const maxYear = yearCounts.size ? Math.max(...yearCounts.keys()) : currentYear;
+const yearSeries: { year: number; count: number }[] = [];
+for (let y = minYear; y <= maxYear; y++) {
+  yearSeries.push({ year: y, count: yearCounts.get(y) ?? 0 });
+}
+const maxYearCount = Math.max(...yearSeries.map((y) => y.count), 1);
+---
+
+<BaseLayout title="Research · Conceptual Investigations Unit">
+  <section class="relative">
+    <div
+      class="w-full"
+      style={`aspect-ratio: 16 / 5; background: linear-gradient(180deg, color-mix(in oklab, ${accent} 22%, var(--paper)) 0%, var(--paper) 100%);`}
+    ></div>
+    <div
+      class="container-content pt-6 pb-2"
+      style={`border-top: 4px solid ${accent};`}
+    >
+      <p class="eyebrow mb-2">
+        <a href="/research" class="border-b-0 hover:text-ink">RESEARCH</a>
+        <span class="dot">›</span>
+        <span style={`color: ${accent};`}>APPROACH</span>
+      </p>
+      <h1 class="m-0">Conceptual Investigations Unit</h1>
+      <p class="lede max-w-prose mt-3 mb-0">
+        Theory-first work by the lab's CIU — building abstract models in a
+        quest for high-level insights into the behavior of important but
+        complex systems.
+      </p>
+    </div>
+  </section>
+
+  {/* Stats + sparkline */}
+  <section class="container-content pt-6 pb-6">
+    <div class="grid md:grid-cols-2 gap-8 border-y border-rule py-5">
+      <div class="grid grid-cols-2 gap-x-6 gap-y-3">
+        <div>
+          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 m-0">Papers</p>
+          <p class="font-serif text-3xl m-0" style="line-height: 1;">{conceptualPubs.length}</p>
+        </div>
+        <div>
+          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 m-0">Citations</p>
+          <p class="font-serif text-3xl m-0" style="line-height: 1;">{totalCitesSum.toLocaleString()}</p>
+        </div>
+        <div>
+          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 m-0">Last 3 yrs · papers</p>
+          <p class="font-serif text-3xl m-0" style="line-height: 1;">{recentPapersCount}</p>
+        </div>
+        <div>
+          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 m-0">Last 3 yrs · cites</p>
+          <p class="font-serif text-3xl m-0" style="line-height: 1;">{recentCitesSum.toLocaleString()}</p>
+        </div>
+      </div>
+
+      <div>
+        <p class="font-mono text-xs uppercase tracking-wider text-ink-3 m-0 mb-2">Conceptual papers by year</p>
+        <svg
+          viewBox="0 0 100 30"
+          preserveAspectRatio="none"
+          class="w-full block"
+          style="height: 64px;"
+          role="img"
+          aria-label={`Conceptual papers per year ${minYear}–${maxYear}`}
+        >
+          {yearSeries.map((y, i) => {
+            const w = 100 / yearSeries.length;
+            const h = (y.count / maxYearCount) * 30;
+            return (
+              <rect
+                x={i * w + 0.4}
+                y={30 - h}
+                width={Math.max(w - 0.8, 0.4)}
+                height={Math.max(h, 0.3)}
+                fill={accent}
+              ><title>{y.year}: {y.count} paper{y.count === 1 ? '' : 's'}</title></rect>
+            );
+          })}
+        </svg>
+        <div class="flex justify-between font-mono text-[10px] text-ink-3 mt-1">
+          <span>{minYear}</span>
+          <span>{maxYear}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* About section — placeholder prose. Replace with the CIU narrative. */}
+  <section class="container-prose pb-10">
+    <p class="text-ink-3 italic">
+      Description of the Conceptual Investigations Unit goes here — replace
+      this paragraph with the prose from the existing CIU page.
+    </p>
+  </section>
+
+  <hr class="border-rule" />
+
+  {/* Members */}
+  {ciuPeople.length > 0 && (
+    <section class="container-content pt-8 pb-8">
+      <p class="eyebrow mb-4">THE UNIT</p>
+
+      {ciuCurrent.length > 0 && (
+        <>
+          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 mt-0 mb-3">Current</p>
+          <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 list-none p-0 m-0 mb-6">
+            {ciuCurrent.map((p) => (
+              <li class="m-0 p-0">
+                <PersonCard person={p} />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {ciuAlumni.length > 0 && (
+        <>
+          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 mt-2 mb-3">Alumni</p>
+          <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 list-none p-0 m-0">
+            {ciuAlumni.map((p) => (
+              <li class="m-0 p-0">
+                <PersonCard person={p} />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  )}
+
+  <hr class="border-rule" />
+
+  {/* Selected conceptual publications */}
+  <section class="container-content pt-8 pb-24">
+    <div class="flex items-baseline justify-between mb-4 gap-4 flex-wrap">
+      <p class="eyebrow m-0">
+        Conceptual papers <span class="text-ink-3">· {conceptualPubs.length}</span>
+      </p>
+      <a
+        href="/publications?approach=conceptual"
+        class="font-mono text-xs uppercase tracking-wider text-ink-3 hover:text-ink border-b-0"
+      >
+        Filter on publications page →
+      </a>
+    </div>
+
+    {conceptualPubs.length === 0 ? (
+      <p class="text-ink-3 text-sm">
+        No publications tagged conceptual yet — flip the <code>conceptual</code>
+        column to TRUE on the relevant rows of the Publications sheet.
+      </p>
+    ) : (
+      <ul class="list-none p-0 m-0">
+        {conceptualPubs.map((pub) => <PublicationItem pub={pub} />)}
+      </ul>
+    )}
+  </section>
+</BaseLayout>

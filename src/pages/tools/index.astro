@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import tools from '../../data/tools.json';
 import publications from '../../data/publications.json';
 import type { Tool, Publication } from '../../lib/types';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const sorted = (tools as Tool[])
@@ -35,15 +35,19 @@ const cards = sorted.map((t) => {
 });
 
 // Cornerstone initiative card — special-treatment spotlight rendered
-// above the sheet-driven tools. Logo file falls back gracefully: drop
-// a SVG/PNG at /public/tools/cornerstone.svg or .png to replace the
-// serif text overlay.
+// above the sheet-driven tools. Logo lookup: any file in /public/tools/
+// or /public/images/ whose name starts with "cornerstone" (case-
+// insensitive) and ends in svg/png/webp/jpg. Falls back to a serif
+// title overlay when no logo is found.
+const LOGO_EXT_RE = /\.(svg|png|webp|jpe?g)$/i;
 function resolveCornerstoneLogo(): string | null {
-  for (const ext of ['svg', 'png', 'webp', 'jpg']) {
-    const fname = `cornerstone.${ext}`;
-    for (const folder of ['tools', 'images']) {
-      if (existsSync(resolve('public', folder, fname))) return `/${folder}/${fname}`;
-    }
+  for (const folder of ['tools', 'images']) {
+    const dir = resolve('public', folder);
+    if (!existsSync(dir)) continue;
+    const match = readdirSync(dir).find(
+      (f) => /^cornerstone/i.test(f) && LOGO_EXT_RE.test(f),
+    );
+    if (match) return `/${folder}/${match}`;
   }
   return null;
 }

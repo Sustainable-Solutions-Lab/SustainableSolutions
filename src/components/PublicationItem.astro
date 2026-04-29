@@ -1,10 +1,10 @@
 ---
 import type { Publication, Person } from '../lib/types';
 import people from '../data/people.json';
-import scholarDetails from '../../templates/scholar-details.json';
 import { splitAndLinkAuthors, toNaturalOrder } from '../lib/author-links';
 import { themeColor, themeLabel } from '../lib/themes';
 import { roleColor } from '../lib/roles';
+import { citationsArray, totalCitations } from '../lib/citations';
 import CitationChart from './CitationChart.astro';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -15,48 +15,8 @@ interface Props {
 
 const { pub } = Astro.props;
 
-// Build {DOI → citations[]} and {normalized-title → citations[]} lookups.
-// Most scholar-details entries have no DOI (132 of 212), so title-based
-// fallback is essential — DOI-only matching covered ~25% of pubs; adding
-// title fallback brings coverage to ~95%.
-const citationsByDoi = new Map<string, Array<{ year: number; count: number }>>();
-const totalsByDoi = new Map<string, number>();
-const citationsByTitle = new Map<string, Array<{ year: number; count: number }>>();
-const totalsByTitle = new Map<string, number>();
-
-function normalizeTitle(t: string | null | undefined): string {
-  return (t ?? '')
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
-
-for (const detail of Object.values(scholarDetails as Record<string, any>)) {
-  if (!detail) continue;
-  const hasCits = Array.isArray(detail.citations) && detail.citations.length > 0;
-  const hasTotal = typeof detail.total_citations === 'number';
-  if (detail.doi) {
-    if (hasCits) citationsByDoi.set(detail.doi, detail.citations);
-    if (hasTotal) totalsByDoi.set(detail.doi, detail.total_citations);
-  }
-  const tkey = normalizeTitle(detail.title);
-  if (tkey) {
-    if (hasCits && !citationsByTitle.has(tkey)) citationsByTitle.set(tkey, detail.citations);
-    if (hasTotal && !totalsByTitle.has(tkey)) totalsByTitle.set(tkey, detail.total_citations);
-  }
-}
-
-const pubTitleKey = normalizeTitle(pub.title);
-const citationsForPub =
-  (pub.doi && citationsByDoi.get(pub.doi)) ||
-  (pubTitleKey && citationsByTitle.get(pubTitleKey)) ||
-  null;
-const totalCitationsForPub =
-  (pub.doi && totalsByDoi.get(pub.doi)) ??
-  (pubTitleKey && totalsByTitle.get(pubTitleKey)) ??
-  null;
+const citationsForPub = citationsArray(pub);
+const totalCitationsForPub = citationsForPub ? totalCitations(pub) : null;
 
 // Gate the impact row (citation chart + Altmetric/Dimensions badges) on a
 // minimum citation count. Newer/uncited papers don't get a near-empty chart

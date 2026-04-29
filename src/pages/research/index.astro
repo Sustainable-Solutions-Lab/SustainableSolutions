@@ -3,14 +3,14 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import publications from '../../data/publications.json';
 import type { Publication } from '../../lib/types';
 import { SYSTEMS, systemMatches } from '../../lib/systems';
+import { totalCitations } from '../../lib/citations';
 
-// Per-system paper count to show on each card (prefix-matched, so
-// energy:electricity etc. roll up under the parent system).
 const pubs = publications as Publication[];
-const cards = SYSTEMS.map((s) => ({
-  ...s,
-  count: pubs.filter((p) => systemMatches(p.system, s.slug)).length,
-}));
+const cards = SYSTEMS.map((s) => {
+  const myPubs = pubs.filter((p) => systemMatches(p.system, s.slug));
+  const cites = myPubs.reduce((sum, p) => sum + totalCitations(p), 0);
+  return { ...s, count: myPubs.length, cites };
+});
 ---
 
 <BaseLayout title="Research" showCoordReadout={true}>
@@ -25,23 +25,26 @@ const cards = SYSTEMS.map((s) => ({
   </section>
 
   <section class="container-content pb-24">
-    <ul class="grid md:grid-cols-2 gap-px bg-rule border border-rule list-none p-0 m-0">
+    <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0 m-0">
       {cards.map((s) => (
-        <li class="bg-paper m-0 p-0">
+        <li class="m-0 p-0 h-full">
           <a
             href={`/research/${s.slug}`}
-            class="flex flex-col h-full p-6 hover:bg-paper-2 transition-colors border-b-0"
+            class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
+            style={`border-radius: var(--radius-md); border-top: 4px solid ${s.color}; overflow: hidden;`}
           >
-            <p class="eyebrow mb-2">SYSTEM</p>
-            <h3 class="m-0">{s.title}</h3>
-            <p class="text-ink-2 text-sm mt-2 mb-0" style="line-height: 1.5;">
-              {s.summary}
-            </p>
-            <p class="font-mono text-xs text-ink-3 mt-4 mb-0 uppercase tracking-wider">
-              {s.count} paper{s.count === 1 ? '' : 's'}
-              <span class="dot">·</span>
-              <span class="text-ink-2">Read more →</span>
-            </p>
+            <div class="p-5 flex-1 flex flex-col">
+              <p class="eyebrow m-0 mb-2" style={`color: ${s.color};`}>SYSTEM</p>
+              <h3 class="m-0">{s.title}</h3>
+              <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">
+                {s.summary}
+              </p>
+              <p class="font-mono text-xs uppercase tracking-wider text-ink-3 mt-auto pt-4 m-0">
+                <span class="text-ink-2">{s.count}</span> paper{s.count === 1 ? '' : 's'}
+                <span class="dot">·</span>
+                <span class="text-ink-2">{s.cites.toLocaleString()}</span> cite{s.cites === 1 ? '' : 's'}
+              </p>
+            </div>
           </a>
         </li>
       ))}

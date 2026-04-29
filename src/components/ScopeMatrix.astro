@@ -17,8 +17,8 @@
 // impacts:drought → Drought row, etc. (prefix match).
 
 import publications from '../data/publications.json';
-import scholarDetails from '../../templates/scholar-details.json';
 import type { Publication } from '../lib/types';
+import { totalCitations as pubTotalCitations, recentCitations as pubRecentCitations } from '../lib/citations';
 
 const SYSTEMS = [
   { key: 'energy',    label: 'Energy'    },
@@ -54,47 +54,9 @@ function axisMatches(values: string[], target: string): boolean {
   return false;
 }
 
-// Citation lookup: DOI primary, normalized-title fallback. Most
-// scholar-details entries have no DOI, so title fallback is essential.
-function normalizeTitle(t: string | null | undefined): string {
-  return (t ?? '')
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
-const detailsByDoi = new Map<string, any>();
-const detailsByTitle = new Map<string, any>();
-for (const detail of Object.values(scholarDetails as Record<string, any>)) {
-  if (!detail) continue;
-  if (detail.doi) detailsByDoi.set(detail.doi.toLowerCase(), detail);
-  const tk = normalizeTitle(detail.title);
-  if (tk && !detailsByTitle.has(tk)) detailsByTitle.set(tk, detail);
-}
-function detailFor(pub: Publication): any | null {
-  if (pub.doi) {
-    const d = detailsByDoi.get(pub.doi.toLowerCase());
-    if (d) return d;
-  }
-  const tk = normalizeTitle(pub.title);
-  return tk ? detailsByTitle.get(tk) ?? null : null;
-}
-
 const RECENT_YEARS = 3;
 const currentYear = new Date().getFullYear();
 const recentCutoff = currentYear - RECENT_YEARS + 1;
-
-function totalCitations(pub: Publication): number {
-  return detailFor(pub)?.total_citations ?? 0;
-}
-function recentCitations(pub: Publication): number {
-  const d = detailFor(pub);
-  if (!d || !Array.isArray(d.citations)) return 0;
-  return d.citations
-    .filter((c: any) => c.year >= recentCutoff)
-    .reduce((s: number, c: any) => s + (c.count || 0), 0);
-}
 
 // Key on row.match (which is unique) rather than row.key — MIT and IMP
 // both have a "general" sub-row, and keying on row.key collided so the
@@ -112,8 +74,8 @@ for (const sys of SYSTEMS) {
       const r = (p.response ?? []) as string[];
       if (axisMatches(s, sys.key) && axisMatches(r, row.match)) {
         papers++;
-        citations += totalCitations(p);
-        recCites += recentCitations(p);
+        citations += pubTotalCitations(p);
+        recCites += pubRecentCitations(p, RECENT_YEARS);
         if (typeof p.year === 'number' && p.year >= recentCutoff) recPapers++;
       }
     }

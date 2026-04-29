@@ -4,6 +4,9 @@ import PublicationItem from '../../components/PublicationItem.astro';
 import publications from '../../data/publications.json';
 import type { Publication } from '../../lib/types';
 import { SYSTEMS, systemMatches } from '../../lib/systems';
+import { totalCitations, recentCitations } from '../../lib/citations';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 export function getStaticPaths() {
   return SYSTEMS.map((s) => ({
@@ -17,8 +20,31 @@ const pubs = (publications as Publication[])
   .filter((p) => systemMatches(p.system, system.slug))
   .sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || (b.month ?? 0) - (a.month ?? 0));
 
-// Sub-system tags actually present in the data (e.g. energy:electricity).
-// Surfaces granularity to readers without us having to enumerate sub-keys.
+// Stats strip
+const RECENT_YEARS = 3;
+const currentYear = new Date().getFullYear();
+const recentCutoff = currentYear - RECENT_YEARS + 1;
+const totalCitesSum = pubs.reduce((sum, p) => sum + totalCitations(p), 0);
+const recentCitesSum = pubs.reduce((sum, p) => sum + recentCitations(p, RECENT_YEARS), 0);
+const recentPapersCount = pubs.filter((p) => typeof p.year === 'number' && p.year >= recentCutoff).length;
+
+// Papers-per-year sparkline. Series spans the full range from the earliest
+// to most-recent paper so empty years show as gaps in the bar chart.
+const yearCounts = new Map<number, number>();
+for (const p of pubs) {
+  if (typeof p.year === 'number') {
+    yearCounts.set(p.year, (yearCounts.get(p.year) ?? 0) + 1);
+  }
+}
+const minYear = yearCounts.size ? Math.min(...yearCounts.keys()) : currentYear;
+const maxYear = yearCounts.size ? Math.max(...yearCounts.keys()) : currentYear;
+const yearSeries: { year: number; count: number }[] = [];
+for (let y = minYear; y <= maxYear; y++) {
+  yearSeries.push({ year: y, count: yearCounts.get(y) ?? 0 });
+}
+const maxYearCount = Math.max(...yearSeries.map((y) => y.count), 1);
+
+// Sub-system tags actually present (e.g. energy:electricity → "electricity").
 const subSystems = Array.from(
   new Set(
     pubs
@@ -27,28 +53,129 @@ const subSystems = Array.from(
       .map((v) => v.split(':').slice(1).join(':'))
   ),
 ).sort();
+
+// Hero image: filename declared in src/lib/systems.ts → file in
+// /public/research/ (preferred) or /public/images/ (shared). Falls back to
+// a tinted color band when not set.
+function resolveHeroUrl(filename: string | null | undefined): string | null {
+  if (!filename) return null;
+  for (const folder of ['research', 'images']) {
+    if (existsSync(resolve('public', folder, filename))) return `/${folder}/${filename}`;
+  }
+  return null;
+}
+const heroUrl = resolveHeroUrl(system.heroImage);
 ---
 
 <BaseLayout title={`Research · ${system.title}`}>
-  <section class="container-content pt-8 pb-6">
-    <p class="eyebrow mb-4">
-      <a href="/research" class="border-b-0 hover:text-ink">RESEARCH</a>
-      <span class="dot">›</span>
-      SYSTEM
-    </p>
-    <h1>{system.title}</h1>
-    <p class="lede max-w-prose mt-4">{system.summary}</p>
+  {/* Hero band: image when set, else a tinted swath of the system's color. */}
+  <section class="relative">
+    {heroUrl ? (
+      <div
+        class="w-full bg-paper-2 bg-cover bg-center"
+        style="aspect-ratio: 16 / 5;"
+        role="img"
+        aria-label={`${system.title} system hero image`}
+      >
+        <img
+          src={heroUrl}
+          alt={`${system.title} system`}
+          loading="eager"
+          class="w-full h-full object-cover block"
+        />
+      </div>
+    ) : (
+      <div
+        class="w-full"
+        style={`aspect-ratio: 16 / 5; background: linear-gradient(180deg, color-mix(in oklab, ${system.color} 22%, var(--paper)) 0%, var(--paper) 100%);`}
+      ></div>
+    )}
+    <div
+      class="container-content pt-6 pb-2"
+      style={`border-top: 4px solid ${system.color};`}
+    >
+      <p class="eyebrow mb-2">
+        <a href="/research" class="border-b-0 hover:text-ink">RESEARCH</a>
+        <span class="dot">›</span>
+        <span style={`color: ${system.color};`}>SYSTEM</span>
+      </p>
+      <h1 class="m-0">{system.title}</h1>
+      <p class="lede max-w-prose mt-3 mb-0">{system.summary}</p>
+    </div>
+  </section>
+
+  {/* Stats strip + sparkline. Side-by-side on wide screens, stacked on narrow. */}
+  <section class="container-content pt-6 pb-6">
+    <div class="grid md:grid-cols-2 gap-8 border-y border-rule py-5">
+      <div class="grid grid-cols-2 gap-x-6 gap-y-3">
+        <div>
+          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 m-0">Papers</p>
+          <p class="font-serif text-3xl m-0" style="line-height: 1;">{pubs.length}</p>
+        </div>
+        <div>
+          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 m-0">Citations</p>
+          <p class="font-serif text-3xl m-0" style="line-height: 1;">{totalCitesSum.toLocaleString()}</p>
+        </div>
+        <div>
+          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 m-0">Last 3 yrs · papers</p>
+          <p class="font-serif text-3xl m-0" style="line-height: 1;">{recentPapersCount}</p>
+        </div>
+        <div>
+          <p class="font-mono text-xs uppercase tracking-wider text-ink-3 m-0">Last 3 yrs · cites</p>
+          <p class="font-serif text-3xl m-0" style="line-height: 1;">{recentCitesSum.toLocaleString()}</p>
+        </div>
+      </div>
+
+      <div>
+        <p class="font-mono text-xs uppercase tracking-wider text-ink-3 m-0 mb-2">
+          Papers by year
+        </p>
+        <svg
+          viewBox="0 0 100 30"
+          preserveAspectRatio="none"
+          class="w-full block"
+          style="height: 64px;"
+          role="img"
+          aria-label={`Papers per year ${minYear}–${maxYear}`}
+        >
+          {yearSeries.map((y, i) => {
+            const w = 100 / yearSeries.length;
+            const h = (y.count / maxYearCount) * 30;
+            return (
+              <rect
+                x={i * w + 0.4}
+                y={30 - h}
+                width={Math.max(w - 0.8, 0.4)}
+                height={Math.max(h, 0.3)}
+                fill={system.color}
+              >
+                <title>{y.year}: {y.count} paper{y.count === 1 ? '' : 's'}</title>
+              </rect>
+            );
+          })}
+        </svg>
+        <div class="flex justify-between font-mono text-[10px] text-ink-3 mt-1">
+          <span>{minYear}</span>
+          <span>{maxYear}</span>
+        </div>
+      </div>
+    </div>
 
     {subSystems.length > 0 && (
-      <p class="font-mono text-xs uppercase tracking-wider text-ink-3 mt-4">
-        Sub-areas:
-        {subSystems.map((sub, i) => (
-          <>
-            {i > 0 && <span class="dot">·</span>}
-            <span class="text-ink-2">{sub.replace(/-/g, ' ')}</span>
-          </>
-        ))}
-      </p>
+      <div class="mt-6">
+        <p class="font-mono text-xs uppercase tracking-wider text-ink-3 m-0 mb-2">Sub-areas</p>
+        <div class="flex flex-wrap gap-2">
+          {subSystems.map((sub) => (
+            <a
+              href={`/publications?system=${encodeURIComponent(system.slug + ':' + sub)}`}
+              class="px-3 py-1 text-sm bg-paper-2 text-ink-2 hover:text-ink hover:bg-paper border border-rule border-b-0"
+              style={`border-radius: var(--radius-sm); border-left: 2px solid ${system.color};`}
+            >
+              {sub.replace(/-/g, ' ')}
+            </a>
+          ))}
+        </div>
+      </div>
     )}
   </section>
 
@@ -62,7 +189,7 @@ const subSystems = Array.from(
   <hr class="border-rule" />
 
   <section class="container-content pt-8 pb-24">
-    <div class="flex items-baseline justify-between mb-4">
+    <div class="flex items-baseline justify-between mb-4 gap-4 flex-wrap">
       <p class="eyebrow m-0">
         Papers in this system <span class="text-ink-3">· {pubs.length}</span>
       </p>

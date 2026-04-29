@@ -41,7 +41,7 @@ const max = Math.max(...citations.map((c) => c.count), 1);
   </svg>
   <div class="flex justify-between items-baseline mt-1 font-mono text-[10px] text-ink-3 leading-none">
     <span>{citations[0].year}</span>
-    {total != null && <span>{total.toLocaleString()} citations</span>}
+    {total != null && <span>{total.toLocaleString()} cites</span>}
     <span>{citations[citations.length - 1].year}</span>
   </div>
 </div>

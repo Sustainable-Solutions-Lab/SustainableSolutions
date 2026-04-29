@@ -33,6 +33,21 @@ const cards = sorted.map((t) => {
     companion,
   };
 });
+
+// Cornerstone initiative card — special-treatment spotlight rendered
+// above the sheet-driven tools. Logo file falls back gracefully: drop
+// a SVG/PNG at /public/tools/cornerstone.svg or .png to replace the
+// serif text overlay.
+function resolveCornerstoneLogo(): string | null {
+  for (const ext of ['svg', 'png', 'webp', 'jpg']) {
+    const fname = `cornerstone.${ext}`;
+    for (const folder of ['tools', 'images']) {
+      if (existsSync(resolve('public', folder, fname))) return `/${folder}/${fname}`;
+    }
+  }
+  return null;
+}
+const cornerstoneLogo = resolveCornerstoneLogo();
 ---
 
 <BaseLayout title="Tools">
@@ -46,6 +61,85 @@ const cards = sorted.map((t) => {
 
   <section class="container-content pb-24">
     <ul class="list-none p-0 m-0 grid md:grid-cols-2 gap-6">
+      {/*
+        Cornerstone initiative — full-width card, spectral-gradient hero
+        with logo overlay (or serif title fallback). Three external links
+        in the footer go to website / Zenodo community / GitHub org.
+      */}
+      <li class="m-0 p-0 md:col-span-2">
+        <article
+          class="block bg-paper border border-rule overflow-hidden"
+          style="border-radius: var(--radius-md);"
+        >
+          <div
+            class="relative flex items-center justify-center"
+            style="
+              aspect-ratio: 16 / 5;
+              background: linear-gradient(
+                90deg,
+                var(--spectral-1)  0%,
+                var(--spectral-3)  18%,
+                var(--spectral-5)  36%,
+                var(--spectral-7)  54%,
+                var(--spectral-9)  72%,
+                var(--spectral-10) 88%,
+                var(--spectral-11) 100%
+              );
+            "
+          >
+            {/* Soft paper overlay so the logo / title reads cleanly on the gradient. */}
+            <div
+              aria-hidden="true"
+              class="absolute inset-0"
+              style="background: color-mix(in oklab, var(--paper) 30%, transparent);"
+            ></div>
+            {cornerstoneLogo ? (
+              <img
+                src={cornerstoneLogo}
+                alt="Cornerstone"
+                class="relative block max-h-20 md:max-h-24 max-w-[60%]"
+              />
+            ) : (
+              <p
+                class="relative font-serif m-0"
+                style="font-size: clamp(36px, 6vw, 64px); color: var(--ink); letter-spacing: -0.02em;"
+              >
+                Cornerstone
+              </p>
+            )}
+          </div>
+          <div class="p-6">
+            <p class="eyebrow m-0 mb-2">INITIATIVE</p>
+            <h3 class="m-0">Cornerstone</h3>
+            <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">
+              An open-data initiative the lab participates in. Description goes
+              here — replace this paragraph with one that captures Cornerstone's
+              mission and the lab's role.
+            </p>
+            <div class="flex flex-wrap gap-x-5 gap-y-1 mt-4 font-mono text-xs uppercase tracking-wider">
+              <a
+                href="https://cornerstonedata.org/"
+                class="text-ink-2 hover:text-ink border-b-0"
+                target="_blank"
+                rel="noopener"
+              >Website ↗</a>
+              <a
+                href="https://zenodo.org/communities/cornerstone-data/records?q=&l=list&p=1&s=10&sort=newest"
+                class="text-ink-2 hover:text-ink border-b-0"
+                target="_blank"
+                rel="noopener"
+              >Zenodo ↗</a>
+              <a
+                href="https://github.com/cornerstone-data"
+                class="text-ink-2 hover:text-ink border-b-0"
+                target="_blank"
+                rel="noopener"
+              >GitHub ↗</a>
+            </div>
+          </div>
+        </article>
+      </li>
+
       {cards.map((t) => (
         <li class="m-0 p-0">
           <a

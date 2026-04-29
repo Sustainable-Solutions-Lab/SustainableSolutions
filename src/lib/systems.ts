@@ -44,19 +44,19 @@ export const SYSTEMS: System[] = [
     slug: 'materials',
     title: 'Materials',
     summary: 'Decarbonization of structural materials — cement and steel — and securing of critical material supply chains.',
-    color: 'var(--spectral-5)',  // yellow
+    color: 'var(--spectral-11)', // purple
   },
   {
     slug: 'climate',
     title: 'Climate',
     summary: 'Climate effects of greenhouse gas and air pollution emissions.',
-    color: 'var(--spectral-2)',  // red
+    color: 'var(--brand-teal)',  // light blue (distinct from water's spectral-10)
   },
   {
     slug: 'health',
     title: 'Health',
     summary: 'Air pollution, heat exposure, and the human consequences of environmental change.',
-    color: 'var(--spectral-11)', // purple
+    color: 'var(--spectral-2)',  // red
   },
 ];
 

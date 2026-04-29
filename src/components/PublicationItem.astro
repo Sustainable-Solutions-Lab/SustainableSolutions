@@ -65,10 +65,11 @@ function newsYearLabel(d: string | null | undefined): string {
 }
 
 // Gate the impact row (citation chart + Altmetric/Dimensions badges) on a
-// minimum citation count. Newer/uncited papers don't get a near-empty chart
-// and an empty pair of badges screaming for attention.
+// minimum citation count or featured status. Featured papers always get
+// the impact strip even if they're new/lightly-cited; otherwise we wait
+// for ≥ IMPACT_THRESHOLD citations to avoid an empty chart and badges.
 const IMPACT_THRESHOLD = 100;
-const showImpact = (totalCitationsForPub ?? 0) >= IMPACT_THRESHOLD;
+const showImpact = !!pub.featured || (totalCitationsForPub ?? 0) >= IMPACT_THRESHOLD;
 
 // Sort scores. Used by the publications page's Sort dropdown via data-* attrs.
 const currentYear = new Date().getFullYear();

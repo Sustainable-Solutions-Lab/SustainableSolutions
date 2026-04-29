@@ -1,16 +1,97 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import publications from '../../data/publications.json';
-import type { Publication } from '../../lib/types';
+import people from '../../data/people.json';
+import type { Publication, Person } from '../../lib/types';
 import { SYSTEMS, systemMatches } from '../../lib/systems';
 import { totalCitations } from '../../lib/citations';
+import { splitAndLinkAuthors } from '../../lib/author-links';
 
 const pubs = publications as Publication[];
-const cards = SYSTEMS.map((s) => {
+const peopleArr = people as Person[];
+
+// ── Systems cards ────────────────────────────────────────────────────────────
+const systemCards = SYSTEMS.map((s) => {
   const myPubs = pubs.filter((p) => systemMatches(p.system, s.slug));
   const cites = myPubs.reduce((sum, p) => sum + totalCitations(p), 0);
   return { ...s, count: myPubs.length, cites };
 });
+
+// ── Topics cards (matrix response axis) ──────────────────────────────────────
+function responsePrefix(p: Publication, prefix: string): boolean {
+  return (p.response ?? []).some((r) => r === prefix || r.startsWith(prefix + ':'));
+}
+const TOPICS = [
+  {
+    slug: 'mitigation',
+    title: 'Mitigation',
+    summary: 'Reducing greenhouse-gas emissions across systems — including the trade and carbon-management dimensions.',
+    color: 'var(--spectral-10)',
+    subs: [
+      { match: 'mitigation',                   label: 'General' },
+      { match: 'mitigation:trade',             label: 'Trade' },
+      { match: 'mitigation:carbon-management', label: 'Carbon mgmt' },
+    ],
+  },
+  {
+    slug: 'impacts',
+    title: 'Impacts & adaptation',
+    summary: 'Consequences of climate change for people and systems — air pollution, heat, drought, fire, flooding.',
+    color: 'var(--spectral-2)',
+    subs: [
+      { match: 'impacts',               label: 'General' },
+      { match: 'impacts:air-pollution', label: 'Air pollution' },
+      { match: 'impacts:heat',          label: 'Heat' },
+      { match: 'impacts:drought',       label: 'Drought' },
+      { match: 'impacts:fire',          label: 'Fire' },
+      { match: 'impacts:flooding',      label: 'Flooding' },
+    ],
+  },
+];
+const topicCards = TOPICS.map((t) => {
+  const myPubs = pubs.filter((p) => responsePrefix(p, t.slug));
+  const cites = myPubs.reduce((sum, p) => sum + totalCitations(p), 0);
+  return { ...t, count: myPubs.length, cites };
+});
+
+// ── Approach cards (Conceptual / Data-driven) ────────────────────────────────
+const ciuSlugs = new Set(peopleArr.filter((p) => p.unit === 'ciu').map((p) => p.slug));
+function isConceptual(pub: Publication): boolean {
+  for (const seg of splitAndLinkAuthors(pub.authors ?? '', peopleArr)) {
+    if (seg.slug && ciuSlugs.has(seg.slug)) return true;
+  }
+  return false;
+}
+const conceptualPubs = pubs.filter(isConceptual);
+const dataDrivenPubs = pubs.filter((p) => !isConceptual(p));
+const conceptualCites = conceptualPubs.reduce((s, p) => s + totalCitations(p), 0);
+const dataDrivenCites = dataDrivenPubs.reduce((s, p) => s + totalCitations(p), 0);
+const ciuMembers = peopleArr.filter((p) => p.unit === 'ciu').length;
+
+const approachCards = [
+  {
+    slug: 'conceptual',
+    title: 'Conceptual',
+    summary:
+      `Theory-first work led by the lab's Conceptual Investigations Unit — ${ciuMembers} affiliated researcher${ciuMembers === 1 ? '' : 's'} synthesizing across the data-driven projects below.`,
+    color: 'var(--cardinal)',
+    href: '/publications?approach=ciu',
+    count: conceptualPubs.length,
+    cites: conceptualCites,
+    eyebrow: 'CONCEPTUAL · CIU',
+  },
+  {
+    slug: 'data-driven',
+    title: 'Data-driven',
+    summary:
+      'Empirical and modeling work that quantifies emissions, impacts, and pathways across the systems and topics above.',
+    color: 'var(--ink-2)',
+    href: '/publications?approach=non-ciu',
+    count: dataDrivenPubs.length,
+    cites: dataDrivenCites,
+    eyebrow: 'DATA-DRIVEN',
+  },
+];
 ---
 
 <BaseLayout title="Research" showCoordReadout={true}>
@@ -20,13 +101,15 @@ const cards = SYSTEMS.map((s) => {
     <p class="lede max-w-prose mt-4">
       The lab studies the unavoidable environmental tradeoffs of energy, food,
       and material security — and the most viable paths to a sustainable future.
-      Our work spans six interconnected systems.
+      Our work spans six interconnected systems, two main topic axes, and two
+      complementary methodological approaches.
     </p>
   </section>
 
-  <section class="container-content pb-24">
+  <section class="container-content pb-10">
+    <p class="eyebrow mb-4">BY SYSTEM</p>
     <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0 m-0">
-      {cards.map((s) => (
+      {systemCards.map((s) => (
         <li class="m-0 p-0 h-full">
           <a
             href={`/research/${s.slug}`}
@@ -43,6 +126,79 @@ const cards = SYSTEMS.map((s) => {
                 <span class="text-ink-2">{s.count}</span> paper{s.count === 1 ? '' : 's'}
                 <span class="dot">·</span>
                 <span class="text-ink-2">{s.cites.toLocaleString()}</span> cite{s.cites === 1 ? '' : 's'}
+              </p>
+            </div>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <hr class="border-rule" />
+
+  <section class="container-content pt-8 pb-10">
+    <p class="eyebrow mb-4">BY TOPIC</p>
+    <ul class="grid md:grid-cols-2 gap-4 list-none p-0 m-0">
+      {topicCards.map((t) => (
+        <li class="m-0 p-0 h-full">
+          <article
+            class="flex flex-col h-full bg-paper border border-rule overflow-hidden"
+            style={`border-radius: var(--radius-md); border-top: 4px solid ${t.color};`}
+          >
+            <div class="p-5 flex-1 flex flex-col">
+              <p class="eyebrow m-0 mb-2" style={`color: ${t.color};`}>TOPIC</p>
+              <h3 class="m-0">
+                <a
+                  href={`/publications?response=${encodeURIComponent(t.slug)}`}
+                  class="border-b-0 hover:underline"
+                >{t.title}</a>
+              </h3>
+              <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">
+                {t.summary}
+              </p>
+              <div class="flex flex-wrap gap-2 mt-3">
+                {t.subs.map((sub) => (
+                  <a
+                    href={`/publications?response=${encodeURIComponent(sub.match)}`}
+                    class="px-2 py-0.5 text-xs bg-paper-2 text-ink-2 hover:text-ink hover:bg-paper border border-rule border-b-0"
+                    style={`border-radius: var(--radius-sm); border-left: 2px solid ${t.color};`}
+                  >{sub.label}</a>
+                ))}
+              </div>
+              <p class="font-mono text-xs uppercase tracking-wider text-ink-3 mt-auto pt-4 m-0">
+                <span class="text-ink-2">{t.count}</span> paper{t.count === 1 ? '' : 's'}
+                <span class="dot">·</span>
+                <span class="text-ink-2">{t.cites.toLocaleString()}</span> cite{t.cites === 1 ? '' : 's'}
+              </p>
+            </div>
+          </article>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <hr class="border-rule" />
+
+  <section class="container-content pt-8 pb-24">
+    <p class="eyebrow mb-4">BY APPROACH</p>
+    <ul class="grid md:grid-cols-2 gap-4 list-none p-0 m-0">
+      {approachCards.map((a) => (
+        <li class="m-0 p-0 h-full">
+          <a
+            href={a.href}
+            class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
+            style={`border-radius: var(--radius-md); border-top: 4px solid ${a.color}; overflow: hidden;`}
+          >
+            <div class="p-5 flex-1 flex flex-col">
+              <p class="eyebrow m-0 mb-2" style={`color: ${a.color};`}>{a.eyebrow}</p>
+              <h3 class="m-0">{a.title}</h3>
+              <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">
+                {a.summary}
+              </p>
+              <p class="font-mono text-xs uppercase tracking-wider text-ink-3 mt-auto pt-4 m-0">
+                <span class="text-ink-2">{a.count}</span> paper{a.count === 1 ? '' : 's'}
+                <span class="dot">·</span>
+                <span class="text-ink-2">{a.cites.toLocaleString()}</span> cite{a.cites === 1 ? '' : 's'}
               </p>
             </div>
           </a>

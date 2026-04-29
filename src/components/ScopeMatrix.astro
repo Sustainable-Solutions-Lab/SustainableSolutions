@@ -437,17 +437,34 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
       'recent-papers':  function (n) { return n + ' recent paper' + (n === 1 ? '' : 's') + ' (' + recentYears + 'yr)'; },
     };
 
+    // Mode → publications-page sort dropdown value. Click-through carries
+    // the active matrix metric so the filtered list lands sorted accordingly.
+    const MODE_TO_SORT = {
+      'papers':         '',  // default = date
+      'citations':      'total-citations',
+      'recent-cites':   'recent-citations',
+      'recent-papers':  '',  // sort by date works fine
+    };
+
     function applyMode(mode) {
       const sortedList = ranks[mode];
       if (!sortedList) return;
       const key = dskey(mode);
       const format = fmt[mode];
+      const sortVal = MODE_TO_SORT[mode] ?? '';
       cells.forEach(function (cell) {
         const v = parseFloat(cell.dataset[key] || '0') || 0;
         cell.style.backgroundColor = cellBg(v, sortedList);
         const label = cell.dataset.label || '';
         cell.setAttribute('aria-label', label + ' — ' + format(v));
         cell.setAttribute('title', label + ' · ' + format(v));
+        // Update href to include the matching sort param.
+        try {
+          const url = new URL(cell.href, window.location.origin);
+          if (sortVal) url.searchParams.set('sort', sortVal);
+          else url.searchParams.delete('sort');
+          cell.setAttribute('href', url.pathname + url.search);
+        } catch {}
       });
       buttons.forEach(function (b) {
         const active = b.dataset.mode === mode;

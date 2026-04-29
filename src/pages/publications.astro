@@ -133,6 +133,19 @@ const total = all.length;
         </select>
       </label>
 
+      <label class="flex items-center gap-2 text-sm">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Approach</span>
+        <select
+          id="pub-approach"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
+          style="border-radius: var(--radius-sm);"
+        >
+          <option value="">All approaches</option>
+          <option value="ciu">Conceptual (CIU)</option>
+          <option value="non-ciu">Data-driven</option>
+        </select>
+      </label>
+
       {labAuthorOptions.length > 0 && (
         <label class="flex items-center gap-2 text-sm">
           <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Author</span>
@@ -201,6 +214,7 @@ const total = all.length;
     const yearSel = document.getElementById('pub-year');
     const systemSel = document.getElementById('pub-system');
     const topicSel = document.getElementById('pub-topic');
+    const approachSel = document.getElementById('pub-approach');
     const authorSel = document.getElementById('pub-author');
     const sortSel = document.getElementById('pub-sort');
     const feat = document.getElementById('pub-featured');
@@ -247,6 +261,7 @@ const total = all.length;
       const y = yearSel?.value ?? '';
       const sys = systemSel?.value ?? '';
       const top = topicSel?.value ?? '';
+      const ap = approachSel?.value ?? '';
       const a = authorSel?.value ?? '';
       const f = feat?.checked ?? false;
 
@@ -255,11 +270,14 @@ const total = all.length;
         const sysVals = (li.dataset.system ?? '').split(',').filter(Boolean);
         const respVals = (li.dataset.response ?? '').split(',').filter(Boolean);
         const labAuthors = (li.dataset.labAuthors ?? '').split(',').filter(Boolean);
+        const ciu = li.dataset.ciu === 'true';
+        const okApproach = !ap || (ap === 'ciu' && ciu) || (ap === 'non-ciu' && !ciu);
         const ok =
           (!q || (li.dataset.search ?? '').includes(q)) &&
           (!y || li.dataset.year === y) &&
           (!a || labAuthors.includes(a)) &&
           (!f || li.dataset.featured === 'true') &&
+          okApproach &&
           axisHasPrefix(sysVals, sys) &&
           axisHasPrefix(respVals, top);
         li.hidden = !ok;
@@ -284,12 +302,18 @@ const total = all.length;
       const opt = Array.from(sel.options).find((o) => o.value === value);
       if (opt) sel.value = value;
     };
-    setSelectIfPresent(authorSel, params.get('author'));
-    setSelectIfPresent(sortSel,   params.get('sort'));
-    setSelectIfPresent(systemSel, (params.get('system') ?? '').trim());
-    setSelectIfPresent(topicSel,  (params.get('response') ?? '').trim());
+    setSelectIfPresent(authorSel,    params.get('author'));
+    setSelectIfPresent(sortSel,      params.get('sort'));
+    setSelectIfPresent(systemSel,    (params.get('system') ?? '').trim());
+    setSelectIfPresent(topicSel,     (params.get('response') ?? '').trim());
+    // ?ciu=true → Conceptual; ?ciu=false → Data-driven; ?approach=ciu / non-ciu also works
+    const approachParam = params.get('approach') ?? (
+      params.get('ciu') === 'true' ? 'ciu' :
+      params.get('ciu') === 'false' ? 'non-ciu' : null
+    );
+    setSelectIfPresent(approachSel, approachParam);
 
-    [search, yearSel, systemSel, topicSel, authorSel, feat].forEach((el) => {
+    [search, yearSel, systemSel, topicSel, approachSel, authorSel, feat].forEach((el) => {
       el?.addEventListener('input', apply);
       el?.addEventListener('change', apply);
     });

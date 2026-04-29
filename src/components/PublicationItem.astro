@@ -1,6 +1,7 @@
 ---
-import type { Publication, Person } from '../lib/types';
+import type { Publication, Person, NewsItem } from '../lib/types';
 import people from '../data/people.json';
+import news from '../data/news.json';
 import { splitAndLinkAuthors, toNaturalOrder } from '../lib/author-links';
 import { roleColor } from '../lib/roles';
 import { SYSTEMS } from '../lib/systems';
@@ -8,6 +9,18 @@ import { citationsArray, totalCitations } from '../lib/citations';
 import CitationChart from './CitationChart.astro';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+
+// Build a {DOI → NewsItem[]} map once so each pub card can surface its
+// press coverage. Keys lowercased for case-insensitive matching.
+const newsByDoi = new Map<string, NewsItem[]>();
+for (const n of (news as NewsItem[])) {
+  if (!n.doi) continue;
+  const k = n.doi.trim().toLowerCase();
+  if (!k) continue;
+  const arr = newsByDoi.get(k) ?? [];
+  arr.push(n);
+  newsByDoi.set(k, arr);
+}
 
 interface Props {
   pub: Publication;
@@ -37,6 +50,19 @@ const primarySystemColor = primarySystem
 
 const citationsForPub = citationsArray(pub);
 const totalCitationsForPub = citationsForPub ? totalCitations(pub) : null;
+
+// News mentions of this paper, sorted newest-first. Sourced from the News
+// tab's `doi` column (rendered as mini chips on non-featured cards).
+const newsForPub: NewsItem[] = pub.doi
+  ? (newsByDoi.get(pub.doi.toLowerCase()) ?? []).slice().sort(
+      (a, b) => (b.date ?? '').localeCompare(a.date ?? ''),
+    )
+  : [];
+function newsYearLabel(d: string | null | undefined): string {
+  if (!d) return '';
+  const m = String(d).match(/^(\d{4})/) ?? String(d).match(/(\d{4})$/);
+  return m ? m[1] : '';
+}
 
 // Gate the impact row (citation chart + Altmetric/Dimensions badges) on a
 // minimum citation count. Newer/uncited papers don't get a near-empty chart
@@ -338,6 +364,27 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
           {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
         </div>
       </div>
+
+      {newsForPub.length > 0 && (
+        <p class="font-mono text-xs text-ink-3 mt-2 m-0">
+          <span class="uppercase tracking-wider mr-1">In the news:</span>
+          {newsForPub.map((nws, i) => (
+            <>
+              {i > 0 && <span class="dot">·</span>}
+              {nws.link ? (
+                <a
+                  href={nws.link}
+                  class="text-ink-2 hover:text-ink border-b-0"
+                  data-external
+                  title={nws.title}
+                >{nws.source ?? nws.title}{newsYearLabel(nws.date) && <span class="text-ink-3"> ({newsYearLabel(nws.date)})</span>}</a>
+              ) : (
+                <span>{nws.source ?? nws.title}</span>
+              )}
+            </>
+          ))}
+        </p>
+      )}
     </div>
   )}
 </li>

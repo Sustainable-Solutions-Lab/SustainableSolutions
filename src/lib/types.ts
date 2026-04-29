@@ -73,6 +73,9 @@ export type NewsItem = {
   system: string[];     // multi-value, comma-separated in sheet
   topic: string[];      // multi-value, comma-separated in sheet (matrix "response")
   source: string | null;  // outlet name shown as the eyebrow (e.g. "New York Times")
+  // Cross-references: surface the news item on linked Tool / Person cards.
+  tool: string[];       // tool slugs (e.g. cornerstone)
+  people: string[];     // person slugs (e.g. wes-ingwersen)
 };
 
 export type Tool = {

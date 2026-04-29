@@ -1,10 +1,11 @@
 ---
-import type { Person, Publication, Tool } from '../lib/types';
+import type { Person, Publication, Tool, NewsItem } from '../lib/types';
 import { roleColor } from '../lib/roles';
 import { splitAndLinkAuthors } from '../lib/author-links';
 import publications from '../data/publications.json';
 import externalPubs from '../data/external-pubs.json';
 import tools from '../data/tools.json';
+import news from '../data/news.json';
 import scholarDetails from '../../templates/scholar-details.json';
 
 interface Props {
@@ -129,6 +130,19 @@ function pubMeta(pub: Publication) {
 }
 const notableMeta = notable ? pubMeta(notable) : null;
 const recentMeta = recent ? pubMeta(recent) : null;
+
+// News mentions tagged to this person via the News tab's `people` column.
+// Sorted newest-first; capped at 3 to keep the card compact.
+const personNews: NewsItem[] = (news as NewsItem[])
+  .filter((n) => Array.isArray(n.people) && n.people.includes(person.slug) && n.title)
+  .slice()
+  .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
+  .slice(0, 3);
+function newsYearLabel(d: string | null | undefined): string {
+  if (!d) return '';
+  const m = String(d).match(/^(\d{4})/) ?? String(d).match(/(\d{4})$/);
+  return m ? m[1] : '';
+}
 ---
 
 <article
@@ -234,6 +248,31 @@ const recentMeta = recent ? pubMeta(recent) : null;
             )}
           </div>
         )}
+      </div>
+    )}
+
+    {personNews.length > 0 && (
+      <div class="mt-4 pt-4 border-t border-rule">
+        <p class="eyebrow m-0 mb-1">IN THE NEWS</p>
+        <ul class="list-none p-0 m-0 space-y-1">
+          {personNews.map((nws) => (
+            <li class="m-0 p-0">
+              <p class="font-mono text-xs text-ink-3 m-0" style="line-height: 1.4;">
+                {nws.source && <span class="text-ink-2">{nws.source}</span>}
+                {nws.source && newsYearLabel(nws.date) && <span class="dot">·</span>}
+                {newsYearLabel(nws.date)}
+                {(nws.source || newsYearLabel(nws.date)) && <span class="dot">·</span>}
+                {nws.link ? (
+                  <a href={nws.link} class="text-ink hover:underline border-b-0" data-external>
+                    <em class="not-italic">{nws.title}</em>
+                  </a>
+                ) : (
+                  <em class="not-italic">{nws.title}</em>
+                )}
+              </p>
+            </li>
+          ))}
+        </ul>
       </div>
     )}
 

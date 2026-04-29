@@ -2,8 +2,16 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import news from '../../data/news.json';
 import publications from '../../data/publications.json';
-import type { NewsItem, Publication } from '../../lib/types';
+import tools from '../../data/tools.json';
+import type { NewsItem, Publication, Tool } from '../../lib/types';
 import { SYSTEMS } from '../../lib/systems';
+
+const TOOLS_WITHOUT_DETAIL_PAGE = new Set(['cornerstone']);
+function toolHref(t: Tool): string {
+  if (t.link) return t.link;
+  if (TOOLS_WITHOUT_DETAIL_PAGE.has(t.slug)) return '/tools';
+  return `/tools/${t.slug}`;
+}
 
 // Filter taxonomy mirrors the publications page so users get the same
 // vocabulary across both lists.
@@ -69,6 +77,9 @@ for (const p of publications as Publication[]) {
   if (p.doi) pubsByDoi.set(p.doi.toLowerCase(), p);
 }
 
+const toolsBySlug = new Map<string, Tool>();
+for (const t of tools as Tool[]) toolsBySlug.set(t.slug, t);
+
 const systemBySlug = new Map(SYSTEMS.map((s) => [s.slug, s]));
 
 function responseColor(r: string): string {
@@ -85,6 +96,9 @@ function topLevels(values: string[] | undefined): string[] {
 // stripe color, and a search blob the client filter greps over.
 const cards = items.map((n) => {
   const companion = n.doi ? pubsByDoi.get(n.doi.trim().toLowerCase()) ?? null : null;
+  const companionTools = (n.tool ?? [])
+    .map((slug) => toolsBySlug.get(slug))
+    .filter((t): t is Tool => !!t);
   const sys = (n.system && n.system.length > 0)
     ? n.system
     : ((companion?.system ?? []) as string[]);
@@ -96,16 +110,102 @@ const cards = items.map((n) => {
   const primary = topSys[0] ? systemBySlug.get(topSys[0]) ?? null : null;
   const stripe = primary?.color ?? 'var(--ink-4)';
   const year = n.date ? n.date.slice(0, 4) : '';
-  const searchBlob = [n.title, n.summary, n.source, companion?.title, companion?.journal]
+  const toolsBlob = companionTools.map((t) => t.title).join(' ');
+  const searchBlob = [n.title, n.summary, n.source, companion?.title, companion?.journal, toolsBlob]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
-  return { n, companion, sys, topic, topSys, topTopic, stripe, year, searchBlob };
+  return { n, companion, companionTools, sys, topic, topSys, topTopic, stripe, year, searchBlob };
 });
 
 // Years present in the data, descending. Drop empties.
 const years = Array.from(new Set(cards.map((c) => c.year).filter(Boolean)))
   .sort((a, b) => b.localeCompare(a));
+
+// ── Outlet donut: top-5 sources + "Other" rollup ─────────────────────────────
+const outletCounts = new Map<string, number>();
+for (const c of cards) {
+  const src = (c.n.source ?? '').trim();
+  if (!src) continue;
+  outletCounts.set(src, (outletCounts.get(src) ?? 0) + 1);
+}
+const sortedOutlets = [...outletCounts.entries()].sort((a, b) => b[1] - a[1]);
+const top5Outlets = sortedOutlets.slice(0, 5);
+const otherOutletCount = sortedOutlets.slice(5).reduce((s, [, n]) => s + n, 0);
+const donutSlices: Array<{ label: string; count: number; color: string }> = [];
+const donutColors = [
+  'var(--spectral-2)',  'var(--spectral-3)',  'var(--spectral-5)',
+  'var(--spectral-9)',  'var(--spectral-10)', 'var(--spectral-11)',
+];
+top5Outlets.forEach(([label, count], i) => {
+  donutSlices.push({ label, count, color: donutColors[i] });
+});
+if (otherOutletCount > 0) {
+  donutSlices.push({ label: 'Other', count: otherOutletCount, color: 'var(--ink-4)' });
+}
+const donutTotal = donutSlices.reduce((s, x) => s + x.count, 0);
+// Build cumulative dash offsets for the donut segments. Drawing on a
+// circumference of 100 (viewBox-relative units) — segment length = share × 100.
+const donutSegments = (() => {
+  let offset = 0;
+  return donutSlices.map((s) => {
+    const len = donutTotal > 0 ? (s.count / donutTotal) * 100 : 0;
+    const seg = { ...s, len, offset };
+    offset += len;
+    return seg;
+  });
+})();
+
+// ── Trend lines: total + per-system, year on x-axis ──────────────────────────
+const trendSystems = SYSTEMS.map((s) => ({ slug: s.slug, title: s.title, color: s.color }));
+const trendYears = (() => {
+  const ys = cards.map((c) => parseInt(c.year, 10)).filter((n) => !isNaN(n));
+  if (ys.length === 0) return [] as number[];
+  const min = Math.min(...ys);
+  const max = Math.max(...ys);
+  const out: number[] = [];
+  for (let y = min; y <= max; y++) out.push(y);
+  return out;
+})();
+function trendCounts(slug: string | null): number[] {
+  return trendYears.map((y) => {
+    const yStr = String(y);
+    return cards.filter((c) => {
+      if (c.year !== yStr) return false;
+      if (slug === null) return true;
+      return c.topSys.includes(slug);
+    }).length;
+  });
+}
+const trendSeries: Array<{ slug: string | null; title: string; color: string; values: number[] }> = [
+  { slug: null, title: 'Total', color: 'var(--ink)', values: trendCounts(null) },
+  ...trendSystems.map((s) => ({
+    slug: s.slug,
+    title: s.title,
+    color: s.color,
+    values: trendCounts(s.slug),
+  })),
+];
+const trendMax = Math.max(1, ...trendSeries.flatMap((s) => s.values));
+// SVG geometry: 320x140 with 8px padding, leaving room for sparse year labels.
+const TREND_W = 320;
+const TREND_H = 140;
+const TREND_PAD = { l: 6, r: 6, t: 8, b: 16 };
+const innerW = TREND_W - TREND_PAD.l - TREND_PAD.r;
+const innerH = TREND_H - TREND_PAD.t - TREND_PAD.b;
+function trendPoints(values: number[]): string {
+  if (values.length === 0) return '';
+  if (values.length === 1) {
+    const x = TREND_PAD.l + innerW / 2;
+    const y = TREND_PAD.t + innerH - (values[0] / trendMax) * innerH;
+    return `${x},${y}`;
+  }
+  return values.map((v, i) => {
+    const x = TREND_PAD.l + (i / (values.length - 1)) * innerW;
+    const y = TREND_PAD.t + innerH - (v / trendMax) * innerH;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+}
 
 function sourceLabel(n: NewsItem): string {
   const s = n.source ?? '';
@@ -126,12 +226,116 @@ const total = cards.length;
 
 <BaseLayout title="News">
   <section class="container-content pt-8 pb-6">
-    <p class="eyebrow mb-4">NEWS</p>
-    <h1>Press, papers, and milestones</h1>
-    <p class="lede max-w-prose mt-4">
-      Reverse-chronological. Press coverage of our work, paper releases, op-eds,
-      talks, and lab milestones.
-    </p>
+    <div class="grid md:grid-cols-[2fr_3fr] gap-8 md:gap-10">
+      <div class="min-w-0">
+        <p class="eyebrow mb-4">NEWS</p>
+        <h1>Press, papers, and milestones</h1>
+        <p class="lede mt-4">
+          Reverse-chronological. Press coverage of our work, paper releases,
+          op-eds, talks, and lab milestones.
+        </p>
+      </div>
+
+      {donutTotal > 0 && (
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <figure class="m-0">
+            <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-cardinal m-0 mb-1">
+              <span class="cardinal-dot"></span>FIGURE · TOP OUTLETS
+            </p>
+            <h3 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Where it lands</h3>
+            <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
+              Top 5 outlets across {donutTotal} mentions
+            </p>
+            <div class="flex items-center gap-3">
+              <svg
+                viewBox="0 0 36 36"
+                role="img"
+                aria-label="Distribution of media coverage by outlet"
+                style="width: 110px; height: 110px; flex: none;"
+              >
+                {/* Stacked donut segments using stroke-dashoffset. r=15.915 → C=100. */}
+                {donutSegments.map((s) => (
+                  <circle
+                    cx="18" cy="18" r="15.915"
+                    fill="transparent"
+                    stroke={s.color}
+                    stroke-width="6"
+                    stroke-dasharray={`${s.len.toFixed(3)} ${(100 - s.len).toFixed(3)}`}
+                    stroke-dashoffset={(-s.offset).toFixed(3)}
+                    transform="rotate(-90 18 18)"
+                  ><title>{s.label}: {s.count} mention{s.count === 1 ? '' : 's'}</title></circle>
+                ))}
+              </svg>
+              <ul class="list-none p-0 m-0 text-xs font-mono space-y-1 min-w-0">
+                {donutSegments.map((s) => (
+                  <li class="flex items-baseline gap-2 m-0 min-w-0">
+                    <span class="inline-block shrink-0" style={`width: 8px; height: 8px; background: ${s.color}; border-radius: 1px;`}></span>
+                    <span class="text-ink-2 truncate" title={s.label}>{s.label}</span>
+                    <span class="text-ink-3 ml-auto">{s.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </figure>
+
+          <figure class="m-0">
+            <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-cardinal m-0 mb-1">
+              <span class="cardinal-dot"></span>FIGURE · COVERAGE BY YEAR
+            </p>
+            <h3 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Drumbeat over time</h3>
+            <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
+              Mentions per year, total and by system
+            </p>
+            <svg
+              viewBox={`0 0 ${TREND_W} ${TREND_H}`}
+              preserveAspectRatio="none"
+              role="img"
+              aria-label={`News mentions per year, ${trendYears[0]} to ${trendYears[trendYears.length - 1]}`}
+              class="block w-full"
+              style={`height: 110px;`}
+            >
+              {/* Per-system lines (back) */}
+              {trendSeries.filter((s) => s.slug !== null).map((s) => (
+                <polyline
+                  points={trendPoints(s.values)}
+                  fill="none"
+                  stroke={s.color}
+                  stroke-width="1.25"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  opacity="0.85"
+                ><title>{s.title}</title></polyline>
+              ))}
+              {/* Total line on top, ink, slightly thicker */}
+              <polyline
+                points={trendPoints(trendSeries[0].values)}
+                fill="none"
+                stroke="var(--ink)"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ><title>Total</title></polyline>
+            </svg>
+            <div class="flex justify-between font-mono text-[10px] text-ink-3 mt-0">
+              <span>{trendYears[0]}</span>
+              <span>{trendYears[trendYears.length - 1]}</span>
+            </div>
+            <ul class="list-none p-0 m-0 mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono">
+              <li class="flex items-center gap-1 m-0">
+                <span class="inline-block" style="width: 12px; height: 2px; background: var(--ink);"></span>
+                <span class="text-ink-2">Total</span>
+              </li>
+              {trendSystems.map((s) => (
+                <li class="flex items-center gap-1 m-0">
+                  <span class="inline-block" style={`width: 12px; height: 2px; background: ${s.color};`}></span>
+                  <span class="text-ink-3">{s.title}</span>
+                </li>
+              ))}
+            </ul>
+          </figure>
+        </div>
+      )}
+    </div>
   </section>
 
   <section class="container-content pb-24">
@@ -217,7 +421,7 @@ const total = cards.length;
       <p class="text-ink-3 text-sm">No news items yet — add rows to the News tab in the sheet.</p>
     ) : (
       <ul id="news-list" class="list-none p-0 m-0">
-        {cards.map(({ n, companion, sys, topic, topSys, topTopic, stripe, year, searchBlob }) => {
+        {cards.map(({ n, companion, companionTools, sys, topic, topSys, topTopic, stripe, year, searchBlob }) => {
           const isExternal = !!n.link && /^https?:\/\//.test(n.link);
           const companionUrl = companion
             ? (companion.url ?? (companion.doi ? `https://doi.org/${companion.doi}` : null))
@@ -230,6 +434,8 @@ const total = cards.length;
               data-type={n.type ?? ''}
               data-system={sys.join(',')}
               data-topic={topic.join(',')}
+              data-tool={(n.tool ?? []).join(',')}
+              data-people={(n.people ?? []).join(',')}
               data-featured={String(!!n.featured)}
               data-search={searchBlob}
             >
@@ -292,6 +498,20 @@ const total = cards.length;
                     )}
                     <span class="dot">·</span>
                     {companion.journal} · {companion.year}
+                  </p>
+                )}
+
+                {companionTools.length > 0 && (
+                  <p class="font-mono text-xs text-ink-3 mt-1 m-0">
+                    Companion tool:
+                    {companionTools.map((t, i) => (
+                      <>
+                        {i > 0 && <span class="dot">·</span>}
+                        <a href={toolHref(t)} class="text-ink-2 hover:text-ink border-b-0 ml-1">
+                          {t.title}
+                        </a>
+                      </>
+                    ))}
                   </p>
                 )}
               </article>

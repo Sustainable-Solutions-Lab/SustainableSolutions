@@ -297,6 +297,8 @@ off-screen otherwise.
 | J      | system            | Text, comma-separated                          | Same vocabulary as Publications (`energy`, `food`, …). Inherits from companion publication when blank. |
 | K      | topic             | Text, comma-separated                          | Same vocabulary as Publications `response` (e.g. `mitigation:trade`, `impacts:fire`). Inherits from companion when blank. |
 | L      | source            | Text                                           | Outlet name (e.g. "New York Times", "Heatmap"). Used as the eyebrow on press cards. |
+| M      | tool              | Text, comma-separated                          | Slugs from the Tools tab (e.g. `cornerstone`). Surfaces a "Companion tool" link on the news card and listing of this news item on the tool's card. |
+| N      | people            | Text, comma-separated                          | Slugs from the People tab (e.g. `wes-ingwersen,steve-davis`). Surfaces "In the news" mentions on the person's active-member card. |
 
 ### Tab: `Tools`
 

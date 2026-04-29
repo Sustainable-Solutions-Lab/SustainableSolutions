@@ -299,7 +299,9 @@ function coerce(value, key) {
     key === 'lab_authors' ||
     key === 'system' ||
     key === 'response' ||
-    key === 'topic'
+    key === 'topic' ||
+    key === 'tool' ||
+    key === 'people'
   ) {
     return value.split(',').map((s) => s.trim()).filter(Boolean);
   }

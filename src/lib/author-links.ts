@@ -87,11 +87,26 @@ export function parsePersonName(name: string): ParsedCitation | null {
  * Author can have FEWER givens than person (the citation may omit a middle
  * initial). Author may not have MORE — that would expand the person's name.
  */
+/** Compare two surnames, allowing a hyphenated form on either side to
+ *  match the trailing segment on the other (e.g. roster "Navarro-Fofrich"
+ *  matches a paper's "Fofrich, R."). */
+function lastNamesMatch(a: string, p: string): boolean {
+  if (a === p) return true
+  if (a.includes('-') && a.split('-').pop() === p) return true
+  if (p.includes('-') && p.split('-').pop() === a) return true
+  return false
+}
+
 function matches(a: ParsedCitation, p: ParsedCitation): boolean {
-  if (a.last !== p.last) return false
-  if (a.givens.length === 0) return false
-  if (a.givens.length > p.givens.length) return false
-  for (let i = 0; i < a.givens.length; i++) {
+  if (!lastNamesMatch(a.last, p.last)) return false
+  if (a.givens.length === 0 || p.givens.length === 0) return false
+  // Compare only the givens both sides actually carry. The longer side
+  // may have extra middle initials/names that the shorter side simply
+  // didn't record (roster lists "Lyssa Freese", paper has "Freese, Lyssa
+  // M." — same person, the M just wasn't in the sheet). Trades a small
+  // false-positive risk for catching real lab members.
+  const n = Math.min(a.givens.length, p.givens.length)
+  for (let i = 0; i < n; i++) {
     const ag = a.givens[i]
     const pg = p.givens[i]
     if (ag.length === 1) {

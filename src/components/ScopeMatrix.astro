@@ -17,6 +17,7 @@
 // impacts:drought → Drought row, etc. (prefix match).
 
 import publications from '../data/publications.json';
+import scholarDetails from '../../templates/scholar-details.json';
 import type { Publication } from '../lib/types';
 
 const SYSTEMS = [
@@ -53,43 +54,105 @@ function axisMatches(values: string[], target: string): boolean {
   return false;
 }
 
+// Citation lookup: DOI primary, normalized-title fallback. Most
+// scholar-details entries have no DOI, so title fallback is essential.
+function normalizeTitle(t: string | null | undefined): string {
+  return (t ?? '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+const detailsByDoi = new Map<string, any>();
+const detailsByTitle = new Map<string, any>();
+for (const detail of Object.values(scholarDetails as Record<string, any>)) {
+  if (!detail) continue;
+  if (detail.doi) detailsByDoi.set(detail.doi.toLowerCase(), detail);
+  const tk = normalizeTitle(detail.title);
+  if (tk && !detailsByTitle.has(tk)) detailsByTitle.set(tk, detail);
+}
+function detailFor(pub: Publication): any | null {
+  if (pub.doi) {
+    const d = detailsByDoi.get(pub.doi.toLowerCase());
+    if (d) return d;
+  }
+  const tk = normalizeTitle(pub.title);
+  return tk ? detailsByTitle.get(tk) ?? null : null;
+}
+
+const RECENT_YEARS = 3;
+const currentYear = new Date().getFullYear();
+const recentCutoff = currentYear - RECENT_YEARS + 1;
+
+function totalCitations(pub: Publication): number {
+  return detailFor(pub)?.total_citations ?? 0;
+}
+function recentCitations(pub: Publication): number {
+  const d = detailFor(pub);
+  if (!d || !Array.isArray(d.citations)) return 0;
+  return d.citations
+    .filter((c: any) => c.year >= recentCutoff)
+    .reduce((s: number, c: any) => s + (c.count || 0), 0);
+}
+
 // Key on row.match (which is unique) rather than row.key — MIT and IMP
 // both have a "general" sub-row, and keying on row.key collided so the
 // IMP general count silently overwrote the MIT general count.
-const cellCount: Record<string, number> = {};
-let globalMax = 0;
+const cellPapers: Record<string, number> = {};
+const cellCitations: Record<string, number> = {};
+const cellRecentCites: Record<string, number> = {};
+const cellRecentPapers: Record<string, number> = {};
+
 for (const sys of SYSTEMS) {
   for (const row of [...MIT_ROWS, ...IMP_ROWS]) {
-    let n = 0;
+    let papers = 0, citations = 0, recCites = 0, recPapers = 0;
     for (const p of pubs) {
       const s = (p.system ?? []) as string[];
       const r = (p.response ?? []) as string[];
-      if (axisMatches(s, sys.key) && axisMatches(r, row.match)) n++;
+      if (axisMatches(s, sys.key) && axisMatches(r, row.match)) {
+        papers++;
+        citations += totalCitations(p);
+        recCites += recentCitations(p);
+        if (typeof p.year === 'number' && p.year >= recentCutoff) recPapers++;
+      }
     }
-    cellCount[`${sys.key}|${row.match}`] = n;
-    if (n > globalMax) globalMax = n;
+    const k = `${sys.key}|${row.match}`;
+    cellPapers[k] = papers;
+    cellCitations[k] = citations;
+    cellRecentCites[k] = recCites;
+    cellRecentPapers[k] = recPapers;
   }
 }
 
-// Spectral ramp across the FULL palette: low counts at Spectral-10
-// (deep blue), high at Spectral-1 (wine). Empty cells stay paper-toned.
-//
-// Rank-based percentile scaling: the data is heavy-tailed (one cell at
-// ~100, most under 25), so value-based scales (linear and log alike)
-// pile most cells into one half of the palette. Sorting non-zero cells
-// by count and assigning palette positions by rank gives even visual
-// spread regardless of distribution skew, so 1–2-paper cells reliably
-// land at the blue end and the top reaches wine.
-const nonZeroCounts = Object.values(cellCount).filter((n) => n > 0).sort((a, b) => a - b);
-const rankDenom = Math.max(1, nonZeroCounts.length - 1);
-function cellBg(count: number): string {
-  if (!count) return 'var(--paper-2)';
-  const lower = nonZeroCounts.filter((n) => n < count).length;
-  const equal = nonZeroCounts.filter((n) => n === count).length;
-  const rank = (lower + (equal - 1) / 2) / rankDenom;
+// Rank-percentile color: the data is heavy-tailed at every metric, so
+// value scales pile cells into one half of the palette. Sorting non-zero
+// values per metric and mapping by rank gives even spread blue→wine
+// regardless of distribution skew. Computed per metric so each mode has
+// its own ramp anchored to that metric's own min/max/distribution.
+function sortedNonZero(map: Record<string, number>): number[] {
+  return Object.values(map).filter((n) => n > 0).sort((a, b) => a - b);
+}
+const rankLists = {
+  papers:           sortedNonZero(cellPapers),
+  citations:        sortedNonZero(cellCitations),
+  'recent-cites':   sortedNonZero(cellRecentCites),
+  'recent-papers':  sortedNonZero(cellRecentPapers),
+};
+
+function cellBg(value: number, sorted: number[]): string {
+  if (!value) return 'var(--paper-2)';
+  const lower = sorted.filter((n) => n < value).length;
+  const equal = sorted.filter((n) => n === value).length;
+  const denom = Math.max(1, sorted.length - 1);
+  const rank = (lower + (equal - 1) / 2) / denom;
   const idx = Math.max(1, Math.min(10, Math.round(10 - rank * 9)));
   return `var(--spectral-${idx})`;
 }
+
+// Initial render uses the "papers" metric. JS toggle re-colors and
+// re-labels in place using the embedded rank lists + per-cell data attrs.
+const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
 ---
 
 <figure class="scope-figure">
@@ -101,7 +164,19 @@ function cellBg(count: number): string {
     <em>Publications by system and topic</em>
   </p>
 
-  <div class="scope-grid">
+  <div class="scope-modes" role="radiogroup" aria-label="Recolor matrix by metric">
+    <span class="modes-label">Color by</span>
+    <button class="mode-btn is-active" type="button" data-mode="papers"        aria-pressed="true">Papers</button>
+    <button class="mode-btn"           type="button" data-mode="citations"     aria-pressed="false">Citations</button>
+    <button class="mode-btn"           type="button" data-mode="recent-cites"  aria-pressed="false">Recent cites</button>
+    <button class="mode-btn"           type="button" data-mode="recent-papers" aria-pressed="false">Recent papers</button>
+  </div>
+
+  <div
+    class="scope-grid"
+    data-rank-lists={JSON.stringify(rankLists)}
+    data-recent-years={RECENT_YEARS}
+  >
     {/* Header row: empty section col + empty row-label col + 6 system labels. */}
     <div></div>
     <div></div>
@@ -122,19 +197,30 @@ function cellBg(count: number): string {
       <>
         <div class="row-label">{row.label}</div>
         {SYSTEMS.map((s) => {
-          const count = cellCount[`${s.key}|${row.match}`] ?? 0;
+          const k = `${s.key}|${row.match}`;
+          const cellLabel = `${s.label} × Mitigation: ${row.label}`;
+          const papers = cellPapers[k] ?? 0;
           return (
             <a
               class="cell"
               href={`/publications?system=${encodeURIComponent(s.key)}&response=${encodeURIComponent(row.match)}`}
-              style={`background-color: ${cellBg(count)};`}
-              title={`${s.label} × Mitigation: ${row.label} · ${count} paper${count === 1 ? '' : 's'} · click to filter`}
-              aria-label={`${s.label} × Mitigation: ${row.label} — ${count} papers`}
+              style={`background-color: ${cellBg(papers, rankLists.papers)};`}
+              data-papers={papers}
+              data-citations={cellCitations[k] ?? 0}
+              data-recent-cites={cellRecentCites[k] ?? 0}
+              data-recent-papers={cellRecentPapers[k] ?? 0}
+              data-label={cellLabel}
+              title={`${cellLabel} · ${labelPapers(papers)} · click to filter`}
+              aria-label={`${cellLabel} — ${labelPapers(papers)}`}
             ></a>
           );
         })}
       </>
     ))}
+
+    {/* Spacer row creates breathing room between Mitigation and Impacts so
+        the rotated labels and their colored rules don't crowd each other. */}
+    <div class="section-spacer" style="grid-column: 1 / -1;" aria-hidden="true"></div>
 
     <div class="section-label section-imp" style={`grid-row: span ${IMP_ROWS.length};`}>
       Impacts &amp;<br />adaptation
@@ -144,14 +230,21 @@ function cellBg(count: number): string {
       <>
         <div class="row-label">{row.label}</div>
         {SYSTEMS.map((s) => {
-          const count = cellCount[`${s.key}|${row.match}`] ?? 0;
+          const k = `${s.key}|${row.match}`;
+          const cellLabel = `${s.label} × Impacts: ${row.label}`;
+          const papers = cellPapers[k] ?? 0;
           return (
             <a
               class="cell"
               href={`/publications?system=${encodeURIComponent(s.key)}&response=${encodeURIComponent(row.match)}`}
-              style={`background-color: ${cellBg(count)};`}
-              title={`${s.label} × Impacts: ${row.label} · ${count} paper${count === 1 ? '' : 's'} · click to filter`}
-              aria-label={`${s.label} × Impacts: ${row.label} — ${count} papers`}
+              style={`background-color: ${cellBg(papers, rankLists.papers)};`}
+              data-papers={papers}
+              data-citations={cellCitations[k] ?? 0}
+              data-recent-cites={cellRecentCites[k] ?? 0}
+              data-recent-papers={cellRecentPapers[k] ?? 0}
+              data-label={cellLabel}
+              title={`${cellLabel} · ${labelPapers(papers)} · click to filter`}
+              aria-label={`${cellLabel} — ${labelPapers(papers)}`}
             ></a>
           );
         })}
@@ -194,7 +287,42 @@ function cellBg(count: number): string {
     font-size: 14px;
     font-style: italic;
     color: var(--ink-3);
-    margin: 0 0 14px;
+    margin: 0 0 10px;
+  }
+
+  /* Mode-toggle row: monospace eyebrow buttons for switching the metric
+     used to color cells. Active button gets ink color + cardinal underline. */
+  .scope-modes {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    margin: 0 0 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .modes-label {
+    color: var(--ink-3);
+    margin-right: 2px;
+  }
+  .mode-btn {
+    background: transparent;
+    border: 0;
+    color: var(--ink-3);
+    cursor: pointer;
+    padding: 2px 4px;
+    font: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+    border-bottom: 1px solid transparent;
+    transition: color 0.12s ease, border-color 0.12s ease;
+  }
+  .mode-btn:hover { color: var(--ink-2); }
+  .mode-btn.is-active {
+    color: var(--ink);
+    border-bottom-color: var(--cardinal);
   }
 
   .scope-grid {
@@ -222,11 +350,12 @@ function cellBg(count: number): string {
 
   /* Rotated spine label: bottom-to-top, vertically centered against its rows.
      Allows manual <br/> for multi-line labels (e.g. "Impacts & adaptation").
-     The border-left becomes a colored vertical RULE on the visual right
-     after the 180° rotation — runs the full height of its row group so
-     the reader can see which rows belong to which section. */
+     The colored rule is a ::before pseudo-element so we can inset its top
+     and bottom — without the inset, the two sections' rules would touch
+     across the grid gap. */
   .section-label {
     grid-column: 1;
+    position: relative;
     font-family: var(--font-mono);
     font-size: 10px;
     font-weight: 600;
@@ -241,13 +370,21 @@ function cellBg(count: number): string {
     text-align: center;
     padding-right: 6px;                  /* gap between rule and label text */
   }
-  .section-mit {
-    color: var(--spectral-10);
-    border-left: 2px solid var(--spectral-10);
+  .section-label::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 0;                             /* visual right after rotate(180deg) */
+    width: 2px;
+    background: currentColor;
   }
-  .section-imp {
-    color: var(--spectral-2);
-    border-left: 2px solid var(--spectral-2);
+  .section-mit { color: var(--spectral-10); }
+  .section-imp { color: var(--spectral-2); }
+
+  /* Empty row pushing Mitigation and Impacts apart in the grid flow. */
+  .section-spacer {
+    height: 10px;
   }
 
   .row-label {
@@ -265,7 +402,7 @@ function cellBg(count: number): string {
     border-radius: 3px;
     height: 22px;
     border-bottom: 0;
-    transition: outline 0.12s ease, transform 0.12s ease;
+    transition: outline 0.12s ease, transform 0.12s ease, background-color 0.2s ease;
     cursor: pointer;
   }
   .cell:hover {
@@ -306,3 +443,65 @@ function cellBg(count: number): string {
     );
   }
 </style>
+
+<script is:inline>
+  // Mode toggle for the scope matrix: recolor cells in place using the
+  // metric the user picked. Rank-percentile scaling matches the build-time
+  // logic so colors stay aligned with the colorbar regardless of metric.
+  (function () {
+    const grid = document.querySelector('.scope-grid');
+    if (!grid) return;
+    const ranks = JSON.parse(grid.dataset.rankLists || '{}');
+    const recentYears = parseInt(grid.dataset.recentYears || '3', 10);
+    const cells = grid.querySelectorAll('.cell');
+    const buttons = document.querySelectorAll('.mode-btn');
+
+    function cellBg(value, sortedList) {
+      if (!value || !sortedList || !sortedList.length) return 'var(--paper-2)';
+      let lower = 0, equal = 0;
+      for (const n of sortedList) {
+        if (n < value) lower++;
+        else if (n === value) equal++;
+      }
+      const denom = Math.max(1, sortedList.length - 1);
+      const rank = (lower + (equal - 1) / 2) / denom;
+      const idx = Math.max(1, Math.min(10, Math.round(10 - rank * 9)));
+      return 'var(--spectral-' + idx + ')';
+    }
+
+    // Map data-mode → camelCase dataset key (recent-cites → recentCites).
+    function dskey(mode) {
+      return mode.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); });
+    }
+
+    const fmt = {
+      'papers':         function (n) { return n + ' paper' + (n === 1 ? '' : 's'); },
+      'citations':      function (n) { return Number(n).toLocaleString() + ' citation' + (n === 1 ? '' : 's'); },
+      'recent-cites':   function (n) { return Number(n).toLocaleString() + ' recent citation' + (n === 1 ? '' : 's') + ' (' + recentYears + 'yr)'; },
+      'recent-papers':  function (n) { return n + ' recent paper' + (n === 1 ? '' : 's') + ' (' + recentYears + 'yr)'; },
+    };
+
+    function applyMode(mode) {
+      const sortedList = ranks[mode];
+      if (!sortedList) return;
+      const key = dskey(mode);
+      const format = fmt[mode];
+      cells.forEach(function (cell) {
+        const v = parseFloat(cell.dataset[key] || '0') || 0;
+        cell.style.backgroundColor = cellBg(v, sortedList);
+        const label = cell.dataset.label || '';
+        cell.setAttribute('aria-label', label + ' — ' + format(v));
+        cell.setAttribute('title', label + ' · ' + format(v) + ' · click to filter');
+      });
+      buttons.forEach(function (b) {
+        const active = b.dataset.mode === mode;
+        b.classList.toggle('is-active', active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    }
+
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () { applyMode(b.dataset.mode); });
+    });
+  })();
+</script>

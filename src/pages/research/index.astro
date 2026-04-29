@@ -61,13 +61,15 @@ const dataDrivenPubs = pubs.filter((p) => p.conceptual !== true);
 const conceptualCites = conceptualPubs.reduce((s, p) => s + totalCitations(p), 0);
 const dataDrivenCites = dataDrivenPubs.reduce((s, p) => s + totalCitations(p), 0);
 const ciuMembers = peopleArr.filter((p) => p.unit === 'ciu').length;
+const NUM_WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'];
+const ciuMembersWord = ciuMembers <= 12 ? NUM_WORDS[ciuMembers] : String(ciuMembers);
 
 const approachCards = [
   {
     slug: 'conceptual',
     title: 'Conceptual',
     summary:
-      `Theory-first work led by the lab's Conceptual Investigations Unit — ${ciuMembers} affiliated researcher${ciuMembers === 1 ? '' : 's'} synthesizing across the data-driven projects below.`,
+      `Theory-first work by the lab's Conceptual Investigations Unit — ${ciuMembersWord} affiliated researcher${ciuMembers === 1 ? '' : 's'}, building abstract models in a quest for high-level insights into the behavior of important but complex systems.`,
     color: 'var(--cardinal)',
     href: '/publications?approach=conceptual',
     count: conceptualPubs.length,

@@ -2,8 +2,8 @@
 import type { Publication, Person } from '../lib/types';
 import people from '../data/people.json';
 import { splitAndLinkAuthors, toNaturalOrder } from '../lib/author-links';
-import { themeColor, themeLabel } from '../lib/themes';
 import { roleColor } from '../lib/roles';
+import { SYSTEMS } from '../lib/systems';
 import { citationsArray, totalCitations } from '../lib/citations';
 import CitationChart from './CitationChart.astro';
 import { existsSync } from 'node:fs';
@@ -14,6 +14,26 @@ interface Props {
 }
 
 const { pub } = Astro.props;
+
+// System/topic eyebrow keywords — replace the old free-form `themes` tags.
+// Top-level system → colored chip in its system color. Top-level response
+// (mitigation / impacts) → chip in matrix-section color (spectral-10 / -2).
+const systemBySlug = new Map(SYSTEMS.map((s) => [s.slug, s]));
+const topLevelSystems: string[] = Array.from(
+  new Set((pub.system ?? []).map((v: string) => v.split(':')[0])),
+);
+const topLevelResponses: string[] = Array.from(
+  new Set((pub.response ?? []).map((v: string) => v.split(':')[0])),
+);
+function responseColor(r: string): string {
+  if (r === 'mitigation') return 'var(--spectral-10)';
+  if (r === 'impacts') return 'var(--spectral-2)';
+  return 'var(--ink-3)';
+}
+const primarySystem = topLevelSystems[0];
+const primarySystemColor = primarySystem
+  ? systemBySlug.get(primarySystem)?.color ?? 'var(--ink-4)'
+  : 'var(--ink-4)';
 
 const citationsForPub = citationsArray(pub);
 const totalCitationsForPub = citationsForPub ? totalCitations(pub) : null;
@@ -93,10 +113,6 @@ const heroHash = [...(pub.doi || pub.title || '')].reduce(
 );
 const heroAccent = spectralColors[heroHash % spectralColors.length];
 
-// Theme color stripe — primary theme drives the left-edge color on
-// non-featured cards. Falls back to neutral gray if no themes tagged.
-const pubThemes = pub.themes ?? [];
-const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var(--ink-4)';
 ---
 
 <li
@@ -126,6 +142,22 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
           <em class="not-italic">{pub.journal}</em>
           <span class="dot">·</span>
           {pub.year}
+          {topLevelSystems.map((s) => {
+            const meta = systemBySlug.get(s);
+            if (!meta) return null;
+            return (
+              <>
+                <span class="dot">·</span>
+                <span style={`color: ${meta.color};`}>{meta.title.toUpperCase()}</span>
+              </>
+            );
+          })}
+          {topLevelResponses.map((r) => (
+            <>
+              <span class="dot">·</span>
+              <span style={`color: ${responseColor(r)};`}>{r.toUpperCase()}</span>
+            </>
+          ))}
         </p>
 
         <h3 class="m-0">
@@ -225,16 +257,26 @@ const primaryThemeColor = pubThemes.length > 0 ? themeColor(pubThemes[0]) : 'var
   ) : (
     <div
       class="pl-4"
-      style={`border-left: 4px solid ${primaryThemeColor};`}
+      style={`border-left: 4px solid ${primarySystemColor};`}
     >
       <p class="eyebrow m-0 mb-1">
         <em class="not-italic">{pub.journal}</em>
         <span class="dot">·</span>
         {pub.year}
-        {pubThemes.map((t, i) => (
+        {topLevelSystems.map((s, i) => {
+          const meta = systemBySlug.get(s);
+          if (!meta) return null;
+          return (
+            <span class:list={[i > 0 && 'hidden md:inline']}>
+              <span class="dot">·</span>
+              <span style={`color: ${meta.color};`}>{meta.title.toUpperCase()}</span>
+            </span>
+          );
+        })}
+        {topLevelResponses.map((r, i) => (
           <span class:list={[i > 0 && 'hidden md:inline']}>
             <span class="dot">·</span>
-            <span style={`color: ${themeColor(t)};`}>{themeLabel(t).toUpperCase()}</span>
+            <span style={`color: ${responseColor(r)};`}>{r.toUpperCase()}</span>
           </span>
         ))}
       </p>

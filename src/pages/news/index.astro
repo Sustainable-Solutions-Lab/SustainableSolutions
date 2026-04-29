@@ -5,6 +5,39 @@ import publications from '../../data/publications.json';
 import type { NewsItem, Publication } from '../../lib/types';
 import { SYSTEMS } from '../../lib/systems';
 
+// Filter taxonomy mirrors the publications page so users get the same
+// vocabulary across both lists.
+const SYSTEM_OPTIONS = [
+  { value: 'energy',    label: 'Energy'    },
+  { value: 'food',      label: 'Food'      },
+  { value: 'water',     label: 'Water'     },
+  { value: 'materials', label: 'Materials' },
+  { value: 'climate',   label: 'Climate'   },
+  { value: 'health',    label: 'Health'    },
+];
+const TOPIC_GROUPS = [
+  {
+    label: 'Mitigation',
+    options: [
+      { value: 'mitigation',                   label: 'Mitigation (all)' },
+      { value: 'mitigation:trade',             label: 'Trade' },
+      { value: 'mitigation:carbon-management', label: 'Carbon management' },
+    ],
+  },
+  {
+    label: 'Impacts & adaptation',
+    options: [
+      { value: 'impacts',               label: 'Impacts (all)' },
+      { value: 'impacts:air-pollution', label: 'Air pollution' },
+      { value: 'impacts:heat',          label: 'Heat' },
+      { value: 'impacts:drought',       label: 'Drought' },
+      { value: 'impacts:fire',          label: 'Fire' },
+      { value: 'impacts:flooding',      label: 'Flooding' },
+    ],
+  },
+];
+const TYPE_OPTIONS = ['paper', 'press', 'op-ed', 'talk', 'award', 'other'];
+
 // Canonicalize a date cell to ISO "YYYY-MM-DD" for sorting + display.
 // Accepts:  2024-03-15, 3/15/2024, 3/15/24, 03/15/2024  (and missing day forms)
 function toIsoDate(d: string | null | undefined): string {
@@ -47,8 +80,9 @@ function topLevels(values: string[] | undefined): string[] {
   return Array.from(new Set((values ?? []).map((v) => v.split(':')[0])));
 }
 
-// Per-card derivations: companion paper (when doi set), system/topic
-// (item's own first, else inherited from companion), primary stripe color.
+// Per-card derivations: companion paper (when doi set), effective system
+// and topic (item's own values, else inherited from the companion paper),
+// stripe color, and a search blob the client filter greps over.
 const cards = items.map((n) => {
   const companion = n.doi ? pubsByDoi.get(n.doi.trim().toLowerCase()) ?? null : null;
   const sys = (n.system && n.system.length > 0)
@@ -61,8 +95,17 @@ const cards = items.map((n) => {
   const topTopic = topLevels(topic);
   const primary = topSys[0] ? systemBySlug.get(topSys[0]) ?? null : null;
   const stripe = primary?.color ?? 'var(--ink-4)';
-  return { n, companion, topSys, topTopic, stripe };
+  const year = n.date ? n.date.slice(0, 4) : '';
+  const searchBlob = [n.title, n.summary, n.source, companion?.title, companion?.journal]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return { n, companion, sys, topic, topSys, topTopic, stripe, year, searchBlob };
 });
+
+// Years present in the data, descending. Drop empties.
+const years = Array.from(new Set(cards.map((c) => c.year).filter(Boolean)))
+  .sort((a, b) => b.localeCompare(a));
 
 function sourceLabel(n: NewsItem): string {
   const s = n.source ?? '';
@@ -92,17 +135,104 @@ const total = cards.length;
   </section>
 
   <section class="container-content pb-24">
+    <div
+      class="flex flex-wrap items-center gap-2 md:gap-4 py-2 md:py-4 mb-2 border-y border-rule bg-paper sticky z-20"
+      style="top: 56px;"
+      role="search"
+    >
+      <label class="flex items-center gap-2 text-sm flex-1 md:flex-initial min-w-0">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Search</span>
+        <input
+          id="news-search"
+          type="search"
+          placeholder="Search…"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink w-full md:w-auto"
+          style="border-radius: var(--radius-sm); min-width: 0;"
+        />
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Year</span>
+        <select
+          id="news-year"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
+          style="border-radius: var(--radius-sm);"
+        >
+          <option value="">All years</option>
+          {years.map((y) => <option value={y}>{y}</option>)}
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Type</span>
+        <select
+          id="news-type"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
+          style="border-radius: var(--radius-sm);"
+        >
+          <option value="">All types</option>
+          {TYPE_OPTIONS.map((t) => <option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">System</span>
+        <select
+          id="news-system"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
+          style="border-radius: var(--radius-sm);"
+        >
+          <option value="">All systems</option>
+          {SYSTEM_OPTIONS.map((s) => <option value={s.value}>{s.label}</option>)}
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Topic</span>
+        <select
+          id="news-topic"
+          class="bg-paper-2 border border-rule px-2 py-1 text-sm font-sans focus:outline-none focus:border-ink"
+          style="border-radius: var(--radius-sm);"
+        >
+          <option value="">All topics</option>
+          {TOPIC_GROUPS.map((g) => (
+            <optgroup label={g.label}>
+              {g.options.map((o) => <option value={o.value}>{o.label}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <input id="news-featured" type="checkbox" class="accent-cardinal" />
+        <span class="font-mono text-xs uppercase tracking-wider text-ink-3">Featured</span>
+      </label>
+
+      <span id="news-count" class="ml-auto font-mono text-xs uppercase tracking-wider text-ink-3">
+        {total} of {total}
+      </span>
+    </div>
+
     {total === 0 ? (
       <p class="text-ink-3 text-sm">No news items yet — add rows to the News tab in the sheet.</p>
     ) : (
-      <ul class="list-none p-0 m-0">
-        {cards.map(({ n, companion, topSys, topTopic, stripe }) => {
+      <ul id="news-list" class="list-none p-0 m-0">
+        {cards.map(({ n, companion, sys, topic, topSys, topTopic, stripe, year, searchBlob }) => {
           const isExternal = !!n.link && /^https?:\/\//.test(n.link);
           const companionUrl = companion
             ? (companion.url ?? (companion.doi ? `https://doi.org/${companion.doi}` : null))
             : null;
           return (
-            <li class="m-0 p-0 py-5 border-b border-rule">
+            <li
+              class="m-0 p-0 py-5 border-b border-rule"
+              data-news
+              data-year={year}
+              data-type={n.type ?? ''}
+              data-system={sys.join(',')}
+              data-topic={topic.join(',')}
+              data-featured={String(!!n.featured)}
+              data-search={searchBlob}
+            >
               <article class="pl-4" style={`border-left: 4px solid ${stripe};`}>
                 <p class="eyebrow m-0 mb-1">
                   <span class="text-ink-2">{sourceLabel(n)}</span>
@@ -171,8 +301,82 @@ const total = cards.length;
       </ul>
     )}
 
-    <p class="font-mono text-xs text-ink-3 mt-4 m-0 uppercase tracking-wider">
-      {total} item{total === 1 ? '' : 's'}
+    <p id="news-empty" hidden class="py-12 text-center text-ink-3 text-sm">
+      No news items match the current filters.
     </p>
   </section>
 </BaseLayout>
+
+<script is:inline>
+  (function () {
+    const search = document.getElementById('news-search');
+    const yearSel = document.getElementById('news-year');
+    const typeSel = document.getElementById('news-type');
+    const systemSel = document.getElementById('news-system');
+    const topicSel = document.getElementById('news-topic');
+    const feat = document.getElementById('news-featured');
+    const list = document.getElementById('news-list');
+    const empty = document.getElementById('news-empty');
+    const count = document.getElementById('news-count');
+    if (!list || !count) return;
+
+    const items = Array.from(list.querySelectorAll('[data-news]'));
+    const total = items.length;
+
+    function axisHasPrefix(values, target) {
+      if (!target) return true;
+      for (const v of values) {
+        if (!v) continue;
+        if (v === target) return true;
+        if (v.startsWith(target + ':')) return true;
+      }
+      return false;
+    }
+
+    const apply = () => {
+      const q = (search?.value ?? '').trim().toLowerCase();
+      const y = yearSel?.value ?? '';
+      const t = typeSel?.value ?? '';
+      const sys = systemSel?.value ?? '';
+      const top = topicSel?.value ?? '';
+      const f = feat?.checked ?? false;
+
+      let visible = 0;
+      for (const li of items) {
+        const sysVals = (li.dataset.system ?? '').split(',').filter(Boolean);
+        const topicVals = (li.dataset.topic ?? '').split(',').filter(Boolean);
+        const ok =
+          (!q || (li.dataset.search ?? '').includes(q)) &&
+          (!y || li.dataset.year === y) &&
+          (!t || li.dataset.type === t) &&
+          axisHasPrefix(sysVals, sys) &&
+          axisHasPrefix(topicVals, top) &&
+          (!f || li.dataset.featured === 'true');
+        li.hidden = !ok;
+        if (ok) visible++;
+      }
+
+      count.textContent = `${visible} of ${total}`;
+      if (empty) empty.hidden = visible !== 0;
+    };
+
+    // Pre-fill filters from URL params: ?system=energy, ?topic=mitigation, ?type=press, ?year=2023
+    const params = new URLSearchParams(window.location.search);
+    const setIf = (sel, value) => {
+      if (!sel || !value) return;
+      const opt = Array.from(sel.options).find((o) => o.value === value);
+      if (opt) sel.value = value;
+    };
+    setIf(yearSel,   params.get('year'));
+    setIf(typeSel,   params.get('type'));
+    setIf(systemSel, (params.get('system') ?? '').trim());
+    setIf(topicSel,  (params.get('topic') ?? params.get('response') ?? '').trim());
+
+    [search, yearSel, typeSel, systemSel, topicSel, feat].forEach((el) => {
+      el?.addEventListener('input', apply);
+      el?.addEventListener('change', apply);
+    });
+
+    apply();
+  })();
+</script>

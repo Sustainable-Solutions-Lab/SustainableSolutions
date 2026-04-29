@@ -189,7 +189,7 @@ const narrativeParagraphs = (system.narrative ?? '')
 
   {/* Narrative prose. Sheet-driven via the Research tab's `narrative`
       column; falls back to a placeholder when blank. */}
-  <section class="container-prose pb-10">
+  <section class="container-prose pb-4">
     {narrativeParagraphs.length > 0 ? (
       narrativeParagraphs.map((p) => (
         <p class="text-ink mt-0 mb-4" style="line-height: 1.6;">{p}</p>
@@ -203,7 +203,7 @@ const narrativeParagraphs = (system.narrative ?? '')
 
   <hr class="border-rule" />
 
-  <section class="container-content pt-8 pb-24">
+  <section class="container-content pt-4 pb-24">
     <div class="flex items-baseline justify-between mb-4 gap-4 flex-wrap">
       <p class="eyebrow m-0">
         Papers in this system <span class="text-ink-3">· {pubs.length}</span>

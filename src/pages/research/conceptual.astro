@@ -4,13 +4,45 @@ import PublicationItem from '../../components/PublicationItem.astro';
 import PersonCard from '../../components/PersonCard.astro';
 import publications from '../../data/publications.json';
 import people from '../../data/people.json';
+import researchData from '../../data/research.json';
 import type { Publication, Person } from '../../lib/types';
 import { totalCitations, recentCitations } from '../../lib/citations';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const accent = 'var(--cardinal)';
 
 const pubs = publications as Publication[];
 const peopleArr = people as Person[];
+
+// Sheet-driven copy: Research tab → row with slug='conceptual'.
+const researchRow = (researchData as Array<{
+  slug: string;
+  title?: string | null;
+  summary?: string | null;
+  hero_image?: string | null;
+  narrative?: string | null;
+}>).find((r) => r.slug === 'conceptual') ?? null;
+
+const summaryText =
+  researchRow?.summary ??
+  "Theory-first work by the lab's CIU — building abstract models in a quest for high-level insights into the behavior of important and complex systems.";
+
+// Narrative split on blank lines into paragraphs.
+const narrativeParagraphs = (researchRow?.narrative ?? '')
+  .split(/\n\s*\n/)
+  .map((p) => p.trim())
+  .filter(Boolean);
+
+// Hero image lookup: same fallback chain as system pages.
+function resolveHeroUrl(filename: string | null | undefined): string | null {
+  if (!filename) return null;
+  for (const folder of ['research', 'images']) {
+    if (existsSync(resolve('public', folder, filename))) return `/${folder}/${filename}`;
+  }
+  return null;
+}
+const heroUrl = resolveHeroUrl(researchRow?.hero_image);
 
 // Conceptual pubs come from the Publications sheet's `conceptual` column.
 const conceptualPubs = pubs
@@ -51,10 +83,26 @@ const maxYearCount = Math.max(...yearSeries.map((y) => y.count), 1);
 
 <BaseLayout title="Research · Conceptual Investigations Unit">
   <section class="relative">
-    <div
-      class="w-full"
-      style={`aspect-ratio: 16 / 5; background: linear-gradient(180deg, color-mix(in oklab, ${accent} 22%, var(--paper)) 0%, var(--paper) 100%);`}
-    ></div>
+    {heroUrl ? (
+      <div
+        class="w-full bg-paper-2 bg-cover bg-center"
+        style="aspect-ratio: 16 / 5;"
+        role="img"
+        aria-label="Conceptual Investigations Unit hero image"
+      >
+        <img
+          src={heroUrl}
+          alt="Conceptual Investigations Unit"
+          loading="eager"
+          class="w-full h-full object-cover block"
+        />
+      </div>
+    ) : (
+      <div
+        class="w-full"
+        style={`aspect-ratio: 16 / 5; background: linear-gradient(180deg, color-mix(in oklab, ${accent} 22%, var(--paper)) 0%, var(--paper) 100%);`}
+      ></div>
+    )}
     <div
       class="container-content pt-6 pb-2"
       style={`border-top: 4px solid ${accent};`}
@@ -65,11 +113,7 @@ const maxYearCount = Math.max(...yearSeries.map((y) => y.count), 1);
         <span style={`color: ${accent};`}>APPROACH</span>
       </p>
       <h1 class="m-0">Conceptual Investigations Unit</h1>
-      <p class="lede max-w-prose mt-3 mb-0">
-        Theory-first work by the lab's CIU — building abstract models in a
-        quest for high-level insights into the behavior of important and
-        complex systems.
-      </p>
+      <p class="lede max-w-prose mt-3 mb-0">{summaryText}</p>
     </div>
   </section>
 
@@ -127,12 +171,20 @@ const maxYearCount = Math.max(...yearSeries.map((y) => y.count), 1);
     </div>
   </section>
 
-  {/* About section — placeholder prose. Replace with the CIU narrative. */}
+  {/* Narrative prose — sheet-driven via the Research tab's `narrative`
+      column. Falls back to a placeholder when blank. */}
   <section class="container-prose pb-10">
-    <p class="text-ink-3 italic">
-      Description of the Conceptual Investigations Unit goes here — replace
-      this paragraph with the prose from the existing CIU page.
-    </p>
+    {narrativeParagraphs.length > 0 ? (
+      narrativeParagraphs.map((p) => (
+        <p class="text-ink mt-0 mb-4" style="line-height: 1.6;">{p}</p>
+      ))
+    ) : (
+      <p class="text-ink-3 italic">
+        Narrative for the Conceptual Investigations Unit goes here — fill in
+        the <code>narrative</code> cell on the Research sheet's
+        <code>conceptual</code> row.
+      </p>
+    )}
   </section>
 
   <hr class="border-rule" />

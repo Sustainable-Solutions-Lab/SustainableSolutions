@@ -2,12 +2,34 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import publications from '../../data/publications.json';
 import people from '../../data/people.json';
+import researchData from '../../data/research.json';
 import type { Publication, Person } from '../../lib/types';
 import { SYSTEMS, systemMatches } from '../../lib/systems';
 import { totalCitations } from '../../lib/citations';
 
 const pubs = publications as Publication[];
 const peopleArr = people as Person[];
+
+// Look up a Research-sheet row by slug, with soft-match fallback so a
+// sheet slug like "impacts & adaptation" resolves to my code key "impacts"
+// (first whitespace-separated token after normalization).
+type ResearchRow = {
+  slug: string;
+  title?: string | null;
+  summary?: string | null;
+  hero_image?: string | null;
+  narrative?: string | null;
+};
+const researchRows = researchData as ResearchRow[];
+function findResearchRow(slug: string): ResearchRow | null {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const target = norm(slug);
+  for (const r of researchRows) {
+    if (norm(r.slug) === target) return r;
+    if (norm(r.slug).split(' ')[0] === target) return r;
+  }
+  return null;
+}
 
 // ── Systems cards ────────────────────────────────────────────────────────────
 const systemCards = SYSTEMS.map((s) => {
@@ -50,7 +72,10 @@ const TOPICS = [
 const topicCards = TOPICS.map((t) => {
   const myPubs = pubs.filter((p) => responsePrefix(p, t.slug));
   const cites = myPubs.reduce((sum, p) => sum + totalCitations(p), 0);
-  return { ...t, count: myPubs.length, cites };
+  // Sheet override: Research tab summary wins when present.
+  const overrideRow = findResearchRow(t.slug);
+  const summary = overrideRow?.summary ?? t.summary;
+  return { ...t, summary, count: myPubs.length, cites };
 });
 
 // ── Approach cards (Conceptual / Data-driven) ────────────────────────────────
@@ -64,11 +89,14 @@ const ciuMembers = peopleArr.filter((p) => p.unit === 'ciu').length;
 const NUM_WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'];
 const ciuMembersWord = ciuMembers <= 12 ? NUM_WORDS[ciuMembers] : String(ciuMembers);
 
+const conceptualOverride = findResearchRow('conceptual');
+const dataDrivenOverride = findResearchRow('data-driven');
 const approachCards = [
   {
     slug: 'conceptual',
     title: 'Conceptual',
     summary:
+      conceptualOverride?.summary ??
       `Theory-first work by the lab's Conceptual Investigations Unit — ${ciuMembersWord} affiliated researcher${ciuMembers === 1 ? '' : 's'}, building abstract models in a quest for high-level insights into the behavior of important and complex systems.`,
     color: 'var(--cardinal)',
     href: '/research/conceptual',
@@ -80,6 +108,7 @@ const approachCards = [
     slug: 'data-driven',
     title: 'Data-driven',
     summary:
+      dataDrivenOverride?.summary ??
       'Empirical and modeling work that quantifies emissions, impacts, and pathways across the systems and topics above.',
     color: 'var(--ink-2)',
     href: '/publications?approach=data-driven',

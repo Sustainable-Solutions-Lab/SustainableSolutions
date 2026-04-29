@@ -23,17 +23,17 @@ export const SYSTEMS: System[] = [
   {
     slug: 'water',
     title: 'Water',
-    summary: 'Hydrology, drought, and water-energy-food interactions.',
+    summary: 'Drought, flooding, and water-energy-food interactions.',
   },
   {
     slug: 'materials',
     title: 'Materials',
-    summary: 'Embodied emissions in heavy industry — steel, cement, plastics.',
+    summary: 'Decarbonization of structural materials — cement and steel — and securing of critical material supply chains.',
   },
   {
     slug: 'climate',
     title: 'Climate',
-    summary: 'Trends in CO₂ emissions and pathways to limit warming.',
+    summary: 'Climate effects of greenhouse gas and air pollution emissions.',
   },
   {
     slug: 'health',

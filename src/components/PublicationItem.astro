@@ -91,11 +91,17 @@ const doiUrl = pub.url ?? (pub.doi ? `https://doi.org/${pub.doi}` : null);
 // initials prefix, so "Davis, S." or "Davis, S.J." both link to Steve).
 const peopleArr = people as Person[];
 const peopleBySlug = new Map(peopleArr.map((p) => [p.slug, p]));
+// Author segment href: external members (no internal detail page)
+// link to their card anchor on /people; internal members link to their
+// /people/{slug} detail page as before.
 const authorSegments = splitAndLinkAuthors(pub.authors ?? '', peopleArr).map((seg) => {
   const person = seg.slug ? peopleBySlug.get(seg.slug) ?? null : null;
   return {
     ...seg,
     color: person ? roleColor(person.role) : null,
+    href: person
+      ? (person.external === true ? `/people#${person.slug}` : `/people/${person.slug}`)
+      : null,
   };
 });
 const detectedLabSlugs = Array.from(
@@ -210,7 +216,7 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
             <>
               {i > 0 && ', '}
               {seg.slug ? (
-                <a href={`/people/${seg.slug}`} class="font-semibold bare" style={`white-space: nowrap; color: ${seg.color ?? 'var(--ink)'};`}>{toNaturalOrder(seg.text)}</a>
+                <a href={seg.href ?? '#'} class="font-semibold bare" style={`white-space: nowrap; color: ${seg.color ?? 'var(--ink)'};`}>{toNaturalOrder(seg.text)}</a>
               ) : (
                 <span style="white-space: nowrap;">{toNaturalOrder(seg.text)}</span>
               )}
@@ -331,7 +337,7 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
           <>
             {i > 0 && ', '}
             {seg.slug ? (
-              <a href={`/people/${seg.slug}`} class="font-semibold bare" style={`white-space: nowrap; color: ${seg.color ?? 'var(--ink)'};`}>{toNaturalOrder(seg.text)}</a>
+              <a href={seg.href ?? '#'} class="font-semibold bare" style={`white-space: nowrap; color: ${seg.color ?? 'var(--ink)'};`}>{toNaturalOrder(seg.text)}</a>
             ) : (
               <span style="white-space: nowrap;">{toNaturalOrder(seg.text)}</span>
             )}

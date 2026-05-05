@@ -157,8 +157,9 @@ function newsYearLabel(d: string | null | undefined): string {
 ---
 
 <article
+  id={person.slug}
   class="grid md:grid-cols-[1fr_240px] gap-6 p-6 border border-rule bg-paper"
-  style={`border-radius: var(--radius-md); border-left: 4px solid ${stripeColor};`}
+  style={`border-radius: var(--radius-md); border-left: 4px solid ${stripeColor}; scroll-margin-top: 80px;`}
 >
   <div class="min-w-0">
     <p class="eyebrow m-0 mb-2">

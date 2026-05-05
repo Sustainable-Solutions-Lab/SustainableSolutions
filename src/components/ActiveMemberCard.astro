@@ -14,12 +14,13 @@ interface Props {
 
 const { person } = Astro.props;
 // External CIU affiliates skip the internal detail page; their card
-// links straight to personal_url if set.
+// links to personal_url when present. When external=true with no URL
+// the name + photo render as plain text/img with no link.
 const isExternal = person.external === true;
 const detailHref = isExternal
-  ? (person.personal_url || '#')
+  ? (person.personal_url || null)
   : `/people/${person.slug}`;
-const hrefIsExternal = isExternal && person.personal_url;
+const hrefIsExternal = isExternal && !!person.personal_url;
 const sectionLabel =
   person.unit === 'ciu' ? 'CONCEPTUAL INVESTIGATIONS UNIT' : 'CURRENT';
 const stripeColor = roleColor(person.role);
@@ -161,13 +162,17 @@ function newsYearLabel(d: string | null | undefined): string {
     </p>
 
     <h3 class="m-0">
-      <a
-        href={detailHref}
-        class="border-b-0 hover:underline"
-        data-external={hrefIsExternal ? '' : null}
-        target={hrefIsExternal ? '_blank' : undefined}
-        rel={hrefIsExternal ? 'noopener' : undefined}
-      >{person.name}</a>
+      {detailHref ? (
+        <a
+          href={detailHref}
+          class="border-b-0 hover:underline"
+          data-external={hrefIsExternal ? '' : null}
+          target={hrefIsExternal ? '_blank' : undefined}
+          rel={hrefIsExternal ? 'noopener' : undefined}
+        >{person.name}</a>
+      ) : (
+        person.name
+      )}
     </h3>
 
     <p class="text-ink-2 mt-2 m-0 text-sm">{person.role}</p>
@@ -316,30 +321,52 @@ function newsYearLabel(d: string | null | undefined): string {
     </div>
   </div>
 
-  <a
-    href={detailHref}
-    class="bare block shrink-0"
-    style="line-height: 0;"
-    data-external={hrefIsExternal ? '' : null}
-    target={hrefIsExternal ? '_blank' : undefined}
-    rel={hrefIsExternal ? 'noopener' : undefined}
-  >
-    {person.photo_filename ? (
-      <img
-        src={`/people/${person.photo_filename}`}
-        alt={person.name}
-        loading="lazy"
-        class="w-full object-cover border border-rule"
-        style="aspect-ratio: 1 / 1; border-radius: var(--radius-md);"
-      />
-    ) : (
-      <div
-        aria-hidden="true"
-        class="flex items-center justify-center font-mono text-paper select-none"
-        style={`width: 100%; aspect-ratio: 1/1; background: ${avatarBg}; border-radius: var(--radius-md); font-size: 64px;`}
-      >
-        {initials || '·'}
-      </div>
-    )}
-  </a>
+  {detailHref ? (
+    <a
+      href={detailHref}
+      class="bare block shrink-0"
+      style="line-height: 0;"
+      data-external={hrefIsExternal ? '' : null}
+      target={hrefIsExternal ? '_blank' : undefined}
+      rel={hrefIsExternal ? 'noopener' : undefined}
+    >
+      {person.photo_filename ? (
+        <img
+          src={`/people/${person.photo_filename}`}
+          alt={person.name}
+          loading="lazy"
+          class="w-full object-cover border border-rule"
+          style="aspect-ratio: 1 / 1; border-radius: var(--radius-md);"
+        />
+      ) : (
+        <div
+          aria-hidden="true"
+          class="flex items-center justify-center font-mono text-paper select-none"
+          style={`width: 100%; aspect-ratio: 1/1; background: ${avatarBg}; border-radius: var(--radius-md); font-size: 64px;`}
+        >
+          {initials || '·'}
+        </div>
+      )}
+    </a>
+  ) : (
+    <div class="bare block shrink-0" style="line-height: 0;">
+      {person.photo_filename ? (
+        <img
+          src={`/people/${person.photo_filename}`}
+          alt={person.name}
+          loading="lazy"
+          class="w-full object-cover border border-rule"
+          style="aspect-ratio: 1 / 1; border-radius: var(--radius-md);"
+        />
+      ) : (
+        <div
+          aria-hidden="true"
+          class="flex items-center justify-center font-mono text-paper select-none"
+          style={`width: 100%; aspect-ratio: 1/1; background: ${avatarBg}; border-radius: var(--radius-md); font-size: 64px;`}
+        >
+          {initials || '·'}
+        </div>
+      )}
+    </div>
+  )}
 </article>

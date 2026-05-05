@@ -26,21 +26,28 @@ const initials = person.name
   .map((s) => s[0])
   .join('');
 
-// External collaborators get linked to their personal_url (or no link
-// if missing); internal members link to /people/{slug}.
+// External collaborators link to personal_url when present; internal
+// members link to /people/{slug}. When external=true with no URL the
+// card renders as a plain <div> — no link target, no hover, no cursor
+// pointer — until the sheet either gets a personal_url filled in or
+// `external` is flipped back to FALSE so the internal page kicks in.
 const isExternal = person.external === true;
 const detailHref = isExternal
   ? (person.personal_url || null)
   : `/people/${person.slug}`;
 const isAlum = person.status === 'alumni';
 const currentPosition = (person.current_position ?? '').trim();
+
+const Wrapper = detailHref ? 'a' : 'div';
+const wrapperClass = detailHref
+  ? 'group block bg-paper border border-rule p-5 hover:border-rule-strong transition-colors border-b-0'
+  : 'block bg-paper border border-rule p-5';
 ---
 
-<a
-  href={detailHref ?? '#'}
-  class="group block bg-paper border border-rule p-5 hover:border-rule-strong transition-colors border-b-0"
+<Wrapper
+  class={wrapperClass}
   style="min-height: 152px;"
-  aria-disabled={detailHref ? undefined : 'true'}
+  href={detailHref ?? undefined}
   data-external={isExternal && detailHref ? '' : null}
   target={isExternal && detailHref ? '_blank' : undefined}
   rel={isExternal && detailHref ? 'noopener' : undefined}
@@ -79,4 +86,4 @@ const currentPosition = (person.current_position ?? '').trim();
       }
     </div>
   </div>
-</a>
+</Wrapper>

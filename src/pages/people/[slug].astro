@@ -9,11 +9,15 @@ import { splitAndLinkAuthors } from '../../lib/author-links'
 import scholarDetails from '../../../templates/scholar-details.json'
 
 export async function getStaticPaths() {
+  // External collaborators (sheet `external` = TRUE) skip the internal
+  // detail page; their card on /people links straight to personal_url.
   const { default: people } = await import('../../data/people.json')
-  return (people as Person[]).map((person) => ({
-    params: { slug: person.slug },
-    props: { person },
-  }))
+  return (people as Person[])
+    .filter((p) => p.external !== true)
+    .map((person) => ({
+      params: { slug: person.slug },
+      props: { person },
+    }))
 }
 
 const { person } = Astro.props as { person: Person }

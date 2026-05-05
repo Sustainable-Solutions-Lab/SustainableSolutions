@@ -26,15 +26,24 @@ const initials = person.name
   .map((s) => s[0])
   .join('');
 
-const detailHref = `/people/${person.slug}`;
+// External collaborators get linked to their personal_url (or no link
+// if missing); internal members link to /people/{slug}.
+const isExternal = person.external === true;
+const detailHref = isExternal
+  ? (person.personal_url || null)
+  : `/people/${person.slug}`;
 const isAlum = person.status === 'alumni';
 const currentPosition = (person.current_position ?? '').trim();
 ---
 
 <a
-  href={detailHref}
+  href={detailHref ?? '#'}
   class="group block bg-paper border border-rule p-5 hover:border-rule-strong transition-colors border-b-0"
   style="min-height: 152px;"
+  aria-disabled={detailHref ? undefined : 'true'}
+  data-external={isExternal && detailHref ? '' : null}
+  target={isExternal && detailHref ? '_blank' : undefined}
+  rel={isExternal && detailHref ? 'noopener' : undefined}
 >
   <div class="flex items-center gap-4 h-full">
     {

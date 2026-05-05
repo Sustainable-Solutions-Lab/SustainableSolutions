@@ -13,7 +13,13 @@ interface Props {
 }
 
 const { person } = Astro.props;
-const detailHref = `/people/${person.slug}`;
+// External CIU affiliates skip the internal detail page; their card
+// links straight to personal_url if set.
+const isExternal = person.external === true;
+const detailHref = isExternal
+  ? (person.personal_url || '#')
+  : `/people/${person.slug}`;
+const hrefIsExternal = isExternal && person.personal_url;
 const sectionLabel =
   person.unit === 'ciu' ? 'CONCEPTUAL INVESTIGATIONS UNIT' : 'CURRENT';
 const stripeColor = roleColor(person.role);
@@ -155,7 +161,13 @@ function newsYearLabel(d: string | null | undefined): string {
     </p>
 
     <h3 class="m-0">
-      <a href={detailHref} class="border-b-0 hover:underline">{person.name}</a>
+      <a
+        href={detailHref}
+        class="border-b-0 hover:underline"
+        data-external={hrefIsExternal ? '' : null}
+        target={hrefIsExternal ? '_blank' : undefined}
+        rel={hrefIsExternal ? 'noopener' : undefined}
+      >{person.name}</a>
     </h3>
 
     <p class="text-ink-2 mt-2 m-0 text-sm">{person.role}</p>
@@ -277,7 +289,9 @@ function newsYearLabel(d: string | null | undefined): string {
     )}
 
     <div class="flex flex-wrap gap-x-5 gap-y-1 mt-4 text-xs font-mono uppercase tracking-wider">
-      <a href={detailHref} class="text-ink-2 hover:text-ink border-b-0">Profile →</a>
+      {!isExternal && (
+        <a href={detailHref} class="text-ink-2 hover:text-ink border-b-0">Profile →</a>
+      )}
       {person.cv_url && (
         <a href={person.cv_url} class="text-ink-2 hover:text-ink border-b-0" data-external>CV</a>
       )}
@@ -302,7 +316,14 @@ function newsYearLabel(d: string | null | undefined): string {
     </div>
   </div>
 
-  <a href={detailHref} class="bare block shrink-0" style="line-height: 0;">
+  <a
+    href={detailHref}
+    class="bare block shrink-0"
+    style="line-height: 0;"
+    data-external={hrefIsExternal ? '' : null}
+    target={hrefIsExternal ? '_blank' : undefined}
+    rel={hrefIsExternal ? 'noopener' : undefined}
+  >
     {person.photo_filename ? (
       <img
         src={`/people/${person.photo_filename}`}

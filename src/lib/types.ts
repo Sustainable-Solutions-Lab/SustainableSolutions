@@ -25,6 +25,10 @@ export type Person = {
   // (recent) papers detected on the person's authorship.
   notable_pub_doi: string | null;
   recent_pub_doi: string | null;
+  // External collaborators (e.g. CIU affiliates with their own home pages).
+  // When TRUE, no internal /people/{slug} detail page is generated and the
+  // card on the grid links to personal_url instead. Default false.
+  external: boolean;
 };
 
 export type Publication = {

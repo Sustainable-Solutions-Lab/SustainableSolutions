@@ -281,6 +281,7 @@ off-screen otherwise.
 | R      | recent_pub_doi    | Text                                           | DOI of the paper to feature as "Recent work". Falls back to most-recent if blank. Also accepts `tool:<slug>` to surface a Tools-tab entry instead of a paper. |
 | S      | linkedin_url      | Text                                           | Optional. LinkedIn profile URL                 |
 | T      | github_url        | Text                                           | Optional. GitHub profile URL                   |
+| —      | external          | Boolean (TRUE/FALSE)                           | TRUE = no internal `/people/{slug}` detail page is generated; the card on `/people` links straight to `personal_url` (target=_blank). Default FALSE. Use for external CIU affiliates, visiting scholars, etc. |
 
 ### Tab: `News`
 

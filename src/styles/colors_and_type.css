@@ -82,6 +82,21 @@
   --warn:        var(--spectral-3);  /* orange */
   --info:        var(--spectral-10); /* blue */
 
+  /* System TEXT variants — same family as the system fill colors but
+     dark enough to clear WCAG AA (4.5:1) against the cream paper
+     background. Use for system labels in chips/legends/links; keep the
+     raw spectral fill colors for matrix cells, sparklines, stripes,
+     hero bands, and other non-text decoration. */
+  --system-energy-text:    #C2440E;  /* darker burnt orange  · 4.75:1 */
+  --system-food-text:      #2E7B3F;  /* deeper forest green  · 4.87:1 */
+  --system-water-text:     #1F5E8C;  /* deeper blue          · 6.45:1 */
+  --system-materials-text: var(--spectral-11);  /* purple   · 6.28:1 */
+  --system-climate-text:   #1F6B82;  /* deeper teal          · 5.62:1 */
+  --system-health-text:    var(--spectral-1);   /* wine     · 7.72:1 */
+  /* Topic axis text colors (matrix Mitigation / Impacts) */
+  --mitigation-text:       var(--system-water-text);
+  --impacts-text:           var(--system-health-text);
+
   /* Dynamic theme palette — used by themes.ts for user-added theme slugs.
      Light-mode versions are deliberately darker than the raw Spectral
      palette so they read on the cream paper background; dark mode keeps
@@ -190,6 +205,18 @@
   --theme-dyn-3: var(--spectral-4);  /* light orange */
   --theme-dyn-4: var(--spectral-8);  /* light green */
   --theme-dyn-5: var(--spectral-7);  /* yellow-green */
+
+  /* In dark mode the original Spectral fills are bright enough to read
+     as text on the deep-navy paper, so the system-text variants revert
+     to the fill colors. */
+  --system-energy-text:    var(--spectral-3);
+  --system-food-text:      var(--spectral-8);
+  --system-water-text:     var(--spectral-10);
+  --system-materials-text: var(--spectral-11);
+  --system-climate-text:   var(--brand-teal);
+  --system-health-text:    var(--spectral-2);
+  --mitigation-text:       var(--spectral-10);
+  --impacts-text:           var(--spectral-2);
 
   --shadow-pop:
     0 1px 2px rgba(0, 0, 0, 0.4),
@@ -481,3 +508,18 @@ a.ext::after {
 .spec-9  { color: var(--spectral-9); }
 .spec-10 { color: var(--spectral-10); }
 .spec-11 { color: var(--spectral-11); }
+
+/* ---------- Reduced motion ----------------------------------------------- */
+/* Honor the user's OS-level preference. Drops transitions/animations to a
+   trivial duration so cell color swaps, hover effects, smooth scroll, etc.
+   feel instant rather than animated. WCAG 2.3.3 (AAA) and 2.3.1 (AA). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

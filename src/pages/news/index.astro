@@ -82,9 +82,11 @@ for (const t of tools as Tool[]) toolsBySlug.set(t.slug, t);
 
 const systemBySlug = new Map(SYSTEMS.map((s) => [s.slug, s]));
 
+// Topic-axis text color for in-text chips. AA-passing variants live as
+// CSS vars in colors_and_type.css.
 function responseColor(r: string): string {
-  if (r === 'mitigation') return 'var(--spectral-10)';
-  if (r === 'impacts') return 'var(--spectral-2)';
+  if (r === 'mitigation') return 'var(--mitigation-text)';
+  if (r === 'impacts') return 'var(--impacts-text)';
   return 'var(--ink-3)';
 }
 function topLevels(values: string[] | undefined): string[] {
@@ -274,7 +276,7 @@ const total = cards.length;
             <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-cardinal m-0 mb-1">
               <span class="cardinal-dot"></span>FIGURE · TOP OUTLETS
             </p>
-            <h3 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Where it lands</h3>
+            <h2 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Where it lands</h2>
             <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
               Top 5 outlets across {donutTotal} items
             </p>
@@ -314,7 +316,7 @@ const total = cards.length;
             <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-cardinal m-0 mb-1">
               <span class="cardinal-dot"></span>FIGURE · COVERAGE BY YEAR
             </p>
-            <h3 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Drumbeat over time</h3>
+            <h2 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Drumbeat over time</h2>
             <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
               Annual coverage, stacked by system
             </p>
@@ -437,6 +439,8 @@ const total = cards.length;
     {total === 0 ? (
       <p class="text-ink-3 text-sm">No news items yet — add rows to the News tab in the sheet.</p>
     ) : (
+      <>
+      <h2 class="sr-only">News items</h2>
       <ul id="news-list" class="list-none p-0 m-0">
         {cards.map(({ n, companion, companionTools, sys, topic, topSys, topTopic, stripe, year, searchBlob }) => {
           const isExternal = !!n.link && /^https?:\/\//.test(n.link);
@@ -473,7 +477,7 @@ const total = cards.length;
                     return (
                       <>
                         <span class="dot">·</span>
-                        <span style={`color: ${meta.color};`}>{meta.title.toUpperCase()}</span>
+                        <span style={`color: ${meta.textColor};`}>{meta.title.toUpperCase()}</span>
                       </>
                     );
                   })}
@@ -536,6 +540,7 @@ const total = cards.length;
           );
         })}
       </ul>
+      </>
     )}
 
     <p id="news-empty" hidden class="py-12 text-center text-ink-3 text-sm">

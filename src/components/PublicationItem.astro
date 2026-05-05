@@ -38,9 +38,11 @@ const topLevelSystems: string[] = Array.from(
 const topLevelResponses: string[] = Array.from(
   new Set((pub.response ?? []).map((v: string) => v.split(':')[0])),
 );
+// Returns the topic-axis TEXT color (passes 4.5:1 on paper). Use this for
+// in-text uses (chips, legends). Fills can keep raw spectral palette.
 function responseColor(r: string): string {
-  if (r === 'mitigation') return 'var(--spectral-10)';
-  if (r === 'impacts') return 'var(--spectral-2)';
+  if (r === 'mitigation') return 'var(--mitigation-text)';
+  if (r === 'impacts') return 'var(--impacts-text)';
   return 'var(--ink-3)';
 }
 const primarySystem = topLevelSystems[0];
@@ -181,7 +183,7 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
             return (
               <>
                 <span class="dot">·</span>
-                <span style={`color: ${meta.color};`}>{meta.title.toUpperCase()}</span>
+                <span style={`color: ${meta.textColor};`}>{meta.title.toUpperCase()}</span>
               </>
             );
           })}
@@ -302,7 +304,7 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
           return (
             <span class:list={[i > 0 && 'hidden md:inline']}>
               <span class="dot">·</span>
-              <span style={`color: ${meta.color};`}>{meta.title.toUpperCase()}</span>
+              <span style={`color: ${meta.textColor};`}>{meta.title.toUpperCase()}</span>
             </span>
           );
         })}

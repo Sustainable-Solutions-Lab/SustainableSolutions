@@ -47,7 +47,8 @@ const TOPICS = [
     slug: 'mitigation',
     title: 'Mitigation',
     summary: 'Reducing greenhouse-gas emissions across systems — including the trade and carbon-management dimensions.',
-    color: 'var(--spectral-10)',
+    color:     'var(--spectral-10)',     // fill — top border, sub-area chip border
+    textColor: 'var(--mitigation-text)', // AA text on paper
     subs: [
       { match: 'mitigation',                   label: 'General' },
       { match: 'mitigation:trade',             label: 'Trade' },
@@ -58,7 +59,8 @@ const TOPICS = [
     slug: 'impacts',
     title: 'Impacts & adaptation',
     summary: 'Consequences of climate change for people and systems — air pollution, heat, drought, fire, flooding.',
-    color: 'var(--spectral-2)',
+    color:     'var(--spectral-2)',
+    textColor: 'var(--impacts-text)',
     subs: [
       { match: 'impacts',               label: 'General' },
       { match: 'impacts:air-pollution', label: 'Air pollution' },
@@ -132,7 +134,7 @@ const approachCards = [
   </section>
 
   <section class="container-content pb-10">
-    <p class="eyebrow mb-4">BY SYSTEM</p>
+    <h2 class="eyebrow mb-4">BY SYSTEM</h2>
     <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0 m-0">
       {systemCards.map((s) => (
         <li class="m-0 p-0 h-full">
@@ -142,7 +144,7 @@ const approachCards = [
             style={`border-radius: var(--radius-md); border-top: 4px solid ${s.color}; overflow: hidden;`}
           >
             <div class="p-5 flex-1 flex flex-col">
-              <p class="eyebrow m-0 mb-2" style={`color: ${s.color};`}>SYSTEM</p>
+              <p class="eyebrow m-0 mb-2" style={`color: ${s.textColor};`}>SYSTEM</p>
               <h3 class="m-0">{s.title}</h3>
               <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">
                 {s.summary}
@@ -162,7 +164,7 @@ const approachCards = [
   <hr class="border-rule" />
 
   <section class="container-content pt-8 pb-10">
-    <p class="eyebrow mb-4">BY TOPIC</p>
+    <h2 class="eyebrow mb-4">BY TOPIC</h2>
     <ul class="grid md:grid-cols-2 gap-4 list-none p-0 m-0">
       {topicCards.map((t) => (
         <li class="m-0 p-0 h-full">
@@ -171,7 +173,7 @@ const approachCards = [
             style={`border-radius: var(--radius-md); border-top: 4px solid ${t.color};`}
           >
             <div class="p-5 flex-1 flex flex-col">
-              <p class="eyebrow m-0 mb-2" style={`color: ${t.color};`}>TOPIC</p>
+              <p class="eyebrow m-0 mb-2" style={`color: ${t.textColor};`}>TOPIC</p>
               <h3 class="m-0">
                 <a
                   href={`/publications?response=${encodeURIComponent(t.slug)}`}
@@ -185,7 +187,7 @@ const approachCards = [
                 {t.subs.map((sub) => (
                   <a
                     href={`/publications?response=${encodeURIComponent(sub.match)}`}
-                    class="px-2 py-0.5 text-xs bg-paper-2 text-ink-2 hover:text-ink hover:bg-paper border border-rule border-b-0"
+                    class="px-3 py-1.5 text-xs bg-paper-2 text-ink-2 hover:text-ink hover:bg-paper border border-rule border-b-0"
                     style={`border-radius: var(--radius-sm); border-left: 2px solid ${t.color};`}
                   >{sub.label}</a>
                 ))}
@@ -205,7 +207,7 @@ const approachCards = [
   <hr class="border-rule" />
 
   <section class="container-content pt-8 pb-24">
-    <p class="eyebrow mb-4">BY APPROACH</p>
+    <h2 class="eyebrow mb-4">BY APPROACH</h2>
     <ul class="grid md:grid-cols-2 gap-4 list-none p-0 m-0">
       {approachCards.map((a) => (
         <li class="m-0 p-0 h-full">

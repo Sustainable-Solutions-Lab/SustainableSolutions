@@ -105,7 +105,7 @@ const narrativeParagraphs = (system.narrative ?? '')
       <p class="eyebrow mb-2">
         <a href="/research" class="border-b-0 hover:text-ink">RESEARCH</a>
         <span class="dot">›</span>
-        <span style={`color: ${system.color};`}>SYSTEM</span>
+        <span style={`color: ${system.textColor};`}>SYSTEM</span>
       </p>
       <h1 class="m-0">{system.title}</h1>
       <p class="lede max-w-prose mt-3 mb-0">{system.summary}</p>
@@ -176,7 +176,7 @@ const narrativeParagraphs = (system.narrative ?? '')
           {subSystems.map((sub) => (
             <a
               href={`/publications?system=${encodeURIComponent(system.slug + ':' + sub)}`}
-              class="px-3 py-1 text-sm bg-paper-2 text-ink-2 hover:text-ink hover:bg-paper border border-rule border-b-0"
+              class="px-3 py-1.5 text-sm bg-paper-2 text-ink-2 hover:text-ink hover:bg-paper border border-rule border-b-0"
               style={`border-radius: var(--radius-sm); border-left: 2px solid ${system.color};`}
             >
               {sub.replace(/-/g, ' ')}
@@ -205,9 +205,9 @@ const narrativeParagraphs = (system.narrative ?? '')
 
   <section class="container-content pt-4 pb-24">
     <div class="flex items-baseline justify-between mb-4 gap-4 flex-wrap">
-      <p class="eyebrow m-0">
+      <h2 class="eyebrow m-0">
         Papers in this system <span class="text-ink-3">· {pubs.length}</span>
-      </p>
+      </h2>
       <a
         href={`/publications?system=${encodeURIComponent(system.slug)}`}
         class="font-mono text-xs uppercase tracking-wider text-ink-3 hover:text-ink border-b-0"

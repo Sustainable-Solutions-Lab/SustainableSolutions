@@ -270,7 +270,7 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
     border: 0;
     color: var(--ink-3);
     cursor: pointer;
-    padding: 2px 4px;
+    padding: 6px 8px;
     font: inherit;
     text-transform: inherit;
     letter-spacing: inherit;
@@ -340,8 +340,13 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
     line-height: 1.2;
     text-align: center;
   }
-  .section-mit { color: var(--spectral-10); }
-  .section-imp { color: var(--spectral-2); }
+  /* Label text uses AA-passing variants; the colored rule next to the
+     text keeps the bright Spectral fill (3:1 UI-component contrast is
+     enough for non-text decoration). */
+  .section-mit { color: var(--mitigation-text); }
+  .section-mit::before { background: var(--spectral-10); }
+  .section-imp { color: var(--impacts-text); }
+  .section-imp::before { background: var(--spectral-2); }
 
   .row-label {
     font-family: var(--font-sans);

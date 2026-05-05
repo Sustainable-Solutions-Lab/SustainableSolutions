@@ -14,9 +14,16 @@ export interface System {
   title: string;
   /** One-line description shown on the /research index card. */
   summary: string;
-  /** Spectral palette CSS var used as an accent on the index card and as
-   *  the colored band / sparkline / sub-area pill on the detail page. */
+  /** Fill color — used on the matrix cells, sparkline fills, hero band
+   *  tints, and decorative left-edge stripes. Light-end spectral hues
+   *  are deliberately bright; do NOT use this for text. */
   color: string;
+  /** Text-on-paper color — same hue family as `color` but dark enough to
+   *  clear WCAG AA (4.5:1) against the cream background. Use for
+   *  system labels in eyebrow chips, legends, and inline text. Defined
+   *  as a CSS var so it auto-flips back to the spectral fill in dark
+   *  mode where the lighter palette reads fine on deep-navy. */
+  textColor: string;
   /**
    * Hero image filename. Sheet-controlled — set the `hero_image` column
    * on the Research tab and drop the file into /public/research/ or
@@ -51,37 +58,43 @@ const BASE_SYSTEMS: System[] = [
     slug: 'energy',
     title: 'Energy',
     summary: 'Decarbonizing electricity, transport, and industrial energy use.',
-    color: 'var(--spectral-3)',  // orange-red
+    color:     'var(--spectral-3)',           // orange-red fill
+    textColor: 'var(--system-energy-text)',   // 4.75:1 on paper
   },
   {
     slug: 'food',
     title: 'Food',
     summary: 'Agricultural emissions, food security, and land-use tradeoffs.',
-    color: 'var(--spectral-8)',  // light green
+    color:     'var(--spectral-8)',           // light green fill
+    textColor: 'var(--system-food-text)',     // 4.87:1 on paper
   },
   {
     slug: 'water',
     title: 'Water',
     summary: 'Drought, flooding, and water-energy-food interactions.',
-    color: 'var(--spectral-10)', // blue
+    color:     'var(--spectral-10)',          // blue fill
+    textColor: 'var(--system-water-text)',    // 6.45:1 on paper
   },
   {
     slug: 'materials',
     title: 'Materials',
     summary: 'Decarbonization of structural materials — cement and steel — and securing of critical material supply chains.',
-    color: 'var(--spectral-11)', // purple
+    color:     'var(--spectral-11)',          // purple fill
+    textColor: 'var(--system-materials-text)', // 6.28:1 on paper (= spectral-11)
   },
   {
     slug: 'climate',
     title: 'Climate',
     summary: 'Climate effects of greenhouse gas and air pollution emissions.',
-    color: 'var(--brand-teal)',  // light blue (distinct from water's spectral-10)
+    color:     'var(--brand-teal)',           // light blue fill
+    textColor: 'var(--system-climate-text)',  // 5.62:1 on paper
   },
   {
     slug: 'health',
     title: 'Health',
     summary: 'Air pollution, heat exposure, and the human consequences of environmental change.',
-    color: 'var(--spectral-2)',  // red
+    color:     'var(--spectral-2)',           // red fill
+    textColor: 'var(--system-health-text)',   // 7.72:1 on paper (= spectral-1 wine)
   },
 ];
 

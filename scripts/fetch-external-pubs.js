@@ -46,6 +46,56 @@ function decodeHtmlEntities(s) {
   })
 }
 
+// ── JATS/HTML inline-markup cleaner ─────────────────────────────────────────
+// Crossref returns titles with embedded JATS/MathML tags (<sub>, <sup>,
+// <i>, <b>, <jats:sub>, etc.) and pretty-printing whitespace inside them.
+// Convert simple subscript/superscript runs to Unicode codepoints, strip
+// the rest, and collapse whitespace.
+const SUB_MAP = {
+  '0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉',
+  '+':'₊','-':'₋','=':'₌','(':'₍',')':'₎',
+  a:'ₐ', e:'ₑ', h:'ₕ', i:'ᵢ', j:'ⱼ', k:'ₖ', l:'ₗ', m:'ₘ', n:'ₙ', o:'ₒ',
+  p:'ₚ', r:'ᵣ', s:'ₛ', t:'ₜ', u:'ᵤ', v:'ᵥ', x:'ₓ',
+}
+const SUP_MAP = {
+  '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹',
+  '+':'⁺','-':'⁻','=':'⁼','(':'⁽',')':'⁾',
+}
+function toUnicodeRun(text, map) {
+  // Strip any nested HTML tags first, then map char-by-char.
+  const clean = text.replace(/<[^>]*>/g, '').replace(/\s+/g, '').trim()
+  if (!clean) return ''
+  let out = ''
+  for (const ch of clean) {
+    const m = map[ch.toLowerCase()] ?? map[ch]
+    if (!m) return null   // can't represent — bail and let outer code fall back
+    out += m
+  }
+  return out
+}
+function cleanInlineMarkup(s) {
+  if (!s) return s
+  // Replace <sub>...</sub> (and JATS-prefixed variants) with Unicode subscripts
+  // when possible; otherwise drop the tags.
+  s = s.replace(/<\s*(?:jats:)?sub\b[^>]*>([\s\S]*?)<\s*\/\s*(?:jats:)?sub\s*>/gi,
+    (_, inner) => toUnicodeRun(inner, SUB_MAP) ?? inner.replace(/<[^>]*>/g, ''))
+  s = s.replace(/<\s*(?:jats:)?sup\b[^>]*>([\s\S]*?)<\s*\/\s*(?:jats:)?sup\s*>/gi,
+    (_, inner) => toUnicodeRun(inner, SUP_MAP) ?? inner.replace(/<[^>]*>/g, ''))
+  // Drop any remaining inline tags (italic, bold, span, etc.).
+  s = s.replace(/<[^>]+>/g, '')
+  // Collapse runs of whitespace introduced by pretty-printed JATS.
+  s = s.replace(/\s+/g, ' ').trim()
+  // Glue Unicode subscripts/superscripts to the preceding word so we get
+  // "NOₓ" instead of "NO ₓ" after JATS pretty-printing is stripped.
+  const SUBS = '₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ'
+  const SUPS = '⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾'
+  s = s.replace(new RegExp(`(\\w)\\s+([${SUBS}${SUPS}]+)`, 'g'), '$1$2')
+  return s
+}
+function clean(s) {
+  return cleanInlineMarkup(decodeHtmlEntities(s))
+}
+
 // ── Crossref response → Publication shape ──
 function authorsFromCrossref(msg) {
   if (!msg.author?.length) return ''
@@ -93,9 +143,9 @@ function pubRecord(msg) {
   const { year, month } = dateFromCrossref(msg)
   return {
     doi: msg.DOI,
-    title: decodeHtmlEntities(msg.title?.[0] ?? ''),
-    authors: decodeHtmlEntities(authorsFromCrossref(msg)),
-    journal: decodeHtmlEntities(msg['container-title']?.[0] ?? ''),
+    title: clean(msg.title?.[0] ?? ''),
+    authors: clean(authorsFromCrossref(msg)),
+    journal: clean(msg['container-title']?.[0] ?? ''),
     year,
     month,
     volume_issue: msg.volume
@@ -156,7 +206,14 @@ async function main() {
   for (const doi of externalDois) {
     const hit = cacheByDoi.get(doi)
     if (hit) {
-      out.push(hit)
+      // Re-run the inline-markup cleaner on cached records — earlier
+      // builds stored raw JATS markup (<sub>, <i>, etc.) verbatim.
+      out.push({
+        ...hit,
+        title:   clean(hit.title),
+        authors: clean(hit.authors),
+        journal: clean(hit.journal),
+      })
       cached++
       continue
     }

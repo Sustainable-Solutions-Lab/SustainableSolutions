@@ -6,7 +6,7 @@ import publications from '../data/publications.json';
 import externalPubs from '../data/external-pubs.json';
 import tools from '../data/tools.json';
 import news from '../data/news.json';
-import scholarDetails from '../../templates/scholar-details.json';
+import { totalCitations } from '../lib/citations';
 
 interface Props {
   person: Person;
@@ -50,18 +50,25 @@ const orcidUrl = person.orcid ? `https://orcid.org/${person.orcid}` : null;
 //
 // If both columns resolve to the same paper (e.g., one DOI set, the other
 // fallback picks the same one), Recent is hidden so we don't duplicate.
-const totalsByDoi = new Map<string, number>();
-for (const detail of Object.values(scholarDetails as Record<string, any>)) {
-  if (detail?.doi && typeof detail?.total_citations === 'number') {
-    totalsByDoi.set(detail.doi, detail.total_citations);
-  }
-}
-// Crossref-fetched external pubs include their own citation counts; fold
-// those in too so Notable/Recent cards from pre-lab work show "X citations".
+// Crossref-fetched external pubs carry their own citation counts in
+// total_citations; index them by DOI so we can layer them on top of the
+// DOI-or-title lookup that lib/citations.totalCitations already does
+// against scholar-details.
+const externalCitesByDoi = new Map<string, number>();
 for (const ext of externalPubs as Array<{ doi: string; total_citations: number | null }>) {
   if (ext.doi && typeof ext.total_citations === 'number') {
-    totalsByDoi.set(ext.doi, ext.total_citations);
+    externalCitesByDoi.set(ext.doi.toLowerCase(), ext.total_citations);
   }
+}
+function citesFor(pub: Publication): number {
+  // External-pubs (Crossref) wins for pre-lab work; otherwise fall back
+  // to lib/citations.totalCitations which handles DOI + normalized-title
+  // matching against scholar-details.json.
+  if (pub.doi) {
+    const ext = externalCitesByDoi.get(pub.doi.toLowerCase());
+    if (typeof ext === 'number') return ext;
+  }
+  return totalCitations(pub);
 }
 
 const personPubs = (publications as Publication[]).filter((p) =>
@@ -82,11 +89,7 @@ function resolveExplicit(doi: string | null): Publication | null {
   const k = doi.trim().toLowerCase();
   return personPubsByDoi.get(k) ?? externalByDoi.get(k) ?? null;
 }
-const mostCited = [...personPubs].sort((a, b) => {
-  const aC = (a.doi && totalsByDoi.get(a.doi)) ?? 0;
-  const bC = (b.doi && totalsByDoi.get(b.doi)) ?? 0;
-  return bC - aC;
-})[0] ?? null;
+const mostCited = [...personPubs].sort((a, b) => citesFor(b) - citesFor(a))[0] ?? null;
 const mostRecent = [...personPubs].sort((a, b) =>
   (b.year - a.year) || ((b.month ?? 0) - (a.month ?? 0)),
 )[0] ?? null;
@@ -131,7 +134,8 @@ if (recent && notable && recent.doi && notable.doi && recent.doi === notable.doi
 }
 
 function pubMeta(pub: Publication) {
-  const citations = pub.doi ? totalsByDoi.get(pub.doi) ?? null : null;
+  const c = citesFor(pub);
+  const citations = c > 0 ? c : null;
   const url = pub.url ?? (pub.doi ? `https://doi.org/${pub.doi}` : null);
   return { citations, url };
 }

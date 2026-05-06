@@ -3,6 +3,8 @@ import '../styles/global.css';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import CoordReadout from '../components/CoordReadout.astro';
+import Analytics from '@vercel/analytics/astro';
+import SpeedInsights from '@vercel/speed-insights/astro';
 
 interface Props {
   title: string;
@@ -48,6 +50,11 @@ const fullTitle = title === 'Sustainable Solutions Lab'
     </main>
     {!hideFooter && <Footer />}
     {showCoordReadout && <CoordReadout />}
+
+    {/* Vercel Web Analytics + Speed Insights — privacy-friendly, no cookies,
+        no PII. Only emits events on production deployments. */}
+    <Analytics />
+    <SpeedInsights />
 
     <script is:inline>
       // Theme bootstrap — runs before paint to avoid flash.

@@ -156,6 +156,8 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
 ---
 
 <li
+  id={pub.doi ? `pub-${pub.doi.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : undefined}
+  style="scroll-margin-top: 112px;"
   class:list={['relative', isFeatured ? 'py-6' : 'py-6 border-b border-rule']}
   data-pub
   data-year={pub.year}

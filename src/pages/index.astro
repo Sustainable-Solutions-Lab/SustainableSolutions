@@ -28,11 +28,17 @@ function resolveImage(filename: string | null | undefined): string | null {
 
 const cards = items.map((it) => {
   const pub = it.doi ? pubsByDoi.get(it.doi.trim().toLowerCase()) ?? null : null;
+  // For type=publication with a known DOI, deep-link to the paper's card
+  // anchor on /publications. A bare "/publications" override in the sheet
+  // (the existing pattern) gets upgraded to the anchor automatically; a
+  // distinct override URL is honored verbatim.
+  const anchorLink = (it.type === 'publication' && it.doi)
+    ? `/publications#pub-${it.doi.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+    : null;
   const link =
-    it.link ||
-    pub?.url ||
-    (it.doi ? `https://doi.org/${it.doi}` : null) ||
-    '#';
+    (anchorLink && (!it.link || it.link === '/publications'))
+      ? anchorLink
+      : (it.link || pub?.url || (it.doi ? `https://doi.org/${it.doi}` : null) || '#');
   return {
     ...it,
     imgUrl: resolveImage(it.image_filename),

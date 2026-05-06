@@ -5,6 +5,22 @@ import publications from '../../data/publications.json';
 import tools from '../../data/tools.json';
 import type { NewsItem, Publication, Tool } from '../../lib/types';
 import { SYSTEMS } from '../../lib/systems';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+// Resolve a news image_filename to a /public/-relative URL. Accepts either
+// a bare filename (searched across common folders) or a path under /public/
+// (e.g. "news/SSF.png"). Falls back to null if no match found.
+function resolveNewsImage(filename: string | null | undefined): string | null {
+  if (!filename) return null;
+  if (filename.includes('/')) {
+    if (existsSync(resolve('public', filename))) return `/${filename}`;
+  }
+  for (const folder of ['news', 'images/news', 'featured', 'images']) {
+    if (existsSync(resolve('public', folder, filename))) return `/${folder}/${filename}`;
+  }
+  return null;
+}
 
 const TOOLS_WITHOUT_DETAIL_PAGE = new Set(['cornerstone']);
 function toolHref(t: Tool): string {
@@ -117,7 +133,8 @@ const cards = items.map((n) => {
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
-  return { n, companion, companionTools, sys, topic, topSys, topTopic, stripe, year, searchBlob };
+  const imageUrl = resolveNewsImage(n.image_filename);
+  return { n, companion, companionTools, sys, topic, topSys, topTopic, stripe, year, searchBlob, imageUrl };
 });
 
 // Years present in the data, descending. Drop empties.
@@ -442,7 +459,7 @@ const total = cards.length;
       <>
       <h2 class="sr-only">News items</h2>
       <ul id="news-list" class="list-none p-0 m-0">
-        {cards.map(({ n, companion, companionTools, sys, topic, topSys, topTopic, stripe, year, searchBlob }) => {
+        {cards.map(({ n, companion, companionTools, sys, topic, topSys, topTopic, stripe, year, searchBlob, imageUrl }) => {
           const isExternal = !!n.link && /^https?:\/\//.test(n.link);
           const companionUrl = companion
             ? (companion.url ?? (companion.doi ? `https://doi.org/${companion.doi}` : null))
@@ -461,6 +478,22 @@ const total = cards.length;
               data-search={searchBlob}
             >
               <article class="pl-4" style={`border-left: 4px solid ${stripe};`}>
+                {imageUrl && (
+                  <a
+                    href={n.link ?? undefined}
+                    class="block mb-3 border-b-0"
+                    target={isExternal ? '_blank' : undefined}
+                    rel={isExternal ? 'noopener' : undefined}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={n.title}
+                      loading="lazy"
+                      class="block w-full max-w-md object-cover border border-rule"
+                      style="aspect-ratio: 16/9; border-radius: var(--radius-md);"
+                    />
+                  </a>
+                )}
                 <p class="eyebrow m-0 mb-1">
                   <span class="text-ink-2">{sourceLabel(n)}</span>
                   <span class="dot">·</span>

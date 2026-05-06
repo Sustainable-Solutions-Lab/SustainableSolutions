@@ -20,7 +20,12 @@ for (const p of publications as Publication[]) {
 
 function resolveImage(filename: string | null | undefined): string | null {
   if (!filename) return null;
-  for (const folder of ['featured', 'images']) {
+  // Path-style values (e.g. "news/SSF.png") look up directly under /public/.
+  if (filename.includes('/')) {
+    if (existsSync(resolve('public', filename))) return `/${filename}`;
+  }
+  // Bare filenames search a few common folders.
+  for (const folder of ['featured', 'news', 'images', 'images/news']) {
     if (existsSync(resolve('public', folder, filename))) return `/${folder}/${filename}`;
   }
   return null;

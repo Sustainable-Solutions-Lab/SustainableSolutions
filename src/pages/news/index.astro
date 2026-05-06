@@ -477,23 +477,14 @@ const total = cards.length;
               data-featured={String(!!n.featured)}
               data-search={searchBlob}
             >
-              <article class="pl-4" style={`border-left: 4px solid ${stripe};`}>
-                {imageUrl && (
-                  <a
-                    href={n.link ?? undefined}
-                    class="block mb-3 border-b-0"
-                    target={isExternal ? '_blank' : undefined}
-                    rel={isExternal ? 'noopener' : undefined}
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={n.title}
-                      loading="lazy"
-                      class="block w-full max-w-md object-cover border border-rule"
-                      style="aspect-ratio: 16/9; border-radius: var(--radius-md);"
-                    />
-                  </a>
-                )}
+              <article
+                class:list={[
+                  'pl-4',
+                  imageUrl ? 'grid md:grid-cols-[1fr_240px] gap-6' : '',
+                ]}
+                style={`border-left: 4px solid ${stripe};`}
+              >
+                <div class="min-w-0">
                 <p class="eyebrow m-0 mb-1">
                   <span class="text-ink-2">{sourceLabel(n)}</span>
                   <span class="dot">·</span>
@@ -567,6 +558,23 @@ const total = cards.length;
                       </>
                     ))}
                   </p>
+                )}
+                </div>
+                {imageUrl && (
+                  <a
+                    href={n.link ?? undefined}
+                    class="block shrink-0 self-start border-b-0"
+                    target={isExternal ? '_blank' : undefined}
+                    rel={isExternal ? 'noopener' : undefined}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={n.title}
+                      loading="lazy"
+                      class="block w-full object-cover border border-rule"
+                      style="aspect-ratio: 16/10; border-radius: var(--radius-md);"
+                    />
+                  </a>
                 )}
               </article>
             </li>

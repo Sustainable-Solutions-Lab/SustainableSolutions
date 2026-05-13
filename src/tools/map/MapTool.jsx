@@ -175,23 +175,24 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       const sourceId = 'just-air-data'
       const sourceLayer = baseConfig.sourceLayer ?? baseConfig.id
 
-      // Pull values from the most uniformly-distributed scale available so
-      // the histogram represents CONUS-wide spread rather than whichever
-      // scale happens to be in the current viewport. _scale=9 covers every
-      // CONUS cell that's not been bbox-tagged out, so it's the best
-      // single-scale proxy for the underlying distribution.
-      let lastN = 0
+      // Take whichever scale is currently in the tile — prefer 9 km national
+      // (uniform CONUS coverage) but fall back to any features so the
+      // histogram populates even when only 36 km supercells are loaded
+      // (z 2–4 default view). Re-query on every sourcedata so the
+      // distribution updates as finer-scale tiles stream in.
       function pull() {
         try {
           const features = mapInstance.querySourceFeatures(sourceId, { sourceLayer })
-          if (features.length === lastN || features.length < 200) return
-          lastN = features.length
-          const preferred = features.filter((f) => f.properties?._scale === 9)
-          const sample = preferred.length >= 200 ? preferred : features
+          if (features.length === 0) return
+          const s9 = features.filter((f) => f.properties?._scale === 9)
+          const s36 = features.filter((f) => f.properties?._scale === 36)
+          const sample = s9.length >= 100 ? s9
+                       : s36.length >= 30 ? s36
+                       : features
           const vals = sample
             .map((f) => f.properties?.[varId])
             .filter((v) => v != null && isFinite(v))
-          if (vals.length >= 100) applyDist(vals)
+          if (vals.length >= 20) applyDist(vals)
         } catch (_) { /* source not loaded yet */ }
       }
       pull()

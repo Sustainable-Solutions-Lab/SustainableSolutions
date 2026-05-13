@@ -20,6 +20,44 @@ const JUST_AIR_SOURCE_ID = 'just-air-data'
 // compound a `[get value] >= low && [get value] <= high` on top so the
 // distribution chart's slider clips the data layers the same way.
 function applyJustAirFilter(map, config, variable, percentileRange, onFilterStats) {
+  const noFilter = (percentileRange?.low ?? 0) <= 0 && (percentileRange?.high ?? 100) >= 100
+
+  // Reset each scale layer to just its base `_scale === N` filter when the
+  // percentile slider is at default; only compound a value-range clamp on
+  // top when the user has actually moved the handles. This is the bug-fix
+  // that restored data visibility — earlier we always re-set the filter
+  // with sample-derived bounds, which silently clipped features whose
+  // values fell outside the (often small) loaded sample.
+  if (noFilter) {
+    for (const s of config.scales) {
+      const layerId = `just-air-cells-${s.value}`
+      if (!map.getLayer(layerId)) continue
+      try {
+        map.setFilter(layerId, [
+          '==', ['coalesce', ['to-number', ['get', '_scale']], 0], s.value,
+        ])
+      } catch (err) {
+        console.error('[applyJustAirFilter] setFilter', layerId, err)
+      }
+    }
+    if (onFilterStats) {
+      const sourceLayer = config.sourceLayer ?? config.id
+      let features = []
+      try { features = map.querySourceFeatures(JUST_AIR_SOURCE_ID, { sourceLayer }) } catch {}
+      const totalValues = features
+        .map((f) => f.properties?.[variable.id])
+        .filter((v) => v != null && !isNaN(v))
+      onFilterStats({
+        count: totalValues.length,
+        totalCount: totalValues.length,
+        mean: null,
+        median: null,
+        allValues: totalValues,
+      })
+    }
+    return
+  }
+
   const sourceLayer = config.sourceLayer ?? config.id
   let allFeatures
   try {
@@ -29,9 +67,6 @@ function applyJustAirFilter(map, config, variable, percentileRange, onFilterStat
   }
   if (!allFeatures || allFeatures.length === 0) return
 
-  // Use _scale=9 features (national grid, CONUS-uniform spatial coverage)
-  // for the threshold computation when available; otherwise fall back to
-  // whatever scale is in the tile.
   const sample = (() => {
     const s9 = allFeatures.filter((f) => f.properties?._scale === 9)
     return s9.length >= 100 ? s9 : allFeatures

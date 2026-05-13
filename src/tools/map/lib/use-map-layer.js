@@ -146,10 +146,14 @@ export function useMapLayer(map, config, state, opacityP95) {
   // ── Source / layer lifecycle ──────────────────────────────────────────────
   useEffect(() => {
     if (!map) return
-    // Projects that opt into tileSources are rendered by useMultiSourceLayers
-    // instead — the Firefuels-specific LOD circle scheme assumed by this
-    // hook doesn't fit polygon-tiled PMTiles with no _scale property.
+    // Bow out for projects rendered by an alternate hook — without this we
+    // would double-add data layers and the second set (added later, with no
+    // beforeId) would float to the top of the style and cover state borders
+    // and city labels. The two alternate paths are:
+    //   - tileSources  → useMultiSourceLayers (polygon fill)
+    //   - scales       → useJustAirLayers     (multi-scale circles)
     if (config.tileSources) return
+    if (config.scales) return
 
     const sourceConfig = isPlaceholder
       ? { type: 'geojson', data: '/fuel-treatment.geojson' }

@@ -142,9 +142,28 @@
  * @property {Dimension[]}          dimensions      - all dimensions, flat list
  * @property {PercentileFilterConfig} percentileFilter
  * @property {AreaToolConfig}       areaTool
- * @property {string}               tilesUrl        - PMTiles URL or local path
+ * @property {string}               tilesUrl        - PMTiles URL or local path (legacy/fallback)
+ * @property {TileSource[]}         [tileSources]   - opt-in: multi-source polygon PMTiles
+ *                                                   renderer. When set, the legacy LOD
+ *                                                   circle renderer (use-map-layer.js)
+ *                                                   bows out and use-multi-source-layers
+ *                                                   handles the data layers instead.
  * @property {string}               [methodsPath]
  * @property {BoxOverlayConfig}     [boxOverlay]
+ */
+
+/**
+ * One polygon-tiled PMTiles source. Used by projects whose data isn't the
+ * Firefuels 0.01°/0.05°/0.1° LOD circle scheme — most things, in practice.
+ *
+ * @typedef {Object} TileSource
+ * @property {string} id           - MapLibre source id (must be unique)
+ * @property {string} url          - PMTiles URL (https://…/foo.pmtiles)
+ * @property {string} sourceLayer  - tippecanoe layer name baked into the PMTiles
+ * @property {number} [minZoom]    - clamp the fill layer's visibility (default: 0)
+ * @property {number} [maxZoom]    - clamp the fill layer's visibility (default: 24)
+ * @property {[number, number]} [fadeInRange]  - [z0, z1]: opacity ramps 0→1 across this range
+ * @property {[number, number]} [fadeOutRange] - [z0, z1]: opacity ramps 1→0 across this range
  */
 
 // This file exports nothing at runtime — it is documentation only.

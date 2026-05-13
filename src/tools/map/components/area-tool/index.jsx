@@ -24,6 +24,18 @@ import {
 import { LAYER_IDS } from '../../lib/use-map-layer.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 
+// Layer IDs that currently render data on the map. Firefuels-LOD projects
+// use the four legacy circle layers; tileSources-driven projects use one
+// fill layer per declared source. The area tool's queryRenderedFeatures
+// call needs whichever set is live so the per-circle / per-polygon
+// aggregates pull the right features.
+function dataLayerIds(config) {
+  if (config.tileSources && config.tileSources.length > 0) {
+    return config.tileSources.map((ts) => `${ts.id}-fill`)
+  }
+  return LAYER_IDS
+}
+
 const CIRCLE_SOURCE_ID = 'area-circle'
 const CIRCLE_MASK_LAYER_ID = 'area-circle-mask'
 const CIRCLE_FILL_LAYER_ID = 'area-circle-fill'
@@ -228,7 +240,7 @@ export function AreaTool({ map, config, state, dispatch }) {
       [Math.min(p1.x, p2.x), Math.min(p1.y, p2.y)],
       [Math.max(p1.x, p2.x), Math.max(p1.y, p2.y)],
     ]
-    const activeLayers = LAYER_IDS.filter(id => map.getLayer(id))
+    const activeLayers = dataLayerIds(config).filter((id) => map.getLayer(id))
     const features = map.queryRenderedFeatures(bbox, { layers: activeLayers })
     const filtered = featuresWithinCircle(features, lat, lng, radiusKm)
 
@@ -279,7 +291,7 @@ export function AreaTool({ map, config, state, dispatch }) {
       [Math.min(sw.x, ne.x), Math.min(sw.y, ne.y)],
       [Math.max(sw.x, ne.x), Math.max(sw.y, ne.y)],
     ]
-    const activeLayers = LAYER_IDS.filter((id) => map.getLayer(id))
+    const activeLayers = dataLayerIds(config).filter((id) => map.getLayer(id))
     const features = map.queryRenderedFeatures(bbox, { layers: activeLayers })
     const filtered = featuresWithinPolygon(features, geometry)
     const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)

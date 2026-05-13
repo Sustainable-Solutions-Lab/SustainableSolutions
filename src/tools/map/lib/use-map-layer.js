@@ -146,6 +146,10 @@ export function useMapLayer(map, config, state, opacityP95) {
   // ── Source / layer lifecycle ──────────────────────────────────────────────
   useEffect(() => {
     if (!map) return
+    // Projects that opt into tileSources are rendered by useMultiSourceLayers
+    // instead — the Firefuels-specific LOD circle scheme assumed by this
+    // hook doesn't fit polygon-tiled PMTiles with no _scale property.
+    if (config.tileSources) return
 
     const sourceConfig = isPlaceholder
       ? { type: 'geojson', data: '/fuel-treatment.geojson' }

@@ -119,7 +119,7 @@ const config = {
       id: 'pm25_diff',
       label: 'Δ PM₂.₅ (High − Low)',
       unit: 'µg/m³',
-      colormap: 'RdBu',
+      colormap: 'BuRd',
       diverging: true,
       domain: { min: -5, max: 5, zero: 0 },
       layer: 'pm25',
@@ -154,7 +154,7 @@ const config = {
       id: 'mort_diff',
       label: 'Δ Mortality (High − Low)',
       unit: 'deaths/pixel',
-      colormap: 'RdBu',
+      colormap: 'BuRd',
       diverging: true,
       domain: { min: -0.0005, max: 0.0005, zero: 0 },
       layer: 'mortality',
@@ -189,6 +189,26 @@ const config = {
     labelSize: 10,
   },
 
+  // Two PMTiles sources stack at every zoom: the synthetic 9 km national
+  // surface is always visible, and the 15-metro pixel data fades in starting
+  // at zoom 7.5 (where individual city pixels become large enough to read).
+  // The cities tileset visually covers the national surface inside city
+  // boxes, so no explicit masking is needed.
+  tileSources: [
+    {
+      id: 'just-air-national',
+      url: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/just-air-national.pmtiles',
+      sourceLayer: 'national',
+    },
+    {
+      id: 'just-air-cities',
+      url: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/just-air-cities.pmtiles',
+      sourceLayer: 'cities',
+      fadeInRange: [7.5, 8.5],
+    },
+  ],
+  // Legacy field — kept so back-compat code paths don't NPE. The actual
+  // data sources are declared above in tileSources.
   tilesUrl: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/just-air-cities.pmtiles',
   methodsPath: 'just-air/methods.mdx',
 };

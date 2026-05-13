@@ -20,6 +20,9 @@ import {
 const INTERPOLATORS = {
   // Standard RdBu: t=0 → red (costs > benefits), t=1 → blue (benefits > costs)
   RdBu: interpolateRdBu,
+  // Inverted RdBu: t=0 → blue, t=1 → red. Used by Just Air's diff layers where
+  // a positive diff (High CDR is dirtier / kills more people) reads as bad.
+  BuRd: (t) => interpolateRdBu(1 - t),
   PuOr: interpolatePuOr,
   Greens: interpolateGreens,
   Oranges: interpolateOranges,

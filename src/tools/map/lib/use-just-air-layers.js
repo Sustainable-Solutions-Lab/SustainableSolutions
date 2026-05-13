@@ -34,12 +34,26 @@ const R12 = 13.1  * FILL_FACTOR
 const MIN_RADIUS_PX = 2
 const MAX_RADIUS_PX = 12
 
-const RADIUS = ['max', MIN_RADIUS_PX, ['min', MAX_RADIUS_PX, [
+// MapLibre forbids `['zoom']` from appearing anywhere except as the direct
+// input to a top-level step/interpolate expression. The earlier attempt to
+// clamp the whole interpolate inside ['max', MIN, ['min', MAX, ...]] caused
+// MapLibre to reject every just-air layer at register time, which is why
+// the map looked empty. Push the min/max clamp INSIDE each stop instead —
+// each stop value is just a scale × R constant (no zoom), so clamping it
+// is fine.
+const clampScale = (k) => [
+  'max', MIN_RADIUS_PX, [
+    'min', MAX_RADIUS_PX, [
+      '*', ['coalesce', ['to-number', ['get', '_scale']], 1], k,
+    ],
+  ],
+]
+const RADIUS = [
   'interpolate', ['exponential', 2], ['zoom'],
-  4,  ['*', ['coalesce', ['to-number', ['get', '_scale']], 1], R4],
-  12, ['*', ['coalesce', ['to-number', ['get', '_scale']], 1], R12],
-  22, ['*', ['coalesce', ['to-number', ['get', '_scale']], 1], R12],
-]]]
+  4,  clampScale(R4),
+  12, clampScale(R12),
+  22, clampScale(R12),
+]
 
 const SOURCE_ID = 'just-air-data'
 

@@ -196,11 +196,18 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         } catch (_) { /* source not loaded yet */ }
       }
       pull()
+      // Don't gate on isSourceLoaded — for the pmtiles protocol that flag
+      // didn't reliably flip true and the histogram stayed empty.
       function onSourceData(e) {
-        if (e.sourceId === sourceId && e.isSourceLoaded) pull()
+        if (e.sourceId === sourceId) pull()
       }
+      function onIdle() { pull() }
       mapInstance.on('sourcedata', onSourceData)
-      return () => mapInstance.off('sourcedata', onSourceData)
+      mapInstance.on('idle', onIdle)
+      return () => {
+        mapInstance.off('sourcedata', onSourceData)
+        mapInstance.off('idle', onIdle)
+      }
     }
 
     setStatewideValues([])

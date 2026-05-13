@@ -83,18 +83,22 @@ export function useJustAirLayers(map, config, state) {
       if (!v || v.type === 'categorical') return
       try {
         const features = map.querySourceFeatures(SOURCE_ID, { sourceLayer })
-        if (features.length < 30) return
+        if (features.length < 10) return
         const values = features
           .map((f) => f.properties?.[v.id])
           .filter((x) => x != null && !isNaN(x))
-        if (values.length < 30) return
+        if (values.length < 10) return
         const zero = v.domain?.zero ?? v.domain?.min ?? 0
         const absDev = values.map((x) => Math.abs(x - zero)).sort((a, b) => a - b)
         const idx = Math.floor(0.99 * (absDev.length - 1))
         const p99 = absDev[idx]
         if (p99 > 0) {
           colorRangeRef.current = { maxDev: p99 }
-          colorRangeLockedRef.current = true
+          // Lock only once we've had a chance to compute across a real sample
+          // (not just a single tile's worth) — leave it unlocked if we got
+          // few features so a subsequent sourcedata event with a fuller
+          // sample can refine the p99 before we settle on a final scale.
+          if (values.length >= 100) colorRangeLockedRef.current = true
           updatePaint()
         }
       } catch (_) { /* source not loaded yet */ }
@@ -157,12 +161,21 @@ export function useJustAirLayers(map, config, state) {
       }
     }
 
+    // Fire computeColorRange on every sourcedata event for our source
+    // (not just isSourceLoaded=true) — the pmtiles protocol fetches one
+    // tile at a time via byte-range and MapLibre's isSourceLoaded flag for
+    // vector sources didn't reliably flip true with this protocol, leaving
+    // computeColorRange permanently unfired and the alpha math stuck on
+    // the configured domain max. computeColorRange has its own
+    // small-sample guard so harmless to call repeatedly.
     function onSourceData(e) {
-      if (e.sourceId === SOURCE_ID && e.isSourceLoaded) computeColorRange()
+      if (e.sourceId === SOURCE_ID) computeColorRange()
     }
+    function onIdle() { computeColorRange() }
 
     map.on('styledata', addLayers)
     map.on('sourcedata', onSourceData)
+    map.on('idle', onIdle)
     if (map.isStyleLoaded()) addLayers()
     else map.once('idle', addLayers)
     computeColorRange()
@@ -170,6 +183,7 @@ export function useJustAirLayers(map, config, state) {
     return () => {
       map.off('styledata', addLayers)
       map.off('sourcedata', onSourceData)
+      map.off('idle', onIdle)
       for (const s of scales) {
         const layerId = `just-air-cells-${s.value}`
         if (map.getLayer(layerId)) map.removeLayer(layerId)

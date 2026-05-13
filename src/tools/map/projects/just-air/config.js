@@ -168,8 +168,13 @@ const config = {
   ],
 
   // ── Percentile filter ────────────────────────────────────────────────────
+  // Disabled for v1: the slider works against the Firefuels LOD source
+  // (firemap-data), which Just Air doesn't use. The distribution chart that
+  // hosts the slider also draws from a Firefuels-only GeoJSON prefetch, so
+  // it would render as an empty bar regardless. Re-enable once the filter
+  // is generalized for multi-source projects.
   percentileFilter: {
-    enabled: true,
+    enabled: false,
     defaultLow: 0,
     defaultHigh: 100,
   },

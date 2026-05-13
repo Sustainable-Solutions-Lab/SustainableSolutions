@@ -25,11 +25,13 @@ const config = {
   description:
     'Annual PM₂.₅ concentrations and PM₂.₅-related mortality projected to 2050 under two net-zero scenarios — Low CDR (limited carbon-dioxide removal) and High CDR — at high spatial resolution for the 15 most populous U.S. metros. Difference layers show where each scenario yields cleaner or more polluted air, and where the resulting health burden shifts. For details, see <a href="https://assets-eu.researchsquare.com/files/rs-7359464/v1/e95da285-43f3-4f1b-b892-d899d3335dda.pdf" target="_blank" rel="noopener noreferrer"><strong>Bergero et al., Nature Climate Change, in press.</strong></a>',
 
-  // CONUS-wide framing with city-by-city zoom-in allowed.
+  // CONUS-wide framing with city-by-city zoom-in allowed. The default
+  // zoom shows the full lower-48 footprint; minZoom is generous so the
+  // user can still pinch out further for context.
   region: {
     center: [-96.5, 38.5],
-    zoom: 4.2,
-    minZoom: 3.5,
+    zoom: 3.8,
+    minZoom: 2.5,
     maxZoom: 13,
     bounds: [-125, 24, -66, 50],
     // Suppress the California-only static overlays (out-of-bounds mask,

@@ -59,7 +59,11 @@ const config = {
       id: 'treatment',
       label: 'Treatment type',
       type: 'toggle',
-      defaultValue: 'rx_burn',
+      // Must be 'min' until the PMTiles is rebuilt with the other treatment
+      // variants — fuel-treatment.pmtiles only carries net_min_current on
+      // its features, so any other default yields a missing-property paint
+      // expression and MapLibre falls back to its black default circle-color.
+      defaultValue: 'min',
       options: [
         { id: 'min',          label: 'Lowest Cost' },
         { id: 'rx_burn',      label: 'Prescribed Burning' },

@@ -29,3 +29,4 @@ design-system.bin
 *.swp
 dist-zips/
 templates/ca-zip-codes-geo.min.json
+dist-tiles/

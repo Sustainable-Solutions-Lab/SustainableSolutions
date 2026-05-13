@@ -154,12 +154,18 @@ function round(n, places) {
   return Math.round(n * f) / f;
 }
 
-function makePoint(lng, lat, props) {
-  return {
+// tippecanoe respects an inline `tippecanoe: { minzoom, maxzoom }` key on
+// each feature and uses it instead of the global -Z/-z range. We exploit
+// that to confine each scale to its own zoom band so tippecanoe's
+// drop-densest sampling doesn't strip the coarser scales out at low zoom.
+function makePoint(lng, lat, props, tcZoom) {
+  const f = {
     type: 'Feature',
     properties: props,
     geometry: { type: 'Point', coordinates: [round(lng, 5), round(lat, 5)] },
   };
+  if (tcZoom) f.tippecanoe = tcZoom;
+  return f;
 }
 
 function cityPixelToPoint(p, city) {
@@ -176,7 +182,7 @@ function cityPixelToPoint(p, city) {
     mort_low:  round(p.mort_low, 6),
     mort_high: round(p.mort_high, 6),
     mort_diff: round(p.mort_high - p.mort_low, 6),
-  });
+  }, { minzoom: 8, maxzoom: 14 });
 }
 
 // ── Synthetic 9 km CONUS national grid (centroids) ──────────────────────────
@@ -243,7 +249,7 @@ function nationalCellToPoint(c) {
     mort_low:  round(c.mort_low, 8),
     mort_high: round(c.mort_high, 8),
     mort_diff: round(c.mort_high - c.mort_low, 8),
-  });
+  }, { minzoom: 4, maxzoom: 11 });
 }
 
 // ── 4×4 supercell aggregation of the 9 km national grid ─────────────────────
@@ -282,7 +288,7 @@ function aggregateSupercells(cells, blockSize = 4) {
       mort_low:  round(b.mort_low  / n, 8),
       mort_high: round(b.mort_high / n, 8),
       mort_diff: round((b.mort_high - b.mort_low) / n, 8),
-    }));
+    }, { minzoom: 2, maxzoom: 7 }));
   }
   return out;
 }

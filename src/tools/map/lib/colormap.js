@@ -15,6 +15,9 @@ import {
   interpolateOranges,
   interpolateYlOrRd,
   interpolateBlues,
+  interpolatePurples,
+  interpolateRdPu,
+  interpolateBuPu,
 } from 'd3-scale-chromatic'
 
 const INTERPOLATORS = {
@@ -28,6 +31,9 @@ const INTERPOLATORS = {
   Oranges: interpolateOranges,
   YlOrRd: interpolateYlOrRd,
   Blues: interpolateBlues,
+  Purples: interpolatePurples,
+  RdPu: interpolateRdPu,
+  BuPu: interpolateBuPu,
   // Blue half of RdBu — for benefit variables: low=light blue, high=deep blue
   // Starts at 0.62 (not 0.5/white) so even low values show a visible blue
   RdBuBlue: (t) => interpolateRdBu(0.62 + t * 0.38),

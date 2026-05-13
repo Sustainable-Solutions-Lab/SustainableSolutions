@@ -139,12 +139,14 @@ const config = {
       description: 'High CDR minus Low CDR. Blue: High CDR is cleaner; red: High CDR is dirtier.',
     },
 
-    // Mortality — sequential warm scale; magnitudes are small (deaths per pixel).
+    // Mortality — distinct colormap from PM₂.₅ so the user has a quick
+    // visual cue which variable they're looking at. Purples reads
+    // semantically as "deaths" without competing with PM₂.₅'s warm scale.
     {
       id: 'mort_low',
       label: 'Mortality — Low CDR',
       unit: 'deaths/pixel',
-      colormap: 'YlOrRd',
+      colormap: 'Purples',
       diverging: false,
       domain: { min: 0, max: 0.001 },
       layer: 'mortality',
@@ -155,7 +157,7 @@ const config = {
       id: 'mort_high',
       label: 'Mortality — High CDR',
       unit: 'deaths/pixel',
-      colormap: 'YlOrRd',
+      colormap: 'Purples',
       diverging: false,
       domain: { min: 0, max: 0.001 },
       layer: 'mortality',
@@ -176,13 +178,8 @@ const config = {
   ],
 
   // ── Percentile filter ────────────────────────────────────────────────────
-  // Disabled for v1: the slider works against the Firefuels LOD source
-  // (firemap-data), which Just Air doesn't use. The distribution chart that
-  // hosts the slider also draws from a Firefuels-only GeoJSON prefetch, so
-  // it would render as an empty bar regardless. Re-enable once the filter
-  // is generalized for multi-source projects.
   percentileFilter: {
-    enabled: false,
+    enabled: true,
     defaultLow: 0,
     defaultHigh: 100,
   },

@@ -24,21 +24,22 @@ import { buildColorScale } from './colormap.js'
 import { getActiveVariable } from './get-active-variable.js'
 
 // Tiling-exact base radius for a 1 km cell — the natural Mercator-derived
-// pixel size of a 1 km × 1 km cell, scaled by FILL_FACTOR to overlap a
-// touch so the cells read as a coherent surface instead of a dotted grid.
-// MAX_RADIUS_PX caps the circle size at high zoom so a 9 km cell rendered
-// at z10 stays at a readable ~24 px wide instead of swelling to 120 px.
+// pixel size of a 1 km × 1 km cell, scaled by FILL_FACTOR. MAX_RADIUS_PX
+// caps a 9 km cell at high zoom so it doesn't swell to 120 px; MIN_RADIUS_PX
+// keeps small cells (e.g. _scale 9 at z 5) visible as a dot instead of
+// dropping below 1 px and disappearing entirely.
 const FILL_FACTOR = 2.0
 const R4  = 0.051 * FILL_FACTOR
 const R12 = 13.1  * FILL_FACTOR
+const MIN_RADIUS_PX = 2
 const MAX_RADIUS_PX = 12
 
-const RADIUS = ['min', MAX_RADIUS_PX, [
+const RADIUS = ['max', MIN_RADIUS_PX, ['min', MAX_RADIUS_PX, [
   'interpolate', ['exponential', 2], ['zoom'],
   4,  ['*', ['coalesce', ['to-number', ['get', '_scale']], 1], R4],
   12, ['*', ['coalesce', ['to-number', ['get', '_scale']], 1], R12],
   22, ['*', ['coalesce', ['to-number', ['get', '_scale']], 1], R12],
-]]
+]]]
 
 const SOURCE_ID = 'just-air-data'
 
@@ -148,19 +149,34 @@ export function useJustAirLayers(map, config, state) {
 
 // ── Paint expression builders ──────────────────────────────────────────────
 //
-// Firefuels-style emulation:
-//   • Diverging variables get a binary blue/red color expression keyed off
-//     the value's sign vs the variable's `zero`. Magnitude is conveyed by
-//     opacity, so values at zero fade to fully transparent.
-//   • Sequential variables get the continuous colormap, but their opacity
-//     ramps with magnitude away from `zero` (default 0) too, so low values
-//     also fade to transparent rather than sitting on top of the basemap
-//     as a faint wash.
+// "Fade to transparent at zero" is implemented by embedding alpha directly
+// in the colormap stops: each rgba string's alpha component is a function
+// of |value − zero| / extremum. value at zero ⇒ alpha 0 (fully transparent),
+// value at the configured extremum ⇒ alpha 1 (fully opaque), with a t^1.5
+// power curve so the falloff is sharp near zero (low-value cells truly
+// disappear into the basemap) and gentler at the extremes.
 //
-// The d3 colormap convention: scaleDiverging(interp).domain([min,zero,max])
-// maps min→interp(0) and max→interp(1). For RdBu, max→blue; for BuRd
-// (Just Air diff layers), max→red. So we pick the anchor colors directly
-// from the configured colormap rather than hard-coding blue/red sides.
+// This is the same trick Firefuels' continuous-legend gradient uses to
+// produce its distinctive faded-low-end visual — we just lift it from
+// the legend SVG into the actual map paint expression so the map matches
+// the legend instead of fighting it. circle-opacity is then a plain
+// constant (no value-driven magnitude factor) which keeps the alpha math
+// readable and avoids opacity-multiplied-twice bugs.
+
+function withAlpha(rgbStr, alpha) {
+  // Accepts d3 outputs (rgb(r,g,b)) and hex (#rrggbb); produces rgba.
+  if (rgbStr.startsWith('rgba')) return rgbStr
+  if (rgbStr.startsWith('rgb(')) {
+    return rgbStr.replace(/^rgb\(/, 'rgba(').replace(/\)$/, `,${alpha.toFixed(3)})`)
+  }
+  if (rgbStr.startsWith('#') && rgbStr.length === 7) {
+    const r = parseInt(rgbStr.slice(1, 3), 16)
+    const g = parseInt(rgbStr.slice(3, 5), 16)
+    const b = parseInt(rgbStr.slice(5, 7), 16)
+    return `rgba(${r},${g},${b},${alpha.toFixed(3)})`
+  }
+  return rgbStr
+}
 
 function buildColorExpr(variable, isDark) {
   if (!variable) return '#888888'
@@ -170,63 +186,61 @@ function buildColorExpr(variable, isDark) {
     expr.push('#888888')
     return expr
   }
-  if (variable.diverging) {
-    const zero = variable.domain?.zero ?? 0
-    // Pick Firefuels' anchor hexes for legibility against the paper / dark
-    // basemap, then assign them to sides based on the colormap name. RdBu
-    // maps the positive end to blue (firefuels' net-benefit convention);
-    // BuRd inverts that so the positive end (a higher diff = "worse"
-    // outcome) reads red.
-    const blue = isDark ? '#4393c3' : '#2166ac'
-    const red  = isDark ? '#d6604d' : '#b2182b'
-    const posIsBlue = variable.colormap !== 'BuRd'
-    const posColor = posIsBlue ? blue : red
-    const negColor = posIsBlue ? red  : blue
-    return ['case',
-      ['>=', ['get', variable.id], zero], posColor,
-      negColor,
-    ]
-  }
-  // Sequential: continuous colormap
-  const { min, max } = variable.domain
-  const scale = buildColorScale(variable)
-  const steps = 24
-  const expr = ['interpolate', ['linear'], ['get', variable.id]]
-  for (let i = 0; i <= steps; i++) {
-    const v = min + (i / steps) * (max - min)
-    expr.push(v, scale(v))
-  }
-  return expr
-}
 
-// Magnitude-driven opacity: value=zero ⇒ fully transparent, value at the
-// configured extremum ⇒ fully opaque, ramping linearly. Linear (rather
-// than Firefuels' t^0.4 curve) is what produces a visible fade-to-paper
-// for low-value cells; the t^0.4 curve makes anything above zero almost
-// fully opaque, which the user explicitly flagged as not what they want.
-//
-// Zoom-fade at the start and end of each scale's render band is multiplied
-// in on top so the transition between scales (36 → 9 → 3 → 1 km) cross-
-// fades over ~0.2 zoom rather than snapping, which read as visible
-// "disappear / reappear" pops at the band edges.
-function buildOpacityExpr(variable, scaleEntry) {
-  if (!variable || variable.type === 'categorical') return 0.9
   const zero = variable.domain?.zero ?? variable.domain?.min ?? 0
   const max  = variable.domain?.max ?? 1
   const min  = variable.domain?.min ?? 0
   const maxPosDev = Math.max(max  - zero, 0.001)
   const maxNegDev = Math.max(zero - min,  0.001)
-  const tPos = ['min', 1, ['max', 0,
-    ['/', ['-', ['get', variable.id], zero], maxPosDev],
-  ]]
-  const tNeg = ['min', 1, ['max', 0,
-    ['/', ['-', zero, ['get', variable.id]], maxNegDev],
-  ]]
-  const valueOpacity = ['case',
-    ['>=', ['get', variable.id], zero], tPos,
-    tNeg,
-  ]
-  return ['*', valueOpacity, buildZoomFade(scaleEntry)]
+
+  // t^1.5 power curve. Low values (|v − zero| / extremum small) fade
+  // aggressively to transparent; mid values are translucent; extremes
+  // are fully opaque. Steeper than Firefuels' t^0.4 (the user explicitly
+  // asked for more transparency at low values).
+  function alphaForValue(v) {
+    const t = v >= zero ? (v - zero) / maxPosDev : (zero - v) / maxNegDev
+    return Math.min(1, Math.pow(Math.max(0, t), 1.5))
+  }
+
+  const expr = ['interpolate', ['linear'], ['get', variable.id]]
+  const steps = 24
+
+  if (variable.diverging) {
+    // Binary blue/red anchor colors. The colormap name picks which side
+    // is which: RdBu sends max → blue (Firefuels' "positive = good ="
+    // blue convention); BuRd inverts so max → red (Just Air diff layers,
+    // where positive diff = High CDR is dirtier = bad reads red).
+    const bluePos = isDark ? [67, 147, 195] : [33, 102, 172]
+    const redPos  = isDark ? [214, 96, 77]  : [178, 24, 43]
+    const posIsBlue = variable.colormap !== 'BuRd'
+    const posRgb = posIsBlue ? bluePos : redPos
+    const negRgb = posIsBlue ? redPos  : bluePos
+    for (let i = 0; i <= steps; i++) {
+      const v = min + (i / steps) * (max - min)
+      const rgb = v >= zero ? posRgb : negRgb
+      const a = alphaForValue(v)
+      expr.push(v, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a.toFixed(3)})`)
+    }
+    return expr
+  }
+
+  // Sequential: full colormap with alpha embedded in each stop.
+  const scale = buildColorScale(variable)
+  for (let i = 0; i <= steps; i++) {
+    const v = min + (i / steps) * (max - min)
+    const a = alphaForValue(v)
+    expr.push(v, withAlpha(scale(v), a))
+  }
+  return expr
+}
+
+// circle-opacity is now just a constant peak multiplied by a zoom-fade so
+// adjacent scale bands cross-fade at their boundaries instead of snapping
+// (the user reported visible "disappear / reappear" pops at the band
+// transitions). The value-magnitude fade is embedded in the color alpha
+// (see buildColorExpr).
+function buildOpacityExpr(_variable, scaleEntry) {
+  return buildZoomFade(scaleEntry)
 }
 
 function buildZoomFade(s) {
@@ -242,7 +256,7 @@ function buildZoomFade(s) {
   return ['interpolate', ['linear'], ['zoom'],
     Math.max(0, minZ - fade), 0,
     minZ,                     1,
-    Math.max(minZ + 0.0001, maxZ), 1,
-    maxZ + fade,              0,
+    Math.max(minZ + 0.0001, maxZ - fade), 1,
+    maxZ,                     0,
   ]
 }

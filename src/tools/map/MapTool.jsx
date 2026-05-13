@@ -133,7 +133,13 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const isDark = state.colorScheme === 'dark'
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
 
-  // Fetch full statewide dataset once per variable for the distribution chart.
+  // Populate the "statewide" value distribution for the active variable.
+  // Two paths:
+  //   - Fuel-treatment uses the GeoJSON dev fallback (kept for back-compat).
+  //   - Other projects (just-air) querySourceFeatures on the rendered map
+  //     so the distribution chart + percentile filter have real values to
+  //     work with. We listen for sourcedata events because tile features
+  //     arrive asynchronously after the map first becomes ready.
   useEffect(() => {
     if (!activeVariable || activeVariable.type === 'categorical') {
       setStatewideValues([])
@@ -142,29 +148,63 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     }
     const varId = activeVariable.id
     const zero = activeVariable.domain?.zero ?? activeVariable.domain?.min ?? 0
-    // Statewide distribution prefetch only applies to the fuel-treatment dev
-    // dataset (GeoJSON fallback before PMTiles were built). Other projects
-    // skip this — the legend/opacity scale falls back to config domain.
-    if (state.projectId !== 'fuel-treatment') {
-      setStatewideValues([])
-      setOpacityP95(null)
+
+    function applyDist(vals) {
+      setStatewideValues(vals)
+      if (vals.length > 0) {
+        const absDev = vals.map((v) => Math.abs(v - zero)).sort((a, b) => a - b)
+        const idx = Math.floor(0.95 * (absDev.length - 1))
+        setOpacityP95(absDev[idx])
+      }
+    }
+
+    if (state.projectId === 'fuel-treatment') {
+      fetch('/fuel-treatment.geojson')
+        .then((r) => r.json())
+        .then((data) => {
+          const vals = data.features
+            .map((f) => f.properties?.[varId])
+            .filter((v) => v != null && isFinite(v))
+          applyDist(vals)
+        })
+        .catch(() => {})
       return
     }
-    fetch('/fuel-treatment.geojson')
-      .then((r) => r.json())
-      .then((data) => {
-        const vals = data.features
-          .map((f) => f.properties?.[varId])
-          .filter((v) => v != null && isFinite(v))
-        setStatewideValues(vals)
-        if (vals.length > 0) {
-          const absDev = vals.map((v) => Math.abs(v - zero)).sort((a, b) => a - b)
-          const idx = Math.floor(0.95 * (absDev.length - 1))
-          setOpacityP95(absDev[idx])
-        }
-      })
-      .catch(() => {})
-  }, [activeVariable?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    if (state.projectId === 'just-air' && mapInstance) {
+      const sourceId = 'just-air-data'
+      const sourceLayer = baseConfig.sourceLayer ?? baseConfig.id
+
+      // Pull values from the most uniformly-distributed scale available so
+      // the histogram represents CONUS-wide spread rather than whichever
+      // scale happens to be in the current viewport. _scale=9 covers every
+      // CONUS cell that's not been bbox-tagged out, so it's the best
+      // single-scale proxy for the underlying distribution.
+      let lastN = 0
+      function pull() {
+        try {
+          const features = mapInstance.querySourceFeatures(sourceId, { sourceLayer })
+          if (features.length === lastN || features.length < 200) return
+          lastN = features.length
+          const preferred = features.filter((f) => f.properties?._scale === 9)
+          const sample = preferred.length >= 200 ? preferred : features
+          const vals = sample
+            .map((f) => f.properties?.[varId])
+            .filter((v) => v != null && isFinite(v))
+          if (vals.length >= 100) applyDist(vals)
+        } catch (_) { /* source not loaded yet */ }
+      }
+      pull()
+      function onSourceData(e) {
+        if (e.sourceId === sourceId && e.isSourceLoaded) pull()
+      }
+      mapInstance.on('sourcedata', onSourceData)
+      return () => mapInstance.off('sourcedata', onSourceData)
+    }
+
+    setStatewideValues([])
+    setOpacityP95(null)
+  }, [activeVariable?.id, state.projectId, mapInstance, baseConfig]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Subscribe to the site-level theme attribute so the nav's dark/light
   // toggle drives the entire tool. The in-map moon/sun button was removed —

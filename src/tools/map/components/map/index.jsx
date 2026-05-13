@@ -13,6 +13,74 @@ import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { percentileThresholds } from '../../lib/area-stats.js'
 import { SOURCE_ID, LAYER_ID, LAYER_ID_AGG, LAYER_ID_MED, LAYER_ID_COARSE, LAYER_IDS } from '../../lib/use-map-layer.js'
 
+const JUST_AIR_SOURCE_ID = 'just-air-data'
+
+// Mirror Firefuels' percentile-filter behavior for Just Air's per-scale
+// layer scheme. Each layer keeps its `_scale === N` base filter; we
+// compound a `[get value] >= low && [get value] <= high` on top so the
+// distribution chart's slider clips the data layers the same way.
+function applyJustAirFilter(map, config, variable, percentileRange, onFilterStats) {
+  const sourceLayer = config.sourceLayer ?? config.id
+  let allFeatures
+  try {
+    allFeatures = map.querySourceFeatures(JUST_AIR_SOURCE_ID, { sourceLayer })
+  } catch {
+    return
+  }
+  if (!allFeatures || allFeatures.length === 0) return
+
+  // Use _scale=9 features (national grid, CONUS-uniform spatial coverage)
+  // for the threshold computation when available; otherwise fall back to
+  // whatever scale is in the tile.
+  const sample = (() => {
+    const s9 = allFeatures.filter((f) => f.properties?._scale === 9)
+    return s9.length >= 100 ? s9 : allFeatures
+  })()
+
+  const { low, high } = percentileThresholds(
+    sample,
+    variable.id,
+    percentileRange.low,
+    percentileRange.high,
+  )
+
+  for (const s of config.scales) {
+    const layerId = `just-air-cells-${s.value}`
+    if (!map.getLayer(layerId)) continue
+    try {
+      map.setFilter(layerId, ['all',
+        ['==', ['coalesce', ['to-number', ['get', '_scale']], 0], s.value],
+        ['>=', ['get', variable.id], low],
+        ['<=', ['get', variable.id], high],
+      ])
+    } catch (err) {
+      console.error('[applyJustAirFilter] setFilter', layerId, err)
+    }
+  }
+
+  if (onFilterStats) {
+    const totalValues = sample
+      .map((f) => f.properties?.[variable.id])
+      .filter((v) => v != null && !isNaN(v))
+    const inRange = totalValues.filter((v) => v >= low && v <= high)
+    const mean = inRange.length > 0
+      ? inRange.reduce((s, v) => s + v, 0) / inRange.length
+      : null
+    const sorted = [...inRange].sort((a, b) => a - b)
+    const n = sorted.length
+    const median = n > 0
+      ? (n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)])
+      : null
+    onFilterStats({
+      count: inRange.length,
+      totalCount: totalValues.length,
+      mean,
+      median,
+      allValues: totalValues,
+    })
+  }
+}
+
 const BOX_OVERLAY_SOURCE = 'box-overlay'
 const BOX_OVERLAY_FILL   = 'box-overlay-fill'
 const BOX_OVERLAY_LINE   = 'box-overlay-line'
@@ -254,11 +322,19 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     if (!map || !mapReady) return
 
     function applyFilter() {
-      const hasAnyLayer = LAYER_IDS.some(id => map.getLayer(id))
-      if (!hasAnyLayer) return
-
       const variable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
       if (!variable || variable.type === 'categorical') return
+
+      // Just Air uses a different source + per-scale layer scheme. Dispatch
+      // to its branch and bail out so the Firefuels-shaped filters below
+      // don't try to mutate layers that don't exist.
+      if (config.scales && config.scales.length > 0) {
+        applyJustAirFilter(map, config, variable, state.percentileRange, onFilterStats)
+        return
+      }
+
+      const hasAnyLayer = LAYER_IDS.some(id => map.getLayer(id))
+      if (!hasAnyLayer) return
 
       // PMTiles (vector) sources require sourceLayer; GeoJSON sources do not.
       const sourceOptions = config.tilesUrl === 'REPLACE_WITH_R2_URL'
@@ -341,9 +417,12 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     applyFilter()
 
     // Re-run once the source finishes loading (querySourceFeatures returns empty
-    // until the GeoJSON/tile data has been parsed and loaded into the map)
+    // until the GeoJSON/tile data has been parsed and loaded into the map).
+    // Listen for either source id so the filter applies regardless of which
+    // project's source is live.
     function onSourceData(e) {
-      if (e.sourceId === SOURCE_ID && e.isSourceLoaded) applyFilter()
+      if (!e.isSourceLoaded) return
+      if (e.sourceId === SOURCE_ID || e.sourceId === JUST_AIR_SOURCE_ID) applyFilter()
     }
     map.on('sourcedata', onSourceData)
 

@@ -103,32 +103,18 @@ const CALIFORNIA_CITIES = {
 // ── US cities (rank-by-zoom disclosure, mirrors CALIFORNIA_CITIES shape) ──────
 //
 // Rank 1 cities show from zoom 3 (CONUS view), rank 2 from ~z4, rank 3 from
-// ~z5. The set is biased toward the 15 Just Air metros so a user looking at
-// the default CONUS view sees a name next to every box-overlay rectangle.
+// ~z5. The 15 Just Air metros (NYC, LA, Chicago, etc.) are intentionally
+// omitted because the box-overlay layer already labels them; including them
+// here would render the city name twice next to its bbox.
 
 const USA_CITIES = {
   type: 'FeatureCollection',
   features: [
-    // Rank 1 — visible at zoom 3+ (CONUS overview)
-    { type: 'Feature', properties: { name: 'New York',      rank: 1 }, geometry: { type: 'Point', coordinates: [-74.006, 40.713] } },
-    { type: 'Feature', properties: { name: 'Los Angeles',   rank: 1 }, geometry: { type: 'Point', coordinates: [-118.244, 34.052] } },
-    { type: 'Feature', properties: { name: 'Chicago',       rank: 1 }, geometry: { type: 'Point', coordinates: [-87.630, 41.878] } },
-    { type: 'Feature', properties: { name: 'Houston',       rank: 1 }, geometry: { type: 'Point', coordinates: [-95.369, 29.760] } },
-    { type: 'Feature', properties: { name: 'Phoenix',       rank: 1 }, geometry: { type: 'Point', coordinates: [-112.074, 33.448] } },
-    { type: 'Feature', properties: { name: 'Philadelphia',  rank: 1 }, geometry: { type: 'Point', coordinates: [-75.165, 39.953] } },
+    // Rank 1 — visible at zoom 3+ (CONUS overview). Non-Just-Air metros only.
     { type: 'Feature', properties: { name: 'San Antonio',   rank: 1 }, geometry: { type: 'Point', coordinates: [-98.493, 29.424] } },
-    { type: 'Feature', properties: { name: 'Dallas',        rank: 1 }, geometry: { type: 'Point', coordinates: [-96.797, 32.776] } },
     { type: 'Feature', properties: { name: 'San Diego',     rank: 1 }, geometry: { type: 'Point', coordinates: [-117.161, 32.715] } },
-    { type: 'Feature', properties: { name: 'San Francisco', rank: 1 }, geometry: { type: 'Point', coordinates: [-122.419, 37.775] } },
-    { type: 'Feature', properties: { name: 'Seattle',       rank: 1 }, geometry: { type: 'Point', coordinates: [-122.332, 47.606] } },
-    { type: 'Feature', properties: { name: 'Boston',        rank: 1 }, geometry: { type: 'Point', coordinates: [-71.058, 42.360] } },
-    { type: 'Feature', properties: { name: 'Washington',    rank: 1 }, geometry: { type: 'Point', coordinates: [-77.037, 38.907] } },
-    { type: 'Feature', properties: { name: 'Atlanta',       rank: 1 }, geometry: { type: 'Point', coordinates: [-84.388, 33.749] } },
-    { type: 'Feature', properties: { name: 'Miami',         rank: 1 }, geometry: { type: 'Point', coordinates: [-80.193, 25.762] } },
-    { type: 'Feature', properties: { name: 'Detroit',       rank: 1 }, geometry: { type: 'Point', coordinates: [-83.046, 42.331] } },
     { type: 'Feature', properties: { name: 'Denver',        rank: 1 }, geometry: { type: 'Point', coordinates: [-104.991, 39.739] } },
     { type: 'Feature', properties: { name: 'Minneapolis',   rank: 1 }, geometry: { type: 'Point', coordinates: [-93.265, 44.978] } },
-    { type: 'Feature', properties: { name: 'Riverside',     rank: 1 }, geometry: { type: 'Point', coordinates: [-117.396, 33.953] } },
     // Rank 2 — visible at zoom 4+
     { type: 'Feature', properties: { name: 'Austin',        rank: 2 }, geometry: { type: 'Point', coordinates: [-97.743, 30.267] } },
     { type: 'Feature', properties: { name: 'Jacksonville',  rank: 2 }, geometry: { type: 'Point', coordinates: [-81.656, 30.332] } },

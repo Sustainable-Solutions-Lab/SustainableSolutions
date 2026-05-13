@@ -63,11 +63,54 @@ export function useJustAirLayers(map, config, state) {
   const isDarkRef = useRef(state.colorScheme === 'dark')
   isDarkRef.current = state.colorScheme === 'dark'
 
+  // colorRangeRef caches the p99 of |value − zero| for the active variable
+  // so the alpha-in-colormap math uses the actual data spread rather than
+  // the configured domain max (which for mortality is 1e-3 even though
+  // typical values cluster around 1e-5 — without this rescale every cell
+  // ended up at near-zero alpha and the map looked blank).
+  const colorRangeRef = useRef(null)
+  const colorRangeLockedRef = useRef(false)
+
   // ── Source + layer lifecycle ────────────────────────────────────────────
   useEffect(() => {
     if (!map) return
     if (!scales || scales.length === 0) return
     if (!tilesUrl) return
+
+    function computeColorRange() {
+      if (colorRangeLockedRef.current) return
+      const v = variableRef.current
+      if (!v || v.type === 'categorical') return
+      try {
+        const features = map.querySourceFeatures(SOURCE_ID, { sourceLayer })
+        if (features.length < 30) return
+        const values = features
+          .map((f) => f.properties?.[v.id])
+          .filter((x) => x != null && !isNaN(x))
+        if (values.length < 30) return
+        const zero = v.domain?.zero ?? v.domain?.min ?? 0
+        const absDev = values.map((x) => Math.abs(x - zero)).sort((a, b) => a - b)
+        const idx = Math.floor(0.99 * (absDev.length - 1))
+        const p99 = absDev[idx]
+        if (p99 > 0) {
+          colorRangeRef.current = { maxDev: p99 }
+          colorRangeLockedRef.current = true
+          updatePaint()
+        }
+      } catch (_) { /* source not loaded yet */ }
+    }
+
+    function updatePaint() {
+      if (!scales) return
+      for (const s of scales) {
+        const layerId = `just-air-cells-${s.value}`
+        if (!map.getLayer(layerId)) continue
+        try {
+          map.setPaintProperty(layerId, 'circle-color',
+            buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current))
+        } catch (_) { /* ignore */ }
+      }
+    }
 
     function addLayers() {
       if (!map.isStyleLoaded()) return
@@ -100,7 +143,7 @@ export function useJustAirLayers(map, config, state) {
             filter: ['==', ['coalesce', ['to-number', ['get', '_scale']], 0], s.value],
             paint: {
               'circle-radius':       RADIUS,
-              'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current),
+              'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current),
               'circle-opacity':      buildOpacityExpr(variableRef.current, s),
               'circle-stroke-width': 0,
               'circle-blur':         0,
@@ -114,12 +157,19 @@ export function useJustAirLayers(map, config, state) {
       }
     }
 
+    function onSourceData(e) {
+      if (e.sourceId === SOURCE_ID && e.isSourceLoaded) computeColorRange()
+    }
+
     map.on('styledata', addLayers)
+    map.on('sourcedata', onSourceData)
     if (map.isStyleLoaded()) addLayers()
     else map.once('idle', addLayers)
+    computeColorRange()
 
     return () => {
       map.off('styledata', addLayers)
+      map.off('sourcedata', onSourceData)
       for (const s of scales) {
         const layerId = `just-air-cells-${s.value}`
         if (map.getLayer(layerId)) map.removeLayer(layerId)
@@ -133,11 +183,38 @@ export function useJustAirLayers(map, config, state) {
   useEffect(() => {
     if (!map || !scales) return
     if (!map.isStyleLoaded()) return
+    // New variable means new value distribution — drop the cached p99 so
+    // the next sourcedata event recomputes for the new column.
+    colorRangeRef.current = null
+    colorRangeLockedRef.current = false
+    let recomputed = null
+    try {
+      const v = variableRef.current
+      if (v && v.type !== 'categorical') {
+        const features = map.querySourceFeatures(SOURCE_ID, { sourceLayer })
+        if (features.length >= 30) {
+          const values = features
+            .map((f) => f.properties?.[v.id])
+            .filter((x) => x != null && !isNaN(x))
+          if (values.length >= 30) {
+            const zero = v.domain?.zero ?? v.domain?.min ?? 0
+            const absDev = values.map((x) => Math.abs(x - zero)).sort((a, b) => a - b)
+            const idx = Math.floor(0.99 * (absDev.length - 1))
+            const p99 = absDev[idx]
+            if (p99 > 0) {
+              recomputed = { maxDev: p99 }
+              colorRangeRef.current = recomputed
+              colorRangeLockedRef.current = true
+            }
+          }
+        }
+      }
+    } catch (_) { /* ignore */ }
     for (const s of scales) {
       const layerId = `just-air-cells-${s.value}`
       if (!map.getLayer(layerId)) continue
       try {
-        map.setPaintProperty(layerId, 'circle-color',   buildColorExpr(variableRef.current, isDarkRef.current))
+        map.setPaintProperty(layerId, 'circle-color',   buildColorExpr(variableRef.current, isDarkRef.current, recomputed))
         map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current, s))
       } catch (err) {
         console.error('[useJustAirLayers] setPaintProperty', layerId, err)
@@ -178,7 +255,7 @@ function withAlpha(rgbStr, alpha) {
   return rgbStr
 }
 
-function buildColorExpr(variable, isDark) {
+function buildColorExpr(variable, isDark, colorRange) {
   if (!variable) return '#888888'
   if (variable.type === 'categorical') {
     const expr = ['match', ['get', variable.id]]
@@ -190,13 +267,15 @@ function buildColorExpr(variable, isDark) {
   const zero = variable.domain?.zero ?? variable.domain?.min ?? 0
   const max  = variable.domain?.max ?? 1
   const min  = variable.domain?.min ?? 0
-  const maxPosDev = Math.max(max  - zero, 0.001)
-  const maxNegDev = Math.max(zero - min,  0.001)
+  // Prefer the data-derived p99 |value − zero| when available — without it
+  // a variable whose config domain max is far above the actual data (e.g.
+  // mortality at 1e-3 vs typical values 1e-5) renders at near-zero alpha
+  // across the whole map. Falls back to the configured domain for the
+  // first paint while features are still streaming in.
+  const dataDev = colorRange?.maxDev
+  const maxPosDev = dataDev ?? Math.max(max  - zero, 0.001)
+  const maxNegDev = dataDev ?? Math.max(zero - min,  0.001)
 
-  // t^1.5 power curve. Low values (|v − zero| / extremum small) fade
-  // aggressively to transparent; mid values are translucent; extremes
-  // are fully opaque. Steeper than Firefuels' t^0.4 (the user explicitly
-  // asked for more transparency at low values).
   function alphaForValue(v) {
     const t = v >= zero ? (v - zero) / maxPosDev : (zero - v) / maxNegDev
     return Math.min(1, Math.pow(Math.max(0, t), 1.5))

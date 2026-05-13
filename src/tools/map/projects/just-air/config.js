@@ -38,6 +38,9 @@ const config = {
     // state border, county borders, CA-city labels) baked in for Firefuels.
     // Without this, the mask would hide everything outside California.
     useCaliforniaOverlay: false,
+    // Render 48-state borders from /us-states.geojson (single thin line
+    // layer; outermost segments collectively form the CONUS coastline).
+    useUsOverlay: true,
   },
 
   // ── Layers (sidebar tabs) ────────────────────────────────────────────────
@@ -208,9 +211,10 @@ const config = {
   tilesUrl: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/just-air.pmtiles',
   sourceLayer: 'just-air',
   scales: [
-    { value: 36, minZoom: 2, maxZoom: 6.5 },   // 36 km supercells
-    { value: 9,  minZoom: 5, maxZoom: 11 },    // 9 km national grid
-    { value: 1,  minZoom: 8, maxZoom: 14 },    // native city pixels
+    { value: 36, minZoom: 2, maxZoom: 6.5 },  // 36 km national supercells
+    { value: 9,  minZoom: 5, maxZoom: 11 },   // 9 km national grid
+    { value: 3,  minZoom: 6, maxZoom: 10 },   // 3 km city aggregation
+    { value: 1,  minZoom: 7, maxZoom: 14 },   // native ~1 km city pixels
   ],
   methodsPath: 'just-air/methods.mdx',
 };

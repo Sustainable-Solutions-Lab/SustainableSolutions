@@ -36,12 +36,40 @@ import { promises as fs, existsSync, mkdirSync } from 'node:fs';
 import { resolve, join, basename, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
+import bbox from '@turf/bbox';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
 const SRC = '/Users/stevedavis/Library/CloudStorage/Dropbox/Papers/In Press/Just CDR (w Cande)/Outputs for map app';
 const OUT_DIR = resolve(REPO_ROOT, 'dist-tiles/just-air');
 const MANIFEST_OUT = resolve(REPO_ROOT, 'public/tools/just-air/just-air-cities.json');
+const US_STATES_GEOJSON = resolve(REPO_ROOT, 'public/us-states.geojson');
+
+// ── CONUS clipping ──────────────────────────────────────────────────────────
+//
+// Load the 48-state GeoJSON once. Each state polygon is wrapped in its own
+// turf feature so booleanPointInPolygon can be called against it; we also
+// pre-compute bbox for each so the per-cell check can short-circuit before
+// running the (more expensive) ray-casting.
+let CONUS_FEATURES = null;
+async function loadConusFeatures() {
+  if (CONUS_FEATURES) return CONUS_FEATURES;
+  const text = await fs.readFile(US_STATES_GEOJSON, 'utf8');
+  const fc = JSON.parse(text);
+  CONUS_FEATURES = fc.features.map((f) => ({ feature: f, bbox: bbox(f) }));
+  return CONUS_FEATURES;
+}
+
+function isInsideConus(lng, lat) {
+  // turf's bbox is [west, south, east, north]; reject early if outside any
+  // state bbox before doing the polygon test.
+  for (const { feature, bbox: b } of CONUS_FEATURES) {
+    if (lng < b[0] || lng > b[2] || lat < b[1] || lat > b[3]) continue;
+    if (booleanPointInPolygon([lng, lat], feature)) return true;
+  }
+  return false;
+}
 
 const CITIES = [
   'Atlanta', 'Boston', 'Chicago', 'Dallas', 'DC', 'Detroit', 'Houston',
@@ -182,7 +210,7 @@ function cityPixelToPoint(p, city) {
     mort_low:  round(p.mort_low, 6),
     mort_high: round(p.mort_high, 6),
     mort_diff: round(p.mort_high - p.mort_low, 6),
-  }, { minzoom: 8, maxzoom: 14 });
+  }, { minzoom: 7, maxzoom: 14 });
 }
 
 // ── Synthetic 9 km CONUS national grid (centroids) ──────────────────────────
@@ -252,6 +280,55 @@ function nationalCellToPoint(c) {
   }, { minzoom: 4, maxzoom: 11 });
 }
 
+// ── 3 km aggregation of native city pixels ──────────────────────────────────
+//
+// Bin every city's pixels into ~3 km cells (0.03° in lat / lng — accurate to
+// ~1% at mid-latitudes, fine for visual aggregation). One emitted feature per
+// bin carries the mean of the underlying pixels and `_scale = 3`. tippecanoe
+// keeps these at zoom 5–10 so they bridge the 9 km national surface and the
+// native 1 km city pixels rather than the user having to zoom all the way in
+// before any city-scale detail appears.
+
+function aggregateCityTo3km(pixels, city) {
+  const BIN = 0.03; // degrees
+  const bins = new Map();
+  for (const p of pixels.values()) {
+    if (p.pm25_low == null || p.pm25_high == null || p.mort_low == null || p.mort_high == null) {
+      continue;
+    }
+    const bx = Math.floor(p.lng / BIN);
+    const by = Math.floor(p.lat / BIN);
+    const key = `${bx}:${by}`;
+    let b = bins.get(key);
+    if (!b) {
+      b = { lng: 0, lat: 0, pm25_low: 0, pm25_high: 0, mort_low: 0, mort_high: 0, n: 0 };
+      bins.set(key, b);
+    }
+    b.lng       += p.lng;
+    b.lat       += p.lat;
+    b.pm25_low  += p.pm25_low;
+    b.pm25_high += p.pm25_high;
+    b.mort_low  += p.mort_low;
+    b.mort_high += p.mort_high;
+    b.n++;
+  }
+  const out = [];
+  for (const b of bins.values()) {
+    const n = b.n;
+    out.push(makePoint(b.lng / n, b.lat / n, {
+      _scale: 3,
+      city,
+      pm25_low:  round(b.pm25_low  / n, 3),
+      pm25_high: round(b.pm25_high / n, 3),
+      pm25_diff: round((b.pm25_high - b.pm25_low) / n, 3),
+      mort_low:  round(b.mort_low  / n, 6),
+      mort_high: round(b.mort_high / n, 6),
+      mort_diff: round((b.mort_high - b.mort_low) / n, 6),
+    }, { minzoom: 5, maxzoom: 10 }));
+  }
+  return out;
+}
+
 // ── 4×4 supercell aggregation of the 9 km national grid ─────────────────────
 //
 // Group the 9 km cells into 4×4 blocks (≈36 km). For each block emit one
@@ -309,6 +386,9 @@ async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
   mkdirSync(dirname(MANIFEST_OUT), { recursive: true });
 
+  await loadConusFeatures();
+  console.log(`Loaded CONUS clip mask: ${CONUS_FEATURES.length} state polygons`);
+
   const mergedGeoJson = join(OUT_DIR, 'just-air.geojsonl');
   const fh = await fs.open(mergedGeoJson, 'w');
 
@@ -332,31 +412,44 @@ async function main() {
       n++;
     }
     cityCount += n;
+
+    // 3 km city aggregation tier — bridges 9 km national → 1 km city pixels.
+    const cityAgg = aggregateCityTo3km(pixels, city);
+    for (const f of cityAgg) await fh.write(JSON.stringify(f) + '\n');
+
     manifest.push({
       slug: city.toLowerCase(),
       label: city,
       bbox: [round(minLng, 4), round(minLat, 4), round(maxLng, 4), round(maxLat, 4)],
       pixels: n,
     });
-    console.log(`  ${city.padEnd(14)} ${n.toString().padStart(6)} pixels`);
+    console.log(`  ${city.padEnd(14)} ${n.toString().padStart(6)} pixels  +${cityAgg.length} 3 km bins`);
   }
   console.log(`Cities total: ${cityCount} pixel features`);
   await fs.writeFile(MANIFEST_OUT, JSON.stringify(manifest, null, 2));
   console.log(`Manifest      → ${MANIFEST_OUT}`);
 
-  // ── National 9 km ──────────────────────────────────────────────────────
+  // ── National 9 km (CONUS-clipped) ──────────────────────────────────────
+  // Generate the regular grid, then drop cells whose centroid sits outside
+  // the 48 state polygons. Eliminates the rectangular bbox bleed into
+  // Mexico, Canada, and the surrounding oceans.
   console.log('Generating synthetic 9 km CONUS grid…');
-  const nationalCells = syntheticNational();
+  const nationalCellsAll = syntheticNational();
+  const nationalCells = nationalCellsAll.filter((c) => isInsideConus(c.lng, c.lat));
+  console.log(`National 9 km: ${nationalCells.length} cells  (dropped ${nationalCellsAll.length - nationalCells.length} non-CONUS)`);
   for (const c of nationalCells) {
     await fh.write(JSON.stringify(nationalCellToPoint(c)) + '\n');
   }
-  console.log(`National 9 km: ${nationalCells.length} cells`);
 
-  // ── National 36 km supercells ──────────────────────────────────────────
+  // ── National 36 km supercells (CONUS-clipped) ──────────────────────────
   console.log('Aggregating to 36 km supercells…');
-  const supercells = aggregateSupercells(nationalCells);
+  const supercellsAll = aggregateSupercells(nationalCells);
+  const supercells = supercellsAll.filter((f) => {
+    const [lng, lat] = f.geometry.coordinates;
+    return isInsideConus(lng, lat);
+  });
   for (const f of supercells) await fh.write(JSON.stringify(f) + '\n');
-  console.log(`National 36 km: ${supercells.length} supercells`);
+  console.log(`National 36 km: ${supercells.length} supercells  (dropped ${supercellsAll.length - supercells.length} non-CONUS)`);
 
   await fh.close();
   console.log(`Merged GeoJSONL → ${mergedGeoJson}`);

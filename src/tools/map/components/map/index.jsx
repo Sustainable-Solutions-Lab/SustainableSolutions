@@ -203,6 +203,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     map.once('load', () => {
       addStaticLayers(map, schemeRef.current, {
         californiaOverlays: config.region?.useCaliforniaOverlay !== false,
+        usOverlays: config.region?.useUsOverlay === true,
       })
       if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, schemeRef.current)
       setMapReady(true)
@@ -238,6 +239,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     map.once('styledata', () => {
       addStaticLayers(map, state.colorScheme, {
         californiaOverlays: config.region?.useCaliforniaOverlay !== false,
+        usOverlays: config.region?.useUsOverlay === true,
       })
       if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, state.colorScheme)
       // Restore graticule visibility

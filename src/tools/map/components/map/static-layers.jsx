@@ -137,6 +137,10 @@ export function addStaticLayers(map, scheme, opts = {}) {
   // city labels). Default true for back-compat with the original Firefuels
   // project. CONUS-wide projects (e.g. Just Air) pass false to suppress them.
   const californiaOverlays = opts.californiaOverlays !== false
+  // CONUS state-border overlay. Opt-in (defaults false). Loads
+  // /us-states.geojson and renders state boundaries as a single thin line
+  // layer; the outermost segments collectively form the CONUS coastline.
+  const usOverlays = opts.usOverlays === true
   const borderColor =
     scheme === 'dark' ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.28)'
   const stateBorderColor =
@@ -227,6 +231,34 @@ export function addStaticLayers(map, scheme, opts = {}) {
       }, before)
     } else {
       map.setPaintProperty('county-borders', 'line-color', borderColor)
+    }
+  }
+
+  // ── 2b. US state borders (CONUS-wide projects) ────────────────────────────
+  // Single line layer drawn from a 48-state GeoJSON. Width steps up with
+  // zoom so it stays readable at z3 (CONUS view) and doesn't dominate at
+  // z10 (metro view).
+
+  if (usOverlays && !map.getSource('us-states')) {
+    map.addSource('us-states', {
+      type: 'geojson',
+      data: '/us-states.geojson',
+    })
+  }
+
+  if (usOverlays) {
+    if (!map.getLayer('us-state-borders')) {
+      map.addLayer({
+        id: 'us-state-borders',
+        type: 'line',
+        source: 'us-states',
+        paint: {
+          'line-color': stateBorderColor,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.4, 6, 0.9, 10, 1.4],
+        },
+      })
+    } else {
+      map.setPaintProperty('us-state-borders', 'line-color', stateBorderColor)
     }
   }
 

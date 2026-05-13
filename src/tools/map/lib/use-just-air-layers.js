@@ -23,22 +23,22 @@ import { useEffect, useRef } from 'react'
 import { buildColorScale } from './colormap.js'
 import { getActiveVariable } from './get-active-variable.js'
 
-// Tiling-exact base radius for a 1 km cell. Identical curve to
-// use-map-layer.js BASE_RADIUS so the visual density matches Firefuels.
-//
-//   r = 0.009° × (256 × 2^z / 360°) / 2 ≈ 0.0032 × 2^z
-//     z 4  → 0.051 px         z 8  → 0.82 px
-//     z 12 → 13.1 px          z 14 → 52.4 px
+// Tiling-exact base radius for a 1 km cell — the natural Mercator-derived
+// pixel size of a 1 km × 1 km cell, scaled by FILL_FACTOR to overlap a
+// touch so the cells read as a coherent surface instead of a dotted grid.
+// MAX_RADIUS_PX caps the circle size at high zoom so a 9 km cell rendered
+// at z10 stays at a readable ~24 px wide instead of swelling to 120 px.
 const FILL_FACTOR = 2.0
 const R4  = 0.051 * FILL_FACTOR
 const R12 = 13.1  * FILL_FACTOR
+const MAX_RADIUS_PX = 12
 
-const RADIUS = [
+const RADIUS = ['min', MAX_RADIUS_PX, [
   'interpolate', ['exponential', 2], ['zoom'],
   4,  ['*', ['coalesce', ['to-number', ['get', '_scale']], 1], R4],
   12, ['*', ['coalesce', ['to-number', ['get', '_scale']], 1], R12],
   22, ['*', ['coalesce', ['to-number', ['get', '_scale']], 1], R12],
-]
+]]
 
 const SOURCE_ID = 'just-air-data'
 
@@ -77,7 +77,11 @@ export function useJustAirLayers(map, config, state) {
         })
       }
 
-      const beforeId = map.getLayer('box-overlay-fill') ? 'box-overlay-fill'
+      // Insert data circles *below* the state-border / city-label lines so
+      // they don't get hidden under the data. The box overlay (metro
+      // rectangles + labels) and any CA-specific layers also stay on top.
+      const beforeId = map.getLayer('us-state-borders') ? 'us-state-borders'
+                     : map.getLayer('box-overlay-fill') ? 'box-overlay-fill'
                      : map.getLayer('city-labels-r1')   ? 'city-labels-r1'
                      : map.getLayer('ca-border')        ? 'ca-border'
                      : undefined
@@ -96,7 +100,7 @@ export function useJustAirLayers(map, config, state) {
             paint: {
               'circle-radius':       RADIUS,
               'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current),
-              'circle-opacity':      buildOpacityExpr(variableRef.current),
+              'circle-opacity':      buildOpacityExpr(variableRef.current, s),
               'circle-stroke-width': 0,
               'circle-blur':         0,
             },
@@ -133,7 +137,7 @@ export function useJustAirLayers(map, config, state) {
       if (!map.getLayer(layerId)) continue
       try {
         map.setPaintProperty(layerId, 'circle-color',   buildColorExpr(variableRef.current, isDarkRef.current))
-        map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current))
+        map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current, s))
       } catch (err) {
         console.error('[useJustAirLayers] setPaintProperty', layerId, err)
       }
@@ -196,24 +200,16 @@ function buildColorExpr(variable, isDark) {
 }
 
 // Magnitude-driven opacity: value=zero ⇒ fully transparent, value at the
-// configured extremum ⇒ peak opacity, with a non-linear curve so low-mag
-// values are still readable. Same piecewise-linear t^0.4 approximation
-// Firefuels uses (see lib/use-map-layer.js → curveOpacity).
-function curveOpacity(t_expr) {
-  return ['interpolate', ['linear'], t_expr,
-    0,    0,
-    0.02, 0.21,
-    0.05, 0.30,
-    0.1,  0.40,
-    0.25, 0.57,
-    0.5,  0.76,
-    0.75, 0.88,
-    1.0,  1.0,
-  ]
-}
-
-function buildOpacityExpr(variable) {
-  const peak = 1.0
+// configured extremum ⇒ fully opaque, ramping linearly. Linear (rather
+// than Firefuels' t^0.4 curve) is what produces a visible fade-to-paper
+// for low-value cells; the t^0.4 curve makes anything above zero almost
+// fully opaque, which the user explicitly flagged as not what they want.
+//
+// Zoom-fade at the start and end of each scale's render band is multiplied
+// in on top so the transition between scales (36 → 9 → 3 → 1 km) cross-
+// fades over ~0.2 zoom rather than snapping, which read as visible
+// "disappear / reappear" pops at the band edges.
+function buildOpacityExpr(variable, scaleEntry) {
   if (!variable || variable.type === 'categorical') return 0.9
   const zero = variable.domain?.zero ?? variable.domain?.min ?? 0
   const max  = variable.domain?.max ?? 1
@@ -226,8 +222,27 @@ function buildOpacityExpr(variable) {
   const tNeg = ['min', 1, ['max', 0,
     ['/', ['-', zero, ['get', variable.id]], maxNegDev],
   ]]
-  return ['case',
-    ['>=', ['get', variable.id], zero], ['*', peak, curveOpacity(tPos)],
-    ['*', peak, curveOpacity(tNeg)],
+  const valueOpacity = ['case',
+    ['>=', ['get', variable.id], zero], tPos,
+    tNeg,
+  ]
+  return ['*', valueOpacity, buildZoomFade(scaleEntry)]
+}
+
+function buildZoomFade(s) {
+  const fade = 0.25
+  const minZ = s.minZoom ?? 0
+  const maxZ = s.maxZoom
+  if (maxZ == null) {
+    return ['interpolate', ['linear'], ['zoom'],
+      Math.max(0, minZ - fade), 0,
+      minZ,                     1,
+    ]
+  }
+  return ['interpolate', ['linear'], ['zoom'],
+    Math.max(0, minZ - fade), 0,
+    minZ,                     1,
+    Math.max(minZ + 0.0001, maxZ), 1,
+    maxZ + fade,              0,
   ]
 }

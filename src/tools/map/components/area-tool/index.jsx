@@ -364,11 +364,19 @@ export function AreaTool({ map, config, state, dispatch }) {
     if (state.drawnPolygon) return
     if (map.getLayer(CIRCLE_LINE_LAYER_ID)) return  // circle already drawn
     const center = map.getCenter()
-    // Scale default radius to current zoom so the circle fits the visible area.
-    // Zoom 5 (statewide) → ~50 km; zoom 10 (city) → ~5 km, exponentially interpolated.
+    // Scale default radius so the circle is a useful ~12 % of the smaller
+    // viewport dimension. Without this the circle is sub-pixel at low zoom
+    // (50 km at z3 ≈ 0.6 px on a CONUS-spanning view) or fills the screen
+    // at high zoom. Honors config.areaTool.defaultRadiusKm as an explicit
+    // cap so projects can keep the default reasonable for their scale.
     const zoom = map.getZoom()
-    const zoomT = Math.max(0, Math.min(1, (zoom - 5) / 5))
-    const radiusKm = Math.max(MIN_RADIUS_KM, Math.round(50 * Math.pow(0.1, zoomT)))
+    const lat = center.lat * Math.PI / 180
+    const kmPerPx = (40075 * Math.cos(lat)) / (256 * Math.pow(2, zoom))
+    const canvas = map.getCanvas()
+    const targetPx = Math.min(canvas.width, canvas.height) * 0.12
+    const computedKm = Math.max(MIN_RADIUS_KM, Math.round(targetPx * kmPerPx))
+    const configCapKm = config.areaTool?.maxRadiusKm ?? 600
+    const radiusKm = Math.min(computedKm, configCapKm)
     circleRef.current = { lat: center.lat, lng: center.lng, radiusKm }
     drawCircleOnMap(map, center.lat, center.lng, radiusKm, isDarkRef.current)
     updateHandlePos()

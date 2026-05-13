@@ -100,6 +100,74 @@ const CALIFORNIA_CITIES = {
   ],
 }
 
+// ── US cities (rank-by-zoom disclosure, mirrors CALIFORNIA_CITIES shape) ──────
+//
+// Rank 1 cities show from zoom 3 (CONUS view), rank 2 from ~z4, rank 3 from
+// ~z5. The set is biased toward the 15 Just Air metros so a user looking at
+// the default CONUS view sees a name next to every box-overlay rectangle.
+
+const USA_CITIES = {
+  type: 'FeatureCollection',
+  features: [
+    // Rank 1 — visible at zoom 3+ (CONUS overview)
+    { type: 'Feature', properties: { name: 'New York',      rank: 1 }, geometry: { type: 'Point', coordinates: [-74.006, 40.713] } },
+    { type: 'Feature', properties: { name: 'Los Angeles',   rank: 1 }, geometry: { type: 'Point', coordinates: [-118.244, 34.052] } },
+    { type: 'Feature', properties: { name: 'Chicago',       rank: 1 }, geometry: { type: 'Point', coordinates: [-87.630, 41.878] } },
+    { type: 'Feature', properties: { name: 'Houston',       rank: 1 }, geometry: { type: 'Point', coordinates: [-95.369, 29.760] } },
+    { type: 'Feature', properties: { name: 'Phoenix',       rank: 1 }, geometry: { type: 'Point', coordinates: [-112.074, 33.448] } },
+    { type: 'Feature', properties: { name: 'Philadelphia',  rank: 1 }, geometry: { type: 'Point', coordinates: [-75.165, 39.953] } },
+    { type: 'Feature', properties: { name: 'San Antonio',   rank: 1 }, geometry: { type: 'Point', coordinates: [-98.493, 29.424] } },
+    { type: 'Feature', properties: { name: 'Dallas',        rank: 1 }, geometry: { type: 'Point', coordinates: [-96.797, 32.776] } },
+    { type: 'Feature', properties: { name: 'San Diego',     rank: 1 }, geometry: { type: 'Point', coordinates: [-117.161, 32.715] } },
+    { type: 'Feature', properties: { name: 'San Francisco', rank: 1 }, geometry: { type: 'Point', coordinates: [-122.419, 37.775] } },
+    { type: 'Feature', properties: { name: 'Seattle',       rank: 1 }, geometry: { type: 'Point', coordinates: [-122.332, 47.606] } },
+    { type: 'Feature', properties: { name: 'Boston',        rank: 1 }, geometry: { type: 'Point', coordinates: [-71.058, 42.360] } },
+    { type: 'Feature', properties: { name: 'Washington',    rank: 1 }, geometry: { type: 'Point', coordinates: [-77.037, 38.907] } },
+    { type: 'Feature', properties: { name: 'Atlanta',       rank: 1 }, geometry: { type: 'Point', coordinates: [-84.388, 33.749] } },
+    { type: 'Feature', properties: { name: 'Miami',         rank: 1 }, geometry: { type: 'Point', coordinates: [-80.193, 25.762] } },
+    { type: 'Feature', properties: { name: 'Detroit',       rank: 1 }, geometry: { type: 'Point', coordinates: [-83.046, 42.331] } },
+    { type: 'Feature', properties: { name: 'Denver',        rank: 1 }, geometry: { type: 'Point', coordinates: [-104.991, 39.739] } },
+    { type: 'Feature', properties: { name: 'Minneapolis',   rank: 1 }, geometry: { type: 'Point', coordinates: [-93.265, 44.978] } },
+    { type: 'Feature', properties: { name: 'Riverside',     rank: 1 }, geometry: { type: 'Point', coordinates: [-117.396, 33.953] } },
+    // Rank 2 — visible at zoom 4+
+    { type: 'Feature', properties: { name: 'Austin',        rank: 2 }, geometry: { type: 'Point', coordinates: [-97.743, 30.267] } },
+    { type: 'Feature', properties: { name: 'Jacksonville',  rank: 2 }, geometry: { type: 'Point', coordinates: [-81.656, 30.332] } },
+    { type: 'Feature', properties: { name: 'Charlotte',     rank: 2 }, geometry: { type: 'Point', coordinates: [-80.843, 35.227] } },
+    { type: 'Feature', properties: { name: 'Indianapolis',  rank: 2 }, geometry: { type: 'Point', coordinates: [-86.158, 39.768] } },
+    { type: 'Feature', properties: { name: 'Columbus',      rank: 2 }, geometry: { type: 'Point', coordinates: [-82.998, 39.961] } },
+    { type: 'Feature', properties: { name: 'Memphis',       rank: 2 }, geometry: { type: 'Point', coordinates: [-90.049, 35.149] } },
+    { type: 'Feature', properties: { name: 'Nashville',     rank: 2 }, geometry: { type: 'Point', coordinates: [-86.781, 36.163] } },
+    { type: 'Feature', properties: { name: 'Portland',      rank: 2 }, geometry: { type: 'Point', coordinates: [-122.676, 45.523] } },
+    { type: 'Feature', properties: { name: 'Las Vegas',     rank: 2 }, geometry: { type: 'Point', coordinates: [-115.139, 36.169] } },
+    { type: 'Feature', properties: { name: 'New Orleans',   rank: 2 }, geometry: { type: 'Point', coordinates: [-90.071, 29.951] } },
+    { type: 'Feature', properties: { name: 'St. Louis',     rank: 2 }, geometry: { type: 'Point', coordinates: [-90.199, 38.627] } },
+    { type: 'Feature', properties: { name: 'Pittsburgh',    rank: 2 }, geometry: { type: 'Point', coordinates: [-79.996, 40.441] } },
+    { type: 'Feature', properties: { name: 'Cincinnati',    rank: 2 }, geometry: { type: 'Point', coordinates: [-84.512, 39.103] } },
+    { type: 'Feature', properties: { name: 'Cleveland',     rank: 2 }, geometry: { type: 'Point', coordinates: [-81.695, 41.499] } },
+    { type: 'Feature', properties: { name: 'Salt Lake City',rank: 2 }, geometry: { type: 'Point', coordinates: [-111.891, 40.760] } },
+    { type: 'Feature', properties: { name: 'Kansas City',   rank: 2 }, geometry: { type: 'Point', coordinates: [-94.578, 39.099] } },
+    { type: 'Feature', properties: { name: 'Tampa',         rank: 2 }, geometry: { type: 'Point', coordinates: [-82.458, 27.951] } },
+    { type: 'Feature', properties: { name: 'Milwaukee',     rank: 2 }, geometry: { type: 'Point', coordinates: [-87.906, 43.039] } },
+    { type: 'Feature', properties: { name: 'Sacramento',    rank: 2 }, geometry: { type: 'Point', coordinates: [-121.494, 38.582] } },
+    { type: 'Feature', properties: { name: 'Albuquerque',   rank: 2 }, geometry: { type: 'Point', coordinates: [-106.650, 35.085] } },
+    { type: 'Feature', properties: { name: 'Tucson',        rank: 2 }, geometry: { type: 'Point', coordinates: [-110.926, 32.222] } },
+    { type: 'Feature', properties: { name: 'Oklahoma City', rank: 2 }, geometry: { type: 'Point', coordinates: [-97.521, 35.467] } },
+    // Rank 3 — visible at zoom 5+
+    { type: 'Feature', properties: { name: 'Buffalo',       rank: 3 }, geometry: { type: 'Point', coordinates: [-78.879, 42.886] } },
+    { type: 'Feature', properties: { name: 'Hartford',      rank: 3 }, geometry: { type: 'Point', coordinates: [-72.685, 41.764] } },
+    { type: 'Feature', properties: { name: 'Providence',    rank: 3 }, geometry: { type: 'Point', coordinates: [-71.412, 41.824] } },
+    { type: 'Feature', properties: { name: 'Richmond',      rank: 3 }, geometry: { type: 'Point', coordinates: [-77.436, 37.541] } },
+    { type: 'Feature', properties: { name: 'Norfolk',       rank: 3 }, geometry: { type: 'Point', coordinates: [-76.285, 36.847] } },
+    { type: 'Feature', properties: { name: 'Birmingham',    rank: 3 }, geometry: { type: 'Point', coordinates: [-86.802, 33.521] } },
+    { type: 'Feature', properties: { name: 'Tulsa',         rank: 3 }, geometry: { type: 'Point', coordinates: [-95.993, 36.154] } },
+    { type: 'Feature', properties: { name: 'Omaha',         rank: 3 }, geometry: { type: 'Point', coordinates: [-95.934, 41.257] } },
+    { type: 'Feature', properties: { name: 'Boise',         rank: 3 }, geometry: { type: 'Point', coordinates: [-116.203, 43.615] } },
+    { type: 'Feature', properties: { name: 'Spokane',       rank: 3 }, geometry: { type: 'Point', coordinates: [-117.426, 47.659] } },
+    { type: 'Feature', properties: { name: 'Reno',          rank: 3 }, geometry: { type: 'Point', coordinates: [-119.814, 39.530] } },
+    { type: 'Feature', properties: { name: 'El Paso',       rank: 3 }, geometry: { type: 'Point', coordinates: [-106.485, 31.762] } },
+  ],
+}
+
 /**
  * Build a GeoJSON FeatureCollection of graticule lines covering California.
  * @param {number} [latStep=2]
@@ -247,18 +315,65 @@ export function addStaticLayers(map, scheme, opts = {}) {
   }
 
   if (usOverlays) {
+    // Boost the state-border color and line-width so they're legible from
+    // the default CONUS view (z3) down to the metro zoom level.
+    const usBorderColor =
+      scheme === 'dark' ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.50)'
     if (!map.getLayer('us-state-borders')) {
       map.addLayer({
         id: 'us-state-borders',
         type: 'line',
         source: 'us-states',
         paint: {
-          'line-color': stateBorderColor,
-          'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.4, 6, 0.9, 10, 1.4],
+          'line-color': usBorderColor,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 6, 1.3, 10, 1.8],
         },
       })
     } else {
-      map.setPaintProperty('us-state-borders', 'line-color', stateBorderColor)
+      map.setPaintProperty('us-state-borders', 'line-color', usBorderColor)
+    }
+  }
+
+  // ── 2c. US city labels (CONUS-wide projects) ──────────────────────────────
+
+  if (usOverlays && !map.getSource('us-cities')) {
+    map.addSource('us-cities', { type: 'geojson', data: USA_CITIES })
+  }
+
+  const usCityTextColor = scheme === 'dark' ? 'rgba(248, 248, 232, 0.88)' : 'rgba(24, 24, 56, 0.82)'
+  const usCityHaloColor = scheme === 'dark' ? 'rgba(12, 12, 28, 0.85)'    : 'rgba(248, 248, 232, 0.92)'
+  const usCityRanks = [
+    { id: 'us-city-labels-r1', rank: 1, minzoom: 3,   size: 11 },
+    { id: 'us-city-labels-r2', rank: 2, minzoom: 4,   size: 10 },
+    { id: 'us-city-labels-r3', rank: 3, minzoom: 5,   size: 10 },
+  ]
+  if (usOverlays) for (const { id, rank, minzoom, size } of usCityRanks) {
+    if (!map.getLayer(id)) {
+      map.addLayer({
+        id,
+        type: 'symbol',
+        source: 'us-cities',
+        minzoom,
+        filter: ['==', ['get', 'rank'], rank],
+        layout: {
+          visibility: 'visible',
+          'text-field': ['get', 'name'],
+          'text-size': size,
+          'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+          'text-anchor': 'left',
+          'text-offset': [0.4, 0],
+          'text-allow-overlap': false,
+          'text-ignore-placement': false,
+        },
+        paint: {
+          'text-color': usCityTextColor,
+          'text-halo-color': usCityHaloColor,
+          'text-halo-width': 1.6,
+        },
+      })
+    } else {
+      map.setPaintProperty(id, 'text-color', usCityTextColor)
+      map.setPaintProperty(id, 'text-halo-color', usCityHaloColor)
     }
   }
 

@@ -32,7 +32,10 @@ const config = {
     center: [-96.5, 38.5],
     zoom: 3.0,
     minZoom: 2.0,
-    maxZoom: 13,
+    // maxZoom 10 keeps the user inside a zoom range where geographic
+    // context (state borders, city labels) is still meaningful — past
+    // z10 the data circles dwarf the basemap and orientation goes away.
+    maxZoom: 10,
     bounds: [-125, 24, -66, 50],
     // Suppress the California-only static overlays (out-of-bounds mask,
     // state border, county borders, CA-city labels) baked in for Firefuels.

@@ -55,10 +55,12 @@ export function useMultiSourceLayers(map, config, state) {
           })
         }
 
-        // Sit below the basemap's city labels & administrative borders so
-        // the place names stay readable on top of the data.
-        const beforeId = map.getLayer('city-labels-r1') ? 'city-labels-r1'
-                       : map.getLayer('ca-border')      ? 'ca-border'
+        // Sit below the box overlay (so city boxes / labels stay on top of
+        // the pixel data) and the basemap's city labels & state border (so
+        // place names remain legible).
+        const beforeId = map.getLayer('box-overlay-fill') ? 'box-overlay-fill'
+                       : map.getLayer('city-labels-r1')   ? 'city-labels-r1'
+                       : map.getLayer('ca-border')        ? 'ca-border'
                        : undefined
 
         try {

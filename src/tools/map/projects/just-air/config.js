@@ -200,27 +200,18 @@ const config = {
     labelSize: 10,
   },
 
-  // Two PMTiles sources stack at every zoom: the synthetic 9 km national
-  // surface is always visible, and the 15-metro pixel data fades in starting
-  // at zoom 7.5 (where individual city pixels become large enough to read).
-  // The cities tileset visually covers the national surface inside city
-  // boxes, so no explicit masking is needed.
-  tileSources: [
-    {
-      id: 'just-air-national',
-      url: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/just-air-national.pmtiles',
-      sourceLayer: 'national',
-    },
-    {
-      id: 'just-air-cities',
-      url: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/just-air-cities.pmtiles',
-      sourceLayer: 'cities',
-      fadeInRange: [7.5, 8.5],
-    },
+  // Single multi-scale PMTiles. Each feature is a Point at its cell
+  // centroid and carries `_scale` (cell side in km). The renderer
+  // (use-just-air-layers.js) adds one circle layer per scales[] entry,
+  // filtered to that scale value, with the listed zoom band controlling
+  // visibility. Bands overlap by 1 zoom step so transitions cross-fade.
+  tilesUrl: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/just-air.pmtiles',
+  sourceLayer: 'just-air',
+  scales: [
+    { value: 36, minZoom: 2, maxZoom: 6.5 },   // 36 km supercells
+    { value: 9,  minZoom: 5, maxZoom: 11 },    // 9 km national grid
+    { value: 1,  minZoom: 8, maxZoom: 14 },    // native city pixels
   ],
-  // Legacy field — kept so back-compat code paths don't NPE. The actual
-  // data sources are declared above in tileSources.
-  tilesUrl: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/just-air-cities.pmtiles',
   methodsPath: 'just-air/methods.mdx',
 };
 

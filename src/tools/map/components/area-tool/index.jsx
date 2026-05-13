@@ -22,14 +22,18 @@ import {
   computeAggregateStats,
 } from '../../lib/area-stats.js'
 import { LAYER_IDS } from '../../lib/use-map-layer.js'
+import { justAirLayerIds } from '../../lib/use-just-air-layers.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 
-// Layer IDs that currently render data on the map. Firefuels-LOD projects
-// use the four legacy circle layers; tileSources-driven projects use one
-// fill layer per declared source. The area tool's queryRenderedFeatures
-// call needs whichever set is live so the per-circle / per-polygon
-// aggregates pull the right features.
+// Layer IDs that currently render data on the map. The area tool's
+// queryRenderedFeatures call needs whichever set is live so the per-circle
+// / per-polygon aggregates pull the right features. Each project's render
+// hook produces a different set of layer ids; we union the three known
+// shapes here so the area tool stays project-agnostic.
 function dataLayerIds(config) {
+  if (config.scales && config.scales.length > 0) {
+    return justAirLayerIds(config)
+  }
   if (config.tileSources && config.tileSources.length > 0) {
     return config.tileSources.map((ts) => `${ts.id}-fill`)
   }

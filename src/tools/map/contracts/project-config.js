@@ -146,7 +146,17 @@
  * @property {Dimension[]}          dimensions      - all dimensions, flat list
  * @property {PercentileFilterConfig} percentileFilter
  * @property {AreaToolConfig}       areaTool
- * @property {string}               tilesUrl        - PMTiles URL or local path (legacy/fallback)
+ * @property {string}               tilesUrl        - PMTiles URL or local path
+ * @property {string}               [sourceLayer]   - tippecanoe layer name baked into the
+ *                                                   PMTiles. Defaults to `id`.
+ * @property {ScaleBand[]}          [scales]        - opt-in: multi-scale circle renderer
+ *                                                   (use-just-air-layers.js). Each entry
+ *                                                   becomes one circle layer filtered to
+ *                                                   that scale value, sized as
+ *                                                   `_scale × zoom-base-radius`. Used by
+ *                                                   any project whose tileset tags every
+ *                                                   feature with a `_scale` (cell side in
+ *                                                   km) property.
  * @property {TileSource[]}         [tileSources]   - opt-in: multi-source polygon PMTiles
  *                                                   renderer. When set, the legacy LOD
  *                                                   circle renderer (use-map-layer.js)
@@ -154,6 +164,17 @@
  *                                                   handles the data layers instead.
  * @property {string}               [methodsPath]
  * @property {BoxOverlayConfig}     [boxOverlay]
+ */
+
+/**
+ * One scale band for the multi-scale circle renderer.
+ *
+ * @typedef {Object} ScaleBand
+ * @property {number} value      - the `_scale` property value this band matches
+ * @property {number} [minZoom]  - opacity ramps in from 0 at this zoom
+ * @property {number} [maxZoom]  - opacity ramps out to 0 at this zoom
+ * @property {number} [fadeWidth] - half-width of the cross-fade in zoom units
+ *                                  (default 0.5). Larger = softer transition.
  */
 
 /**

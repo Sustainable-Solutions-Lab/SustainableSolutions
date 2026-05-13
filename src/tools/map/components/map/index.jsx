@@ -8,6 +8,7 @@ import { basemapStyle } from './basemap-style.jsx'
 import { addStaticLayers, setGraticuleVisible as applyGraticuleVisibility } from './static-layers.jsx'
 import { useMapLayer } from '../../lib/use-map-layer.js'
 import { useMultiSourceLayers } from '../../lib/use-multi-source-layers.js'
+import { useJustAirLayers } from '../../lib/use-just-air-layers.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { percentileThresholds } from '../../lib/area-stats.js'
 import { SOURCE_ID, LAYER_ID, LAYER_ID_AGG, LAYER_ID_MED, LAYER_ID_COARSE, LAYER_IDS } from '../../lib/use-map-layer.js'
@@ -218,12 +219,14 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
   }, [])
 
   // ── Data layer (PMTiles / GeoJSON) ───────────────────────────────────────
-  // Two parallel renderers; whichever matches the project config does the
-  // work and the other is a no-op:
+  // Three parallel renderers; the one whose config schema matches the
+  // project does the work and the others are no-ops:
   //   - useMapLayer:           legacy Firefuels LOD circle scheme
-  //   - useMultiSourceLayers:  multi-source polygon fill (Just Air, etc.)
+  //   - useMultiSourceLayers:  multi-source polygon fill (no current users)
+  //   - useJustAirLayers:      multi-scale circle stack (Just Air)
   useMapLayer(mapReady ? mapRef.current : null, config, state, opacityP95)
   useMultiSourceLayers(mapReady ? mapRef.current : null, config, state)
+  useJustAirLayers(mapReady ? mapRef.current : null, config, state)
 
   // ── Color scheme change ──────────────────────────────────────────────────
   useEffect(() => {

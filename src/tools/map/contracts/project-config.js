@@ -113,6 +113,21 @@
  * @property {[number, number]}              center   - [lng, lat]
  * @property {number}                        zoom
  * @property {[number,number,number,number]} [bounds] - [west, south, east, north]
+ * @property {number} [minZoom]   - clamp on how far the user can zoom out
+ * @property {number} [maxZoom]   - clamp on how far the user can zoom in
+ */
+
+/**
+ * Optional box-overlay config. Draws outlined rectangles + small labels at
+ * the bbox positions listed in `manifestUrl`. Used by Just Air to mark the
+ * 15 metros where high-resolution pixel data lives on the otherwise-empty
+ * national map. Fades out as the user zooms into the city data itself.
+ *
+ * @typedef {Object} BoxOverlayConfig
+ * @property {string} manifestUrl       - JSON URL: array of { slug, label, bbox: [w,s,e,n] }
+ * @property {number} [fadeOutMinZoom]  - boxes are fully visible at and below this zoom
+ * @property {number} [fadeOutMaxZoom]  - boxes are fully invisible at and above this zoom
+ * @property {number} [labelSize]       - label font size in px
  */
 
 /**
@@ -129,6 +144,7 @@
  * @property {AreaToolConfig}       areaTool
  * @property {string}               tilesUrl        - PMTiles URL or local path
  * @property {string}               [methodsPath]
+ * @property {BoxOverlayConfig}     [boxOverlay]
  */
 
 // This file exports nothing at runtime — it is documentation only.

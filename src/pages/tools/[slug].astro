@@ -13,9 +13,10 @@ import { resolve } from 'node:path';
 export async function getStaticPaths() {
   // Slugs to skip:
   //   - 'firefuels'   has its own hand-written /tools/firefuels.astro
+  //   - 'just-air'    has its own hand-written /tools/just-air.astro
   //   - 'cornerstone' is a multi-link initiative; the index card already
   //     surfaces website / Zenodo / GitHub, no dedicated detail page.
-  const skip = new Set(['firefuels', 'cornerstone']);
+  const skip = new Set(['firefuels', 'just-air', 'cornerstone']);
   const tools = (await import('../../data/tools.json')).default as Tool[];
   return tools
     .filter((t) => t.slug && !skip.has(t.slug))

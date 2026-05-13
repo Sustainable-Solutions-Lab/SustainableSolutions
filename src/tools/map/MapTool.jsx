@@ -76,9 +76,33 @@ function readSiteScheme() {
 
 // ── App ─────────────────────────────────────────────────────────────────────
 
-export default function MapTool({ companion = null, display = null }) {
+/**
+ * Build an AppState seed for `projectId` by reading the first layer + each
+ * dimension's defaultValue from the project config. Keeps MapTool generic so
+ * it doesn't have to know about per-project layer/dimension names.
+ */
+function seedStateForProject(projectId) {
+  const project = projects[projectId]
+  if (!project) return initialState
+  const firstLayer = project.layers.find((l) => !l.hidden) ?? project.layers[0]
+  const activeDimensions = {}
+  for (const d of project.dimensions ?? []) {
+    activeDimensions[d.id] = d.defaultValue
+  }
+  return {
+    ...initialState,
+    projectId,
+    activeLayer: firstLayer?.id ?? initialState.activeLayer,
+    activeDimensions,
+  }
+}
+
+export default function MapTool({ projectId = 'fuel-treatment', companion = null, display = null }) {
   const initialScheme = readSiteScheme()
-  const [state, dispatch] = useReducer(reducer, { ...initialState, colorScheme: initialScheme })
+  const [state, dispatch] = useReducer(
+    reducer,
+    { ...seedStateForProject(projectId), colorScheme: initialScheme },
+  )
 
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
   const [mobileAboutOpen, setMobileAboutOpen] = useState(false)
@@ -93,7 +117,7 @@ export default function MapTool({ companion = null, display = null }) {
   // Memoized so the spread doesn't produce a fresh object on every render —
   // downstream effects use `config` as a useEffect dep and would otherwise
   // re-run forever (which was causing continuous map flashing).
-  const baseConfig = projects[state.projectId]
+  const baseConfig = projects[state.projectId] ?? projects['fuel-treatment']
   const displayTitle = display?.title ?? null
   const displayEyebrow = display?.eyebrow ?? null
   const displaySummary = display?.summary ?? null
@@ -118,6 +142,14 @@ export default function MapTool({ companion = null, display = null }) {
     }
     const varId = activeVariable.id
     const zero = activeVariable.domain?.zero ?? activeVariable.domain?.min ?? 0
+    // Statewide distribution prefetch only applies to the fuel-treatment dev
+    // dataset (GeoJSON fallback before PMTiles were built). Other projects
+    // skip this — the legend/opacity scale falls back to config domain.
+    if (state.projectId !== 'fuel-treatment') {
+      setStatewideValues([])
+      setOpacityP95(null)
+      return
+    }
     fetch('/fuel-treatment.geojson')
       .then((r) => r.json())
       .then((data) => {
@@ -162,12 +194,10 @@ export default function MapTool({ companion = null, display = null }) {
     try { localStorage.setItem('ssl-theme', next) } catch {}
   }
 
-  // Mobile panel: show only treatment + climate dimensions for the active layer
+  // Mobile panel: show whichever dimensions the active layer declares.
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
-  const mobileDimensions = config.dimensions.filter(
-    (d) =>
-      (d.id === 'treatment' || d.id === 'climate') &&
-      activeLayerConfig?.dimensionIds?.includes(d.id),
+  const mobileDimensions = config.dimensions.filter((d) =>
+    activeLayerConfig?.dimensionIds?.includes(d.id),
   )
 
   const wordmarkSrc = isDark ? '/SDSS_brand_white.png' : '/SDSS_brand.png'

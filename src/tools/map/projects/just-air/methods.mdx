@@ -1,0 +1,58 @@
+---
+title: Just Air — Methods
+project: just-air
+---
+
+> This file is a reference copy. The actual content rendered in the
+> "Read methods" panel lives in `src/tools/map/components/methods-panel.jsx`
+> (the `JustAirMethods` component). Keep the two in sync when editing.
+
+## About this map
+
+This map shows projected annual PM₂.₅ concentrations and PM₂.₅-related
+mortality in 2050 across the 15 most populous U.S. metros under two
+net-zero scenarios — *Low CDR*, which reaches net zero with limited
+carbon-dioxide removal, and *High CDR*, which leans more heavily on CDR.
+The difference layer (High − Low) highlights where each scenario yields
+cleaner or dirtier air, and where the resulting health burden shifts. For
+details, see **Bergero et al., *Nature Climate Change*, in press**
+([preprint](https://assets-eu.researchsquare.com/files/rs-7359464/v1/e95da285-43f3-4f1b-b892-d899d3335dda.pdf)).
+
+## Scenarios
+
+Both scenarios reach net-zero CO₂ in the United States by 2050 but differ
+in how much they rely on carbon-dioxide removal (CDR). The Low-CDR
+scenario reduces residual fossil combustion further to meet the same net
+target; the High-CDR scenario tolerates more fossil combustion and offsets
+it with engineered or land-based removals. Because PM₂.₅ co-pollutants
+ride along with fossil combustion, the two scenarios produce different
+air-quality outcomes in the same year.
+
+## Spatial resolution
+
+High-resolution pixel data is shown inside the 15 metro boxes that appear
+on the national view. Outside those boxes, only the background 9 km field
+is meaningful. As you zoom in, the city-level pixels fade in to reveal
+block-scale heterogeneity in concentrations and health burden.
+
+## Mortality estimation
+
+PM₂.₅-attributable mortality per pixel is computed using a standard
+concentration-response function applied to local PM₂.₅ exposure and
+baseline mortality rates. Per-pixel counts are small (because pixels are
+small); city-wide totals can be obtained by summing across pixels within a
+metro using the area-selection tool.
+
+## Difference layer
+
+Difference = High CDR − Low CDR. **Blue** indicates locations where the
+High-CDR scenario is cleaner or saves lives; **red** indicates locations
+where High CDR results in more PM₂.₅ or more deaths than Low CDR. The
+diverging scale is centered on zero (no difference).
+
+## Caveats
+
+The 9 km national surface is a placeholder synthesized for layout
+purposes pending the model's full national output. City-level pixels
+reflect the published model results. Population, minority share, and
+income overlays are scaffolded but data have not yet been loaded.

@@ -11,6 +11,134 @@ import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { percentileThresholds } from '../../lib/area-stats.js'
 import { SOURCE_ID, LAYER_ID, LAYER_ID_AGG, LAYER_ID_MED, LAYER_ID_COARSE, LAYER_IDS } from '../../lib/use-map-layer.js'
 
+const BOX_OVERLAY_SOURCE = 'box-overlay'
+const BOX_OVERLAY_FILL   = 'box-overlay-fill'
+const BOX_OVERLAY_LINE   = 'box-overlay-line'
+const BOX_OVERLAY_LABEL  = 'box-overlay-label'
+
+// Convert a [west, south, east, north] bbox into a closed polygon ring.
+function bboxToPolygon(bbox) {
+  const [w, s, e, n] = bbox
+  return [[ [w, s], [e, s], [e, n], [w, n], [w, s] ]]
+}
+
+/**
+ * Draw outlined rectangles + small labels at the bbox positions listed in
+ * `cfg.manifestUrl`. Boxes fade out as the user zooms in past the city
+ * pixel-data zoom range. Idempotent — safe to call again after `setStyle`
+ * resets the basemap.
+ *
+ * @param {import('maplibre-gl').Map} map
+ * @param {import('../../contracts/project-config').BoxOverlayConfig} cfg
+ * @param {'dark'|'light'} colorScheme
+ */
+function addBoxOverlay(map, cfg, colorScheme) {
+  if (map.getSource(BOX_OVERLAY_SOURCE)) return  // already added in this style
+
+  // Seed with an empty source so the layers can be inserted immediately,
+  // even before the manifest fetch resolves. We update setData() once the
+  // manifest lands. (Avoids a style-load race where addLayer runs first.)
+  map.addSource(BOX_OVERLAY_SOURCE, {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] },
+  })
+
+  const isDark = colorScheme === 'dark'
+  const outlineColor = isDark ? 'rgba(248,248,232,0.55)' : 'rgba(24,24,56,0.55)'
+  const labelColor   = isDark ? 'rgba(248,248,232,0.85)' : 'rgba(24,24,56,0.78)'
+  const labelHalo    = isDark ? 'rgba(12,12,28,0.85)'    : 'rgba(248,248,232,0.85)'
+  const fadeMin = cfg.fadeOutMinZoom ?? 7
+  const fadeMax = cfg.fadeOutMaxZoom ?? 9
+  const labelSize = cfg.labelSize ?? 10
+
+  const opacityStops = [
+    'interpolate', ['linear'], ['zoom'],
+    fadeMin, 1,
+    fadeMax, 0,
+  ]
+
+  // Transparent fill so users can mouse over without the basemap suddenly
+  // becoming opaque inside the box. Kept very faint so it doesn't read as
+  // colored data — it's just a hit target / visual hint.
+  map.addLayer({
+    id: BOX_OVERLAY_FILL,
+    type: 'fill',
+    source: BOX_OVERLAY_SOURCE,
+    filter: ['==', ['geometry-type'], 'Polygon'],
+    paint: {
+      'fill-color': isDark ? 'rgba(248,248,232,0.04)' : 'rgba(24,24,56,0.04)',
+      'fill-opacity': opacityStops,
+    },
+  })
+
+  map.addLayer({
+    id: BOX_OVERLAY_LINE,
+    type: 'line',
+    source: BOX_OVERLAY_SOURCE,
+    filter: ['==', ['geometry-type'], 'Polygon'],
+    paint: {
+      'line-color': outlineColor,
+      'line-width': 1,
+      'line-dasharray': [2, 2],
+      'line-opacity': opacityStops,
+    },
+  })
+
+  // Labels render only on the per-bbox top-left Point features emitted
+  // alongside the polygons (see fetch handler below).
+  map.addLayer({
+    id: BOX_OVERLAY_LABEL,
+    type: 'symbol',
+    source: BOX_OVERLAY_SOURCE,
+    filter: ['==', ['geometry-type'], 'Point'],
+    layout: {
+      'text-field': ['get', 'label'],
+      'text-size': labelSize,
+      'text-font': ['Noto Sans Regular'],
+      'text-anchor': 'top-left',
+      'text-offset': [0.3, 0.3],
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
+    },
+    paint: {
+      'text-color': labelColor,
+      'text-halo-color': labelHalo,
+      'text-halo-width': 1.2,
+      'text-opacity': opacityStops,
+    },
+  })
+
+  fetch(cfg.manifestUrl)
+    .then((r) => r.json())
+    .then((manifest) => {
+      const features = (manifest ?? [])
+        .filter((m) => Array.isArray(m?.bbox) && m.bbox.length === 4)
+        .map((m) => ({
+          type: 'Feature',
+          properties: { slug: m.slug ?? '', label: m.label ?? '' },
+          geometry: { type: 'Polygon', coordinates: bboxToPolygon(m.bbox) },
+        }))
+      // For the label, MapLibre's `symbol-placement: 'point'` on a polygon
+      // uses the polygon centroid. We want the top-left corner instead, so
+      // emit a parallel Point feature per bbox carrying just the label.
+      const labelFeatures = (manifest ?? [])
+        .filter((m) => Array.isArray(m?.bbox) && m.bbox.length === 4)
+        .map((m) => ({
+          type: 'Feature',
+          properties: { slug: m.slug ?? '', label: m.label ?? '' },
+          geometry: { type: 'Point', coordinates: [m.bbox[0], m.bbox[3]] },
+        }))
+      const src = map.getSource(BOX_OVERLAY_SOURCE)
+      if (!src) return
+      src.setData({
+        type: 'FeatureCollection',
+        features: [...features, ...labelFeatures],
+      })
+    })
+    .catch((err) => console.warn('[boxOverlay] manifest fetch failed:', err))
+}
+
+
 /**
  * Interactive MapLibre GL map for Firemap.
  *
@@ -49,13 +177,18 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     // of that to absorb the in-tool title bar.
     const upwardOffset = isMobile ? 0.75 : 0.15
     const center = [config.region.center[0], config.region.center[1] - upwardOffset]
+    // Camera clamps: prefer config.region.{min,max}Zoom; fall back to the
+    // historic Firefuels values when a project hasn't declared them.
+    const fallbackMinZoom = isMobile ? 4.8 : 5.3
+    const fallbackMaxZoom = 9
+    const initialZoom = config.region.zoom ?? (isMobile ? 4.8 : 5)
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: basemapStyle(schemeRef.current),
       center,
-      zoom: isMobile ? 4.8 : 5,
-      minZoom: isMobile ? 4.8 : 5.3,
-      maxZoom: 9,
+      zoom: initialZoom,
+      minZoom: config.region.minZoom ?? fallbackMinZoom,
+      maxZoom: config.region.maxZoom ?? fallbackMaxZoom,
       // Disable built-in attribution — we render our own static text below
       attributionControl: false,
     })
@@ -64,6 +197,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
 
     map.once('load', () => {
       addStaticLayers(map, schemeRef.current)
+      if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, schemeRef.current)
       setMapReady(true)
       if (onMapReady) onMapReady(map)
     })
@@ -89,6 +223,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
 
     map.once('styledata', () => {
       addStaticLayers(map, state.colorScheme)
+      if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, state.colorScheme)
       // Restore graticule visibility
       applyGraticuleVisibility(map, graticuleVisible)
     })

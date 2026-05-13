@@ -1,4 +1,5 @@
 import fuelTreatment from './fuel-treatment/config.js'
+import justAir from './just-air/config.js'
 
 /**
  * Registry of all available projects.
@@ -8,6 +9,7 @@ import fuelTreatment from './fuel-treatment/config.js'
  */
 export const projects = {
   'fuel-treatment': fuelTreatment,
+  'just-air': justAir,
 }
 
 export const defaultProjectId = 'fuel-treatment'

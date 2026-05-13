@@ -1,0 +1,50 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import MapTool from '../../tools/map/MapTool.jsx';
+import tools from '../../data/tools.json';
+import publications from '../../data/publications.json';
+import type { Tool, Publication } from '../../lib/types';
+
+const tool = (tools as Tool[]).find((t) => t.slug === 'just-air') ?? null;
+const companionPub = tool?.doi
+  ? (publications as Publication[]).find((p) => p.doi?.toLowerCase() === tool.doi!.toLowerCase()) ?? null
+  : null;
+const companion = companionPub
+  ? {
+      title: companionPub.title,
+      journal: companionPub.journal,
+      year: companionPub.year,
+      url: companionPub.url ?? (companionPub.doi ? `https://doi.org/${companionPub.doi}` : null),
+    }
+  : null;
+---
+
+<BaseLayout
+  title={tool?.title ?? 'Just Air'}
+  description={tool?.summary}
+  hideFooter={true}
+>
+  <section aria-label="Interactive map">
+    <div
+      class="just-air-frame"
+      style="width: 100%; overflow: hidden; background: var(--paper-2);"
+    >
+      <MapTool
+        client:only="react"
+        projectId="just-air"
+        companion={companion}
+        display={tool ? { title: tool.title, eyebrow: tool.eyebrow, summary: tool.summary } : null}
+      />
+    </div>
+  </section>
+</BaseLayout>
+
+<style is:global>
+  body:has(.just-air-frame) { overflow: hidden; }
+  .just-air-frame {
+    position: relative;
+    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
+  }
+  .just-air-frame > * { width: 100%; height: 100%; }
+</style>

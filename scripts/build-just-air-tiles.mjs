@@ -210,7 +210,7 @@ function cityPixelToPoint(p, city) {
     mort_low:  round(p.mort_low, 6),
     mort_high: round(p.mort_high, 6),
     mort_diff: round(p.mort_high - p.mort_low, 6),
-  }, { minzoom: 7, maxzoom: 14 });
+  }, { minzoom: 9, maxzoom: 14 });
 }
 
 // ── Synthetic 9 km CONUS national grid (centroids) ──────────────────────────
@@ -268,7 +268,17 @@ function syntheticNational() {
   return cells;
 }
 
-function nationalCellToPoint(c) {
+// Tag each 9 km cell with a different tippecanoe zoom range depending on
+// whether its centroid falls inside any of the 15 metro bboxes. Cells inside
+// a bbox stop emitting at z6 so the 3 km / 1 km city tiers take over without
+// the user seeing both sizes layered over the same area. Cells outside every
+// bbox keep emitting all the way to z14 so rural areas still show 9 km
+// coverage when the user zooms in there.
+function nationalCellToPoint(c, cityBboxes) {
+  const insideMetro = pointInAnyBbox(c.lng, c.lat, cityBboxes);
+  const tcZoom = insideMetro
+    ? { minzoom: 5, maxzoom: 6 }
+    : { minzoom: 5 };  // omit maxzoom — emit at every zoom level
   return makePoint(c.lng, c.lat, {
     _scale: 9,
     pm25_low:  round(c.pm25_low, 2),
@@ -277,7 +287,14 @@ function nationalCellToPoint(c) {
     mort_low:  round(c.mort_low, 8),
     mort_high: round(c.mort_high, 8),
     mort_diff: round(c.mort_high - c.mort_low, 8),
-  }, { minzoom: 4, maxzoom: 11 });
+  }, tcZoom);
+}
+
+function pointInAnyBbox(lng, lat, bboxes) {
+  for (const b of bboxes) {
+    if (lng >= b[0] && lng <= b[2] && lat >= b[1] && lat <= b[3]) return true;
+  }
+  return false;
 }
 
 // ── 3 km aggregation of native city pixels ──────────────────────────────────
@@ -324,7 +341,7 @@ function aggregateCityTo3km(pixels, city) {
       mort_low:  round(b.mort_low  / n, 6),
       mort_high: round(b.mort_high / n, 6),
       mort_diff: round((b.mort_high - b.mort_low) / n, 6),
-    }, { minzoom: 5, maxzoom: 10 }));
+    }, { minzoom: 7, maxzoom: 8 }));
   }
   return out;
 }
@@ -365,7 +382,7 @@ function aggregateSupercells(cells, blockSize = 4) {
       mort_low:  round(b.mort_low  / n, 8),
       mort_high: round(b.mort_high / n, 8),
       mort_diff: round((b.mort_high - b.mort_low) / n, 8),
-    }, { minzoom: 2, maxzoom: 7 }));
+    }, { minzoom: 2, maxzoom: 4 }));
   }
   return out;
 }
@@ -429,17 +446,23 @@ async function main() {
   await fs.writeFile(MANIFEST_OUT, JSON.stringify(manifest, null, 2));
   console.log(`Manifest      → ${MANIFEST_OUT}`);
 
-  // ── National 9 km (CONUS-clipped) ──────────────────────────────────────
-  // Generate the regular grid, then drop cells whose centroid sits outside
-  // the 48 state polygons. Eliminates the rectangular bbox bleed into
-  // Mexico, Canada, and the surrounding oceans.
+  // ── National 9 km (CONUS-clipped, metro-tagged) ────────────────────────
+  // Generate the regular grid, drop cells outside the 48 state polygons, and
+  // tag each remaining cell with a tippecanoe zoom range that depends on
+  // whether its centroid falls inside any of the 15 metro bboxes computed
+  // above. The bbox set is the same one used to render the box overlay, so
+  // the tile-level filtering lines up exactly with what the user sees on
+  // the map.
   console.log('Generating synthetic 9 km CONUS grid…');
+  const cityBboxesForFilter = manifest.map((m) => m.bbox);
   const nationalCellsAll = syntheticNational();
   const nationalCells = nationalCellsAll.filter((c) => isInsideConus(c.lng, c.lat));
-  console.log(`National 9 km: ${nationalCells.length} cells  (dropped ${nationalCellsAll.length - nationalCells.length} non-CONUS)`);
+  let inMetroCount = 0;
   for (const c of nationalCells) {
-    await fh.write(JSON.stringify(nationalCellToPoint(c)) + '\n');
+    if (pointInAnyBbox(c.lng, c.lat, cityBboxesForFilter)) inMetroCount++;
+    await fh.write(JSON.stringify(nationalCellToPoint(c, cityBboxesForFilter)) + '\n');
   }
+  console.log(`National 9 km: ${nationalCells.length} cells  (dropped ${nationalCellsAll.length - nationalCells.length} non-CONUS, ${inMetroCount} inside metro bboxes capped at z6)`);
 
   // ── National 36 km supercells (CONUS-clipped) ──────────────────────────
   console.log('Aggregating to 36 km supercells…');

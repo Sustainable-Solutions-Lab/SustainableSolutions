@@ -26,12 +26,12 @@ const config = {
     'Annual PM₂.₅ concentrations and PM₂.₅-related mortality projected to 2050 under two net-zero scenarios — Low CDR (limited carbon-dioxide removal) and High CDR — at high spatial resolution for the 15 most populous U.S. metros. Difference layers show where each scenario yields cleaner or more polluted air, and where the resulting health burden shifts. For details, see <a href="https://assets-eu.researchsquare.com/files/rs-7359464/v1/e95da285-43f3-4f1b-b892-d899d3335dda.pdf" target="_blank" rel="noopener noreferrer"><strong>Bergero et al., Nature Climate Change, in press.</strong></a>',
 
   // CONUS-wide framing with city-by-city zoom-in allowed. The default
-  // zoom shows the full lower-48 footprint; minZoom is generous so the
-  // user can still pinch out further for context.
+  // zoom shows the full lower-48 footprint with margin; minZoom is
+  // generous so the user can still pinch out further for context.
   region: {
     center: [-96.5, 38.5],
-    zoom: 3.8,
-    minZoom: 2.5,
+    zoom: 3.0,
+    minZoom: 2.0,
     maxZoom: 13,
     bounds: [-125, 24, -66, 50],
     // Suppress the California-only static overlays (out-of-bounds mask,
@@ -210,11 +210,16 @@ const config = {
   // visibility. Bands overlap by 1 zoom step so transitions cross-fade.
   tilesUrl: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/just-air.pmtiles',
   sourceLayer: 'just-air',
+  // Disjoint zoom bands enforce "one circle size per area at any zoom".
+  // The 9 km layer has no maxZoom because outside the 15 metro bboxes
+  // the build script keeps 9 km cells emitted at every zoom (those areas
+  // never get 3 km / 1 km coverage), while inside the metro bboxes the
+  // build script truncates 9 km cells at z6 so 3 km / 1 km take over.
   scales: [
-    { value: 36, minZoom: 2, maxZoom: 6.5 },  // 36 km national supercells
-    { value: 9,  minZoom: 5, maxZoom: 11 },   // 9 km national grid
-    { value: 3,  minZoom: 6, maxZoom: 10 },   // 3 km city aggregation
-    { value: 1,  minZoom: 7, maxZoom: 14 },   // native ~1 km city pixels
+    { value: 36, minZoom: 2, maxZoom: 5 },   // CONUS overview supercells
+    { value: 9,  minZoom: 5 },                // 9 km (everywhere → rural-only at z7+)
+    { value: 3,  minZoom: 7, maxZoom: 9 },   // 3 km bridge inside metros
+    { value: 1,  minZoom: 9 },                // native city pixels at z9+
   ],
   methodsPath: 'just-air/methods.mdx',
 };

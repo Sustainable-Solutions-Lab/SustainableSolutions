@@ -11,8 +11,12 @@ import { formatValue } from '../../lib/format.js'
 
 export function Legend({ variable, allValues = [], isDark = true }) {
   if (!variable) return null
-  if (variable.type !== 'categorical') return null
-  return <CategoricalLegend variable={variable} isDark={isDark} />
+  if (variable.type === 'categorical') {
+    return <CategoricalLegend variable={variable} isDark={isDark} />
+  }
+  // Continuous case — used by projects that don't surface the distribution
+  // chart in the sidebar (so the user still gets a color scale + min/max).
+  return <ContinuousLegend variable={variable} allValues={allValues} isDark={isDark} />
 }
 
 /**

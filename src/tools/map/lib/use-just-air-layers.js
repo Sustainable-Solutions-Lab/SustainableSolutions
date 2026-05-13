@@ -86,22 +86,23 @@ export function useJustAirLayers(map, config, state) {
         const layerId = `just-air-cells-${s.value}`
         if (map.getLayer(layerId)) continue
         try {
-          map.addLayer({
+          const layerSpec = {
             id: layerId,
             type: 'circle',
             source: SOURCE_ID,
             'source-layer': sourceLayer,
             minzoom: s.minZoom ?? 0,
-            maxzoom: s.maxZoom ?? 24,
             filter: ['==', ['coalesce', ['to-number', ['get', '_scale']], 0], s.value],
             paint: {
               'circle-radius':       RADIUS,
-              'circle-color':        buildColorExpr(variableRef.current),
-              'circle-opacity':      buildOpacityExpr(variableRef.current, s),
+              'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current),
+              'circle-opacity':      buildOpacityExpr(variableRef.current),
               'circle-stroke-width': 0,
               'circle-blur':         0,
             },
-          }, beforeId)
+          }
+          if (s.maxZoom != null) layerSpec.maxzoom = s.maxZoom
+          map.addLayer(layerSpec, beforeId)
         } catch (err) {
           console.error('[useJustAirLayers] addLayer', layerId, err)
         }
@@ -131,8 +132,8 @@ export function useJustAirLayers(map, config, state) {
       const layerId = `just-air-cells-${s.value}`
       if (!map.getLayer(layerId)) continue
       try {
-        map.setPaintProperty(layerId, 'circle-color',   buildColorExpr(variableRef.current))
-        map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current, s))
+        map.setPaintProperty(layerId, 'circle-color',   buildColorExpr(variableRef.current, isDarkRef.current))
+        map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current))
       } catch (err) {
         console.error('[useJustAirLayers] setPaintProperty', layerId, err)
       }
@@ -142,8 +143,22 @@ export function useJustAirLayers(map, config, state) {
 }
 
 // ── Paint expression builders ──────────────────────────────────────────────
+//
+// Firefuels-style emulation:
+//   • Diverging variables get a binary blue/red color expression keyed off
+//     the value's sign vs the variable's `zero`. Magnitude is conveyed by
+//     opacity, so values at zero fade to fully transparent.
+//   • Sequential variables get the continuous colormap, but their opacity
+//     ramps with magnitude away from `zero` (default 0) too, so low values
+//     also fade to transparent rather than sitting on top of the basemap
+//     as a faint wash.
+//
+// The d3 colormap convention: scaleDiverging(interp).domain([min,zero,max])
+// maps min→interp(0) and max→interp(1). For RdBu, max→blue; for BuRd
+// (Just Air diff layers), max→red. So we pick the anchor colors directly
+// from the configured colormap rather than hard-coding blue/red sides.
 
-function buildColorExpr(variable) {
+function buildColorExpr(variable, isDark) {
   if (!variable) return '#888888'
   if (variable.type === 'categorical') {
     const expr = ['match', ['get', variable.id]]
@@ -151,6 +166,24 @@ function buildColorExpr(variable) {
     expr.push('#888888')
     return expr
   }
+  if (variable.diverging) {
+    const zero = variable.domain?.zero ?? 0
+    // Pick Firefuels' anchor hexes for legibility against the paper / dark
+    // basemap, then assign them to sides based on the colormap name. RdBu
+    // maps the positive end to blue (firefuels' net-benefit convention);
+    // BuRd inverts that so the positive end (a higher diff = "worse"
+    // outcome) reads red.
+    const blue = isDark ? '#4393c3' : '#2166ac'
+    const red  = isDark ? '#d6604d' : '#b2182b'
+    const posIsBlue = variable.colormap !== 'BuRd'
+    const posColor = posIsBlue ? blue : red
+    const negColor = posIsBlue ? red  : blue
+    return ['case',
+      ['>=', ['get', variable.id], zero], posColor,
+      negColor,
+    ]
+  }
+  // Sequential: continuous colormap
   const { min, max } = variable.domain
   const scale = buildColorScale(variable)
   const steps = 24
@@ -162,17 +195,39 @@ function buildColorExpr(variable) {
   return expr
 }
 
-// Per-scale opacity ramp: each scale fades in at the start of its zoom band
-// and fades out at the end, so neighboring scales cross-fade instead of
-// snapping at the maxzoom/minzoom boundary.
-function buildOpacityExpr(variable, scaleEntry) {
-  const peak = 0.9
-  const { minZoom = 0, maxZoom = 24, fadeWidth = 0.5 } = scaleEntry
-  if (variable?.type === 'categorical') return peak
-  return ['interpolate', ['linear'], ['zoom'],
-    minZoom,             0,
-    minZoom + fadeWidth, peak,
-    maxZoom - fadeWidth, peak,
-    maxZoom,             0,
+// Magnitude-driven opacity: value=zero ⇒ fully transparent, value at the
+// configured extremum ⇒ peak opacity, with a non-linear curve so low-mag
+// values are still readable. Same piecewise-linear t^0.4 approximation
+// Firefuels uses (see lib/use-map-layer.js → curveOpacity).
+function curveOpacity(t_expr) {
+  return ['interpolate', ['linear'], t_expr,
+    0,    0,
+    0.02, 0.21,
+    0.05, 0.30,
+    0.1,  0.40,
+    0.25, 0.57,
+    0.5,  0.76,
+    0.75, 0.88,
+    1.0,  1.0,
+  ]
+}
+
+function buildOpacityExpr(variable) {
+  const peak = 1.0
+  if (!variable || variable.type === 'categorical') return 0.9
+  const zero = variable.domain?.zero ?? variable.domain?.min ?? 0
+  const max  = variable.domain?.max ?? 1
+  const min  = variable.domain?.min ?? 0
+  const maxPosDev = Math.max(max  - zero, 0.001)
+  const maxNegDev = Math.max(zero - min,  0.001)
+  const tPos = ['min', 1, ['max', 0,
+    ['/', ['-', ['get', variable.id], zero], maxPosDev],
+  ]]
+  const tNeg = ['min', 1, ['max', 0,
+    ['/', ['-', zero, ['get', variable.id]], maxNegDev],
+  ]]
+  return ['case',
+    ['>=', ['get', variable.id], zero], ['*', peak, curveOpacity(tPos)],
+    ['*', peak, curveOpacity(tNeg)],
   ]
 }

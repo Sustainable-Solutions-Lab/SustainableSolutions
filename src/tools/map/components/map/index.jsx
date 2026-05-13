@@ -95,7 +95,10 @@ function addBoxOverlay(map, cfg, colorScheme) {
     layout: {
       'text-field': ['get', 'label'],
       'text-size': labelSize,
-      'text-font': ['Noto Sans Regular'],
+      // Open Sans Regular is the font already loaded for the graticule /
+      // CA-cities labels via Stadia's glyph endpoint, so we know it's
+      // available without an extra HTTP round-trip.
+      'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
       'text-anchor': 'top-left',
       'text-offset': [0.3, 0.3],
       'text-allow-overlap': true,
@@ -197,7 +200,9 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     mapRef.current = map
 
     map.once('load', () => {
-      addStaticLayers(map, schemeRef.current)
+      addStaticLayers(map, schemeRef.current, {
+        californiaOverlays: config.region?.useCaliforniaOverlay !== false,
+      })
       if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, schemeRef.current)
       setMapReady(true)
       if (onMapReady) onMapReady(map)
@@ -228,7 +233,9 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     map.setStyle(basemapStyle(state.colorScheme))
 
     map.once('styledata', () => {
-      addStaticLayers(map, state.colorScheme)
+      addStaticLayers(map, state.colorScheme, {
+        californiaOverlays: config.region?.useCaliforniaOverlay !== false,
+      })
       if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, state.colorScheme)
       // Restore graticule visibility
       applyGraticuleVisibility(map, graticuleVisible)

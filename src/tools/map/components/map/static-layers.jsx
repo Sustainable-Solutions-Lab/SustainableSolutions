@@ -132,7 +132,11 @@ export function buildGraticule(latStep = 2, lonStep = 2) {
  * @param {import('maplibre-gl').Map} map
  * @param {'dark'|'light'} scheme
  */
-export function addStaticLayers(map, scheme) {
+export function addStaticLayers(map, scheme, opts = {}) {
+  // CA-only overlays (out-of-bounds mask, state border, county borders, CA
+  // city labels). Default true for back-compat with the original Firefuels
+  // project. CONUS-wide projects (e.g. Just Air) pass false to suppress them.
+  const californiaOverlays = opts.californiaOverlays !== false
   const borderColor =
     scheme === 'dark' ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.28)'
   const stateBorderColor =
@@ -150,74 +154,80 @@ export function addStaticLayers(map, scheme) {
   // ── 1. California out-of-bounds mask ──────────────────────────────────────
   // World rectangle with California punched out — hides everything outside CA.
 
-  if (!map.getSource('ca-mask')) {
+  if (californiaOverlays && !map.getSource('ca-mask')) {
     map.addSource('ca-mask', {
       type: 'geojson',
       data: '/ca-mask.geojson',
     })
   }
 
-  if (!map.getLayer('ca-mask-fill')) {
-    map.addLayer({
-      id: 'ca-mask-fill',
-      type: 'fill',
-      source: 'ca-mask',
-      paint: {
-        'fill-color': maskColor,
-        'fill-opacity': 1,
-      },
-    })
-  } else {
-    map.setPaintProperty('ca-mask-fill', 'fill-color', maskColor)
+  if (californiaOverlays) {
+    if (!map.getLayer('ca-mask-fill')) {
+      map.addLayer({
+        id: 'ca-mask-fill',
+        type: 'fill',
+        source: 'ca-mask',
+        paint: {
+          'fill-color': maskColor,
+          'fill-opacity': 1,
+        },
+      })
+    } else {
+      map.setPaintProperty('ca-mask-fill', 'fill-color', maskColor)
+    }
   }
 
   // ── 1b. California state border ───────────────────────────────────────────
   // Uses the dedicated ca-boundary.geojson (just the CA polygon outline).
 
-  if (!map.getSource('ca-boundary')) {
+  if (californiaOverlays && !map.getSource('ca-boundary')) {
     map.addSource('ca-boundary', {
       type: 'geojson',
       data: '/ca-boundary.geojson',
     })
   }
 
-  if (!map.getLayer('ca-border')) {
-    map.addLayer({
-      id: 'ca-border',
-      type: 'line',
-      source: 'ca-boundary',
-      paint: {
-        'line-color': stateBorderColor,
-        'line-width': 1.1,
-      },
-    })
-  } else {
-    map.setPaintProperty('ca-border', 'line-color', stateBorderColor)
+  if (californiaOverlays) {
+    if (!map.getLayer('ca-border')) {
+      map.addLayer({
+        id: 'ca-border',
+        type: 'line',
+        source: 'ca-boundary',
+        paint: {
+          'line-color': stateBorderColor,
+          'line-width': 1.1,
+        },
+      })
+    } else {
+      map.setPaintProperty('ca-border', 'line-color', stateBorderColor)
+    }
   }
 
   // ── 2. County borders ─────────────────────────────────────────────────────
 
-  if (!map.getSource('counties')) {
+  if (californiaOverlays && !map.getSource('counties')) {
     map.addSource('counties', {
       type: 'geojson',
       data: '/counties-ca.geojson',
     })
   }
 
-  if (!map.getLayer('county-borders')) {
-    // Insert below ca-mask-fill so data circles render above county lines
-    const before = map.getLayer('ca-mask-fill') ? 'ca-mask-fill' : undefined
-    map.addLayer({
-      id: 'county-borders',
-      type: 'line',
-      source: 'counties',
-      paint: {
-        'line-color': borderColor,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 5, 0.5, 7, 1.0, 9, 1.4],
-      },
-    }, before)
-  } else {
-    map.setPaintProperty('county-borders', 'line-color', borderColor)
+  if (californiaOverlays) {
+    if (!map.getLayer('county-borders')) {
+      // Insert below ca-mask-fill so data circles render above county lines
+      const before = map.getLayer('ca-mask-fill') ? 'ca-mask-fill' : undefined
+      map.addLayer({
+        id: 'county-borders',
+        type: 'line',
+        source: 'counties',
+        paint: {
+          'line-color': borderColor,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 5, 0.5, 7, 1.0, 9, 1.4],
+        },
+      }, before)
+    } else {
+      map.setPaintProperty('county-borders', 'line-color', borderColor)
+    }
   }
 
   // ── 3. Graticule ──────────────────────────────────────────────────────────
@@ -271,8 +281,10 @@ export function addStaticLayers(map, scheme) {
   }
 
   // ── 4. City labels (shown alongside graticule) ────────────────────────────
+  // CA-cities only. CONUS-wide projects rely on the basemap's own POI labels
+  // (which the basemap style keeps visible at low zoom).
 
-  if (!map.getSource('cities')) {
+  if (californiaOverlays && !map.getSource('cities')) {
     map.addSource('cities', { type: 'geojson', data: CALIFORNIA_CITIES })
   }
 
@@ -299,7 +311,7 @@ export function addStaticLayers(map, scheme) {
     { id: 'city-labels-r5', rank: 5, minzoom: 7.5, size: 10 },
   ]
 
-  for (const { id, rank, minzoom, size } of cityRanks) {
+  if (californiaOverlays) for (const { id, rank, minzoom, size } of cityRanks) {
     if (!map.getLayer(id)) {
       map.addLayer({
         id,

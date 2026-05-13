@@ -32,6 +32,10 @@ const config = {
     minZoom: 3.5,
     maxZoom: 13,
     bounds: [-125, 24, -66, 50],
+    // Suppress the California-only static overlays (out-of-bounds mask,
+    // state border, county borders, CA-city labels) baked in for Firefuels.
+    // Without this, the mask would hide everything outside California.
+    useCaliforniaOverlay: false,
   },
 
   // ── Layers (sidebar tabs) ────────────────────────────────────────────────

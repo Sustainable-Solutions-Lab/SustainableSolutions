@@ -115,6 +115,10 @@
  * @property {[number,number,number,number]} [bounds] - [west, south, east, north]
  * @property {number} [minZoom]   - clamp on how far the user can zoom out
  * @property {number} [maxZoom]   - clamp on how far the user can zoom in
+ * @property {boolean} [useCaliforniaOverlay]  - default true. When false,
+ *           the CA-specific static overlays (out-of-bounds mask, state border,
+ *           county borders, CA-city labels) are suppressed. CONUS-wide and
+ *           international projects should set false.
  */
 
 /**

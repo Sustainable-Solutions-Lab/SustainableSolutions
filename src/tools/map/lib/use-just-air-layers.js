@@ -24,15 +24,15 @@ import { buildColorScale } from './colormap.js'
 import { getActiveVariable } from './get-active-variable.js'
 
 // Tiling-exact base radius for a 1 km cell — the natural Mercator-derived
-// pixel size of a 1 km × 1 km cell, scaled by FILL_FACTOR. MAX_RADIUS_PX
-// caps a 9 km cell at high zoom so it doesn't swell to 120 px; MIN_RADIUS_PX
-// keeps small cells (e.g. _scale 9 at z 5) visible as a dot instead of
-// dropping below 1 px and disappearing entirely.
-const FILL_FACTOR = 2.0
+// pixel size of a 1 km × 1 km cell, scaled by FILL_FACTOR so cells visibly
+// overlap (no dark gaps between neighbors). MAX_RADIUS_PX caps a 9 km cell
+// at high zoom so it doesn't swell to 120 px; MIN_RADIUS_PX keeps small
+// cells visible as a dot.
+const FILL_FACTOR = 3.0
 const R4  = 0.051 * FILL_FACTOR
 const R12 = 13.1  * FILL_FACTOR
 const MIN_RADIUS_PX = 2
-const MAX_RADIUS_PX = 12
+const MAX_RADIUS_PX = 14
 
 // MapLibre forbids `['zoom']` from appearing anywhere except as the direct
 // input to a top-level step/interpolate expression. The earlier attempt to
@@ -304,9 +304,17 @@ function buildColorExpr(variable, isDark, colorRange) {
   const maxPosDev = dataDev ?? Math.max(max  - zero, 0.001)
   const maxNegDev = dataDev ?? Math.max(zero - min,  0.001)
 
+  // Hard transparency floor on the bottom of the data range, then a
+  // pow-1.4 ramp the rest of the way. Anything below ALPHA_FLOOR of the
+  // data spread renders at alpha 0 (rural cells drop out completely
+  // instead of painting a faint wash across the whole map).
+  const ALPHA_FLOOR = 0.30
   function alphaForValue(v) {
     const t = v >= zero ? (v - zero) / maxPosDev : (zero - v) / maxNegDev
-    return Math.min(1, Math.pow(Math.max(0, t), 1.5))
+    const tc = Math.max(0, t)
+    if (tc < ALPHA_FLOOR) return 0
+    const tr = (tc - ALPHA_FLOOR) / (1 - ALPHA_FLOOR)
+    return Math.min(1, Math.pow(tr, 1.4))
   }
 
   const expr = ['interpolate', ['linear'], ['get', variable.id]]

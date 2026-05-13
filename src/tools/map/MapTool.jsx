@@ -76,7 +76,7 @@ function readSiteScheme() {
 
 // ── App ─────────────────────────────────────────────────────────────────────
 
-export default function Firefuels({ companion = null, display = null }) {
+export default function MapTool({ companion = null, display = null }) {
   const initialScheme = readSiteScheme()
   const [state, dispatch] = useReducer(reducer, { ...initialState, colorScheme: initialScheme })
 

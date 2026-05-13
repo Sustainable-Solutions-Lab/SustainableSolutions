@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import Firefuels from '../../tools/firefuels/Firefuels.jsx';
+import MapTool from '../../tools/map/MapTool.jsx';
 import tools from '../../data/tools.json';
 import publications from '../../data/publications.json';
 import type { Tool, Publication } from '../../lib/types';
@@ -29,7 +29,7 @@ const companion = companionPub
       class="firefuels-frame"
       style="width: 100%; overflow: hidden; background: var(--paper-2);"
     >
-      <Firefuels
+      <MapTool
         client:only="react"
         companion={companion}
         display={tool ? { title: tool.title, eyebrow: tool.eyebrow, summary: tool.summary } : null}

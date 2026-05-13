@@ -308,13 +308,19 @@ function buildColorExpr(variable, isDark, colorRange) {
   // pow-1.4 ramp the rest of the way. Anything below ALPHA_FLOOR of the
   // data spread renders at alpha 0 (rural cells drop out completely
   // instead of painting a faint wash across the whole map).
-  const ALPHA_FLOOR = 0.30
+  // Hard truncate the histogram's low tail: anything whose magnitude is
+  // below ALPHA_FLOOR × data-p99 paints fully transparent. From there up,
+  // the alpha rises through a t^1.6 curve so mid-range values stay
+  // translucent and only the top of the distribution lands at full
+  // opacity — keeping the rural baseline invisible against the paper
+  // basemap and leaving only the metro-scale hotspots visibly colored.
+  const ALPHA_FLOOR = 0.45
   function alphaForValue(v) {
     const t = v >= zero ? (v - zero) / maxPosDev : (zero - v) / maxNegDev
     const tc = Math.max(0, t)
     if (tc < ALPHA_FLOOR) return 0
     const tr = (tc - ALPHA_FLOOR) / (1 - ALPHA_FLOOR)
-    return Math.min(1, Math.pow(tr, 1.4))
+    return Math.min(1, Math.pow(tr, 1.6))
   }
 
   const expr = ['interpolate', ['linear'], ['get', variable.id]]

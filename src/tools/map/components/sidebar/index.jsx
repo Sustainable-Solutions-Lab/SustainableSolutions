@@ -114,8 +114,12 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           )
         })}
 
-        {/* Distribution chart — above colorbar */}
-        {config.percentileFilter?.enabled && (
+        {/* Distribution chart serves as the colorbar (Firefuels-style). The
+            standalone gradient legend below it is only rendered when the
+            distribution chart is suppressed — i.e. for categorical variables
+            or projects that turn the percentile filter off — so the user
+            isn't presented with both. */}
+        {config.percentileFilter?.enabled && activeVariable && activeVariable.type !== 'categorical' ? (
           <DistributionChart
             variable={activeVariable}
             allValues={allValues}
@@ -123,14 +127,13 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             dispatch={dispatch}
             isDark={state.colorScheme === 'dark'}
           />
+        ) : (
+          <Legend
+            variable={activeVariable}
+            allValues={allValues}
+            isDark={state.colorScheme === 'dark'}
+          />
         )}
-
-        {/* Legend / colorbar */}
-        <Legend
-          variable={activeVariable}
-          allValues={allValues}
-          isDark={state.colorScheme === 'dark'}
-        />
 
         {/* Regional Data + Read Methods — styled like the people-page filter
             chips: small uppercase sans, ink-3 inactive, ink + bold + underline

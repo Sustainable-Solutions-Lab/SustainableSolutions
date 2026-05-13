@@ -58,8 +58,15 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
   // Cap display range at p1–p99 so extreme outliers don't squish the distribution.
   // Bars for values outside this range are clipped to the chart edge (still visible
   // as full-height or zero-height bars) but don't distort the scale.
+  // A project variable may also pin the low-end at `histogramMin` (e.g. 8 µg/m³
+  // for PM₂.₅) to cut the long tail of background-noise low values out of the
+  // visual; values below that threshold are dropped from the histogram entirely.
   const p99idx = Math.floor(sorted.length * 0.01)
-  const p01idx = Math.floor(sorted.length * 0.99)
+  const p01idxRaw = Math.floor(sorted.length * 0.99)
+  const histMin = variable?.histogramMin
+  const p01idx = (histMin != null && sorted.length > 0)
+    ? Math.max(p99idx + 1, sorted.findIndex((v) => v < histMin) - 1)
+    : p01idxRaw
   const dataMax = sorted.length ? (sorted[p99idx] ?? sorted[0]) : 1
   const dataMin = sorted.length ? (sorted[p01idx] ?? sorted[sorted.length - 1]) : 0
   const dataRange = Math.max(dataMax - dataMin, 1)

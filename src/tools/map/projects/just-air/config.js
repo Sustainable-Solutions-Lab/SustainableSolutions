@@ -105,6 +105,8 @@ const config = {
   // mort_low, mort_high, mort_diff).
   variables: [
     // PM2.5 — sequential warm scale for raw concentrations.
+    // histogramMin clips the long low-value tail out of the sidebar histogram
+    // so the chart focuses on the elevated-PM portion that matters.
     {
       id: 'pm25_low',
       label: 'PM₂.₅ — Low CDR',
@@ -112,6 +114,7 @@ const config = {
       colormap: 'YlOrRd',
       diverging: false,
       domain: { min: 0, max: 15 },
+      histogramMin: 8,
       layer: 'pm25',
       dimensionValues: { scenario: 'low' },
       description: 'Annual mean PM₂.₅ concentration under the Low-CDR scenario.',
@@ -123,6 +126,7 @@ const config = {
       colormap: 'YlOrRd',
       diverging: false,
       domain: { min: 0, max: 15 },
+      histogramMin: 8,
       layer: 'pm25',
       dimensionValues: { scenario: 'high' },
       description: 'Annual mean PM₂.₅ concentration under the High-CDR scenario.',
@@ -149,6 +153,7 @@ const config = {
       colormap: 'Purples',
       diverging: false,
       domain: { min: 0, max: 0.001 },
+      histogramMin: 0.0001,
       layer: 'mortality',
       dimensionValues: { scenario: 'low' },
       description: 'Annual PM₂.₅-attributable deaths per pixel under Low-CDR scenario.',
@@ -160,6 +165,7 @@ const config = {
       colormap: 'Purples',
       diverging: false,
       domain: { min: 0, max: 0.001 },
+      histogramMin: 0.0001,
       layer: 'mortality',
       dimensionValues: { scenario: 'high' },
       description: 'Annual PM₂.₅-attributable deaths per pixel under High-CDR scenario.',

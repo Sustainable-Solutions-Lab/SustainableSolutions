@@ -7,8 +7,18 @@ your morning's "Just Air" plan; you can delete this file after reading.
 
 - `/tools/just-air` now ships on `main` and auto-deploys to the Vercel
   production URL the repo is wired to (`sustainablesolutions.vercel.app`).
-  Two commits tonight: `33c8bba` (page + wiring) and `5e2bf9e` (data
-  rendering).
+  Six commits tonight, deploys all healthy:
+  - `33c8bba` — page + project wiring
+  - `5e2bf9e` — multi-source polygon render hook
+  - `5c0dcd5` — this notes file
+  - `182ab25` — **fix**: gate the CA-only static overlays so they don't
+    paint over everything outside California (without this, 14 of the
+    15 metros would have been invisible — the CA out-of-bounds mask
+    was unconditional)
+  - `4240293` — z-order fix so the metro boxes / labels render above
+    the data layers
+  - `81051ca` — hide Just Air's percentile filter UI (the slider lives
+    inside a Firefuels-only distribution chart, so it was dead).
 - The page mounts the generic map tool against a new project config and
   renders the city PMTiles + the synthetic 9 km national surface.
 - Outline boxes mark the 15 metros on the low-zoom national view and
@@ -156,15 +166,28 @@ Open `https://sustainablesolutions.vercel.app/tools/just-air` and skim:
 
 ## Known rough edges (i.e. things I'd want to fix in v1.1)
 
-- **Sidebar distribution chart shows empty space for Just Air.**
-  Either prefetch a per-variable summary JSON at build time, or
-  switch the chart to render from the area-tool's `activeVarValues`
-  when a circle is open (which would also make it interactive).  I'd
-  go with the second.
-- **Percentile filter UI is dead on Just Air.**  Probably should be
-  hidden via a per-project capability flag (`config.percentileFilter
-  .enabled = false`) and a check in the sidebar.  Cheap to do; just
-  didn't want to risk a regression in Firefuels.
+- **Sidebar distribution chart is hidden on Just Air** (because the
+  percentile filter is disabled — the two share the same gate).  When
+  the filter is generalized for multi-source projects, the chart will
+  also need to draw from somewhere other than the Firefuels-only
+  GeoJSON prefetch.  Cleanest path: switch the chart to render from
+  the area-tool's `activeVarValues` when a circle is open, which makes
+  it interactive in the bargain.
+- **No place-name labels at high zoom on Just Air.**  The CA-cities
+  labels are correctly suppressed, but no replacement set of US-city
+  labels is wired in.  Inside a metro at z11 you see just the data.
+  Box-overlay labels disappear past z9.  Easiest fix: a small
+  US-cities GeoJSON in `static-layers.jsx`, gated on a new
+  `region.usCityLabels` flag.
+- **`config.areaTool.defaultRadiusKm` is dead code.**  The area tool
+  derives its default radius from the current zoom (50 km at z5,
+  exponentially smaller at higher zooms) and ignores the config value.
+  Not a regression; just inherited from Firefuels.  Worth wiring once
+  there's a reason.
+- **Aggregate-stats panel shows all six variables for Just Air.**  I
+  left the area-tool config listing all of pm25_low/high/diff and
+  mort_low/high/diff, which is dense.  Consider trimming to the active
+  pair if/when you use the tool.
 - **No tile-source error UI.**  If R2 is down, the map quietly stays
   blank.  A small "tiles unavailable" toast would be friendly.
 - **Legend numbers on the diff layer.**  The PM₂.₅ diff domain is
@@ -174,16 +197,18 @@ Open `https://sustainablesolutions.vercel.app/tools/just-air` and skim:
 
 ## How to roll back if anything is on fire
 
-The two relevant commits are isolated:
+The Just Air commits are isolated; to fully back out, revert in
+reverse order so each revert lands cleanly:
 
 ```
-git revert --no-edit 5e2bf9e   # disables the multi-source rendering
-git revert --no-edit 33c8bba   # also removes the page wiring
+git revert --no-edit 81051ca 4240293 182ab25 5e2bf9e 33c8bba
 git push origin main
 ```
 
-`/tools/just-air` will 404 after the second revert and the rest of the
-site is untouched.
+(The notes-only commit `5c0dcd5` is harmless to leave behind.)
+`/tools/just-air` will 404 after that and the rest of the site —
+including Firefuels — is untouched, because every change behind a
+generic config field defaults to the Firefuels behaviour.
 
 ## Reach me
 

@@ -35,15 +35,21 @@ import { getActiveVariable } from './get-active-variable.js'
 // disclosure. We don't enforce a MIN_RADIUS floor because clamping
 // sub-pixel circles up to 1+ px reintroduces the overlap the user
 // explicitly didn't want.
-const FILL_FACTOR = 1.0
+// FILL_FACTOR 4.0 brings Just Air's default-zoom (z3) supercells into
+// rough visual parity with Firefuels' default-zoom (z5) supercells. With
+// the tighter z3 framing, FILL_FACTOR 1.0 left a single 36 km supercell
+// at ~2 px radius — visually a dotted overlay — while Firefuels at z5
+// shows _scale=40 cells at ~9 px radius (a full-coverage surface). The
+// 4× bump compensates for the two-zoom-level head-start Firefuels has.
+const FILL_FACTOR = 4.0
 const R4  = 0.057 * FILL_FACTOR
 const R12 = 16.0  * FILL_FACTOR
-// Lower the cap so a 9 km cell at z 8 stops at ~9 px instead of ~18 — the
-// user reported that visible cells weren't shifting to smaller circles
-// fast enough as they zoomed in. With a tighter cap each scale's cells
-// stay compact even as the zoom progresses, so the perceived resolution
-// keeps stepping finer rather than growing the same circles bigger.
-const MAX_RADIUS_PX = 9
+// MAX_RADIUS_PX 12 caps overshooting at high zoom while leaving headroom
+// for the natural growth between scale transitions. 9 km cells past z 8
+// still need to look discrete (so the eye sees the next scale taking
+// over), but 36 km supercells at default zoom should hit the 12 px cap
+// for a strong opening visual.
+const MAX_RADIUS_PX = 12
 
 // MapLibre forbids `['zoom']` from appearing anywhere except as the direct
 // input to a top-level step/interpolate expression. The earlier attempt to

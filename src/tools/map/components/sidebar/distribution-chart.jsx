@@ -209,25 +209,29 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
           }}
           onMouseDown={handleSvgMouseDown}
         >
-          {/* Value bars — one per pixel column, colored by colormap, height by data range */}
+          {/* Value bars — one per pixel column. Colored by the variable's
+              configured `solidColor` (and `solidColorNegative` for the
+              diverging negative side) when present, otherwise the
+              continuous colormap. Opacity ramps with magnitude so the
+              histogram visually mirrors the map's alpha-driven fade. */}
           {bars.map((value, i) => {
             const y = Math.min(valueToY(value), zeroY)
             const h = Math.abs(valueToY(value) - zeroY)
-            // Diverging: binary color (direction) + asymmetric opacity encodes magnitude.
-            // Positive side normalised to maxPosDev; negative side to maxNegDev,
-            // so both the highest and lowest values reach full opacity (1.0).
-            // Sequential: continuous colormap, flat opacity.
             const fill = isDiverging
               ? (value >= zeroRef
-                  ? (isDark ? '#4393c3' : '#2166ac')
-                  : (isDark ? '#d6604d' : '#b2182b'))
-              : scale(value)
+                  ? (variable.solidColor       ?? (isDark ? '#4393c3' : '#2166ac'))
+                  : (variable.solidColorNegative ?? (isDark ? '#d6604d' : '#b2182b')))
+              : (variable.solidColor ?? scale(value))
             const tRaw = isDiverging
               ? (value >= zeroRef
                   ? Math.min(1, (value - zeroRef) / maxPosDev)
                   : Math.min(1, (zeroRef - value) / maxNegDev))
-              : 1
-            const opacity = isDiverging ? (0.15 + 0.85 * Math.pow(tRaw, 0.4)) : 0.9
+              : Math.min(1, (value - (variable.domain?.min ?? 0)) /
+                            Math.max((variable.domain?.max ?? 1) - (variable.domain?.min ?? 0), 0.001))
+            const curved = Math.pow(tRaw, 0.5)
+            const opacity = variable.solidColor || isDiverging
+              ? (0.10 + 0.90 * curved)
+              : 0.9
             return (
               <rect
                 key={i}

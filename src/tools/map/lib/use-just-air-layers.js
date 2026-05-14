@@ -35,21 +35,17 @@ import { getActiveVariable } from './get-active-variable.js'
 // disclosure. We don't enforce a MIN_RADIUS floor because clamping
 // sub-pixel circles up to 1+ px reintroduces the overlap the user
 // explicitly didn't want.
-// FILL_FACTOR 4.0 brings Just Air's default-zoom (z3) supercells into
-// rough visual parity with Firefuels' default-zoom (z5) supercells. With
-// the tighter z3 framing, FILL_FACTOR 1.0 left a single 36 km supercell
-// at ~2 px radius — visually a dotted overlay — while Firefuels at z5
-// shows _scale=40 cells at ~9 px radius (a full-coverage surface). The
-// 4× bump compensates for the two-zoom-level head-start Firefuels has.
-const FILL_FACTOR = 4.0
+// FILL_FACTOR 2.5 puts default-zoom (z3) supercells around ~5 px radius —
+// small enough to read as discrete circles with some spacing rather than
+// merging into a heat-map blob, but still visible enough to convey the
+// regional pattern at the CONUS overview.
+const FILL_FACTOR = 2.5
 const R4  = 0.057 * FILL_FACTOR
 const R12 = 16.0  * FILL_FACTOR
-// MAX_RADIUS_PX 12 caps overshooting at high zoom while leaving headroom
-// for the natural growth between scale transitions. 9 km cells past z 8
-// still need to look discrete (so the eye sees the next scale taking
-// over), but 36 km supercells at default zoom should hit the 12 px cap
-// for a strong opening visual.
-const MAX_RADIUS_PX = 12
+// MAX_RADIUS_PX 10 — modest cap so cells don't balloon past natural
+// tiling size at high zoom and the LOD transition reads as "circles
+// shrunk" not "same circles got bigger".
+const MAX_RADIUS_PX = 10
 
 // MapLibre forbids `['zoom']` from appearing anywhere except as the direct
 // input to a top-level step/interpolate expression. The earlier attempt to
@@ -350,15 +346,18 @@ function buildColorExpr(variable, isDark, colorRange) {
   const steps = 24
 
   if (variable.diverging) {
-    // Binary blue/red anchor colors. The colormap name picks which side
-    // is which: RdBu sends max → blue (Firefuels' "positive = good ="
-    // blue convention); BuRd inverts so max → red (Just Air diff layers,
-    // where positive diff = High CDR is dirtier = bad reads red).
+    // Binary positive/negative anchor colors. A project can pin them per
+    // variable via `solidColor` (positive side) and `solidColorNegative`
+    // (negative side). Falls back to Firefuels' blue/red anchors, mode-
+    // aware, with the colormap-name convention deciding which side is
+    // which (RdBu → max=blue, BuRd → max=red).
     const bluePos = isDark ? [67, 147, 195] : [33, 102, 172]
     const redPos  = isDark ? [214, 96, 77]  : [178, 24, 43]
     const posIsBlue = variable.colormap !== 'BuRd'
-    const posRgb = posIsBlue ? bluePos : redPos
-    const negRgb = posIsBlue ? redPos  : bluePos
+    const fallbackPos = posIsBlue ? bluePos : redPos
+    const fallbackNeg = posIsBlue ? redPos  : bluePos
+    const posRgb = variable.solidColor ? hexToRgb(variable.solidColor) : fallbackPos
+    const negRgb = variable.solidColorNegative ? hexToRgb(variable.solidColorNegative) : fallbackNeg
     for (let i = 0; i <= steps; i++) {
       const v = min + (i / steps) * (max - min)
       const rgb = v >= zero ? posRgb : negRgb
@@ -368,7 +367,19 @@ function buildColorExpr(variable, isDark, colorRange) {
     return expr
   }
 
-  // Sequential: full colormap with alpha embedded in each stop.
+  // Sequential: if the variable pins a `solidColor`, paint every stop in
+  // that single hue with alpha varying by value (intensity reads as a
+  // single-hue heatmap). Otherwise fall back to the full colormap
+  // interpolated across the data range.
+  if (variable.solidColor) {
+    const rgb = hexToRgb(variable.solidColor)
+    for (let i = 0; i <= steps; i++) {
+      const v = min + (i / steps) * (max - min)
+      const a = alphaForValue(v)
+      expr.push(v, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a.toFixed(3)})`)
+    }
+    return expr
+  }
   const scale = buildColorScale(variable)
   for (let i = 0; i <= steps; i++) {
     const v = min + (i / steps) * (max - min)
@@ -376,6 +387,14 @@ function buildColorExpr(variable, isDark, colorRange) {
     expr.push(v, withAlpha(scale(v), a))
   }
   return expr
+}
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return [r, g, b]
 }
 
 // circle-opacity is now just a constant peak multiplied by a zoom-fade so

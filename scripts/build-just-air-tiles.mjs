@@ -277,8 +277,8 @@ function syntheticNational() {
 function nationalCellToPoint(c, cityBboxes) {
   const insideMetro = pointInAnyBbox(c.lng, c.lat, cityBboxes);
   const tcZoom = insideMetro
-    ? { minzoom: 5, maxzoom: 6 }
-    : { minzoom: 5 };  // omit maxzoom — emit at every zoom level
+    ? { minzoom: 4, maxzoom: 6 }
+    : { minzoom: 4 };  // omit maxzoom — emit at every zoom level
   return makePoint(c.lng, c.lat, {
     _scale: 9,
     pm25_low:  round(c.pm25_low, 2),
@@ -382,7 +382,7 @@ function aggregateSupercells(cells, blockSize = 4) {
       mort_low:  round(b.mort_low  / n, 8),
       mort_high: round(b.mort_high / n, 8),
       mort_diff: round((b.mort_high - b.mort_low) / n, 8),
-    }, { minzoom: 2, maxzoom: 4 }));
+    }, { minzoom: 2, maxzoom: 3 }));
   }
   return out;
 }

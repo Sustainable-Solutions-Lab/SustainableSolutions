@@ -35,14 +35,15 @@ import { getActiveVariable } from './get-active-variable.js'
 // disclosure. We don't enforce a MIN_RADIUS floor because clamping
 // sub-pixel circles up to 1+ px reintroduces the overlap the user
 // explicitly didn't want.
-// FILL_FACTOR 1.3 — just-touching plus a small overlap. With the per-
-// variable solid colors (#ff7f00, #d73027) any larger fill_factor stacks
-// neighboring cells into a wash because each cell's color is fully
-// saturated (the previous colormap path muted overlap by virtue of the
-// pale low-end stops, which solid colors no longer have).
-const FILL_FACTOR = 1.3
-const R4  = 0.057 * FILL_FACTOR
-const R12 = 16.0  * FILL_FACTOR
+// Three-stop radius interpolation so the natural exponential extrapolation
+// doesn't smear out the band transition between z 3 (supercells) and
+// z 4 (9 km grid). Targets:
+//   z 3, _scale=36 → ~1.5 px (small overview dots)
+//   z 4, _scale=9  → ~4 px   (denser dotted surface — the user's target)
+//   z 12, _scale=1 → ~14 px  (just-touching at the natural tiling size)
+const R3  = 0.04
+const R4  = 0.44
+const R12 = 16.0
 // MAX_RADIUS_PX 8 keeps the LOD transitions reading as "circles shrunk"
 // rather than the same circles growing past their tiling size.
 const MAX_RADIUS_PX = 8
@@ -65,6 +66,7 @@ const clampScale = (k) => [
 ]
 const RADIUS = [
   'interpolate', ['exponential', 2], ['zoom'],
+  3,  clampScale(R3),
   4,  clampScale(R4),
   12, clampScale(R12),
   22, clampScale(R12),

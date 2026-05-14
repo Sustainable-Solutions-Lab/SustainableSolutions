@@ -112,7 +112,6 @@ const config = {
       label: 'PM₂.₅ — Low CDR',
       unit: 'µg/m³',
       colormap: 'YlOrRd',
-      solidColor: '#ff7f00',
       diverging: false,
       domain: { min: 0, max: 15 },
       histogramMin: 8,
@@ -125,7 +124,6 @@ const config = {
       label: 'PM₂.₅ — High CDR',
       unit: 'µg/m³',
       colormap: 'YlOrRd',
-      solidColor: '#ff7f00',
       diverging: false,
       domain: { min: 0, max: 15 },
       histogramMin: 8,
@@ -155,7 +153,7 @@ const config = {
       label: 'Mortality — Low CDR',
       unit: 'deaths/pixel',
       colormap: 'Purples',
-      solidColor: '#d73027',
+      solidColor: '#a020f0',
       diverging: false,
       domain: { min: 0, max: 0.001 },
       histogramMin: 0.0001,
@@ -168,7 +166,7 @@ const config = {
       label: 'Mortality — High CDR',
       unit: 'deaths/pixel',
       colormap: 'Purples',
-      solidColor: '#d73027',
+      solidColor: '#a020f0',
       diverging: false,
       domain: { min: 0, max: 0.001 },
       histogramMin: 0.0001,
@@ -230,8 +228,12 @@ const config = {
   // never get 3 km / 1 km coverage), while inside the metro bboxes the
   // build script truncates 9 km cells at z6 so 3 km / 1 km take over.
   scales: [
-    { value: 36, minZoom: 2, maxZoom: 5 },   // CONUS overview supercells
-    { value: 9,  minZoom: 5 },                // 9 km (everywhere → rural-only at z7+)
+    // Earlier transition out of the supercells than the previous config so
+    // the user sees the much denser 9 km grid by z 4 — the previous bands
+    // left z 4 still on supercells, which read as "too sparse" at that
+    // zoom step.
+    { value: 36, minZoom: 2, maxZoom: 4 },   // CONUS overview supercells
+    { value: 9,  minZoom: 4 },                // 9 km (everywhere → rural-only at z7+)
     { value: 3,  minZoom: 7, maxZoom: 9 },   // 3 km bridge inside metros
     { value: 1,  minZoom: 9 },                // native city pixels at z9+
   ],

@@ -35,17 +35,17 @@ import { getActiveVariable } from './get-active-variable.js'
 // disclosure. We don't enforce a MIN_RADIUS floor because clamping
 // sub-pixel circles up to 1+ px reintroduces the overlap the user
 // explicitly didn't want.
-// FILL_FACTOR 2.5 puts default-zoom (z3) supercells around ~5 px radius —
-// small enough to read as discrete circles with some spacing rather than
-// merging into a heat-map blob, but still visible enough to convey the
-// regional pattern at the CONUS overview.
-const FILL_FACTOR = 2.5
+// FILL_FACTOR 1.3 — just-touching plus a small overlap. With the per-
+// variable solid colors (#ff7f00, #d73027) any larger fill_factor stacks
+// neighboring cells into a wash because each cell's color is fully
+// saturated (the previous colormap path muted overlap by virtue of the
+// pale low-end stops, which solid colors no longer have).
+const FILL_FACTOR = 1.3
 const R4  = 0.057 * FILL_FACTOR
 const R12 = 16.0  * FILL_FACTOR
-// MAX_RADIUS_PX 10 — modest cap so cells don't balloon past natural
-// tiling size at high zoom and the LOD transition reads as "circles
-// shrunk" not "same circles got bigger".
-const MAX_RADIUS_PX = 10
+// MAX_RADIUS_PX 8 keeps the LOD transitions reading as "circles shrunk"
+// rather than the same circles growing past their tiling size.
+const MAX_RADIUS_PX = 8
 
 // MapLibre forbids `['zoom']` from appearing anywhere except as the direct
 // input to a top-level step/interpolate expression. The earlier attempt to
@@ -329,17 +329,18 @@ function buildColorExpr(variable, isDark, colorRange) {
   // translucent and only the top of the distribution lands at full
   // opacity — keeping the rural baseline invisible against the paper
   // basemap and leaving only the metro-scale hotspots visibly colored.
-  // User feedback: 0.45 floor cut too much of the moderate-value tail.
-  // Soften back to 0.25 — cells whose magnitude is below ~quarter of the
-  // p99 |value − zero| still drop out (no faint wash over rural CONUS),
-  // but the mid-range that drives the actual variation stays visible.
-  const ALPHA_FLOOR = 0.25
+  // Solid-color cells alpha-blend more aggressively than colormap cells
+  // (every cell paints the same hue at full saturation, so overlap turns
+  // mid-range cells into a wash). Push the floor up to 0.40 so anything
+  // below ~40 % of p99 magnitude drops to alpha 0; the remaining mid-to-
+  // high tail rises through a t^1.8 ramp so only the hot spots saturate.
+  const ALPHA_FLOOR = 0.40
   function alphaForValue(v) {
     const t = v >= zero ? (v - zero) / maxPosDev : (zero - v) / maxNegDev
     const tc = Math.max(0, t)
     if (tc < ALPHA_FLOOR) return 0
     const tr = (tc - ALPHA_FLOOR) / (1 - ALPHA_FLOOR)
-    return Math.min(1, Math.pow(tr, 1.5))
+    return Math.min(1, Math.pow(tr, 1.8))
   }
 
   const expr = ['interpolate', ['linear'], ['get', variable.id]]

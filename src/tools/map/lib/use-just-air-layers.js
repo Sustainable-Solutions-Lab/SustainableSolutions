@@ -38,7 +38,12 @@ import { getActiveVariable } from './get-active-variable.js'
 const FILL_FACTOR = 1.0
 const R4  = 0.057 * FILL_FACTOR
 const R12 = 16.0  * FILL_FACTOR
-const MAX_RADIUS_PX = 14
+// Lower the cap so a 9 km cell at z 8 stops at ~9 px instead of ~18 — the
+// user reported that visible cells weren't shifting to smaller circles
+// fast enough as they zoomed in. With a tighter cap each scale's cells
+// stay compact even as the zoom progresses, so the perceived resolution
+// keeps stepping finer rather than growing the same circles bigger.
+const MAX_RADIUS_PX = 9
 
 // MapLibre forbids `['zoom']` from appearing anywhere except as the direct
 // input to a top-level step/interpolate expression. The earlier attempt to
@@ -322,13 +327,17 @@ function buildColorExpr(variable, isDark, colorRange) {
   // translucent and only the top of the distribution lands at full
   // opacity — keeping the rural baseline invisible against the paper
   // basemap and leaving only the metro-scale hotspots visibly colored.
-  const ALPHA_FLOOR = 0.45
+  // User feedback: 0.45 floor cut too much of the moderate-value tail.
+  // Soften back to 0.25 — cells whose magnitude is below ~quarter of the
+  // p99 |value − zero| still drop out (no faint wash over rural CONUS),
+  // but the mid-range that drives the actual variation stays visible.
+  const ALPHA_FLOOR = 0.25
   function alphaForValue(v) {
     const t = v >= zero ? (v - zero) / maxPosDev : (zero - v) / maxNegDev
     const tc = Math.max(0, t)
     if (tc < ALPHA_FLOOR) return 0
     const tr = (tc - ALPHA_FLOOR) / (1 - ALPHA_FLOOR)
-    return Math.min(1, Math.pow(tr, 1.6))
+    return Math.min(1, Math.pow(tr, 1.5))
   }
 
   const expr = ['interpolate', ['linear'], ['get', variable.id]]

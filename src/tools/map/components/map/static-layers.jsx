@@ -328,10 +328,14 @@ export function addStaticLayers(map, scheme, opts = {}) {
 
   const usCityTextColor = scheme === 'dark' ? 'rgba(248, 248, 232, 0.88)' : 'rgba(24, 24, 56, 0.82)'
   const usCityHaloColor = scheme === 'dark' ? 'rgba(12, 12, 28, 0.85)'    : 'rgba(248, 248, 232, 0.92)'
+  // At the default CONUS view (z 3) only the metro-box labels show; the
+  // larger non-Just-Air metros enter at z 4.5, mid-tier at z 5.5,
+  // smaller ones at z 6.5 so the map stays uncluttered until the user
+  // actually zooms in past the regional level.
   const usCityRanks = [
-    { id: 'us-city-labels-r1', rank: 1, minzoom: 3,   size: 11 },
-    { id: 'us-city-labels-r2', rank: 2, minzoom: 4,   size: 10 },
-    { id: 'us-city-labels-r3', rank: 3, minzoom: 5,   size: 10 },
+    { id: 'us-city-labels-r1', rank: 1, minzoom: 4.5, size: 11 },
+    { id: 'us-city-labels-r2', rank: 2, minzoom: 5.5, size: 10 },
+    { id: 'us-city-labels-r3', rank: 3, minzoom: 6.5, size: 10 },
   ]
   if (usOverlays) for (const { id, rank, minzoom, size } of usCityRanks) {
     if (!map.getLayer(id)) {

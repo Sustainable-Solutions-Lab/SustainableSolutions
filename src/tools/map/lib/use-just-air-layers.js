@@ -28,10 +28,16 @@ import { getActiveVariable } from './get-active-variable.js'
 // overlap (no dark gaps between neighbors). MAX_RADIUS_PX caps a 9 km cell
 // at high zoom so it doesn't swell to 120 px; MIN_RADIUS_PX keeps small
 // cells visible as a dot.
-const FILL_FACTOR = 3.0
-const R4  = 0.051 * FILL_FACTOR
-const R12 = 13.1  * FILL_FACTOR
-const MIN_RADIUS_PX = 2
+// FILL_FACTOR 1.0 = tiling-exact (circles just-touch their neighbors,
+// no overlap). Smaller cells appear as sub-pixel dots at zoom levels
+// below their native, then expand to just-touching as the user zooms in,
+// then finer scales emerge to fill the spaces — matching Firefuels' LOD
+// disclosure. We don't enforce a MIN_RADIUS floor because clamping
+// sub-pixel circles up to 1+ px reintroduces the overlap the user
+// explicitly didn't want.
+const FILL_FACTOR = 1.0
+const R4  = 0.057 * FILL_FACTOR
+const R12 = 16.0  * FILL_FACTOR
 const MAX_RADIUS_PX = 14
 
 // MapLibre forbids `['zoom']` from appearing anywhere except as the direct
@@ -41,11 +47,13 @@ const MAX_RADIUS_PX = 14
 // the map looked empty. Push the min/max clamp INSIDE each stop instead —
 // each stop value is just a scale × R constant (no zoom), so clamping it
 // is fine.
+// Cap-only (no MIN floor) so cells stay at their natural tiling size at
+// all zoom levels, even when that means a sub-pixel circle. MapLibre
+// anti-aliases sub-pixel circles to faint dots — better than over-
+// sizing them up to 2 px and creating visible overlap.
 const clampScale = (k) => [
-  'max', MIN_RADIUS_PX, [
-    'min', MAX_RADIUS_PX, [
-      '*', ['coalesce', ['to-number', ['get', '_scale']], 1], k,
-    ],
+  'min', MAX_RADIUS_PX, [
+    '*', ['coalesce', ['to-number', ['get', '_scale']], 1], k,
   ],
 ]
 const RADIUS = [

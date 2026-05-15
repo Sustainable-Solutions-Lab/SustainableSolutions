@@ -125,20 +125,38 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
     ? Math.max(negDevs[Math.floor(negDevs.length * 0.99)] ?? negDevs[negDevs.length - 1], 0.001)
     : Math.max((zero ?? 0) - dataMin, 0.001)
 
-  // Sample CHART_W values evenly from the p1–p99 clipped slice of sorted.
-  // Using the full array caused outliers (sorted[0]) to dominate bar 0, creating
-  // a visible step between the first bar and its neighbours. Clipping to the same
-  // range shown on the axis labels makes the sampling uniform end-to-end.
+  // Build a histogram of counts across `CHART_W` value bins spanning the
+  // clipped data range. Left = highest value, right = lowest (matches the
+  // diverging-chart convention: red on the left, blue on the right). Each
+  // bar carries its bin's count and its center value for coloring.
   const bars = useMemo(() => {
     if (!sorted.length) return []
-    if (!scale && !isDiverging) return []  // sequential needs a scale; diverging uses binary color
-    const clipped = sorted.slice(p99idx, p01idx + 1)
-    if (!clipped.length) return []
-    return Array.from({ length: CHART_W }, (_, i) => {
-      const idx = Math.floor((i / CHART_W) * clipped.length)
-      return clipped[idx] ?? dataMin
+    if (!allValues?.length) return []
+    const N = CHART_W
+    const width = Math.max(dataMax - dataMin, 1e-9) / N
+    const counts = new Array(N).fill(0)
+    for (const v of allValues) {
+      if (v < dataMin || v > dataMax) continue
+      // Lowest bin index for the lowest value; we'll flip the array
+      // when emitting so the screen-left bar is the highest-value bin.
+      const idx = Math.min(N - 1, Math.max(0, Math.floor((v - dataMin) / width)))
+      counts[idx]++
+    }
+    return Array.from({ length: N }, (_, i) => {
+      const lowIdx = N - 1 - i  // screen-left = highest bin
+      const binStart = dataMin + lowIdx * width
+      return {
+        count: counts[lowIdx],
+        binCenter: binStart + width / 2,
+      }
     })
-  }, [sorted, scale, isDiverging, dataMin, p99idx, p01idx])
+  }, [allValues, dataMin, dataMax])
+
+  const maxCount = useMemo(() => {
+    let m = 1
+    for (const b of bars) if (b.count > m) m = b.count
+    return m
+  }, [bars])
 
   // Map a data value to SVG y coordinate (0 = top, CHART_H = bottom)
   // Uses actual data range so bars fill the full chart height
@@ -195,10 +213,11 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
   const showHighGT = sorted.length > 1 && sorted[0] > dataMax          // top 1% trimmed
   const showLowLT  = sorted.length > 1 && sorted[sorted.length - 1] < dataMin  // bottom 1% trimmed
 
-  // Zero crossover x-position for diverging variables:
-  // count how many sorted (descending) values are >= zero; that fraction is % from left edge.
-  const zeroCrossoverPct = (isDiverging && sorted.length > 0)
-    ? (sorted.filter(v => v >= (zero ?? 0)).length / sorted.length) * 100
+  // Zero crossover x-position for diverging variables: bins are linearly
+  // spaced from dataMax (left) to dataMin (right), so the zero crossing
+  // sits at the position where binCenter passes through `zero`.
+  const zeroCrossoverPct = (isDiverging && zero != null && zero > dataMin && zero < dataMax)
+    ? ((dataMax - zero) / Math.max(dataMax - dataMin, 1e-9)) * 100
     : null
 
   if (!variable || isCategorical || !sorted.length) return null
@@ -245,59 +264,41 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
           }}
           onMouseDown={handleSvgMouseDown}
         >
-          {/* Value bars — one per pixel column. Colored by the variable's
-              configured `solidColor` (and `solidColorNegative` for the
-              diverging negative side) when present, otherwise the
-              continuous colormap. Opacity ramps with magnitude so the
-              histogram visually mirrors the map's alpha-driven fade. */}
-          {bars.map((value, i) => {
-            const y = Math.min(valueToY(value), zeroY)
-            const h = Math.abs(valueToY(value) - zeroY)
+          {/* Histogram bars — one per pixel-wide bin, height ∝ √(count) so
+              the long tail of low-frequency bins stays visible alongside
+              the peak. Bars are colored by the bin's center value via the
+              same colormap used on the map. Full opacity throughout so
+              the chart reads as a clear distribution; the map's
+              alpha-driven fade is conveyed by color choice alone. */}
+          {bars.map((bar, i) => {
+            if (bar.count === 0) return null
+            const heightFraction = Math.sqrt(bar.count / maxCount)
+            const h = Math.max(1, heightFraction * CHART_H)
+            const y = CHART_H - h
             const fill = (isDiverging && hasAnchors)
-              ? (value >= zeroRef
+              ? (bar.binCenter >= zeroRef
                   ? variable.solidColor
                   : (variable.solidColorNegative ?? variable.solidColor))
-              : (variable.solidColor ?? scale(value))
-            const tRaw = isDiverging
-              ? (value >= zeroRef
-                  ? Math.min(1, (value - zeroRef) / maxPosDev)
-                  : Math.min(1, (zeroRef - value) / maxNegDev))
-              : Math.min(1, (value - (variable.domain?.min ?? 0)) /
-                            Math.max((variable.domain?.max ?? 1) - (variable.domain?.min ?? 0), 0.001))
-            const curved = Math.pow(tRaw, 0.5)
-            // Match the map's alphaFloor / alphaPower for this variable so
-            // the histogram fades to transparent in the same places the
-            // map cells do (e.g. PM₂.₅ goes invisible right at the WHO
-            // 5 µg/m³ threshold). Single-hue layers still get the curved
-            // sqrt ramp for legacy reasons.
-            const aFloor = variable.alphaFloor ?? 0
-            const aPower = variable.alphaPower ?? 1
-            let mapAlpha
-            if (aPower === 0) mapAlpha = 1
-            else if (tRaw < aFloor) mapAlpha = 0
-            else {
-              const tr = (tRaw - aFloor) / Math.max(1 - aFloor, 1e-6)
-              mapAlpha = Math.min(1, Math.pow(Math.max(tr, 0), aPower))
-            }
-            const opacity = (variable.solidColor || hasAnchors)
-              ? (0.10 + 0.90 * curved)
-              : mapAlpha
+              : (variable.solidColor ?? scale(bar.binCenter))
             return (
               <rect
                 key={i}
                 x={i} y={y}
-                width={1} height={Math.max(0.5, h)}
+                width={1} height={h}
                 fill={fill}
-                opacity={opacity}
+                opacity={1}
               />
             )
           })}
 
-          {/* Zero line for diverging variables (only when zero within data range) */}
-          {showZeroLine && (
+          {/* Vertical zero line for diverging variables — sits at the
+              x-position of the bin whose center is the diverging zero. */}
+          {showZeroLine && zeroCrossoverPct != null && (
             <line
-              x1={0} y1={zeroY}
-              x2={CHART_W} y2={zeroY}
+              x1={(zeroCrossoverPct / 100) * CHART_W}
+              y1={0}
+              x2={(zeroCrossoverPct / 100) * CHART_W}
+              y2={CHART_H}
               stroke='rgba(128,128,128,0.55)'
               strokeWidth={0.8}
             />

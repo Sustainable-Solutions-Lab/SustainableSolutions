@@ -32,10 +32,10 @@ const config = {
     center: [-96.5, 38.5],
     zoom: 3.0,
     minZoom: 3.0,
-    // Past z 6.5 the radius curve clamps at its last stop (the
-    // interpolate doesn't extrapolate); cells stay at z 6.5's size
-    // through z 7.5.
-    maxZoom: 7.5,
+    // Radius now uses a `step` expression that holds the z=7+ size all
+    // the way to the camera cap. Bumping the cap to z=8 gives one more
+    // zoom step of 1 km city-pixel detail before the camera stops.
+    maxZoom: 8,
     bounds: [-125, 24, -66, 50],
     // Suppress the California-only static overlays (out-of-bounds mask,
     // state border, county borders, CA-city labels) baked in for Firefuels.

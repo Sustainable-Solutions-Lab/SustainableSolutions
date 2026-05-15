@@ -32,32 +32,26 @@ import { getActiveVariable } from './get-active-variable.js'
 // no overlap). Smaller cells appear as sub-pixel dots at zoom levels
 // below their native, then expand to just-touching as the user zooms in,
 // then finer scales emerge to fill the spaces — matching Firefuels' LOD
-// Per-zoom (radius coefficient, max-radius cap) pairs baked from iterative
-// dev-panel tuning. The user dragged the radius and max sliders at each
-// zoom of interest, read the zoom off the live readout, and reported the
-// values — these are those values. The final on-screen radius is:
+// Per-zoom radius schedule for the national tiers (36 / 18 / 9 km cells).
+// Each row is `[zoom_breakpoint, radius_px, max_radius_px]` and is read
+// by a `step` expression (not `interpolate`) so transitions snap at each
+// breakpoint — no gradual fade as the user crosses LOD bands.
 //
-//   radius = min(cap, _scale × coef × radiusScale)
+//   z < 4    36 km supercells  →  1.0 px, cap 4.5
+//   z 4–5    18 km mid tier    →  1.0 px, cap 12
+//   z 5–7    9 km national     →  1.15 px, cap 12
+//   z 7+     9 km outside cities (1 km native takes over inside)
+//                              →  1.25 px, cap 12
 //
-// where _scale comes from the feature (36 / 18 / 9 / 3 / 1 km) and
-// radiusScale is a global dev-panel override (default 1.0). MapLibre
-// interpolates linearly between stops in (zoom-2)-base, so values between
-// the baked zooms ramp smoothly.
-const RADIUS_STOPS = [
-  // zoom, coef,  cap
-  [3.0,   0.056, 4.5],
-  [3.8,   0.470, 4.5],
-  [4.0,   0.132, 5.0],
-  [4.3,   0.159, 5.0],
-  [4.5,   0.186, 5.0],
-  [5.0,   0.225, 5.0],
-  [5.2,   0.285, 5.0],
-  [5.5,   0.330, 5.0],
-  [5.8,   0.412, 5.0],
-  [6.0,   0.465, 5.0],
-  [6.2,   0.558, 5.0],
-  [6.3,   0.676, 5.1],
-  [6.5,   0.793, 6.1],
+// City tiers (1 km / 3 km) get fixed pixel radii independent of zoom —
+// see `tierBranch` below. radiusScale (dev panel) multiplies every
+// value.
+const NATIONAL_RADIUS_STEPS = [
+  // zoom break, radius_px, cap_px
+  [0, 1.00, 4.5],    // baseline (used for z < first breakpoint)
+  [4, 1.00, 12],
+  [5, 1.15, 12],
+  [7, 1.25, 12],
 ]
 
 export const DEFAULT_TUNING = {
@@ -77,22 +71,26 @@ function buildRadiusExpr(tuning) {
   const s = tuning.radiusScale ?? 1.0
   const overrideCap = tuning.maxRadiusPx
   const SCALE = ['coalesce', ['to-number', ['get', '_scale']], 1]
-  // MapLibre validation requires `['zoom']` to sit at the top level of an
-  // interpolate or step. So the per-tier branching has to live *inside*
-  // each interpolate stop, not wrapping it. Each stop is itself a case
-  // expression on `_scale`: 1 km pixels → 2.5 px, 3 km bins → 1.25 px,
-  // 36 / 18 / 9 km cells → the per-zoom national curve coefficient.
-  function stop(coef, defaultCap) {
+  // Each `step` output is a `case` on `_scale`:
+  //   1 km city pixels → 2.5 px
+  //   3 km city bins   → 1.25 px
+  //   national tiers   → the literal radius at the current step band
+  // `['zoom']` stays at the top level inside `step`, so it remains
+  // valid per MapLibre's expression rules.
+  function tierBranch(radiusPx, defaultCap) {
     const cap = overrideCap != null && overrideCap > 0 ? overrideCap : defaultCap
     return [
       'case',
       ['==', SCALE, 1], 2.5 * s,
       ['==', SCALE, 3], 1.25 * s,
-      ['min', cap, ['*', SCALE, coef * s]],
+      ['min', cap, radiusPx * s],
     ]
   }
-  const out = ['interpolate', ['exponential', 2], ['zoom']]
-  for (const [z, coef, cap] of RADIUS_STOPS) out.push(z, stop(coef, cap))
+  const out = ['step', ['zoom'], tierBranch(NATIONAL_RADIUS_STEPS[0][1], NATIONAL_RADIUS_STEPS[0][2])]
+  for (let i = 1; i < NATIONAL_RADIUS_STEPS.length; i++) {
+    const [z, r, c] = NATIONAL_RADIUS_STEPS[i]
+    out.push(z, tierBranch(r, c))
+  }
   return out
 }
 

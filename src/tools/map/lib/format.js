@@ -38,7 +38,17 @@ export function formatValue(value, unit) {
 
   if (abs >= 1e6) formatted = `${(value / 1e6).toFixed(1)}M`
   else if (abs >= 1e3) formatted = `${(value / 1e3).toFixed(0)}k`
-  else formatted = Math.round(value).toString()
+  else if (abs >= 100) formatted = Math.round(value).toString()
+  // For sub-100 numbers, keep one decimal so PM₂.₅ values like 6.5 µg/m³
+  // don't get rendered as "7" (or worse, look like "65" once neighbors
+  // round to whole numbers).
+  else if (abs >= 1) formatted = value.toFixed(1)
+  // Below 1, keep two decimals so 0.05 deaths/km² doesn't display as 0.
+  else if (abs >= 0.01) formatted = value.toFixed(2)
+  // For very small values (mortality, etc.), drop into scientific notation
+  // rather than printing strings of zeros.
+  else if (abs > 0) formatted = value.toExponential(1)
+  else formatted = '0'
 
   return unit ? `${formatted} ${unit}` : formatted
 }

@@ -48,10 +48,27 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
 
   const scale = useMemo(() => {
     if (!variable || isCategorical) return null
-    // For diverging, keep the configured (symmetric-about-zero) domain so
-    // the gradient pivots correctly — clipping to p1/p99 would shift the
-    // neutral point off zero when the distribution is skewed.
-    if (isDiverging) return buildColorScale(variable)
+    // Diverging: rescale to data-derived p99 on each side of `zero`
+    // (asymmetric — matches the map's color expression). Sequential:
+    // p1/p99 of the full data so colors saturate at the actual data
+    // extremes instead of the configured-but-too-wide domain.
+    if (isDiverging) {
+      if (allValues?.length >= 10) {
+        const zero = variable.domain?.zero ?? 0
+        const posDevs = allValues.filter((v) => v > zero).map((v) => v - zero).sort((a, b) => a - b)
+        const negDevs = allValues.filter((v) => v < zero).map((v) => zero - v).sort((a, b) => a - b)
+        const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(0.99 * (arr.length - 1))] ?? arr[arr.length - 1]) : null
+        const maxPos = p99(posDevs)
+        const maxNeg = p99(negDevs)
+        if (maxPos != null && maxNeg != null && (maxPos > 0 || maxNeg > 0)) {
+          return buildColorScale({
+            ...variable,
+            domain: { min: zero - maxNeg, max: zero + maxPos, zero },
+          })
+        }
+      }
+      return buildColorScale(variable)
+    }
     const sorted_ = allValues?.length ? [...allValues].sort((a, b) => a - b) : []
     if (sorted_.length < 2) return buildColorScale(variable)
     const p01 = sorted_[Math.floor(sorted_.length * 0.01)] ?? sorted_[0]

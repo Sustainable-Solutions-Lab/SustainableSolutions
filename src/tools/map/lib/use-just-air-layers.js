@@ -47,33 +47,34 @@ import { getActiveVariable } from './get-active-variable.js'
 // City tiers (1 km / 3 km) get fixed pixel radii independent of zoom —
 // see `tierBranch` below. radiusScale (dev panel) multiplies every
 // value.
-// Per-zoom radius schedule for the 36 / 18 / 9 km tiers. Stops are placed
-// so circle radius roughly doubles with each zoom step inside a tier
-// (matching how the underlying grid cell doubles in screen-pixel size on
-// Mercator), giving "as large as possible without runaway overlap" at
-// every zoom. Tight stop pairs at z=3.99/4.00, 4.99/5.00 keep the LOD
-// boundaries reading as instant snaps even though we use a linear
-// interpolate everywhere else.
+// Per-zoom radius schedule. Each stop carries values for all five tiers:
+//   [zoom, nat_radius_px, nat_cap_px, r3km_px, r1km_px]
+//
+// National tiers (36 / 18 / 9 km) use the per-zoom `nat_radius_px` value
+// (subject to `nat_cap_px`). City tiers (3 km, 1 km) use their own
+// per-zoom values so we can smooth the city-side growth across z=6–8.
+//
+// Layer minZoom / maxZoom in config.js (3 km: z 6–7, 1 km: z 7+) keeps
+// each city tier hidden outside its band, so the city values in
+// out-of-band stops only need to be non-negative — they never paint.
 const NATIONAL_RADIUS_STOPS = [
-  // 36 km supercells — z 3.0–3.8 (user-iterated values)
-  [3.0,  2.70,  4],
-  [3.2,  2.80,  4],
-  [3.4,  3.15,  4],
-  [3.6,  3.75,  4],
-  [3.8,  4.35,  4],
-  [3.99, 4.35,  4],
-  // 18 km mid tier — z 4.0–4.9 (user-iterated)
-  [4.0,  2.30, 12],
-  [4.9,  3.75, 12],
-  [4.99, 3.75, 12],
-  // 9 km national — z 5.0–8.0, cell-size-proportional growth (~doubling
-  // per zoom). Anchored to the user's z=5 (2 px) and z=8 (17 px) values,
-  // with intermediate stops at z=6 and z=7 to approximate exponential
-  // growth via linear segments.
-  [5.0,   2.00, 17],
-  [6.0,   4.10, 17],
-  [7.0,   8.40, 17],
-  [8.0,  17.00, 17],
+  // 36 km supercells — z 3.0–3.8
+  [3.0,  2.70,  4,   0,    0   ],
+  [3.2,  2.80,  4,   0,    0   ],
+  [3.4,  3.15,  4,   0,    0   ],
+  [3.6,  3.75,  4,   0,    0   ],
+  [3.8,  4.35,  4,   0,    0   ],
+  [3.99, 4.35,  4,   0,    0   ],
+  // 18 km mid tier — z 4.0–4.9
+  [4.0,  2.30, 12,   0,    0   ],
+  [4.9,  3.75, 12,   0,    0   ],
+  [4.99, 3.75, 12,   0,    0   ],
+  // 9 km national — z 5.0–8.0, ~doubling per zoom step
+  [5.0,   2.00, 17,  0,    0   ],
+  [6.0,   4.10, 17,  1.50, 0   ],   // 3 km bins begin (layer minZoom=6)
+  [6.99,  4.10, 17,  2.00, 0   ],   // hold national, grow 3 km
+  [7.0,   8.40, 17,  2.00, 2.00 ],  // 3 km → 1 km handoff (no size jump)
+  [8.0,  17.00, 17,  2.00, 3.00 ],  // 1 km grows through z 7 → 8
 ]
 
 export const DEFAULT_TUNING = {
@@ -93,23 +94,20 @@ function buildRadiusExpr(tuning) {
   const s = tuning.radiusScale ?? 1.0
   const overrideCap = tuning.maxRadiusPx
   const SCALE = ['coalesce', ['to-number', ['get', '_scale']], 1]
-  // Each stop is a `case` on `_scale`:
-  //   1 km city pixels → 2.5 px
-  //   3 km city bins   → 1.25 px
-  //   national tiers   → the literal radius at this zoom stop
-  // `['zoom']` stays at the top level inside `interpolate`, so it
-  // remains valid per MapLibre's expression rules.
-  function tierBranch(radiusPx, defaultCap) {
+  // Each stop is a `case` on `_scale` with per-tier values plucked from
+  // NATIONAL_RADIUS_STOPS. `['zoom']` stays at the top level inside
+  // `interpolate`, which MapLibre requires.
+  function tierBranch(natRadiusPx, defaultCap, r3km, r1km) {
     const cap = overrideCap != null && overrideCap > 0 ? overrideCap : defaultCap
     return [
       'case',
-      ['==', SCALE, 1], 2.5 * s,
-      ['==', SCALE, 3], 1.25 * s,
-      ['min', cap, radiusPx * s],
+      ['==', SCALE, 1], r1km * s,
+      ['==', SCALE, 3], r3km * s,
+      ['min', cap, natRadiusPx * s],
     ]
   }
   const out = ['interpolate', ['linear'], ['zoom']]
-  for (const [z, r, c] of NATIONAL_RADIUS_STOPS) out.push(z, tierBranch(r, c))
+  for (const [z, r, c, r3, r1] of NATIONAL_RADIUS_STOPS) out.push(z, tierBranch(r, c, r3, r1))
   return out
 }
 
@@ -168,15 +166,17 @@ export function useJustAirLayers(map, config, state, tuning) {
           .filter((x) => x != null && !isNaN(x))
         if (values.length < 10) return
         const zero = v.domain?.zero ?? v.domain?.min ?? 0
-        const absDev = values.map((x) => Math.abs(x - zero)).sort((a, b) => a - b)
-        const idx = Math.floor(0.99 * (absDev.length - 1))
-        const p99 = absDev[idx]
-        if (p99 > 0) {
-          colorRangeRef.current = { maxDev: p99 }
-          // Lock only once we've had a chance to compute across a real sample
-          // (not just a single tile's worth) — leave it unlocked if we got
-          // few features so a subsequent sourcedata event with a fuller
-          // sample can refine the p99 before we settle on a final scale.
+        // Track each side of `zero` independently so the colormap can
+        // saturate asymmetrically when the data is skewed (e.g. PM₂.₅
+        // with most cells above the WHO 5 µg/m³ threshold should reach
+        // dark red sooner than dark blue).
+        const posDevs = values.filter((x) => x > zero).map((x) => x - zero).sort((a, b) => a - b)
+        const negDevs = values.filter((x) => x < zero).map((x) => zero - x).sort((a, b) => a - b)
+        const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(0.99 * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
+        const maxPosDev = p99(posDevs)
+        const maxNegDev = p99(negDevs)
+        if (maxPosDev > 0 || maxNegDev > 0) {
+          colorRangeRef.current = { maxPosDev, maxNegDev }
           if (values.length >= 100) colorRangeLockedRef.current = true
           updatePaint()
         }
@@ -298,11 +298,13 @@ export function useJustAirLayers(map, config, state, tuning) {
             .filter((x) => x != null && !isNaN(x))
           if (values.length >= 30) {
             const zero = v.domain?.zero ?? v.domain?.min ?? 0
-            const absDev = values.map((x) => Math.abs(x - zero)).sort((a, b) => a - b)
-            const idx = Math.floor(0.99 * (absDev.length - 1))
-            const p99 = absDev[idx]
-            if (p99 > 0) {
-              recomputed = { maxDev: p99 }
+            const posDevs = values.filter((x) => x > zero).map((x) => x - zero).sort((a, b) => a - b)
+            const negDevs = values.filter((x) => x < zero).map((x) => zero - x).sort((a, b) => a - b)
+            const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(0.99 * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
+            const maxPosDev = p99(posDevs)
+            const maxNegDev = p99(negDevs)
+            if (maxPosDev > 0 || maxNegDev > 0) {
+              recomputed = { maxPosDev, maxNegDev }
               colorRangeRef.current = recomputed
               colorRangeLockedRef.current = true
             }
@@ -395,9 +397,13 @@ function buildColorExpr(variable, isDark, colorRange, tuning) {
   // and near-zero color saturation across the whole map. Falls back to the
   // configured domain for the first paint while features are still
   // streaming in.
-  const dataDev = colorRange?.maxDev
-  const maxPosDev = dataDev ?? Math.max(cfgMax - zero, 0.001)
-  const maxNegDev = dataDev ?? Math.max(zero - cfgMin, 0.001)
+  // Independent positive / negative p99 — when the data is skewed (e.g.
+  // PM₂.₅ with most cells above the WHO 5 µg/m³ threshold) the colormap
+  // saturates faster on whichever side has more spread.
+  const dataPos = colorRange?.maxPosDev
+  const dataNeg = colorRange?.maxNegDev
+  const maxPosDev = (dataPos != null && dataPos > 0) ? dataPos : Math.max(cfgMax - zero, 0.001)
+  const maxNegDev = (dataNeg != null && dataNeg > 0) ? dataNeg : Math.max(zero - cfgMin, 0.001)
   // The COLOR stops are spread across this range. When dataDev is known,
   // we use it on both sides so colors saturate at the same p99 magnitude
   // that already controls alpha — matching the auto-rescale behavior the

@@ -120,8 +120,12 @@ const config = {
       colormap: 'BuRd',
       diverging: true,
       domain: { min: 0, max: 10, zero: 5 },
+      // alpha = (|v − 5| / p99)^1 → cells right at the WHO threshold are
+      // fully transparent so dark-mode background shows through where
+      // the data is neutral, and cells reach full opacity at p99 of
+      // their side of zero.
       alphaFloor: 0,
-      alphaPower: 0,
+      alphaPower: 1,
       layer: 'pm25',
       dimensionValues: { scenario: 'low' },
       description: 'Annual mean PM₂.₅ concentration under the Low-CDR 2050 scenario, diverging at the WHO 5 µg/m³ safe-air threshold.',
@@ -133,8 +137,12 @@ const config = {
       colormap: 'BuRd',
       diverging: true,
       domain: { min: 0, max: 10, zero: 5 },
+      // alpha = (|v − 5| / p99)^1 → cells right at the WHO threshold are
+      // fully transparent so dark-mode background shows through where
+      // the data is neutral, and cells reach full opacity at p99 of
+      // their side of zero.
       alphaFloor: 0,
-      alphaPower: 0,
+      alphaPower: 1,
       layer: 'pm25',
       dimensionValues: { scenario: 'high' },
       description: 'Annual mean PM₂.₅ concentration under the High-CDR 2050 scenario, diverging at the WHO 5 µg/m³ safe-air threshold.',

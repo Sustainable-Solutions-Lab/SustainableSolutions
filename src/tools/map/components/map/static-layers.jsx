@@ -367,6 +367,46 @@ export function addStaticLayers(map, scheme, opts = {}) {
     }
   }
 
+  // ── 2d. Community / neighborhood labels (sub-metro detail) ────────────────
+  // Curated list of named places inside the 15 Just Air metros — Brooklyn,
+  // Santa Monica, Sandy Springs, etc. Visible from z=6.5 so the user sees
+  // community names exactly when the 3 km / 1 km city tiers reveal the
+  // intra-metro detail. Loaded from /public/us-communities.geojson; extend
+  // that file to add more places.
+  if (usOverlays && !map.getSource('us-communities')) {
+    map.addSource('us-communities', { type: 'geojson', data: '/us-communities.geojson' })
+  }
+  // Slightly lighter than the city labels and italic so they read as a
+  // separate annotation tier.
+  const usCommunityTextColor = scheme === 'dark' ? 'rgba(248, 248, 232, 0.72)' : 'rgba(24, 24, 56, 0.62)'
+  const usCommunityHaloColor = usCityHaloColor
+  if (usOverlays && !map.getLayer('us-community-labels')) {
+    map.addLayer({
+      id: 'us-community-labels',
+      type: 'symbol',
+      source: 'us-communities',
+      minzoom: 6.5,
+      layout: {
+        visibility: 'visible',
+        'text-field': ['get', 'name'],
+        'text-size': 10,
+        'text-font': ['Open Sans Italic', 'Open Sans Regular', 'Arial Unicode MS Regular'],
+        'text-anchor': 'center',
+        'text-allow-overlap': false,
+        'text-ignore-placement': false,
+        'text-padding': 2,
+      },
+      paint: {
+        'text-color': usCommunityTextColor,
+        'text-halo-color': usCommunityHaloColor,
+        'text-halo-width': 1.4,
+      },
+    })
+  } else if (usOverlays && map.getLayer('us-community-labels')) {
+    map.setPaintProperty('us-community-labels', 'text-color', usCommunityTextColor)
+    map.setPaintProperty('us-community-labels', 'text-halo-color', usCommunityHaloColor)
+  }
+
   // ── 3. Graticule ──────────────────────────────────────────────────────────
 
   if (!map.getSource('graticule')) {

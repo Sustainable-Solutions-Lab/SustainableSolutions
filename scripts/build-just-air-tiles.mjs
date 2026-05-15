@@ -350,6 +350,18 @@ function fieldDecimals(name) {
   return 3;
 }
 
+// Returns true if a CONUS-grid cell looks like a "no data" sentinel from
+// the source CMAQ-style model output — zero PM₂.₅ across every scenario.
+// Cells with population > 0 can still be sentinels (e.g. narrow coastal
+// strips where the model didn't run); we drop them to avoid the dark
+// navy circles that BuRd(0) renders for v=0 in the diverging PM map.
+function isNoDataCell(c) {
+  const low  = c.pm25_low  ?? 0
+  const high = c.pm25_high ?? 0
+  const ref  = c.pm25_ref  ?? 0
+  return low === 0 && high === 0 && ref === 0
+}
+
 function nationalCellToPoint(c, cityBboxes, isCityCovered) {
   // 9 km cells everywhere from z=5 — *except* cells that fall inside the
   // footprint of high-resolution city pixels, which are capped at z=5 so
@@ -596,7 +608,12 @@ async function main() {
   console.log('Loading real CONUS 9 km grid (joined PM25 + benmap + population)…');
   const cityBboxesForFilter = manifest.map((m) => m.bbox);
   const nationalCellsAll = await loadConusGrid();
-  const nationalCells = nationalCellsAll.filter((c) => isInsideConus(c.lng, c.lat));
+  // Drop cells outside CONUS and cells that look like "no data" sentinels
+  // (PM₂.₅ = 0 across every scenario — common along coastlines and the
+  // grid's outer edge). The latter were rendering as dark navy circles in
+  // the BuRd-diverging PM map.
+  const nationalCells = nationalCellsAll.filter((c) => isInsideConus(c.lng, c.lat) && !isNoDataCell(c));
+  const droppedNoData = nationalCellsAll.filter((c) => isInsideConus(c.lng, c.lat) && isNoDataCell(c)).length;
   let inMetroCount = 0;
   let coveredCount = 0;
   for (const c of nationalCells) {
@@ -606,7 +623,7 @@ async function main() {
     if (covered) coveredCount++;
     await fh.write(JSON.stringify(nationalCellToPoint(c, cityBboxesForFilter, covered)) + '\n');
   }
-  console.log(`National 9 km: ${nationalCells.length} cells  (dropped ${nationalCellsAll.length - nationalCells.length} non-CONUS, ${inMetroCount} inside metro bboxes — of which ${coveredCount} city-covered → capped at z=5 so 3 km bins take over without overlap)`);
+  console.log(`National 9 km: ${nationalCells.length} cells  (dropped ${nationalCellsAll.length - nationalCells.length - droppedNoData} non-CONUS, ${droppedNoData} no-data sentinels, ${inMetroCount} inside metro bboxes — of which ${coveredCount} city-covered → capped at z=5)`);
 
   // ── National 18 km mid tier (CONUS-clipped) ────────────────────────────
   // Bridges supercells → 9 km grid so z=4 is never blank.

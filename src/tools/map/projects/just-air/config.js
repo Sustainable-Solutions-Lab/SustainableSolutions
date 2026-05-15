@@ -34,9 +34,8 @@ const config = {
     minZoom: 3.0,
     // Past z 6.5 the radius curve clamps at its last stop (the
     // interpolate doesn't extrapolate); cells stay at z 6.5's size
-    // through z 7. Lets the user zoom one more step before bumping
-    // into the cap.
-    maxZoom: 7,
+    // through z 7.5.
+    maxZoom: 7.5,
     bounds: [-125, 24, -66, 50],
     // Suppress the California-only static overlays (out-of-bounds mask,
     // state border, county borders, CA-city labels) baked in for Firefuels.

@@ -64,9 +64,18 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
   const p99idx = Math.floor(sorted.length * 0.01)
   const p01idxRaw = Math.floor(sorted.length * 0.99)
   const histMin = variable?.histogramMin
-  const p01idx = (histMin != null && sorted.length > 0)
-    ? Math.max(p99idx + 1, sorted.findIndex((v) => v < histMin) - 1)
-    : p01idxRaw
+  // `histogramMin` clips the low tail of the distribution (e.g. PM₂.₅ < 8
+  // µg/m³). If the visible data doesn't reach that floor (zoomed deep into
+  // a moderate-PM city, for instance), clipping would leave only a sliver
+  // of values near the top — collapsing the axis labels to a single number
+  // and emptying the bars. Fall back to the natural p1 in that case.
+  const p01idx = (() => {
+    if (histMin == null || sorted.length === 0) return p01idxRaw
+    const cutoffIdx = sorted.findIndex((v) => v < histMin)
+    if (cutoffIdx === -1) return p01idxRaw                  // all values >= histMin
+    if (cutoffIdx < sorted.length * 0.05) return p01idxRaw  // <5% above histMin: ignore the floor
+    return Math.max(p99idx + 1, cutoffIdx - 1)
+  })()
   const dataMax = sorted.length ? (sorted[p99idx] ?? sorted[0]) : 1
   const dataMin = sorted.length ? (sorted[p01idx] ?? sorted[sorted.length - 1]) : 0
   const dataRange = Math.max(dataMax - dataMin, 1)

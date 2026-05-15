@@ -13,6 +13,8 @@ import { DimensionControl } from './components/sidebar/dimension-control.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
 import { MethodsPanel } from './components/methods-panel.jsx'
+import { DevControls, shouldShowDevControls, readStoredTuning } from './components/dev-controls.jsx'
+import { DEFAULT_TUNING } from './lib/use-just-air-layers.js'
 
 // ── Reducer ──────────────────────────────────────────────────────────────────
 
@@ -110,6 +112,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const [filterStats, setFilterStats] = useState({ count: null, mean: null, median: null, totalCount: null, allValues: [] })
   const [statewideValues, setStatewideValues] = useState([])
   const [opacityP95, setOpacityP95] = useState(null)
+  const [tuning, setTuning] = useState(() => readStoredTuning() ?? { ...DEFAULT_TUNING })
+  const [showDevControls, setShowDevControls] = useState(false)
+  useEffect(() => { setShowDevControls(shouldShowDevControls()) }, [])
 
   // Sheet-managed display fields (title, eyebrow, summary) override the
   // hardcoded project config so editing the Tools sheet flows through to
@@ -175,24 +180,31 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       const sourceId = 'just-air-data'
       const sourceLayer = baseConfig.sourceLayer ?? baseConfig.id
 
-      // Take whichever scale is currently in the tile — prefer 9 km national
-      // (uniform CONUS coverage) but fall back to any features so the
-      // histogram populates even when only 36 km supercells are loaded
-      // (z 2–4 default view). Re-query on every sourcedata so the
-      // distribution updates as finer-scale tiles stream in.
+      // Histogram sample: prefer features that actually carry the active
+      // variable. The previous "prefer 9 km national" heuristic broke for
+      // city-only variables (income, % non-Hispanic white) because 9 km
+      // cells don't have those properties — the filter dropped to zero
+      // values and the chart kept stale data from the prior layer.
       function pull() {
         try {
           const features = mapInstance.querySourceFeatures(sourceId, { sourceLayer })
           if (features.length === 0) return
-          const s9 = features.filter((f) => f.properties?._scale === 9)
-          const s36 = features.filter((f) => f.properties?._scale === 36)
+          const withVar = features.filter((f) => {
+            const v = f.properties?.[varId]
+            return v != null && isFinite(v)
+          })
+          if (withVar.length < 20) return
+          // When both city-tier and national-tier features carry the
+          // variable (e.g. population), prefer the national 9 km cells so
+          // the distribution describes the CONUS-wide spread rather than
+          // a single-city slice.
+          const s9 = withVar.filter((f) => f.properties?._scale === 9)
+          const s36 = withVar.filter((f) => f.properties?._scale === 36)
           const sample = s9.length >= 100 ? s9
                        : s36.length >= 30 ? s36
-                       : features
-          const vals = sample
-            .map((f) => f.properties?.[varId])
-            .filter((v) => v != null && isFinite(v))
-          if (vals.length >= 20) applyDist(vals)
+                       : withVar
+          const vals = sample.map((f) => f.properties[varId])
+          applyDist(vals)
         } catch (_) { /* source not loaded yet */ }
       }
       pull()
@@ -335,7 +347,12 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             onToggleScheme={handleToggleScheme}
             isDark={isDark}
             opacityP95={opacityP95}
+            tuning={tuning}
           />
+
+          {showDevControls && (
+            <DevControls tuning={tuning} setTuning={setTuning} mapInstance={mapInstance} />
+          )}
 
           {/* Mobile color bar — sits above Safari's URL bar (~ 90 px tall on
               iPhones) and above the in-map attribution strip (~14 px). Bg

@@ -31,11 +31,12 @@ const config = {
   region: {
     center: [-96.5, 38.5],
     zoom: 3.0,
-    minZoom: 2.0,
-    // maxZoom 10 keeps the user inside a zoom range where geographic
-    // context (state borders, city labels) is still meaningful — past
-    // z10 the data circles dwarf the basemap and orientation goes away.
-    maxZoom: 10,
+    minZoom: 3.0,
+    // Past z 6.5 the radius curve clamps at its last stop (the
+    // interpolate doesn't extrapolate); cells stay at z 6.5's size
+    // through z 7. Lets the user zoom one more step before bumping
+    // into the cap.
+    maxZoom: 7,
     bounds: [-125, 24, -66, 50],
     // Suppress the California-only static overlays (out-of-bounds mask,
     // state border, county borders, CA-city labels) baked in for Firefuels.
@@ -60,27 +61,27 @@ const config = {
       description: 'PM₂.₅-related annual mortality per pixel in 2050.',
       dimensionIds: ['scenario'],
     },
-    // Stubs — UI surfaces these but no data yet.
+    // Static (no scenario) layers — population is national; income and the
+    // race/ethnicity layer come from the per-city demographic CSVs and so
+    // only render within the 15 metro bboxes (at z≥7 once the city tiers
+    // take over from the national 9 km grid).
     {
       id: 'pop_density',
       label: 'Population',
-      description: 'Population density (data forthcoming).',
+      description: 'Estimated population per pixel.',
       dimensionIds: [],
-      hidden: true,
     },
     {
       id: 'minority',
-      label: 'Minority share',
-      description: 'Non-white minority share (data forthcoming).',
+      label: 'Race & ethnicity',
+      description: 'Percent of population identifying as non-Hispanic white. Available within the 15 metros only.',
       dimensionIds: [],
-      hidden: true,
     },
     {
       id: 'income',
       label: 'Income',
-      description: 'Household income (data forthcoming).',
+      description: 'Median household income (USD). Available within the 15 metros only.',
       dimensionIds: [],
-      hidden: true,
     },
   ],
 
@@ -112,6 +113,11 @@ const config = {
       label: 'PM₂.₅ — Low CDR',
       unit: 'µg/m³',
       colormap: 'YlOrRd',
+      // Skip the pale-yellow lower third of YlOrRd; rendered cells start
+      // at orange and deepen to red. Low concentrations fade through
+      // alpha (the alphaForValue curve in use-just-air-layers.js) rather
+      // than through a yellow that's near the paper background.
+      colormapStart: 0.30,
       diverging: false,
       domain: { min: 0, max: 15 },
       histogramMin: 8,
@@ -124,6 +130,7 @@ const config = {
       label: 'PM₂.₅ — High CDR',
       unit: 'µg/m³',
       colormap: 'YlOrRd',
+      colormapStart: 0.30,
       diverging: false,
       domain: { min: 0, max: 15 },
       histogramMin: 8,
@@ -157,6 +164,8 @@ const config = {
       diverging: false,
       domain: { min: 0, max: 0.001 },
       histogramMin: 0.0001,
+      alphaFloor: 0,
+      alphaPower: 0.8,
       layer: 'mortality',
       dimensionValues: { scenario: 'low' },
       description: 'Annual PM₂.₅-attributable deaths per pixel under Low-CDR scenario.',
@@ -170,6 +179,8 @@ const config = {
       diverging: false,
       domain: { min: 0, max: 0.001 },
       histogramMin: 0.0001,
+      alphaFloor: 0,
+      alphaPower: 0.8,
       layer: 'mortality',
       dimensionValues: { scenario: 'high' },
       description: 'Annual PM₂.₅-attributable deaths per pixel under High-CDR scenario.',
@@ -183,9 +194,63 @@ const config = {
       solidColorNegative: '#4575b4',
       diverging: true,
       domain: { min: -0.0005, max: 0.0005, zero: 0 },
+      alphaFloor: 0,
+      alphaPower: 0.8,
       layer: 'mortality',
       dimensionValues: { scenario: 'diff' },
       description: 'High CDR minus Low CDR. Blue: High CDR saves lives here; red: High CDR adds deaths.',
+    },
+
+    // ── Population (national + city) ─────────────────────────────────────
+    // domain capped at 5000 people/pixel — a handful of dense urban pixels
+    // run higher, but clipping there keeps the mid-range visible rather
+    // than letting the histogram pile up at zero.
+    {
+      id: 'population',
+      label: 'Population',
+      unit: 'people/pixel',
+      colormap: 'Greens',
+      colormapStart: 0.25,
+      diverging: false,
+      domain: { min: 0, max: 5000 },
+      histogramMin: 50,
+      alphaFloor: 0,
+      alphaPower: 0.8,
+      layer: 'pop_density',
+      dimensionValues: {},
+      description: 'Estimated population per pixel.',
+    },
+
+    // ── Median household income (city pixels + 3 km city bins only) ──────
+    {
+      id: 'income',
+      label: 'Median household income',
+      unit: 'USD',
+      colormap: 'BuPu',
+      colormapStart: 0.25,
+      diverging: false,
+      domain: { min: 20000, max: 150000 },
+      histogramMin: 25000,
+      layer: 'income',
+      dimensionValues: {},
+      description: 'Median household income within the metro pixel grid.',
+    },
+
+    // ── Race & ethnicity (city pixels + 3 km city bins only) ─────────────
+    // Diverging at 50 so the color reads as "departure from a 50/50 mix":
+    // blue side = white majority, red side = non-white majority. This is
+    // visually intuitive as a "minority share" map without needing a
+    // derived 100 − percent_white field in the tiles.
+    {
+      id: 'percent_white',
+      label: '% non-Hispanic white',
+      unit: '%',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: 0, max: 100, zero: 50 },
+      layer: 'minority',
+      dimensionValues: {},
+      description: 'Percent of population identifying as non-Hispanic white. Diverging at 50%: blue = white majority; red = non-white majority.',
     },
   ],
 
@@ -201,7 +266,7 @@ const config = {
     enabled: true,
     defaultRadiusKm: 25,
     maxRadiusKm: 200,
-    aggregateVariableIds: ['pm25_low', 'pm25_high', 'pm25_diff', 'mort_low', 'mort_high', 'mort_diff'],
+    aggregateVariableIds: ['pm25_low', 'pm25_high', 'pm25_diff', 'mort_low', 'mort_high', 'mort_diff', 'population', 'income', 'percent_white'],
   },
 
   // ── Box overlay ──────────────────────────────────────────────────────────
@@ -232,10 +297,18 @@ const config = {
     // the user sees the much denser 9 km grid by z 4 — the previous bands
     // left z 4 still on supercells, which read as "too sparse" at that
     // zoom step.
-    { value: 36, minZoom: 2, maxZoom: 4 },   // CONUS overview supercells
-    { value: 9,  minZoom: 4 },                // 9 km (everywhere → rural-only at z7+)
-    { value: 3,  minZoom: 7, maxZoom: 9 },   // 3 km bridge inside metros
-    { value: 1,  minZoom: 9 },                // native city pixels at z9+
+    // Disjoint zoom bands. The build script's tippecanoe min/max hints on
+    // each feature mirror these so tiles only carry what gets shown.
+    //
+    // Hand-off inside metros snaps cleanly at z 6 — that's also the tile-
+    // boundary where the inside-metro 9 km cells fall out (tippecanoe
+    // maxzoom=5) and the 3 km city bins begin rendering. Outside metros,
+    // 9 km runs through z 6.5.
+    { value: 36, minZoom: 2, maxZoom: 4 },     // z 2–3: CONUS overview supercells
+    { value: 18, minZoom: 4, maxZoom: 5 },     // z 4:   mid tier
+    { value: 9,  minZoom: 5 },                  // z 5+:  9 km grid (metro cells stop at z 6 in tiles)
+    { value: 3,  minZoom: 6 },                  // z 6+ inside metros (clean snap)
+    { value: 1,  minZoom: 9 },                  // unreached at camera maxZoom 6.5; kept for future
   ],
   methodsPath: 'just-air/methods.mdx',
 };

@@ -257,7 +257,7 @@ function addBoxOverlay(map, cfg, colorScheme) {
  * @param {string}   props.height    - CSS height string
  * @param {Function} [props.onMapReady]  - called with the map instance after load
  */
-export function Map({ config, state, dispatch, height, onMapReady, onFilterStats, onToggleScheme, isDark, opacityP95 }) {
+export function Map({ config, state, dispatch, height, onMapReady, onFilterStats, onToggleScheme, isDark, opacityP95, tuning }) {
   const containerRef = useRef(null)
 
   /** @type {React.MutableRefObject<import('maplibre-gl').Map|null>} */
@@ -330,7 +330,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
   //   - useJustAirLayers:      multi-scale circle stack (Just Air)
   useMapLayer(mapReady ? mapRef.current : null, config, state, opacityP95)
   useMultiSourceLayers(mapReady ? mapRef.current : null, config, state)
-  useJustAirLayers(mapReady ? mapRef.current : null, config, state)
+  useJustAirLayers(mapReady ? mapRef.current : null, config, state, tuning)
 
   // ── Color scheme change ──────────────────────────────────────────────────
   useEffect(() => {

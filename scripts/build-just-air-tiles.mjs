@@ -5,7 +5,13 @@
 // Inputs (Dropbox alias-resolved):
 //   {SRC}/<City>/PM25_<City>_<scenario>_out.csv
 //   {SRC}/<City>/benmap_<City>_<scenario>_out.csv
-//   where <City> in 15 metros, <scenario> in {highCDR, lowCDR}.
+//   {SRC}/<City>/demographic_income_<City>.csv
+//   {SRC}/<City>/demographic_percent_white_<City>.csv
+//   {SRC}/CONUS/PM25_CONUS_2050<scenario>_out.csv
+//   {SRC}/CONUS/benmap_CONUS_2050<scenario>_out.csv
+//   {SRC}/CONUS/population_CONUS.csv
+// where <City> in 15 metros, <scenario> in {highCDR, lowCDR} for cities,
+// and {HighCDR, LowCDR, REF} for CONUS.
 //
 // Output (in dist-tiles/just-air/):
 //   just-air.pmtiles               single tileset, source-layer "just-air"
@@ -15,8 +21,10 @@
 // ─────────────
 // Every feature is a Point at its cell centroid carrying:
 //   pixel_id?, city?, _scale, lng, lat,
-//   pm25_low, pm25_high, pm25_diff,        (µg/m³)
-//   mort_low, mort_high, mort_diff,        (deaths/cell)
+//   pm25_low, pm25_high, pm25_ref, pm25_diff,    (µg/m³)
+//   mort_low, mort_high, mort_ref, mort_diff,    (deaths/cell)
+//   population,                                  (people/cell, when known)
+//   income, percent_white                        (city-tier only)
 //
 // _scale is the cell side length in km. It drives the circle-radius
 // expression in the renderer (see src/tools/map/lib/use-just-air-layers.js):
@@ -164,13 +172,44 @@ async function loadCity(city) {
           const corners = ring.slice(0, 4);
           const lng = corners.reduce((s, p) => s + p[0], 0) / corners.length;
           const lat = corners.reduce((s, p) => s + p[1], 0) / corners.length;
-          pix = { pixel_id: pid, ring, lng, lat };
+          pix = {
+            pixel_id: pid,
+            row: Number(r.Row),
+            col: Number(r.Column),
+            ring, lng, lat,
+          };
           byPixel.set(pid, pix);
         }
         pix[targetCol] = val;
       }
     }
   }
+
+  // Demographics — income and percent non-Hispanic white. The percent_white
+  // file also carries per-pixel Population, which the other city files lack.
+  const incomePath = join(cityDir, `demographic_income_${city}.csv`);
+  if (existsSync(incomePath)) {
+    const rows = await readCsvRows(incomePath);
+    for (const r of rows) {
+      const pix = byPixel.get(r.pixel_ID);
+      if (!pix) continue;
+      const v = Number(r.value);
+      if (Number.isFinite(v)) pix.income = v;
+    }
+  }
+  const whitePath = join(cityDir, `demographic_percent_white_${city}.csv`);
+  if (existsSync(whitePath)) {
+    const rows = await readCsvRows(whitePath);
+    for (const r of rows) {
+      const pix = byPixel.get(r.pixel_ID);
+      if (!pix) continue;
+      const v = Number(r.value);
+      const pop = Number(r.Population);
+      if (Number.isFinite(v)) pix.percent_white = v;
+      if (Number.isFinite(pop)) pix.population = pop;
+    }
+  }
+
   return { city, pixels: byPixel };
 }
 
@@ -200,7 +239,7 @@ function cityPixelToPoint(p, city) {
   if (p.pm25_low == null || p.pm25_high == null || p.mort_low == null || p.mort_high == null) {
     return null;
   }
-  return makePoint(p.lng, p.lat, {
+  const props = {
     _scale: 1,
     pixel_id: p.pixel_id,
     city,
@@ -210,62 +249,69 @@ function cityPixelToPoint(p, city) {
     mort_low:  round(p.mort_low, 6),
     mort_high: round(p.mort_high, 6),
     mort_diff: round(p.mort_high - p.mort_low, 6),
-  }, { minzoom: 9, maxzoom: 14 });
+  };
+  if (p.income != null)        props.income        = round(p.income, 0);
+  if (p.percent_white != null) props.percent_white = round(p.percent_white, 1);
+  if (p.population != null)    props.population    = round(p.population, 1);
+  return makePoint(p.lng, p.lat, props, { minzoom: 9, maxzoom: 14 });
 }
 
-// ── Synthetic 9 km CONUS national grid (centroids) ──────────────────────────
+// ── Real CONUS 9 km grid loader ─────────────────────────────────────────────
+//
+// Reads the seven CONUS-scale CSVs in {SRC}/CONUS/ and joins them by pixel_ID
+// into one cell record per pixel. Returns cells with the shape expected by
+// nationalCellToPoint and the aggregators downstream (lng, lat, row, col,
+// plus per-scenario PM2.5/mortality and population).
+//
+// The Row/Column columns in the source CSVs are the native modeling grid
+// indices, so we use them directly for 2×2 / 4×4 aggregation rather than
+// re-deriving from lat/lon — that keeps blocks square in the source grid
+// space, even though the grid itself is slightly rotated in geographic
+// coordinates.
 
-function syntheticNational() {
-  const bbox = { minLng: -125, maxLng: -66, minLat: 24, maxLat: 50 };
-  const dLat = 0.09, dLng = 0.10;
-  // Pre-position "urban-ish" centers for plausible PM₂.₅ gradient.
-  const centers = [
-    { lng: -118.2, lat: 34.0, w: 6 },
-    { lng: -73.9,  lat: 40.7, w: 7 },
-    { lng: -87.6,  lat: 41.9, w: 5 },
-    { lng: -95.4,  lat: 29.8, w: 5 },
-    { lng: -84.4,  lat: 33.8, w: 4 },
-    { lng: -97.0,  lat: 32.8, w: 4 },
-    { lng: -75.2,  lat: 39.95, w: 4 },
-    { lng: -122.4, lat: 47.6, w: 3 },
-    { lng: -122.4, lat: 37.8, w: 4 },
-    { lng: -80.2,  lat: 25.8, w: 3 },
-    { lng: -77.0,  lat: 38.9, w: 4 },
-    { lng: -83.0,  lat: 42.3, w: 3 },
-    { lng: -71.1,  lat: 42.4, w: 4 },
-    { lng: -112.1, lat: 33.5, w: 3 },
-    { lng: -117.4, lat: 33.9, w: 3 },
-  ];
-  // Return cells keyed by integer grid index so the supercell aggregator can
-  // index them in O(1) without re-deriving floor()s downstream.
-  const cells = [];
-  let id = 0;
-  let row = 0;
-  for (let lat = bbox.minLat; lat < bbox.maxLat; lat += dLat, row++) {
-    let col = 0;
-    for (let lng = bbox.minLng; lng < bbox.maxLng; lng += dLng, col++) {
-      let pm25_low = 5;
-      for (const c of centers) {
-        const dx = (lng - c.lng) * Math.cos((lat * Math.PI) / 180);
-        const dy = (lat - c.lat);
-        const r2 = dx * dx + dy * dy;
-        pm25_low += c.w * Math.exp(-r2 / 2.0);
+const CONUS_DIR = join(SRC, 'CONUS');
+
+async function loadConusGrid() {
+  const byPixel = new Map();
+
+  async function joinFile(fname, valueCol, targetCol) {
+    const path = join(CONUS_DIR, fname);
+    if (!existsSync(path)) {
+      console.warn(`  CONUS: missing ${fname}`);
+      return;
+    }
+    const rows = await readCsvRows(path);
+    for (const r of rows) {
+      const pid = r.pixel_ID;
+      let pix = byPixel.get(pid);
+      if (!pix) {
+        const ring = parseRingFromR(r.geometry);
+        if (!ring) continue;
+        const corners = ring.slice(0, 4);
+        const lng = corners.reduce((s, p) => s + p[0], 0) / corners.length;
+        const lat = corners.reduce((s, p) => s + p[1], 0) / corners.length;
+        pix = {
+          pixel_id: pid,
+          row: Number(r.Row),
+          col: Number(r.Column),
+          lng, lat,
+        };
+        byPixel.set(pid, pix);
       }
-      const noise = (Math.sin(id * 1.7) + Math.sin(id * 0.31)) * 0.15;
-      const pm25_high = Math.max(2.5, pm25_low * (0.78 + noise * 0.04));
-      const mort_low = pm25_low * 0.000003;
-      const mort_high = pm25_high * 0.000003;
-      cells.push({
-        row, col,
-        lng: lng + dLng / 2,
-        lat: lat + dLat / 2,
-        pm25_low, pm25_high,
-        mort_low, mort_high,
-      });
-      id++;
+      const v = Number(r[valueCol]);
+      if (Number.isFinite(v)) pix[targetCol] = v;
     }
   }
-  return cells;
+
+  await joinFile('PM25_CONUS_2050LowCDR_out.csv',   'Values',     'pm25_low');
+  await joinFile('PM25_CONUS_2050HighCDR_out.csv',  'Values',     'pm25_high');
+  await joinFile('PM25_CONUS_2050REF_out.csv',      'Values',     'pm25_ref');
+  await joinFile('benmap_CONUS_2050LowCDR_out.csv', 'Mortality',  'mort_low');
+  await joinFile('benmap_CONUS_2050HighCDR_out.csv','Mortality',  'mort_high');
+  await joinFile('benmap_CONUS_2050REF_out.csv',    'Mortality',  'mort_ref');
+  await joinFile('population_CONUS.csv',            'Population', 'population');
+
+  return Array.from(byPixel.values());
 }
 
 // Tag each 9 km cell with a different tippecanoe zoom range depending on
@@ -274,20 +320,44 @@ function syntheticNational() {
 // the user seeing both sizes layered over the same area. Cells outside every
 // bbox keep emitting all the way to z14 so rural areas still show 9 km
 // coverage when the user zooms in there.
+// Fields carried through every national tier (9 / 18 / 36 km). The diffs
+// (pm25_diff, mort_diff) are derived post-aggregation rather than averaged,
+// so they remain a true high − low at the aggregated cell rather than the
+// mean of underlying diffs (which would differ if any pixel was missing
+// either scenario).
+const NATIONAL_FIELDS = [
+  'pm25_low', 'pm25_high', 'pm25_ref',
+  'mort_low', 'mort_high', 'mort_ref',
+  'population',
+];
+
+function fieldDecimals(name) {
+  if (name.startsWith('mort')) return 8;
+  if (name.startsWith('pm25')) return 2;
+  if (name === 'population')   return 1;
+  if (name === 'income')       return 0;
+  if (name === 'percent_white')return 1;
+  return 3;
+}
+
 function nationalCellToPoint(c, cityBboxes) {
-  const insideMetro = pointInAnyBbox(c.lng, c.lat, cityBboxes);
-  const tcZoom = insideMetro
-    ? { minzoom: 4, maxzoom: 6 }
-    : { minzoom: 4 };  // omit maxzoom — emit at every zoom level
-  return makePoint(c.lng, c.lat, {
-    _scale: 9,
-    pm25_low:  round(c.pm25_low, 2),
-    pm25_high: round(c.pm25_high, 2),
-    pm25_diff: round(c.pm25_high - c.pm25_low, 2),
-    mort_low:  round(c.mort_low, 8),
-    mort_high: round(c.mort_high, 8),
-    mort_diff: round(c.mort_high - c.mort_low, 8),
-  }, tcZoom);
+  // 9 km cells emitted at z=5 onward everywhere (inside metros too). The
+  // 3 km city bins overlay them inside metro bboxes from z=6, so where
+  // 3 km data exists the user sees that on top; where it doesn't (a
+  // bbox's edges, water-adjacent areas, etc.) the 9 km cell shows
+  // through and fills the white space.
+  const tcZoom = { minzoom: 5 };
+  const props = { _scale: 9 };
+  for (const f of NATIONAL_FIELDS) {
+    if (c[f] != null && Number.isFinite(c[f])) props[f] = round(c[f], fieldDecimals(f));
+  }
+  if (props.pm25_high != null && props.pm25_low != null) {
+    props.pm25_diff = round(props.pm25_high - props.pm25_low, 2);
+  }
+  if (props.mort_high != null && props.mort_low != null) {
+    props.mort_diff = round(props.mort_high - props.mort_low, 8);
+  }
+  return makePoint(c.lng, c.lat, props, tcZoom);
 }
 
 function pointInAnyBbox(lng, lat, bboxes) {
@@ -306,44 +376,79 @@ function pointInAnyBbox(lng, lat, bboxes) {
 // native 1 km city pixels rather than the user having to zoom all the way in
 // before any city-scale detail appears.
 
+const CITY_FIELDS = [
+  'pm25_low', 'pm25_high',
+  'mort_low', 'mort_high',
+  'income', 'percent_white', 'population',
+];
+
 function aggregateCityTo3km(pixels, city) {
-  const BIN = 0.03; // degrees
+  // Bin by source-grid Row/Column rather than degrees so the resulting
+  // 3 km cells form a regular grid in projected (Lambert) space —
+  // matching how the 9/18/36 km national tiers are built. Degree-binning
+  // produced scattered empty cells inside cities because the 1 km source
+  // grid doesn't align cleanly with degree boundaries.
+  const BLOCK = 3;
   const bins = new Map();
   for (const p of pixels.values()) {
     if (p.pm25_low == null || p.pm25_high == null || p.mort_low == null || p.mort_high == null) {
       continue;
     }
-    const bx = Math.floor(p.lng / BIN);
-    const by = Math.floor(p.lat / BIN);
+    if (!Number.isFinite(p.row) || !Number.isFinite(p.col)) continue;
+    const bx = Math.floor(p.col / BLOCK);
+    const by = Math.floor(p.row / BLOCK);
     const key = `${bx}:${by}`;
     let b = bins.get(key);
     if (!b) {
-      b = { lng: 0, lat: 0, pm25_low: 0, pm25_high: 0, mort_low: 0, mort_high: 0, n: 0 };
+      b = { lng: 0, lat: 0, n: 0, sums: {}, counts: {} };
       bins.set(key, b);
     }
-    b.lng       += p.lng;
-    b.lat       += p.lat;
-    b.pm25_low  += p.pm25_low;
-    b.pm25_high += p.pm25_high;
-    b.mort_low  += p.mort_low;
-    b.mort_high += p.mort_high;
-    b.n++;
+    b.lng += p.lng; b.lat += p.lat; b.n++;
+    for (const f of CITY_FIELDS) {
+      const v = p[f];
+      if (v != null && Number.isFinite(v)) {
+        b.sums[f] = (b.sums[f] ?? 0) + v;
+        b.counts[f] = (b.counts[f] ?? 0) + 1;
+      }
+    }
   }
   const out = [];
   for (const b of bins.values()) {
     const n = b.n;
-    out.push(makePoint(b.lng / n, b.lat / n, {
-      _scale: 3,
-      city,
-      pm25_low:  round(b.pm25_low  / n, 3),
-      pm25_high: round(b.pm25_high / n, 3),
-      pm25_diff: round((b.pm25_high - b.pm25_low) / n, 3),
-      mort_low:  round(b.mort_low  / n, 6),
-      mort_high: round(b.mort_high / n, 6),
-      mort_diff: round((b.mort_high - b.mort_low) / n, 6),
-    }, { minzoom: 7, maxzoom: 8 }));
+    const props = { _scale: 3, city };
+    for (const f of CITY_FIELDS) {
+      if (b.counts[f] > 0) {
+        props[f] = round(b.sums[f] / b.counts[f], f.startsWith('pm25') ? 3 : f.startsWith('mort') ? 6 : fieldDecimals(f));
+      }
+    }
+    if (props.pm25_high != null && props.pm25_low != null) {
+      props.pm25_diff = round(props.pm25_high - props.pm25_low, 3);
+    }
+    if (props.mort_high != null && props.mort_low != null) {
+      props.mort_diff = round(props.mort_high - props.mort_low, 6);
+    }
+    // 3 km city bins available from z=5 (so they're in the z=5 tile that
+    // MapLibre uses through z=5.99). Layer config gates visibility at
+    // z=5.8 to time the hand-off from 9 km. maxzoom=7 leaves headroom
+    // past the current camera max (z=6.5) without bloating tile size.
+    out.push(makePoint(b.lng / n, b.lat / n, props, { minzoom: 5, maxzoom: 7 }));
   }
   return out;
+}
+
+// ── 2×2 mid-tier aggregation of the 9 km national grid (≈18 km) ─────────────
+//
+// Bridges the 36 km supercells (z 2–3) and the 9 km national grid (z 4+).
+// Without this tier, the user saw a near-empty z=4 frame as supercells faded
+// out before the 9 km grid registered as visible. Emitted at z 3–4 only.
+
+function aggregate18km(cells) {
+  return aggregateSupercells(cells, 2).map((f) => {
+    f.properties._scale = 18;
+    // Only z=4 — the 36 km supercells own z=3, the 9 km grid owns z=5+.
+    f.tippecanoe = { minzoom: 4, maxzoom: 4 };
+    return f;
+  });
 }
 
 // ── 4×4 supercell aggregation of the 9 km national grid ─────────────────────
@@ -360,29 +465,32 @@ function aggregateSupercells(cells, blockSize = 4) {
     const key = `${br}:${bc}`;
     let block = blocks.get(key);
     if (!block) {
-      block = { lng: 0, lat: 0, pm25_low: 0, pm25_high: 0, mort_low: 0, mort_high: 0, n: 0 };
+      block = { lng: 0, lat: 0, n: 0, sums: {}, counts: {} };
       blocks.set(key, block);
     }
-    block.lng       += c.lng;
-    block.lat       += c.lat;
-    block.pm25_low  += c.pm25_low;
-    block.pm25_high += c.pm25_high;
-    block.mort_low  += c.mort_low;
-    block.mort_high += c.mort_high;
-    block.n++;
+    block.lng += c.lng; block.lat += c.lat; block.n++;
+    for (const f of NATIONAL_FIELDS) {
+      const v = c[f];
+      if (v != null && Number.isFinite(v)) {
+        block.sums[f] = (block.sums[f] ?? 0) + v;
+        block.counts[f] = (block.counts[f] ?? 0) + 1;
+      }
+    }
   }
   const out = [];
   for (const b of blocks.values()) {
     const n = b.n;
-    out.push(makePoint(b.lng / n, b.lat / n, {
-      _scale: 36,
-      pm25_low:  round(b.pm25_low  / n, 2),
-      pm25_high: round(b.pm25_high / n, 2),
-      pm25_diff: round((b.pm25_high - b.pm25_low) / n, 2),
-      mort_low:  round(b.mort_low  / n, 8),
-      mort_high: round(b.mort_high / n, 8),
-      mort_diff: round((b.mort_high - b.mort_low) / n, 8),
-    }, { minzoom: 2, maxzoom: 3 }));
+    const props = { _scale: 36 };
+    for (const f of NATIONAL_FIELDS) {
+      if (b.counts[f] > 0) props[f] = round(b.sums[f] / b.counts[f], fieldDecimals(f));
+    }
+    if (props.pm25_high != null && props.pm25_low != null) {
+      props.pm25_diff = round(props.pm25_high - props.pm25_low, 2);
+    }
+    if (props.mort_high != null && props.mort_low != null) {
+      props.mort_diff = round(props.mort_high - props.mort_low, 8);
+    }
+    out.push(makePoint(b.lng / n, b.lat / n, props, { minzoom: 2, maxzoom: 3 }));
   }
   return out;
 }
@@ -453,9 +561,9 @@ async function main() {
   // above. The bbox set is the same one used to render the box overlay, so
   // the tile-level filtering lines up exactly with what the user sees on
   // the map.
-  console.log('Generating synthetic 9 km CONUS grid…');
+  console.log('Loading real CONUS 9 km grid (joined PM25 + benmap + population)…');
   const cityBboxesForFilter = manifest.map((m) => m.bbox);
-  const nationalCellsAll = syntheticNational();
+  const nationalCellsAll = await loadConusGrid();
   const nationalCells = nationalCellsAll.filter((c) => isInsideConus(c.lng, c.lat));
   let inMetroCount = 0;
   for (const c of nationalCells) {
@@ -463,6 +571,17 @@ async function main() {
     await fh.write(JSON.stringify(nationalCellToPoint(c, cityBboxesForFilter)) + '\n');
   }
   console.log(`National 9 km: ${nationalCells.length} cells  (dropped ${nationalCellsAll.length - nationalCells.length} non-CONUS, ${inMetroCount} inside metro bboxes capped at z6)`);
+
+  // ── National 18 km mid tier (CONUS-clipped) ────────────────────────────
+  // Bridges supercells → 9 km grid so z=4 is never blank.
+  console.log('Aggregating to 18 km mid tier…');
+  const mid18All = aggregate18km(nationalCells);
+  const mid18 = mid18All.filter((f) => {
+    const [lng, lat] = f.geometry.coordinates;
+    return isInsideConus(lng, lat);
+  });
+  for (const f of mid18) await fh.write(JSON.stringify(f) + '\n');
+  console.log(`National 18 km: ${mid18.length} cells  (dropped ${mid18All.length - mid18.length} non-CONUS)`);
 
   // ── National 36 km supercells (CONUS-clipped) ──────────────────────────
   console.log('Aggregating to 36 km supercells…');

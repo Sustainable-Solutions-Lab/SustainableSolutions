@@ -32,45 +32,63 @@ import { getActiveVariable } from './get-active-variable.js'
 // no overlap). Smaller cells appear as sub-pixel dots at zoom levels
 // below their native, then expand to just-touching as the user zooms in,
 // then finer scales emerge to fill the spaces — matching Firefuels' LOD
-// disclosure. We don't enforce a MIN_RADIUS floor because clamping
-// sub-pixel circles up to 1+ px reintroduces the overlap the user
-// explicitly didn't want.
-// Three-stop radius interpolation so the natural exponential extrapolation
-// doesn't smear out the band transition between z 3 (supercells) and
-// z 4 (9 km grid). Targets:
-//   z 3, _scale=36 → ~1.5 px (small overview dots)
-//   z 4, _scale=9  → ~4 px   (denser dotted surface — the user's target)
-//   z 12, _scale=1 → ~14 px  (just-touching at the natural tiling size)
-const R3  = 0.04
-const R4  = 0.44
-const R12 = 16.0
-// MAX_RADIUS_PX 8 keeps the LOD transitions reading as "circles shrunk"
-// rather than the same circles growing past their tiling size.
-const MAX_RADIUS_PX = 8
+// Per-zoom (radius coefficient, max-radius cap) pairs baked from iterative
+// dev-panel tuning. The user dragged the radius and max sliders at each
+// zoom of interest, read the zoom off the live readout, and reported the
+// values — these are those values. The final on-screen radius is:
+//
+//   radius = min(cap, _scale × coef × radiusScale)
+//
+// where _scale comes from the feature (36 / 18 / 9 / 3 / 1 km) and
+// radiusScale is a global dev-panel override (default 1.0). MapLibre
+// interpolates linearly between stops in (zoom-2)-base, so values between
+// the baked zooms ramp smoothly.
+const RADIUS_STOPS = [
+  // zoom, coef,  cap
+  [3.0,   0.056, 4.5],
+  [3.8,   0.470, 4.5],
+  [4.0,   0.132, 5.0],
+  [4.3,   0.159, 5.0],
+  [4.5,   0.186, 5.0],
+  [5.0,   0.225, 5.0],
+  [5.2,   0.285, 5.0],
+  [5.5,   0.330, 5.0],
+  [5.8,   0.412, 5.0],
+  [6.0,   0.465, 5.0],
+  [6.2,   0.558, 5.0],
+  [6.3,   0.676, 5.1],
+  [6.5,   0.793, 6.1],
+]
 
-// MapLibre forbids `['zoom']` from appearing anywhere except as the direct
-// input to a top-level step/interpolate expression. The earlier attempt to
-// clamp the whole interpolate inside ['max', MIN, ['min', MAX, ...]] caused
-// MapLibre to reject every just-air layer at register time, which is why
-// the map looked empty. Push the min/max clamp INSIDE each stop instead —
-// each stop value is just a scale × R constant (no zoom), so clamping it
-// is fine.
-// Cap-only (no MIN floor) so cells stay at their natural tiling size at
-// all zoom levels, even when that means a sub-pixel circle. MapLibre
-// anti-aliases sub-pixel circles to faint dots — better than over-
-// sizing them up to 2 px and creating visible overlap.
-const clampScale = (k) => [
-  'min', MAX_RADIUS_PX, [
-    '*', ['coalesce', ['to-number', ['get', '_scale']], 1], k,
-  ],
-]
-const RADIUS = [
-  'interpolate', ['exponential', 2], ['zoom'],
-  3,  clampScale(R3),
-  4,  clampScale(R4),
-  12, clampScale(R12),
-  22, clampScale(R12),
-]
+export const DEFAULT_TUNING = {
+  alphaFloor: 0.10,
+  alphaPower: 1.0,
+  // Global multiplier on the baked per-zoom radius curve. Default 1.0
+  // means "use the curve as iterated." Drag the dev-panel slider away
+  // from 1.0 to scale every cell up/down uniformly without re-tuning
+  // every zoom step.
+  radiusScale: 1.0,
+  // 0 (or null) means "use the per-zoom default cap from RADIUS_STOPS."
+  // Set to a positive number via the dev panel to globally override.
+  maxRadiusPx: 0,
+}
+
+function buildRadiusExpr(tuning) {
+  const s = tuning.radiusScale ?? 1.0
+  const overrideCap = tuning.maxRadiusPx
+  const SCALE = ['coalesce', ['to-number', ['get', '_scale']], 1]
+  // Per-stop clamp keeps `['zoom']` as the direct interpolate input,
+  // which MapLibre requires — wrapping the whole interpolate in min/max
+  // would have triggered a "zoom may only be input to a top-level
+  // interpolate" validation error.
+  function stop(coef, defaultCap) {
+    const cap = overrideCap != null && overrideCap > 0 ? overrideCap : defaultCap
+    return ['min', cap, ['*', SCALE, coef * s]]
+  }
+  const out = ['interpolate', ['exponential', 2], ['zoom']]
+  for (const [z, coef, cap] of RADIUS_STOPS) out.push(z, stop(coef, cap))
+  return out
+}
 
 const SOURCE_ID = 'just-air-data'
 
@@ -82,8 +100,13 @@ export function justAirLayerIds(config) {
  * @param {import('maplibre-gl').Map|null} map
  * @param {import('../contracts/project-config').ProjectConfig} config
  * @param {import('../contracts/events').AppState} state
+ * @param {object}                                                  [tuning]
+ *   Optional paint-tuning overrides (alphaFloor, alphaPower, r3, r4, r12,
+ *   maxRadiusPx). Defaults to DEFAULT_TUNING. Used by the dev controls
+ *   panel to let the user iterate on values without editing source.
  */
-export function useJustAirLayers(map, config, state) {
+export function useJustAirLayers(map, config, state, tuning) {
+  const t = { ...DEFAULT_TUNING, ...(tuning ?? {}) }
   const scales = config.scales
   const tilesUrl = config.tilesUrl
   const sourceLayer = config.sourceLayer ?? config.id
@@ -93,6 +116,8 @@ export function useJustAirLayers(map, config, state) {
   variableRef.current = variable
   const isDarkRef = useRef(state.colorScheme === 'dark')
   isDarkRef.current = state.colorScheme === 'dark'
+  const tuningRef = useRef(t)
+  tuningRef.current = t
 
   // colorRangeRef caches the p99 of |value − zero| for the active variable
   // so the alpha-in-colormap math uses the actual data spread rather than
@@ -142,7 +167,7 @@ export function useJustAirLayers(map, config, state) {
         if (!map.getLayer(layerId)) continue
         try {
           map.setPaintProperty(layerId, 'circle-color',
-            buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current))
+            buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current))
         } catch (_) { /* ignore */ }
       }
     }
@@ -167,7 +192,10 @@ export function useJustAirLayers(map, config, state) {
 
       for (const s of scales) {
         const layerId = `just-air-cells-${s.value}`
-        if (map.getLayer(layerId)) continue
+        // Always replace any existing layer with the same id so a stale
+        // minzoom/maxzoom from a prior HMR run (where React kept the
+        // useEffect cleanup from firing) doesn't shadow the current config.
+        if (map.getLayer(layerId)) map.removeLayer(layerId)
         try {
           const layerSpec = {
             id: layerId,
@@ -177,8 +205,8 @@ export function useJustAirLayers(map, config, state) {
             minzoom: s.minZoom ?? 0,
             filter: ['==', ['coalesce', ['to-number', ['get', '_scale']], 0], s.value],
             paint: {
-              'circle-radius':       RADIUS,
-              'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current),
+              'circle-radius':       buildRadiusExpr(tuningRef.current),
+              'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current),
               'circle-opacity':      buildOpacityExpr(variableRef.current, s),
               'circle-stroke-width': 0,
               'circle-blur':         0,
@@ -259,14 +287,16 @@ export function useJustAirLayers(map, config, state) {
       const layerId = `just-air-cells-${s.value}`
       if (!map.getLayer(layerId)) continue
       try {
-        map.setPaintProperty(layerId, 'circle-color',   buildColorExpr(variableRef.current, isDarkRef.current, recomputed))
+        map.setPaintProperty(layerId, 'circle-color',   buildColorExpr(variableRef.current, isDarkRef.current, recomputed, tuningRef.current))
         map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current, s))
+        map.setPaintProperty(layerId, 'circle-radius',  buildRadiusExpr(tuningRef.current))
       } catch (err) {
         console.error('[useJustAirLayers] setPaintProperty', layerId, err)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme])
+  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme,
+      t.alphaFloor, t.alphaPower, t.r3, t.r4, t.r6, t.r9, t.r12, t.radiusScale, t.maxRadiusPx])
 }
 
 // ── Paint expression builders ──────────────────────────────────────────────
@@ -300,7 +330,8 @@ function withAlpha(rgbStr, alpha) {
   return rgbStr
 }
 
-function buildColorExpr(variable, isDark, colorRange) {
+function buildColorExpr(variable, isDark, colorRange, tuning) {
+  const t_ = { ...DEFAULT_TUNING, ...(tuning ?? {}) }
   if (!variable) return '#888888'
   if (variable.type === 'categorical') {
     const expr = ['match', ['get', variable.id]]
@@ -310,16 +341,25 @@ function buildColorExpr(variable, isDark, colorRange) {
   }
 
   const zero = variable.domain?.zero ?? variable.domain?.min ?? 0
-  const max  = variable.domain?.max ?? 1
-  const min  = variable.domain?.min ?? 0
+  const cfgMax = variable.domain?.max ?? 1
+  const cfgMin = variable.domain?.min ?? 0
   // Prefer the data-derived p99 |value − zero| when available — without it
   // a variable whose config domain max is far above the actual data (e.g.
   // mortality at 1e-3 vs typical values 1e-5) renders at near-zero alpha
-  // across the whole map. Falls back to the configured domain for the
-  // first paint while features are still streaming in.
+  // and near-zero color saturation across the whole map. Falls back to the
+  // configured domain for the first paint while features are still
+  // streaming in.
   const dataDev = colorRange?.maxDev
-  const maxPosDev = dataDev ?? Math.max(max  - zero, 0.001)
-  const maxNegDev = dataDev ?? Math.max(zero - min,  0.001)
+  const maxPosDev = dataDev ?? Math.max(cfgMax - zero, 0.001)
+  const maxNegDev = dataDev ?? Math.max(zero - cfgMin, 0.001)
+  // The COLOR stops are spread across this range. When dataDev is known,
+  // we use it on both sides so colors saturate at the same p99 magnitude
+  // that already controls alpha — matching the auto-rescale behavior the
+  // user has been seeing for alpha (and removing the "everything is one
+  // faint shade" effect on variables with a wide configured domain like
+  // population: 0–5000 with typical values < 1000).
+  const min = variable.diverging ? (zero - maxNegDev) : zero
+  const max = zero + maxPosDev
 
   // Hard transparency floor on the bottom of the data range, then a
   // pow-1.4 ramp the rest of the way. Anything below ALPHA_FLOOR of the
@@ -336,13 +376,24 @@ function buildColorExpr(variable, isDark, colorRange) {
   // mid-range cells into a wash). Push the floor up to 0.40 so anything
   // below ~40 % of p99 magnitude drops to alpha 0; the remaining mid-to-
   // high tail rises through a t^1.8 ramp so only the hot spots saturate.
-  const ALPHA_FLOOR = 0.40
+  // Per-variable alpha overrides win when set. Lets the user tune mortality
+  // and population fades independently from the global PM-flavored defaults.
+  const ALPHA_FLOOR = variable.alphaFloor ?? t_.alphaFloor
+  const ALPHA_POWER = variable.alphaPower ?? t_.alphaPower
   function alphaForValue(v) {
-    const t = v >= zero ? (v - zero) / maxPosDev : (zero - v) / maxNegDev
-    const tc = Math.max(0, t)
+    const ti = v >= zero ? (v - zero) / maxPosDev : (zero - v) / maxNegDev
+    const tc = Math.max(0, ti)
     if (tc < ALPHA_FLOOR) return 0
     const tr = (tc - ALPHA_FLOOR) / (1 - ALPHA_FLOOR)
-    return Math.min(1, Math.pow(tr, 1.8))
+    return Math.min(1, Math.pow(tr, ALPHA_POWER))
+  }
+
+  // Cells that don't carry the active variable (e.g. 9 km national cells
+  // when the user picks income or % non-Hispanic white) get this wrapped
+  // around the color expression below so they render fully transparent
+  // instead of falling back to MapLibre's default black.
+  function gated(expr) {
+    return ['case', ['has', variable.id], expr, 'rgba(0,0,0,0)']
   }
 
   const expr = ['interpolate', ['linear'], ['get', variable.id]]
@@ -367,7 +418,7 @@ function buildColorExpr(variable, isDark, colorRange) {
       const a = alphaForValue(v)
       expr.push(v, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a.toFixed(3)})`)
     }
-    return expr
+    return gated(expr)
   }
 
   // Sequential: if the variable pins a `solidColor`, paint every stop in
@@ -381,7 +432,7 @@ function buildColorExpr(variable, isDark, colorRange) {
       const a = alphaForValue(v)
       expr.push(v, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a.toFixed(3)})`)
     }
-    return expr
+    return gated(expr)
   }
   const scale = buildColorScale(variable)
   for (let i = 0; i <= steps; i++) {
@@ -389,7 +440,7 @@ function buildColorExpr(variable, isDark, colorRange) {
     const a = alphaForValue(v)
     expr.push(v, withAlpha(scale(v), a))
   }
-  return expr
+  return gated(expr)
 }
 
 function hexToRgb(hex) {

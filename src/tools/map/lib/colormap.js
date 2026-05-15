@@ -58,8 +58,19 @@ const INTERPOLATORS = {
  * @returns {(value: number) => string}
  */
 export function buildColorScale(variable) {
-  const interp = INTERPOLATORS[variable.colormap] ?? interpolateGreens
+  const baseInterp = INTERPOLATORS[variable.colormap] ?? interpolateGreens
   const { min, max, zero = 0 } = variable.domain
+
+  // `colormapStart` re-maps the data range onto a sub-portion of the
+  // colormap, skipping the colormap's lowest stops. Useful when the
+  // user wants those low-end hues replaced by transparency rather
+  // than rendered — e.g. PM₂.₅ with `colormapStart: 0.35` displays
+  // values starting at YlOrRd's orange end (the pale-yellow lower
+  // third is dropped) and alpha-from-magnitude carries the fade.
+  const start = variable.colormapStart ?? 0
+  const interp = start > 0
+    ? (t) => baseInterp(start + (1 - start) * t)
+    : baseInterp
 
   if (variable.diverging) {
     return scaleDiverging(interp).domain([min, zero, max])

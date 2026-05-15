@@ -265,13 +265,23 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
               : Math.min(1, (value - (variable.domain?.min ?? 0)) /
                             Math.max((variable.domain?.max ?? 1) - (variable.domain?.min ?? 0), 0.001))
             const curved = Math.pow(tRaw, 0.5)
-            // Single-hue layers (solidColor pinned, or diverging w/ binary
-            // anchors) lean on opacity to convey magnitude. Gradient layers
-            // already carry magnitude in the color itself, so they paint at
-            // full opacity.
+            // Match the map's alphaFloor / alphaPower for this variable so
+            // the histogram fades to transparent in the same places the
+            // map cells do (e.g. PM₂.₅ goes invisible right at the WHO
+            // 5 µg/m³ threshold). Single-hue layers still get the curved
+            // sqrt ramp for legacy reasons.
+            const aFloor = variable.alphaFloor ?? 0
+            const aPower = variable.alphaPower ?? 1
+            let mapAlpha
+            if (aPower === 0) mapAlpha = 1
+            else if (tRaw < aFloor) mapAlpha = 0
+            else {
+              const tr = (tRaw - aFloor) / Math.max(1 - aFloor, 1e-6)
+              mapAlpha = Math.min(1, Math.pow(Math.max(tr, 0), aPower))
+            }
             const opacity = (variable.solidColor || hasAnchors)
               ? (0.10 + 0.90 * curved)
-              : 0.9
+              : mapAlpha
             return (
               <rect
                 key={i}

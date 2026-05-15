@@ -92,7 +92,6 @@ const config = {
       type: 'toggle',
       defaultValue: 'low',
       options: [
-        { id: 'ref',  label: 'Reference 2050' },
         { id: 'low',  label: 'Low CDR 2050' },
         { id: 'high', label: 'High CDR 2050' },
         { id: 'diff', label: 'Δ (High − Low)' },
@@ -114,19 +113,6 @@ const config = {
     // the paper figure) — otherwise alpha-by-magnitude would fade cells
     // near the threshold to transparent.
     // PM₂.₅ scenarios: BuRd diverging at the WHO 5 µg/m³ safe-air threshold.
-    {
-      id: 'pm25_ref',
-      label: 'PM₂.₅ — Reference 2050',
-      unit: 'µg/m³',
-      colormap: 'BuRd',
-      diverging: true,
-      domain: { min: 0, max: 10, zero: 5 },
-      alphaFloor: 0,
-      alphaPower: 0,
-      layer: 'pm25',
-      dimensionValues: { scenario: 'ref' },
-      description: 'Annual mean PM₂.₅ concentration under the 2050 Reference (no-CDR) scenario.',
-    },
     {
       id: 'pm25_low',
       label: 'PM₂.₅ — Low CDR 2050',
@@ -177,51 +163,37 @@ const config = {
     // Mortality: sequential MagmaR (cream → orange → wine-pink → dark wine
     // → black). colormapStart=0.15 skips the very palest top so the
     // rendered range starts at yellow-orange and walks through wine to
-    // black. Alpha fades the lowest values to transparent.
-    {
-      id: 'mort_ref',
-      label: 'Mortality — Reference 2050',
-      unit: 'deaths/pixel',
-      colormap: 'MagmaR',
-      colormapStart: 0.15,
-      diverging: false,
-      domain: { min: 0, max: 0.001 },
-      histogramMin: 0.0001,
-      alphaFloor: 0,
-      alphaPower: 0.8,
-      layer: 'mortality',
-      dimensionValues: { scenario: 'ref' },
-      description: 'Annual PM₂.₅-attributable deaths per pixel under the 2050 Reference (no-CDR) scenario.',
-    },
+    // black. `histogramMin` clips low-mortality cells from BOTH the chart
+    // and the map (cells below this value render at alpha 0).
     {
       id: 'mort_low',
       label: 'Mortality — Low CDR 2050',
-      unit: 'deaths/pixel',
+      unit: 'deaths/km²',
       colormap: 'MagmaR',
       colormapStart: 0.15,
       diverging: false,
-      domain: { min: 0, max: 0.001 },
-      histogramMin: 0.0001,
+      domain: { min: 0, max: 1 },
+      histogramMin: 0.05,
       alphaFloor: 0,
       alphaPower: 0.8,
       layer: 'mortality',
       dimensionValues: { scenario: 'low' },
-      description: 'Annual PM₂.₅-attributable deaths per pixel under Low-CDR 2050.',
+      description: 'Annual PM₂.₅-attributable death rate (deaths per km² of populated land) under Low-CDR 2050.',
     },
     {
       id: 'mort_high',
       label: 'Mortality — High CDR 2050',
-      unit: 'deaths/pixel',
+      unit: 'deaths/km²',
       colormap: 'MagmaR',
       colormapStart: 0.15,
       diverging: false,
-      domain: { min: 0, max: 0.001 },
-      histogramMin: 0.0001,
+      domain: { min: 0, max: 1 },
+      histogramMin: 0.05,
       alphaFloor: 0,
       alphaPower: 0.8,
       layer: 'mortality',
       dimensionValues: { scenario: 'high' },
-      description: 'Annual PM₂.₅-attributable deaths per pixel under High-CDR 2050.',
+      description: 'Annual PM₂.₅-attributable death rate under High-CDR 2050.',
     },
     // Mortality difference: sequential MagmaR to match the scenario maps.
     // The high − low difference is generally positive, so a sequential
@@ -229,11 +201,12 @@ const config = {
     {
       id: 'mort_diff',
       label: 'Δ Mortality (High − Low)',
-      unit: 'deaths/pixel',
+      unit: 'deaths/km²',
       colormap: 'MagmaR',
       colormapStart: 0.15,
       diverging: false,
-      domain: { min: 0, max: 0.0005 },
+      domain: { min: 0, max: 0.5 },
+      histogramMin: 0.01,
       alphaFloor: 0,
       alphaPower: 0.8,
       layer: 'mortality',
@@ -247,18 +220,21 @@ const config = {
     // than letting the histogram pile up at zero.
     {
       id: 'population',
-      label: 'Population',
-      unit: 'people/pixel',
+      label: 'Population density',
+      unit: 'people/km²',
       colormap: 'Greens',
       colormapStart: 0.25,
       diverging: false,
       domain: { min: 0, max: 5000 },
-      histogramMin: 50,
+      // Hard floor in both the chart and the map: cells below 1,000
+      // people/km² (rural and most exurbs) drop to alpha 0 so the
+      // remaining color reads as where populations actually concentrate.
+      histogramMin: 1000,
       alphaFloor: 0,
       alphaPower: 0.8,
       layer: 'pop_density',
       dimensionValues: {},
-      description: 'Estimated population per pixel.',
+      description: 'Estimated population density per km².',
     },
 
     // ── Median household income (city pixels + 3 km city bins only) ──────
@@ -277,20 +253,21 @@ const config = {
     },
 
     // ── Race & ethnicity (city pixels + 3 km city bins only) ─────────────
-    // Diverging at 50 so the color reads as "departure from a 50/50 mix":
-    // blue side = white majority, red side = non-white majority. This is
-    // visually intuitive as a "minority share" map without needing a
-    // derived 100 − percent_white field in the tiles.
+    // PuOr diverging at 50 so the layer reads visually distinct from PM
+    // (BuRd). Orange side (high values) = non-Hispanic white majority,
+    // purple side = non-white majority.
     {
       id: 'percent_white',
       label: '% non-Hispanic white',
-      unit: '%',
-      colormap: 'RdBu',
+      unit: '% of population',
+      colormap: 'PuOr',
       diverging: true,
       domain: { min: 0, max: 100, zero: 50 },
+      alphaFloor: 0,
+      alphaPower: 0,
       layer: 'minority',
       dimensionValues: {},
-      description: 'Percent of population identifying as non-Hispanic white. Diverging at 50%: blue = white majority; red = non-white majority.',
+      description: 'Share of the local population identifying as non-Hispanic white (PuOr diverging at 50%). Available only inside the 15 metro pixel grids — the national 9 km tier lacks these demographic data.',
     },
   ],
 

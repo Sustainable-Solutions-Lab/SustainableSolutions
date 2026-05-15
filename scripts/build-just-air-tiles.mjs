@@ -284,7 +284,13 @@ const CONUS_DIR = join(SRC, 'CONUS');
 async function loadConusGrid() {
   const byPixel = new Map();
 
-  async function joinFile(fname, valueCol, targetCol) {
+  // `divisor` lets us convert per-cell counts (deaths/cell, people/cell)
+  // into per-km² densities so the units match the city tier (which is
+  // already on a 1 km grid, so its raw values are already per km²).
+  // Each CONUS source pixel is ~9 km × 9 km = 81 km², so we divide by 81
+  // when reading mortality and population. PM₂.₅ is already an intensive
+  // measurement (concentration µg/m³), no division.
+  async function joinFile(fname, valueCol, targetCol, divisor = 1) {
     const path = join(CONUS_DIR, fname);
     if (!existsSync(path)) {
       console.warn(`  CONUS: missing ${fname}`);
@@ -309,17 +315,19 @@ async function loadConusGrid() {
         byPixel.set(pid, pix);
       }
       const v = Number(r[valueCol]);
-      if (Number.isFinite(v)) pix[targetCol] = v;
+      if (Number.isFinite(v)) pix[targetCol] = v / divisor;
     }
   }
+
+  const CELL_AREA_KM2 = 81; // each CONUS source pixel is ≈9 km × 9 km
 
   await joinFile('PM25_CONUS_2050LowCDR_out.csv',   'Values',     'pm25_low');
   await joinFile('PM25_CONUS_2050HighCDR_out.csv',  'Values',     'pm25_high');
   await joinFile('PM25_CONUS_2050REF_out.csv',      'Values',     'pm25_ref');
-  await joinFile('benmap_CONUS_2050LowCDR_out.csv', 'Mortality',  'mort_low');
-  await joinFile('benmap_CONUS_2050HighCDR_out.csv','Mortality',  'mort_high');
-  await joinFile('benmap_CONUS_2050REF_out.csv',    'Mortality',  'mort_ref');
-  await joinFile('population_CONUS.csv',            'Population', 'population');
+  await joinFile('benmap_CONUS_2050LowCDR_out.csv', 'Mortality',  'mort_low',   CELL_AREA_KM2);
+  await joinFile('benmap_CONUS_2050HighCDR_out.csv','Mortality',  'mort_high',  CELL_AREA_KM2);
+  await joinFile('benmap_CONUS_2050REF_out.csv',    'Mortality',  'mort_ref',   CELL_AREA_KM2);
+  await joinFile('population_CONUS.csv',            'Population', 'population', CELL_AREA_KM2);
 
   return Array.from(byPixel.values());
 }

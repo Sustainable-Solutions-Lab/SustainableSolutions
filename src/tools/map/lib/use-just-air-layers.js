@@ -85,9 +85,18 @@ function buildRadiusExpr(tuning) {
     const cap = overrideCap != null && overrideCap > 0 ? overrideCap : defaultCap
     return ['min', cap, ['*', SCALE, coef * s]]
   }
-  const out = ['interpolate', ['exponential', 2], ['zoom']]
-  for (const [z, coef, cap] of RADIUS_STOPS) out.push(z, stop(coef, cap))
-  return out
+  const nationalCurve = ['interpolate', ['exponential', 2], ['zoom']]
+  for (const [z, coef, cap] of RADIUS_STOPS) nationalCurve.push(z, stop(coef, cap))
+  // City tiers (1 km native pixels, 3 km bins) get fixed pixel radii
+  // tuned to read clearly at their respective zoom bands — 3 km cells
+  // at 1.25 px (z 6–7), 1 km cells at 2.5 px (z 7–7.5). National tiers
+  // (36 / 18 / 9 km) keep the per-zoom curve.
+  return [
+    'case',
+    ['==', SCALE, 1], 2.5 * s,
+    ['==', SCALE, 3], 1.25 * s,
+    nationalCurve,
+  ]
 }
 
 const SOURCE_ID = 'just-air-data'
@@ -380,7 +389,14 @@ function buildColorExpr(variable, isDark, colorRange, tuning) {
   // and population fades independently from the global PM-flavored defaults.
   const ALPHA_FLOOR = variable.alphaFloor ?? t_.alphaFloor
   const ALPHA_POWER = variable.alphaPower ?? t_.alphaPower
+  // `histogramMin` doubles as a hard cutoff on the map for sequential
+  // variables — any cell whose value falls below this paints fully
+  // transparent. Keeps the same threshold synchronized with what the
+  // sidebar chart clips out, so the user sees the same "above-floor"
+  // population on both.
+  const HARD_MIN = (!variable.diverging && variable.histogramMin != null) ? variable.histogramMin : null
   function alphaForValue(v) {
+    if (HARD_MIN != null && v < HARD_MIN) return 0
     const ti = v >= zero ? (v - zero) / maxPosDev : (zero - v) / maxNegDev
     const tc = Math.max(0, ti)
     if (tc < ALPHA_FLOOR) return 0

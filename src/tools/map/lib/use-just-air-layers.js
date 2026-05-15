@@ -47,21 +47,33 @@ import { getActiveVariable } from './get-active-variable.js'
 // City tiers (1 km / 3 km) get fixed pixel radii independent of zoom —
 // see `tierBranch` below. radiusScale (dev panel) multiplies every
 // value.
+// Per-zoom radius schedule for the 36 / 18 / 9 km tiers. Stops are placed
+// so circle radius roughly doubles with each zoom step inside a tier
+// (matching how the underlying grid cell doubles in screen-pixel size on
+// Mercator), giving "as large as possible without runaway overlap" at
+// every zoom. Tight stop pairs at z=3.99/4.00, 4.99/5.00 keep the LOD
+// boundaries reading as instant snaps even though we use a linear
+// interpolate everywhere else.
 const NATIONAL_RADIUS_STOPS = [
-  // z = 3.0–3.8: 36 km supercells — smooth ramp
+  // 36 km supercells — z 3.0–3.8 (user-iterated values)
   [3.0,  2.70,  4],
   [3.2,  2.80,  4],
   [3.4,  3.15,  4],
   [3.6,  3.75,  4],
   [3.8,  4.35,  4],
   [3.99, 4.35,  4],
-  // z = 4.0–4.9: 18 km mid tier — smooth growth
+  // 18 km mid tier — z 4.0–4.9 (user-iterated)
   [4.0,  2.30, 12],
   [4.9,  3.75, 12],
   [4.99, 3.75, 12],
-  // z = 5.0–8.0: 9 km national — smooth growth, cap rises with it
-  [5.0,  2.00, 17],
-  [8.0, 17.00, 17],
+  // 9 km national — z 5.0–8.0, cell-size-proportional growth (~doubling
+  // per zoom). Anchored to the user's z=5 (2 px) and z=8 (17 px) values,
+  // with intermediate stops at z=6 and z=7 to approximate exponential
+  // growth via linear segments.
+  [5.0,   2.00, 17],
+  [6.0,   4.10, 17],
+  [7.0,   8.40, 17],
+  [8.0,  17.00, 17],
 ]
 
 export const DEFAULT_TUNING = {
@@ -263,12 +275,16 @@ export function useJustAirLayers(map, config, state, tuning) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, config])
 
-  // ── Paint repaint when active variable / scheme flips ──────────────────
+  // ── Paint repaint when the active variable / scheme flips ─────────────
+  // Variable change is the only thing that invalidates the cached p99 —
+  // a different field has a different distribution, so we drop the lock
+  // and recompute from currently visible features. Tuning changes (alpha
+  // floor / power / radius) do NOT touch colorRange, only re-emit paint.
+  // That stops the bug where wiggling alphaFloor would "stick" because
+  // every wiggle also reshuffled the color rescale.
   useEffect(() => {
     if (!map || !scales) return
     if (!map.isStyleLoaded()) return
-    // New variable means new value distribution — drop the cached p99 so
-    // the next sourcedata event recomputes for the new column.
     colorRangeRef.current = null
     colorRangeLockedRef.current = false
     let recomputed = null
@@ -306,8 +322,27 @@ export function useJustAirLayers(map, config, state, tuning) {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme,
-      t.alphaFloor, t.alphaPower, t.r3, t.r4, t.r6, t.r9, t.r12, t.radiusScale, t.maxRadiusPx])
+  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme])
+
+  // ── Paint repaint when only the tuning sliders move ───────────────────
+  // Re-emits circle-color / circle-radius using the EXISTING colorRange,
+  // so wiggling alphaFloor / alphaPower / radiusScale is a pure alpha or
+  // radius adjustment with no hidden side-effects on the color rescale.
+  useEffect(() => {
+    if (!map || !scales) return
+    if (!map.isStyleLoaded()) return
+    for (const s of scales) {
+      const layerId = `just-air-cells-${s.value}`
+      if (!map.getLayer(layerId)) continue
+      try {
+        map.setPaintProperty(layerId, 'circle-color',  buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current))
+        map.setPaintProperty(layerId, 'circle-radius', buildRadiusExpr(tuningRef.current))
+      } catch (err) {
+        console.error('[useJustAirLayers] setPaintProperty (tuning)', layerId, err)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, t.alphaFloor, t.alphaPower, t.radiusScale, t.maxRadiusPx])
 }
 
 // ── Paint expression builders ──────────────────────────────────────────────

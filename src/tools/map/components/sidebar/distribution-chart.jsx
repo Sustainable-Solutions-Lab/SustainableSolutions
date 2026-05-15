@@ -332,8 +332,11 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
           {showHighGT ? '>' : ''}{formatValue(dataMax, '')}
         </span>
 
-        {/* Zero crossover label — only when diverging and zero falls well inside range */}
-        {zeroCrossoverPct !== null && zeroCrossoverPct > 8 && zeroCrossoverPct < 92 && (
+        {/* Zero crossover label — only when diverging and zero falls
+            well inside the range. The 18/82 thresholds leave room on
+            either side so the centered "5.0" doesn't crash into the
+            ">7k" or "<20.0" edge labels. */}
+        {zeroCrossoverPct !== null && zeroCrossoverPct > 18 && zeroCrossoverPct < 82 && (
           <span
             className="absolute font-mono text-[13px] text-ink-3 leading-none whitespace-nowrap"
             style={{ left: `${zeroCrossoverPct}%`, transform: 'translateX(-50%)' }}

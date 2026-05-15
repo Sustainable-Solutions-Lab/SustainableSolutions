@@ -72,13 +72,13 @@ const config = {
     },
     {
       id: 'minority',
-      label: 'Race & ethnicity',
+      label: 'Race & ethnicity (cities only)',
       description: 'Percent of population identifying as non-Hispanic white. Available within the 15 metros only.',
       dimensionIds: [],
     },
     {
       id: 'income',
-      label: 'Income',
+      label: 'Income (cities only)',
       description: 'Median household income (USD). Available within the 15 metros only.',
       dimensionIds: [],
     },
@@ -234,10 +234,10 @@ const config = {
       colormapStart: 0.25,
       diverging: false,
       domain: { min: 0, max: 5000 },
-      // Hard floor in both the chart and the map: cells below 1,000
-      // people/km² (rural and most exurbs) drop to alpha 0 so the
-      // remaining color reads as where populations actually concentrate.
-      histogramMin: 1000,
+      // Hard floor in both the chart and the map: cells below 200
+      // people/km² (sparse rural land) drop to alpha 0. Suburbs and any
+      // moderately settled area survive the cut.
+      histogramMin: 200,
       alphaFloor: 0,
       alphaPower: 0.8,
       layer: 'pop_density',
@@ -267,7 +267,7 @@ const config = {
     {
       id: 'percent_white',
       label: '% non-Hispanic white',
-      unit: '% of population',
+      unit: '% non-Hispanic white',
       colormap: 'PuOr',
       diverging: true,
       domain: { min: 0, max: 100, zero: 50 },

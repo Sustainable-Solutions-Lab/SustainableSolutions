@@ -172,12 +172,14 @@ function MiniHistogram({ values, variable, isDark }) {
         />
       )}
 
-      {/* Axis labels */}
+      {/* Axis labels — value only (the unit is shown in the surrounding
+          stats panel; repeating it on every axis label in a narrow
+          chart caused the two ends to overlap visually). */}
       <text x={0} y={HIST_H + 11} fontSize={9} fill={labelColor} fontFamily={FONT_MONO}>
-        {formatValue(min, variable?.unit ?? '')}
+        {formatValue(min, '')}
       </text>
       <text x={HIST_W} y={HIST_H + 11} fontSize={9} fill={labelColor} fontFamily={FONT_MONO} textAnchor='end'>
-        {formatValue(max, variable?.unit ?? '')}
+        {formatValue(max, '')}
       </text>
     </svg>
   )

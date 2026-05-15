@@ -108,35 +108,36 @@ const config = {
     // PM2.5 — sequential warm scale for raw concentrations.
     // histogramMin clips the long low-value tail out of the sidebar histogram
     // so the chart focuses on the elevated-PM portion that matters.
+    // PM₂.₅ low/high: diverging at the WHO 5 µg/m³ safe-air threshold.
+    // Dark blue below 5 (safer), neutral at 5, dark red above 5 (riskier).
+    // alphaPower=0 keeps every cell fully opaque (continuous gradient like
+    // the paper figure) — otherwise alpha-by-magnitude would fade cells
+    // near the threshold to transparent.
     {
       id: 'pm25_low',
       label: 'PM₂.₅ — Low CDR',
       unit: 'µg/m³',
-      colormap: 'YlOrRd',
-      // Skip the pale-yellow lower third of YlOrRd; rendered cells start
-      // at orange and deepen to red. Low concentrations fade through
-      // alpha (the alphaForValue curve in use-just-air-layers.js) rather
-      // than through a yellow that's near the paper background.
-      colormapStart: 0.30,
-      diverging: false,
-      domain: { min: 0, max: 15 },
-      histogramMin: 8,
+      colormap: 'BuRd',
+      diverging: true,
+      domain: { min: 0, max: 10, zero: 5 },
+      alphaFloor: 0,
+      alphaPower: 0,
       layer: 'pm25',
       dimensionValues: { scenario: 'low' },
-      description: 'Annual mean PM₂.₅ concentration under the Low-CDR scenario.',
+      description: 'Annual mean PM₂.₅ concentration under the Low-CDR scenario, diverging at the WHO 5 µg/m³ safe-air threshold.',
     },
     {
       id: 'pm25_high',
       label: 'PM₂.₅ — High CDR',
       unit: 'µg/m³',
-      colormap: 'YlOrRd',
-      colormapStart: 0.30,
-      diverging: false,
-      domain: { min: 0, max: 15 },
-      histogramMin: 8,
+      colormap: 'BuRd',
+      diverging: true,
+      domain: { min: 0, max: 10, zero: 5 },
+      alphaFloor: 0,
+      alphaPower: 0,
       layer: 'pm25',
       dimensionValues: { scenario: 'high' },
-      description: 'Annual mean PM₂.₅ concentration under the High-CDR scenario.',
+      description: 'Annual mean PM₂.₅ concentration under the High-CDR scenario, diverging at the WHO 5 µg/m³ safe-air threshold.',
     },
     {
       id: 'pm25_diff',
@@ -155,12 +156,16 @@ const config = {
     // Mortality — distinct colormap from PM₂.₅ so the user has a quick
     // visual cue which variable they're looking at. Purples reads
     // semantically as "deaths" without competing with PM₂.₅'s warm scale.
+    // Mortality: sequential MagmaR (cream → orange → wine-pink → dark wine
+    // → black). colormapStart=0.15 skips the very palest top so the
+    // rendered range starts at yellow-orange and walks through wine to
+    // black. Alpha fades the lowest values to transparent.
     {
       id: 'mort_low',
       label: 'Mortality — Low CDR',
       unit: 'deaths/pixel',
-      colormap: 'Purples',
-      solidColor: '#a020f0',
+      colormap: 'MagmaR',
+      colormapStart: 0.15,
       diverging: false,
       domain: { min: 0, max: 0.001 },
       histogramMin: 0.0001,
@@ -174,8 +179,8 @@ const config = {
       id: 'mort_high',
       label: 'Mortality — High CDR',
       unit: 'deaths/pixel',
-      colormap: 'Purples',
-      solidColor: '#a020f0',
+      colormap: 'MagmaR',
+      colormapStart: 0.15,
       diverging: false,
       domain: { min: 0, max: 0.001 },
       histogramMin: 0.0001,
@@ -306,9 +311,9 @@ const config = {
     // 9 km runs through z 6.5.
     { value: 36, minZoom: 2, maxZoom: 4 },     // z 2–3: CONUS overview supercells
     { value: 18, minZoom: 4, maxZoom: 5 },     // z 4:   mid tier
-    { value: 9,  minZoom: 5 },                  // z 5+:  9 km grid (metro cells stop at z 6 in tiles)
-    { value: 3,  minZoom: 6 },                  // z 6+ inside metros (clean snap)
-    { value: 1,  minZoom: 9 },                  // unreached at camera maxZoom 6.5; kept for future
+    { value: 9,  minZoom: 5 },                  // z 5+:  9 km grid (city-covered cells drop at z=6)
+    { value: 3,  minZoom: 6, maxZoom: 7 },     // z 6:   3 km city bins (clean handoff to 1 km at z=7)
+    { value: 1,  minZoom: 7 },                  // z 7+:  native 1 km city pixels
   ],
   methodsPath: 'just-air/methods.mdx',
 };

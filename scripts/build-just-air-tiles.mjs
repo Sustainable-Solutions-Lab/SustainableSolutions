@@ -253,7 +253,9 @@ function cityPixelToPoint(p, city) {
   if (p.income != null)        props.income        = round(p.income, 0);
   if (p.percent_white != null) props.percent_white = round(p.percent_white, 1);
   if (p.population != null)    props.population    = round(p.population, 1);
-  return makePoint(p.lng, p.lat, props, { minzoom: 9, maxzoom: 14 });
+  // 1 km city pixels appear from z=7 onward — the 3 km bins own z=6 only,
+  // then hand off to native resolution.
+  return makePoint(p.lng, p.lat, props, { minzoom: 7, maxzoom: 14 });
 }
 
 // ── Real CONUS 9 km grid loader ─────────────────────────────────────────────
@@ -428,11 +430,10 @@ function aggregateCityTo3km(pixels, city) {
     if (props.mort_high != null && props.mort_low != null) {
       props.mort_diff = round(props.mort_high - props.mort_low, 6);
     }
-    // 3 km city bins available from z=5 (so they're in the z=5 tile that
-    // MapLibre uses through z=5.99). Layer config gates visibility at
-    // z=5.8 to time the hand-off from 9 km. maxzoom=7 leaves headroom
-    // past the current camera max (z=6.5) without bloating tile size.
-    out.push(makePoint(b.lng / n, b.lat / n, props, { minzoom: 5, maxzoom: 7 }));
+    // 3 km city bins: in z=5 and z=6 tiles only (layer gates display at
+    // z=6). At z=7, the 1 km native pixels take over, so the 3 km tier
+    // doesn't need to be in z=7 tiles.
+    out.push(makePoint(b.lng / n, b.lat / n, props, { minzoom: 5, maxzoom: 6 }));
   }
   return out;
 }

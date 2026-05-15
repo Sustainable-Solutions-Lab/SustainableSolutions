@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { buildColorScale } from './colormap.js'
+import { buildColorScale, INTERPOLATORS } from './colormap.js'
 import { getActiveVariable } from './get-active-variable.js'
 
 // Tiling-exact base radius for a 1 km cell — the natural Mercator-derived
@@ -400,23 +400,46 @@ function buildColorExpr(variable, isDark, colorRange, tuning) {
   const steps = 24
 
   if (variable.diverging) {
-    // Binary positive/negative anchor colors. A project can pin them per
-    // variable via `solidColor` (positive side) and `solidColorNegative`
-    // (negative side). Falls back to Firefuels' blue/red anchors, mode-
-    // aware, with the colormap-name convention deciding which side is
-    // which (RdBu → max=blue, BuRd → max=red).
-    const bluePos = isDark ? [67, 147, 195] : [33, 102, 172]
-    const redPos  = isDark ? [214, 96, 77]  : [178, 24, 43]
-    const posIsBlue = variable.colormap !== 'BuRd'
-    const fallbackPos = posIsBlue ? bluePos : redPos
-    const fallbackNeg = posIsBlue ? redPos  : bluePos
-    const posRgb = variable.solidColor ? hexToRgb(variable.solidColor) : fallbackPos
-    const negRgb = variable.solidColorNegative ? hexToRgb(variable.solidColorNegative) : fallbackNeg
+    // Two modes for diverging:
+    //   (a) Binary anchors — when the variable pins `solidColor` or
+    //       `solidColorNegative`, the two halves render as those two
+    //       colors only (no continuous gradient). Existing diff layers
+    //       use this for the "blue = saves lives, red = adds deaths"
+    //       look.
+    //   (b) Continuous colormap — when neither anchor is set, the
+    //       configured `colormap` is interpolated end-to-end with
+    //       neutral at the midpoint. Used for PM₂.₅ low/high with
+    //       zero=5 µg/m³ (WHO threshold) so the map reads as a smooth
+    //       dark-blue → white → dark-red ramp.
+    const hasAnchors = variable.solidColor != null || variable.solidColorNegative != null
+    if (hasAnchors) {
+      const bluePos = isDark ? [67, 147, 195] : [33, 102, 172]
+      const redPos  = isDark ? [214, 96, 77]  : [178, 24, 43]
+      const posIsBlue = variable.colormap !== 'BuRd'
+      const fallbackPos = posIsBlue ? bluePos : redPos
+      const fallbackNeg = posIsBlue ? redPos  : bluePos
+      const posRgb = variable.solidColor ? hexToRgb(variable.solidColor) : fallbackPos
+      const negRgb = variable.solidColorNegative ? hexToRgb(variable.solidColorNegative) : fallbackNeg
+      for (let i = 0; i <= steps; i++) {
+        const v = min + (i / steps) * (max - min)
+        const rgb = v >= zero ? posRgb : negRgb
+        const a = alphaForValue(v)
+        expr.push(v, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a.toFixed(3)})`)
+      }
+      return gated(expr)
+    }
+    // Continuous diverging via the configured colormap. The (i / steps)
+    // index drives the colormap from one extreme to the other; the
+    // rescaled min/max are symmetric around zero so step 0.5 is exactly
+    // the zero crossing (neutral color in BuRd / RdBu / PuOr).
+    const baseInterp = INTERPOLATORS[variable.colormap] ?? INTERPOLATORS.RdBu
+    const cmStart = variable.colormapStart ?? 0
+    const interp = cmStart > 0 ? (t) => baseInterp(cmStart + (1 - cmStart) * t) : baseInterp
     for (let i = 0; i <= steps; i++) {
       const v = min + (i / steps) * (max - min)
-      const rgb = v >= zero ? posRgb : negRgb
+      const ti = i / steps
       const a = alphaForValue(v)
-      expr.push(v, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a.toFixed(3)})`)
+      expr.push(v, withAlpha(interp(ti), a))
     }
     return gated(expr)
   }

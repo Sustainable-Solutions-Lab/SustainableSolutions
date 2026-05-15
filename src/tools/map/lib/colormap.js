@@ -14,13 +14,16 @@ import {
   interpolateGreens,
   interpolateOranges,
   interpolateYlOrRd,
+  interpolateOrRd,
   interpolateBlues,
   interpolatePurples,
   interpolateRdPu,
   interpolateBuPu,
+  interpolateInferno,
+  interpolateMagma,
 } from 'd3-scale-chromatic'
 
-const INTERPOLATORS = {
+export const INTERPOLATORS = {
   // Standard RdBu: t=0 → red (costs > benefits), t=1 → blue (benefits > costs)
   RdBu: interpolateRdBu,
   // Inverted RdBu: t=0 → blue, t=1 → red. Used by Just Air's diff layers where
@@ -34,6 +37,17 @@ const INTERPOLATORS = {
   Purples: interpolatePurples,
   RdPu: interpolateRdPu,
   BuPu: interpolateBuPu,
+  OrRd: interpolateOrRd,
+  // Magma + reversed. Reversed reads from cream (low) through orange and
+  // wine-pink to deep wine-black (high) — the closest stock palette to the
+  // mortality figure in the companion paper (white → pink → red → wine
+  // → black).
+  Magma:  interpolateMagma,
+  MagmaR: (t) => interpolateMagma(1 - t),
+  // Inferno + reversed. Inferno goes black → purple → red → orange → yellow;
+  // reversed is yellow → orange → red → purple → black.
+  Inferno:  interpolateInferno,
+  InfernoR: (t) => interpolateInferno(1 - t),
   // Blue half of RdBu — for benefit variables: low=light blue, high=deep blue
   // Starts at 0.62 (not 0.5/white) so even low values show a visible blue
   RdBuBlue: (t) => interpolateRdBu(0.62 + t * 0.38),

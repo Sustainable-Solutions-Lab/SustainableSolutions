@@ -340,13 +340,14 @@ function fieldDecimals(name) {
   return 3;
 }
 
-function nationalCellToPoint(c, cityBboxes) {
-  // 9 km cells emitted at z=5 onward everywhere (inside metros too). The
-  // 3 km city bins overlay them inside metro bboxes from z=6, so where
-  // 3 km data exists the user sees that on top; where it doesn't (a
-  // bbox's edges, water-adjacent areas, etc.) the 9 km cell shows
-  // through and fills the white space.
-  const tcZoom = { minzoom: 5 };
+function nationalCellToPoint(c, cityBboxes, isCityCovered) {
+  // 9 km cells everywhere from z=5 — *except* cells that fall inside the
+  // footprint of high-resolution city pixels, which are capped at z=5 so
+  // they vanish at z=6 once the 3 km city bins are visible. The result
+  // at z≥6 inside metros: 3 km bins where city pixels exist, 9 km cells
+  // filling the gaps (water edges, bbox margins, etc.) with no halo
+  // overlap between the two scales.
+  const tcZoom = isCityCovered ? { minzoom: 5, maxzoom: 5 } : { minzoom: 5 };
   const props = { _scale: 9 };
   for (const f of NATIONAL_FIELDS) {
     if (c[f] != null && Number.isFinite(c[f])) props[f] = round(c[f], fieldDecimals(f));
@@ -518,6 +519,27 @@ async function main() {
   const fh = await fs.open(mergedGeoJson, 'w');
 
   // ── Cities ─────────────────────────────────────────────────────────────
+  // Also build a spatial index of every emitted city-pixel centroid so the
+  // national 9 km emission loop below can suppress cells that fall inside
+  // high-resolution coverage. Bucket size = 0.04° (~4 km); we test a 3×3
+  // neighborhood per national cell so any city pixel within ~5 km of the
+  // 9 km cell centroid flags it as covered.
+  const COVERAGE_BUCKET = 0.04;
+  const cityCoverage = new Set();
+  function addCoverage(lng, lat) {
+    cityCoverage.add(`${Math.floor(lng / COVERAGE_BUCKET)}:${Math.floor(lat / COVERAGE_BUCKET)}`);
+  }
+  function isCityCovered(lng, lat) {
+    const cx = Math.floor(lng / COVERAGE_BUCKET);
+    const cy = Math.floor(lat / COVERAGE_BUCKET);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (cityCoverage.has(`${cx + dx}:${cy + dy}`)) return true;
+      }
+    }
+    return false;
+  }
+
   console.log('Loading cities…');
   const manifest = [];
   let cityCount = 0;
@@ -532,6 +554,7 @@ async function main() {
       if (!f) continue;
       await fh.write(JSON.stringify(f) + '\n');
       const [lng, lat] = f.geometry.coordinates;
+      addCoverage(lng, lat);
       if (lng < minLng) minLng = lng; if (lng > maxLng) maxLng = lng;
       if (lat < minLat) minLat = lat; if (lat > maxLat) maxLat = lat;
       n++;
@@ -566,11 +589,15 @@ async function main() {
   const nationalCellsAll = await loadConusGrid();
   const nationalCells = nationalCellsAll.filter((c) => isInsideConus(c.lng, c.lat));
   let inMetroCount = 0;
+  let coveredCount = 0;
   for (const c of nationalCells) {
-    if (pointInAnyBbox(c.lng, c.lat, cityBboxesForFilter)) inMetroCount++;
-    await fh.write(JSON.stringify(nationalCellToPoint(c, cityBboxesForFilter)) + '\n');
+    const insideMetro = pointInAnyBbox(c.lng, c.lat, cityBboxesForFilter);
+    if (insideMetro) inMetroCount++;
+    const covered = insideMetro && isCityCovered(c.lng, c.lat);
+    if (covered) coveredCount++;
+    await fh.write(JSON.stringify(nationalCellToPoint(c, cityBboxesForFilter, covered)) + '\n');
   }
-  console.log(`National 9 km: ${nationalCells.length} cells  (dropped ${nationalCellsAll.length - nationalCells.length} non-CONUS, ${inMetroCount} inside metro bboxes capped at z6)`);
+  console.log(`National 9 km: ${nationalCells.length} cells  (dropped ${nationalCellsAll.length - nationalCells.length} non-CONUS, ${inMetroCount} inside metro bboxes — of which ${coveredCount} city-covered → capped at z=5 so 3 km bins take over without overlap)`);
 
   // ── National 18 km mid tier (CONUS-clipped) ────────────────────────────
   // Bridges supercells → 9 km grid so z=4 is never blank.

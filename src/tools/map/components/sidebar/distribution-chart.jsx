@@ -35,13 +35,23 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
 
   // Build a color scale using the actual data range so colors are vivid,
   // not washed out by a domain that is wider than the real data.
-  // Diverging variables use binary color (sign only) + opacity for magnitude —
-  // matching the map. No D3 scale needed; scale is only used for sequential variables.
+  // Diverging variables now go through the same colormap path so the
+  // chart matches the map's continuous gradient (the older "binary
+  // anchor by sign" mode was correct for diff layers with explicit
+  // solidColor pins, but PM₂.₅ low/high are now BuRd-diverging at the
+  // WHO threshold with no pinned anchors, and the chart should show
+  // the full gradient there too).
   const isDiverging = variable?.diverging
+  const hasAnchors  = variable?.solidColor != null || variable?.solidColorNegative != null
+  const useGradient = !isDiverging || !hasAnchors
   const zeroRef = variable?.domain?.zero ?? 0
 
   const scale = useMemo(() => {
-    if (!variable || isCategorical || isDiverging) return null
+    if (!variable || isCategorical) return null
+    // For diverging, keep the configured (symmetric-about-zero) domain so
+    // the gradient pivots correctly — clipping to p1/p99 would shift the
+    // neutral point off zero when the distribution is skewed.
+    if (isDiverging) return buildColorScale(variable)
     const sorted_ = allValues?.length ? [...allValues].sort((a, b) => a - b) : []
     if (sorted_.length < 2) return buildColorScale(variable)
     const p01 = sorted_[Math.floor(sorted_.length * 0.01)] ?? sorted_[0]
@@ -226,10 +236,10 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
           {bars.map((value, i) => {
             const y = Math.min(valueToY(value), zeroY)
             const h = Math.abs(valueToY(value) - zeroY)
-            const fill = isDiverging
+            const fill = (isDiverging && hasAnchors)
               ? (value >= zeroRef
-                  ? (variable.solidColor       ?? (isDark ? '#4393c3' : '#2166ac'))
-                  : (variable.solidColorNegative ?? (isDark ? '#d6604d' : '#b2182b')))
+                  ? variable.solidColor
+                  : (variable.solidColorNegative ?? variable.solidColor))
               : (variable.solidColor ?? scale(value))
             const tRaw = isDiverging
               ? (value >= zeroRef
@@ -238,7 +248,11 @@ export function DistributionChart({ variable, allValues, percentileRange, dispat
               : Math.min(1, (value - (variable.domain?.min ?? 0)) /
                             Math.max((variable.domain?.max ?? 1) - (variable.domain?.min ?? 0), 0.001))
             const curved = Math.pow(tRaw, 0.5)
-            const opacity = variable.solidColor || isDiverging
+            // Single-hue layers (solidColor pinned, or diverging w/ binary
+            // anchors) lean on opacity to convey magnitude. Gradient layers
+            // already carry magnitude in the color itself, so they paint at
+            // full opacity.
+            const opacity = (variable.solidColor || hasAnchors)
               ? (0.10 + 0.90 * curved)
               : 0.9
             return (

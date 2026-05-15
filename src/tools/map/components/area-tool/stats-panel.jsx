@@ -43,8 +43,14 @@ function MiniHistogram({ values, variable, isDark }) {
     }
   }, [values])
 
+  // Diverging variables with no pinned `solidColor` anchors get a full
+  // colormap-gradient scale just like sequential variables, so the mini
+  // histogram matches the map's continuous BuRd / MagmaR ramp instead of
+  // falling back to the binary blue/red POS/NEG anchors.
+  const hasAnchors = variable?.solidColor != null || variable?.solidColorNegative != null
   const scale = useMemo(() => {
-    if (!variable || variable.diverging || !values?.length) return null
+    if (!variable || !values?.length) return null
+    if (variable.diverging) return buildColorScale(variable)
     return buildColorScale({ ...variable, domain: { min: p01, max: p99val } })
   }, [variable, values, p01, p99val])
 
@@ -93,7 +99,7 @@ function MiniHistogram({ values, variable, isDark }) {
     }
   }, [values, variable, p01, p99val])
 
-  if (!bins.length || (!scale && !variable?.diverging)) return null
+  if (!bins.length || !scale) return null
 
   const maxCount = Math.max(...bins, 1)
   const barW = HIST_W / N_BINS
@@ -114,17 +120,20 @@ function MiniHistogram({ values, variable, isDark }) {
         const binMid = min + (i + 0.5) * binWidth
         const barH = (count / maxCount) * HIST_H
 
-        // Diverging: binary color + asymmetric opacity (matching statewide chart)
-        // Sequential: continuous colormap, flat opacity
-        const fill = variable.diverging
+        // Pinned-anchor diverging (e.g. older diff layers with solidColor /
+        // solidColorNegative): binary POS/NEG fill + asymmetric opacity.
+        // Everything else (continuous gradient): just `scale(binMid)` at
+        // flat opacity, matching the map's per-stop color.
+        const useAnchors = variable.diverging && hasAnchors
+        const fill = useAnchors
           ? (binMid >= zero ? POS_COLOR : NEG_COLOR)
           : scale(binMid)
-        const tRaw = variable.diverging
+        const tRaw = useAnchors
           ? (binMid >= zero
               ? Math.min(1, (binMid - zero) / maxPosDev)
               : Math.min(1, (zero - binMid) / maxNegDev))
           : 1
-        const opacity = variable.diverging ? (0.15 + 0.85 * Math.pow(tRaw, 0.4)) : 0.85
+        const opacity = useAnchors ? (0.15 + 0.85 * Math.pow(tRaw, 0.4)) : 0.85
 
         return (
           <rect

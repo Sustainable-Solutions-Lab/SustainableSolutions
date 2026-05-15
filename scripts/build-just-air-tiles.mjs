@@ -210,6 +210,14 @@ async function loadCity(city) {
     }
   }
 
+  // Clip out city pixels that fall outside the CONUS state polygons. The
+  // input model grid often extends a short distance past the coastline
+  // (NY harbour, Long Island Sound, Chesapeake Bay, etc.); without this
+  // those pixels render as cells offshore of every state outline.
+  for (const [pid, pix] of byPixel) {
+    if (!isInsideConus(pix.lng, pix.lat)) byPixel.delete(pid);
+  }
+
   return { city, pixels: byPixel };
 }
 

@@ -93,8 +93,9 @@ const config = {
       type: 'toggle',
       defaultValue: 'low',
       options: [
-        { id: 'low',  label: 'Low CDR' },
-        { id: 'high', label: 'High CDR' },
+        { id: 'ref',  label: 'Reference 2050' },
+        { id: 'low',  label: 'Low CDR 2050' },
+        { id: 'high', label: 'High CDR 2050' },
         { id: 'diff', label: 'Δ (High − Low)' },
       ],
     },
@@ -113,9 +114,23 @@ const config = {
     // alphaPower=0 keeps every cell fully opaque (continuous gradient like
     // the paper figure) — otherwise alpha-by-magnitude would fade cells
     // near the threshold to transparent.
+    // PM₂.₅ scenarios: BuRd diverging at the WHO 5 µg/m³ safe-air threshold.
+    {
+      id: 'pm25_ref',
+      label: 'PM₂.₅ — Reference 2050',
+      unit: 'µg/m³',
+      colormap: 'BuRd',
+      diverging: true,
+      domain: { min: 0, max: 10, zero: 5 },
+      alphaFloor: 0,
+      alphaPower: 0,
+      layer: 'pm25',
+      dimensionValues: { scenario: 'ref' },
+      description: 'Annual mean PM₂.₅ concentration under the 2050 Reference (no-CDR) scenario.',
+    },
     {
       id: 'pm25_low',
-      label: 'PM₂.₅ — Low CDR',
+      label: 'PM₂.₅ — Low CDR 2050',
       unit: 'µg/m³',
       colormap: 'BuRd',
       diverging: true,
@@ -124,11 +139,11 @@ const config = {
       alphaPower: 0,
       layer: 'pm25',
       dimensionValues: { scenario: 'low' },
-      description: 'Annual mean PM₂.₅ concentration under the Low-CDR scenario, diverging at the WHO 5 µg/m³ safe-air threshold.',
+      description: 'Annual mean PM₂.₅ concentration under the Low-CDR 2050 scenario, diverging at the WHO 5 µg/m³ safe-air threshold.',
     },
     {
       id: 'pm25_high',
-      label: 'PM₂.₅ — High CDR',
+      label: 'PM₂.₅ — High CDR 2050',
       unit: 'µg/m³',
       colormap: 'BuRd',
       diverging: true,
@@ -137,20 +152,24 @@ const config = {
       alphaPower: 0,
       layer: 'pm25',
       dimensionValues: { scenario: 'high' },
-      description: 'Annual mean PM₂.₅ concentration under the High-CDR scenario, diverging at the WHO 5 µg/m³ safe-air threshold.',
+      description: 'Annual mean PM₂.₅ concentration under the High-CDR 2050 scenario, diverging at the WHO 5 µg/m³ safe-air threshold.',
     },
+    // PM₂.₅ difference: sequential red gradient (BuRd upper half) since the
+    // high − low difference is generally positive (more PM under high-CDR).
+    // Continuous color, fully opaque to match the scenario maps.
     {
       id: 'pm25_diff',
       label: 'Δ PM₂.₅ (High − Low)',
       unit: 'µg/m³',
       colormap: 'BuRd',
-      solidColor: '#d73027',
-      solidColorNegative: '#4575b4',
-      diverging: true,
-      domain: { min: -5, max: 5, zero: 0 },
+      colormapStart: 0.5,
+      diverging: false,
+      domain: { min: 0, max: 3 },
+      alphaFloor: 0,
+      alphaPower: 0,
       layer: 'pm25',
       dimensionValues: { scenario: 'diff' },
-      description: 'High CDR minus Low CDR. Blue: High CDR is cleaner; red: High CDR is dirtier.',
+      description: 'High CDR minus Low CDR. Darker red = more PM₂.₅ under high-CDR.',
     },
 
     // Mortality — distinct colormap from PM₂.₅ so the user has a quick
@@ -161,8 +180,23 @@ const config = {
     // rendered range starts at yellow-orange and walks through wine to
     // black. Alpha fades the lowest values to transparent.
     {
+      id: 'mort_ref',
+      label: 'Mortality — Reference 2050',
+      unit: 'deaths/pixel',
+      colormap: 'MagmaR',
+      colormapStart: 0.15,
+      diverging: false,
+      domain: { min: 0, max: 0.001 },
+      histogramMin: 0.0001,
+      alphaFloor: 0,
+      alphaPower: 0.8,
+      layer: 'mortality',
+      dimensionValues: { scenario: 'ref' },
+      description: 'Annual PM₂.₅-attributable deaths per pixel under the 2050 Reference (no-CDR) scenario.',
+    },
+    {
       id: 'mort_low',
-      label: 'Mortality — Low CDR',
+      label: 'Mortality — Low CDR 2050',
       unit: 'deaths/pixel',
       colormap: 'MagmaR',
       colormapStart: 0.15,
@@ -173,11 +207,11 @@ const config = {
       alphaPower: 0.8,
       layer: 'mortality',
       dimensionValues: { scenario: 'low' },
-      description: 'Annual PM₂.₅-attributable deaths per pixel under Low-CDR scenario.',
+      description: 'Annual PM₂.₅-attributable deaths per pixel under Low-CDR 2050.',
     },
     {
       id: 'mort_high',
-      label: 'Mortality — High CDR',
+      label: 'Mortality — High CDR 2050',
       unit: 'deaths/pixel',
       colormap: 'MagmaR',
       colormapStart: 0.15,
@@ -188,22 +222,24 @@ const config = {
       alphaPower: 0.8,
       layer: 'mortality',
       dimensionValues: { scenario: 'high' },
-      description: 'Annual PM₂.₅-attributable deaths per pixel under High-CDR scenario.',
+      description: 'Annual PM₂.₅-attributable deaths per pixel under High-CDR 2050.',
     },
+    // Mortality difference: sequential MagmaR to match the scenario maps.
+    // The high − low difference is generally positive, so a sequential
+    // (rather than diverging) ramp reads more clearly than blue/red anchors.
     {
       id: 'mort_diff',
       label: 'Δ Mortality (High − Low)',
       unit: 'deaths/pixel',
-      colormap: 'BuRd',
-      solidColor: '#d73027',
-      solidColorNegative: '#4575b4',
-      diverging: true,
-      domain: { min: -0.0005, max: 0.0005, zero: 0 },
+      colormap: 'MagmaR',
+      colormapStart: 0.15,
+      diverging: false,
+      domain: { min: 0, max: 0.0005 },
       alphaFloor: 0,
       alphaPower: 0.8,
       layer: 'mortality',
       dimensionValues: { scenario: 'diff' },
-      description: 'High CDR minus Low CDR. Blue: High CDR saves lives here; red: High CDR adds deaths.',
+      description: 'High CDR minus Low CDR. Darker = more deaths under high-CDR.',
     },
 
     // ── Population (national + city) ─────────────────────────────────────

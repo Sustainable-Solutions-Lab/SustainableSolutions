@@ -77,26 +77,23 @@ function buildRadiusExpr(tuning) {
   const s = tuning.radiusScale ?? 1.0
   const overrideCap = tuning.maxRadiusPx
   const SCALE = ['coalesce', ['to-number', ['get', '_scale']], 1]
-  // Per-stop clamp keeps `['zoom']` as the direct interpolate input,
-  // which MapLibre requires — wrapping the whole interpolate in min/max
-  // would have triggered a "zoom may only be input to a top-level
-  // interpolate" validation error.
+  // MapLibre validation requires `['zoom']` to sit at the top level of an
+  // interpolate or step. So the per-tier branching has to live *inside*
+  // each interpolate stop, not wrapping it. Each stop is itself a case
+  // expression on `_scale`: 1 km pixels → 2.5 px, 3 km bins → 1.25 px,
+  // 36 / 18 / 9 km cells → the per-zoom national curve coefficient.
   function stop(coef, defaultCap) {
     const cap = overrideCap != null && overrideCap > 0 ? overrideCap : defaultCap
-    return ['min', cap, ['*', SCALE, coef * s]]
+    return [
+      'case',
+      ['==', SCALE, 1], 2.5 * s,
+      ['==', SCALE, 3], 1.25 * s,
+      ['min', cap, ['*', SCALE, coef * s]],
+    ]
   }
-  const nationalCurve = ['interpolate', ['exponential', 2], ['zoom']]
-  for (const [z, coef, cap] of RADIUS_STOPS) nationalCurve.push(z, stop(coef, cap))
-  // City tiers (1 km native pixels, 3 km bins) get fixed pixel radii
-  // tuned to read clearly at their respective zoom bands — 3 km cells
-  // at 1.25 px (z 6–7), 1 km cells at 2.5 px (z 7–7.5). National tiers
-  // (36 / 18 / 9 km) keep the per-zoom curve.
-  return [
-    'case',
-    ['==', SCALE, 1], 2.5 * s,
-    ['==', SCALE, 3], 1.25 * s,
-    nationalCurve,
-  ]
+  const out = ['interpolate', ['exponential', 2], ['zoom']]
+  for (const [z, coef, cap] of RADIUS_STOPS) out.push(z, stop(coef, cap))
+  return out
 }
 
 const SOURCE_ID = 'just-air-data'

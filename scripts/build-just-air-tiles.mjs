@@ -52,6 +52,7 @@ const REPO_ROOT = resolve(__dirname, '..');
 const SRC = '/Users/stevedavis/Library/CloudStorage/Dropbox/Papers/In Press/Just CDR (w Cande)/Outputs for map app';
 const OUT_DIR = resolve(REPO_ROOT, 'dist-tiles/just-air');
 const MANIFEST_OUT = resolve(REPO_ROOT, 'public/tools/just-air/just-air-cities.json');
+const DISTRIBUTIONS_OUT = resolve(REPO_ROOT, 'public/tools/just-air/distributions.json');
 const US_STATES_GEOJSON = resolve(REPO_ROOT, 'public/us-states.geojson');
 
 // ── CONUS clipping ──────────────────────────────────────────────────────────
@@ -572,6 +573,11 @@ async function main() {
   console.log('Loading cities…');
   const manifest = [];
   let cityCount = 0;
+  // Collect city-pixel values for the demographic layers' nationwide
+  // distribution chart. Population is included from both the city tier
+  // and the CONUS 9 km tier later; income / percent_white only exist on
+  // city pixels.
+  const cityValuesAll = { income: [], percent_white: [] };
   for (const city of CITIES) {
     const result = await loadCity(city);
     if (!result) continue;
@@ -586,6 +592,8 @@ async function main() {
       addCoverage(lng, lat);
       if (lng < minLng) minLng = lng; if (lng > maxLng) maxLng = lng;
       if (lat < minLat) minLat = lat; if (lat > maxLat) maxLat = lat;
+      if (p.income != null && Number.isFinite(p.income)) cityValuesAll.income.push(p.income);
+      if (p.percent_white != null && Number.isFinite(p.percent_white)) cityValuesAll.percent_white.push(p.percent_white);
       n++;
     }
     cityCount += n;
@@ -656,6 +664,58 @@ async function main() {
 
   await fh.close();
   console.log(`Merged GeoJSONL → ${mergedGeoJson}`);
+
+  // ── Nationwide value-distribution snapshots ────────────────────────────
+  // The sidebar's distribution chart reads this JSON instead of
+  // querySourceFeatures-on-the-fly so the histogram represents the full
+  // CONUS distribution and stays stable as the user pans / zooms. Each
+  // variable gets up to TARGET_SAMPLE values, evenly-strided across the
+  // source population so the shape of the distribution is preserved.
+  console.log('Computing nationwide distributions…');
+  const TARGET_SAMPLE = 12000;
+  function evenSample(values, n) {
+    if (values.length <= n) return [...values];
+    const step = values.length / n;
+    const out = new Array(n);
+    for (let i = 0; i < n; i++) out[i] = values[Math.floor(i * step)];
+    return out;
+  }
+  function collectNational(field) {
+    const out = [];
+    for (const c of nationalCells) {
+      const v = c[field];
+      if (v != null && Number.isFinite(v)) out.push(v);
+    }
+    return out;
+  }
+  function collectNationalDiff(low, high) {
+    const out = [];
+    for (const c of nationalCells) {
+      if (c[low] != null && c[high] != null && Number.isFinite(c[low]) && Number.isFinite(c[high])) {
+        out.push(c[high] - c[low]);
+      }
+    }
+    return out;
+  }
+  const distributions = {
+    pm25_low:      evenSample(collectNational('pm25_low'),  TARGET_SAMPLE),
+    pm25_high:     evenSample(collectNational('pm25_high'), TARGET_SAMPLE),
+    pm25_diff:     evenSample(collectNationalDiff('pm25_low', 'pm25_high'), TARGET_SAMPLE),
+    mort_low:      evenSample(collectNational('mort_low'),  TARGET_SAMPLE),
+    mort_high:     evenSample(collectNational('mort_high'), TARGET_SAMPLE),
+    mort_diff:     evenSample(collectNationalDiff('mort_low', 'mort_high'), TARGET_SAMPLE),
+    population:    evenSample(collectNational('population'), TARGET_SAMPLE),
+    income:        evenSample(cityValuesAll.income,         TARGET_SAMPLE),
+    percent_white: evenSample(cityValuesAll.percent_white,  TARGET_SAMPLE),
+  };
+  // Round to short decimals so the JSON stays compact.
+  for (const k of Object.keys(distributions)) {
+    const dec = k.startsWith('mort') ? 5 : k.startsWith('pm25') ? 2 : k === 'population' ? 1 : k === 'income' ? 0 : 1;
+    distributions[k] = distributions[k].map((v) => round(v, dec));
+  }
+  await fs.writeFile(DISTRIBUTIONS_OUT, JSON.stringify(distributions));
+  const totalVals = Object.values(distributions).reduce((s, a) => s + a.length, 0);
+  console.log(`Distributions → ${DISTRIBUTIONS_OUT}  (${totalVals.toLocaleString()} values)`);
 
   // ── Tippecanoe → mbtiles → PMTiles ─────────────────────────────────────
   // -Z2 -z14: full zoom range. drop-densest-as-needed keeps the sparser

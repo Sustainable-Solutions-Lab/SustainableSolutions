@@ -176,50 +176,23 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       return
     }
 
-    if (state.projectId === 'just-air' && mapInstance) {
-      const sourceId = 'just-air-data'
-      const sourceLayer = baseConfig.sourceLayer ?? baseConfig.id
-
-      // Histogram sample: prefer features that actually carry the active
-      // variable. The previous "prefer 9 km national" heuristic broke for
-      // city-only variables (income, % non-Hispanic white) because 9 km
-      // cells don't have those properties — the filter dropped to zero
-      // values and the chart kept stale data from the prior layer.
-      function pull() {
-        try {
-          const features = mapInstance.querySourceFeatures(sourceId, { sourceLayer })
-          if (features.length === 0) return
-          const withVar = features.filter((f) => {
-            const v = f.properties?.[varId]
-            return v != null && isFinite(v)
-          })
-          if (withVar.length < 20) return
-          // When both city-tier and national-tier features carry the
-          // variable (e.g. population), prefer the national 9 km cells so
-          // the distribution describes the CONUS-wide spread rather than
-          // a single-city slice.
-          const s9 = withVar.filter((f) => f.properties?._scale === 9)
-          const s36 = withVar.filter((f) => f.properties?._scale === 36)
-          const sample = s9.length >= 100 ? s9
-                       : s36.length >= 30 ? s36
-                       : withVar
-          const vals = sample.map((f) => f.properties[varId])
+    if (state.projectId === 'just-air') {
+      // Read the precomputed nationwide value sample baked at build time
+      // (scripts/build-just-air-tiles.mjs writes distributions.json).
+      // This replaces the previous querySourceFeatures-on-every-pan
+      // approach: the sidebar chart is now a stable CONUS-wide reference
+      // that doesn't shift as the user zooms or pans. For region-level
+      // detail, use the area / region-focus tool.
+      let cancelled = false
+      fetch('/tools/just-air/distributions.json')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (cancelled || !data) return
+          const vals = Array.isArray(data[varId]) ? data[varId] : []
           applyDist(vals)
-        } catch (_) { /* source not loaded yet */ }
-      }
-      pull()
-      // Don't gate on isSourceLoaded — for the pmtiles protocol that flag
-      // didn't reliably flip true and the histogram stayed empty.
-      function onSourceData(e) {
-        if (e.sourceId === sourceId) pull()
-      }
-      function onIdle() { pull() }
-      mapInstance.on('sourcedata', onSourceData)
-      mapInstance.on('idle', onIdle)
-      return () => {
-        mapInstance.off('sourcedata', onSourceData)
-        mapInstance.off('idle', onIdle)
-      }
+        })
+        .catch(() => {})
+      return () => { cancelled = true }
     }
 
     setStatewideValues([])

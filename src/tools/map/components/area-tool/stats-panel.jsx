@@ -46,11 +46,28 @@ function MiniHistogram({ values, variable, isDark }) {
   // Diverging variables with no pinned `solidColor` anchors get a full
   // colormap-gradient scale just like sequential variables, so the mini
   // histogram matches the map's continuous BuRd / MagmaR ramp instead of
-  // falling back to the binary blue/red POS/NEG anchors.
+  // falling back to the binary blue/red POS/NEG anchors. Use the same
+  // asymmetric data-derived domain the map uses (per-side p99 around
+  // `zero`), so a region that's all on one side of the diverging point
+  // saturates to dark instead of stuck in mid-tones.
   const hasAnchors = variable?.solidColor != null || variable?.solidColorNegative != null
   const scale = useMemo(() => {
     if (!variable || !values?.length) return null
-    if (variable.diverging) return buildColorScale(variable)
+    if (variable.diverging) {
+      const zero = variable.domain?.zero ?? 0
+      const posDevs = values.filter((v) => v > zero).map((v) => v - zero).sort((a, b) => a - b)
+      const negDevs = values.filter((v) => v < zero).map((v) => zero - v).sort((a, b) => a - b)
+      const p99fn = (arr) => arr.length > 0 ? (arr[Math.floor(0.99 * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
+      const maxPos = p99fn(posDevs)
+      const maxNeg = p99fn(negDevs)
+      if (maxPos > 0 || maxNeg > 0) {
+        return buildColorScale({
+          ...variable,
+          domain: { min: zero - Math.max(maxNeg, 1e-9), max: zero + Math.max(maxPos, 1e-9), zero },
+        })
+      }
+      return buildColorScale(variable)
+    }
     return buildColorScale({ ...variable, domain: { min: p01, max: p99val } })
   }, [variable, values, p01, p99val])
 

@@ -48,22 +48,20 @@ import { getActiveVariable } from './get-active-variable.js'
 // see `tierBranch` below. radiusScale (dev panel) multiplies every
 // value.
 const NATIONAL_RADIUS_STOPS = [
-  // z = 3.0–3.8: 36 km supercells, smooth ramp
-  [3.0,  2.70, 4],
-  [3.2,  2.80, 4],
-  [3.4,  3.15, 4],
-  [3.6,  3.75, 4],
-  [3.8,  4.35, 4],
-  [3.99, 4.35, 4],
-  // z = 4.0–5.0: 18 km mid tier
-  [4.0,  1.00, 12],
-  [4.99, 1.00, 12],
-  // z = 5.0–7.0: 9 km national
-  [5.0,  1.15, 12],
-  [6.99, 1.15, 12],
-  // z = 7.0–8.0: 9 km outside cities (1 km native takes over inside)
-  [7.0,  1.25, 12],
-  [8.0,  1.25, 12],
+  // z = 3.0–3.8: 36 km supercells — smooth ramp
+  [3.0,  2.70,  4],
+  [3.2,  2.80,  4],
+  [3.4,  3.15,  4],
+  [3.6,  3.75,  4],
+  [3.8,  4.35,  4],
+  [3.99, 4.35,  4],
+  // z = 4.0–4.9: 18 km mid tier — smooth growth
+  [4.0,  2.30, 12],
+  [4.9,  3.75, 12],
+  [4.99, 3.75, 12],
+  // z = 5.0–8.0: 9 km national — smooth growth, cap rises with it
+  [5.0,  2.00, 17],
+  [8.0, 17.00, 17],
 ]
 
 export const DEFAULT_TUNING = {

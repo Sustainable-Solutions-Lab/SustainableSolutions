@@ -18,10 +18,11 @@
 import { useEffect, useState } from 'react'
 import { DEFAULT_TUNING } from '../lib/use-just-air-layers.js'
 
-// v2: per-zoom radius/max curve baked into use-just-air-layers.js — clear
-// any stale localStorage values from the old constant-scale tuning that
-// would otherwise override the new defaults.
-const STORAGE_KEY = 'just-air:devtuning-v2'
+// v3: bumped after a session where `Radius ×` had been typed up to 17 (well
+// past the slider max), persisting an effective 17× global multiplier on
+// the entire radius curve. Storing under a fresh key drops those values
+// on next load.
+const STORAGE_KEY = 'just-air:devtuning-v3'
 
 export function shouldShowDevControls() {
   if (typeof window === 'undefined') return false

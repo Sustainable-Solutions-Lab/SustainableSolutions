@@ -237,11 +237,9 @@ const config = {
       colormapStart: 0.25,
       diverging: false,
       domain: { min: 0, max: 5000 },
-      // Hard floor in both the chart and the map: cells below 25
-      // people/km² (effectively unpopulated land) drop to alpha 0.
-      // Generous enough that rural counties stay on the map and only
-      // the empty interior west / mountains / public lands fall away.
-      histogramMin: 25,
+      // Hard floor in both the chart and the map: cells below 100
+      // people/km² drop to alpha 0.
+      histogramMin: 100,
       alphaFloor: 0,
       alphaPower: 0.8,
       layer: 'pop_density',

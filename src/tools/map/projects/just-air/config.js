@@ -251,7 +251,7 @@ const config = {
     {
       id: 'income',
       label: 'Median household income',
-      unit: 'USD',
+      unit: 'USD/household',
       colormap: 'BuPu',
       colormapStart: 0.25,
       diverging: false,

@@ -281,10 +281,10 @@ function StackedBar({ values, variable, isDark }) {
 // inner band for the point estimate.
 
 const EQUITY_W = 260
-const EQUITY_H = 110
+const EQUITY_H = 96
 const EQUITY_PAD_TOP = 16
-const EQUITY_PAD_BOT = 18
-const EQUITY_AXIS = 24 // x-axis label area
+const EQUITY_PAD_BOT = 14
+const EQUITY_AXIS = 14 // single row of bin labels under the bars
 const EQUITY_BAR_W = 20
 const EQUITY_BAR_GAP = 12
 const EQUITY_GROUP_GAP = 28
@@ -439,8 +439,17 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel }) {
 
   return (
     <div style={{ marginTop: 8 }}>
+      {/* Single header row — full taxonomy of the metric is conveyed by the
+          active-layer state in the rest of the UI; here we just title the
+          chart by what it shows. */}
       <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: labelMuted, marginBottom: 2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-        {metricLabel} · excess relative to region mean
+        Excess relative to region mean
+      </div>
+      {/* Direction labels — "higher income →" and "more white →" sit
+          directly above their bar groups. */}
+      <div style={{ display: 'flex', fontFamily: FONT_MONO, fontSize: 9, color: labelFaint, marginBottom: 2 }}>
+        <span style={{ flex: 1, textAlign: 'center' }}>higher income →</span>
+        <span style={{ flex: 1, textAlign: 'center' }}>more white →</span>
       </div>
       <svg
         viewBox={`0 0 ${EQUITY_W} ${EQUITY_H}`}
@@ -461,7 +470,8 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel }) {
         {computed.income.map((b, i) => renderBar(b, incomeXs[i], palette.income.bandFill, palette.income.barFill))}
         {computed.race.map((b, i) => renderBar(b, raceXs[i], palette.race.bandFill, palette.race.barFill))}
 
-        {/* x labels */}
+        {/* x labels — bin names only (the direction is in the headers
+            above so the under-axis row stays uncluttered). */}
         {['<33ʳᵈ', '33–66ᵗʰ', '>66ᵗʰ'].map((lbl, i) => (
           <text key={`il${i}`}
             x={incomeXs[i] + EQUITY_BAR_W / 2}
@@ -469,7 +479,6 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel }) {
             fontSize={9} fontFamily={FONT_MONO}
             fill={labelMuted} textAnchor='middle'>{lbl}</text>
         ))}
-        <text x={incomeStart + groupW / 2} y={EQUITY_H - 3} fontSize={8} fontFamily={FONT_MONO} fill={labelFaint} textAnchor='middle'>income tertile →</text>
         {['<30%', '30–60%', '>60%'].map((lbl, i) => (
           <text key={`rl${i}`}
             x={raceXs[i] + EQUITY_BAR_W / 2}
@@ -477,7 +486,6 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel }) {
             fontSize={9} fontFamily={FONT_MONO}
             fill={labelMuted} textAnchor='middle'>{lbl}</text>
         ))}
-        <text x={raceStart + groupW / 2} y={EQUITY_H - 3} fontSize={8} fontFamily={FONT_MONO} fill={labelFaint} textAnchor='middle'>% non-Hisp. white →</text>
       </svg>
     </div>
   )
@@ -588,23 +596,9 @@ export function StatsPanel({ drawnCircle, drawnPolygon, aggregateStats, areaTool
         <MiniHistogram values={activeVarValues} variable={activeVariable} isDark={isDark} />
       )}
 
-      {/* Equity chart — pop-weighted exposure by income tertile + race
-          bin. Only renders for PM / mortality + low|high-CDR scenarios
-          when the region overlaps city pixels (which carry the income
-          + race fields) with enough records to bin meaningfully. */}
-      {equityValueKey && equityRecords.length >= 30 && (
-        <EquityChart
-          records={equityRecords}
-          valueKey={equityValueKey}
-          metricLabel={equityMetricLabel}
-          unit={activeVariable?.unit ?? ''}
-          isDark={isDark}
-        />
-      )}
-
-      {/* Stats row */}
+      {/* Stats row — mean / median legend + area, sits right under the
+          histogram so the line marks above it have an immediate key. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: hasData ? 5 : 0, flexWrap: 'wrap' }}>
-        {/* Mean and median — numeric variables only */}
         {hasData && !isCategorical && (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -630,6 +624,20 @@ export function StatsPanel({ drawnCircle, drawnPolygon, aggregateStats, areaTool
           {count.toLocaleString()} km²
         </span>
       </div>
+
+      {/* Equity chart — pop-weighted exposure by income tertile + race
+          bin. Only renders for PM / mortality + low|high-CDR scenarios
+          when the region overlaps city pixels (which carry the income
+          + race fields) with enough records to bin meaningfully. */}
+      {equityValueKey && equityRecords.length >= 30 && (
+        <EquityChart
+          records={equityRecords}
+          valueKey={equityValueKey}
+          metricLabel={equityMetricLabel}
+          unit={activeVariable?.unit ?? ''}
+          isDark={isDark}
+        />
+      )}
 
       {/* Empty state */}
       {!hasData && count === 0 && (

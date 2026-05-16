@@ -487,6 +487,12 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel }) {
             fill={labelMuted} textAnchor='middle'>{lbl}</text>
         ))}
       </svg>
+      {/* "percentiles" caption — sits centered under each bin group so
+          the user reads the row as e.g. "<33ʳᵈ 33–66ᵗʰ >66ᵗʰ percentiles". */}
+      <div style={{ display: 'flex', fontFamily: FONT_MONO, fontSize: 9, color: labelFaint, marginTop: 1 }}>
+        <span style={{ flex: 1, textAlign: 'center' }}>percentiles</span>
+        <span style={{ flex: 1, textAlign: 'center' }}>percentiles</span>
+      </div>
     </div>
   )
 }

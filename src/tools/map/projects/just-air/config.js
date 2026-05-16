@@ -149,7 +149,10 @@ const config = {
     },
     // PM₂.₅ difference: sequential red gradient (BuRd upper half) since the
     // high − low difference is generally positive (more PM under high-CDR).
-    // Continuous color, fully opaque to match the scenario maps.
+    // alphaPower=1 fades cells with near-zero difference to transparent so
+    // the (otherwise white) low end shows the basemap through rather than
+    // a wash of cream/white circles. Cells with the largest |Δ| reach
+    // full opacity at the data's p99.
     {
       id: 'pm25_diff',
       label: 'Δ PM₂.₅ (High − Low)',
@@ -159,10 +162,10 @@ const config = {
       diverging: false,
       domain: { min: 0, max: 3 },
       alphaFloor: 0,
-      alphaPower: 0,
+      alphaPower: 1,
       layer: 'pm25',
       dimensionValues: { scenario: 'diff' },
-      description: 'High CDR minus Low CDR. Darker red = more PM₂.₅ under high-CDR.',
+      description: 'High CDR minus Low CDR. Darker red = more PM₂.₅ under high-CDR; cells with negligible difference fade to transparent.',
     },
 
     // Mortality — distinct colormap from PM₂.₅ so the user has a quick

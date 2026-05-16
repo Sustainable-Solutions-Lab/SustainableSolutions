@@ -269,6 +269,216 @@ function StackedBar({ values, variable, isDark }) {
   )
 }
 
+// ── Equity chart ──────────────────────────────────────────────────────────
+//
+// Bins the per-cell records by income tertile (left) and by % non-Hispanic
+// white into the paper's 3 categorical bins (<30 / 30–60 / >60) on the
+// right. Within each bin we compute the population-weighted mean of the
+// active metric (PM₂.₅ or mortality, low/high CDR follows the user's
+// scenario toggle) and express it as percent deviation from the region's
+// overall pop-weighted mean. Bars matched to the figure: a wider light
+// rectangle for an approximate 95 % bootstrap CI, with a saturated
+// inner band for the point estimate.
+
+const EQUITY_W = 260
+const EQUITY_H = 110
+const EQUITY_PAD_TOP = 16
+const EQUITY_PAD_BOT = 18
+const EQUITY_AXIS = 24 // x-axis label area
+const EQUITY_BAR_W = 20
+const EQUITY_BAR_GAP = 12
+const EQUITY_GROUP_GAP = 28
+
+function popWeightedMean(records, valueKey) {
+  let num = 0, den = 0
+  for (const r of records) {
+    const v = r[valueKey]
+    if (v == null || !isFinite(v)) continue
+    num += v * r.population
+    den += r.population
+  }
+  return den > 0 ? num / den : null
+}
+
+function quantile(arr, q) {
+  if (!arr.length) return null
+  const idx = Math.min(arr.length - 1, Math.max(0, Math.floor(q * arr.length)))
+  return arr[idx]
+}
+
+function bootstrapDeviationCI(records, valueKey, overallMean, draws = 200) {
+  if (!records.length || overallMean == null || overallMean === 0) return null
+  const n = records.length
+  const devs = new Array(draws)
+  for (let d = 0; d < draws; d++) {
+    let num = 0, den = 0
+    for (let i = 0; i < n; i++) {
+      const r = records[(Math.random() * n) | 0]
+      num += r[valueKey] * r.population
+      den += r.population
+    }
+    devs[d] = (num / den - overallMean) / overallMean
+  }
+  devs.sort((a, b) => a - b)
+  return {
+    lo: devs[Math.floor(0.025 * draws)],
+    hi: devs[Math.floor(0.975 * draws)],
+  }
+}
+
+function EquityChart({ records, valueKey, isDark, unit, metricLabel }) {
+  const computed = useMemo(() => {
+    if (records.length < 30) return null
+    const overall = popWeightedMean(records, valueKey)
+    if (overall == null || overall === 0) return null
+
+    // Income tertiles by INCOME value (each pixel weighted equally for
+    // breakpoint selection — same as the paper's >33 / 33–66 / >66 split).
+    const byIncome = [...records].sort((a, b) => a.income - b.income)
+    const t1 = quantile(byIncome, 1 / 3)
+    const t2 = quantile(byIncome, 2 / 3)
+    const incomeBins = [
+      { label: '<33ʳᵈ',    records: byIncome.filter((r) => r.income <= t1) },
+      { label: '33–66ᵗʰ',  records: byIncome.filter((r) => r.income >  t1 && r.income <= t2) },
+      { label: '>66ᵗʰ',    records: byIncome.filter((r) => r.income >  t2) },
+    ]
+
+    // Race bins — same thresholds as the paper.
+    const raceBins = [
+      { label: '<30%',   records: records.filter((r) => r.percent_white <= 30) },
+      { label: '30–60%', records: records.filter((r) => r.percent_white >  30 && r.percent_white <= 60) },
+      { label: '>60%',   records: records.filter((r) => r.percent_white >  60) },
+    ]
+
+    function summarize(bins) {
+      return bins.map((b) => {
+        if (b.records.length < 5) return { ...b, dev: null, ci: null }
+        const m = popWeightedMean(b.records, valueKey)
+        const dev = (m - overall) / overall
+        const ci = bootstrapDeviationCI(b.records, valueKey, overall)
+        return { ...b, dev, ci, n: b.records.length }
+      })
+    }
+    return {
+      overall,
+      income: summarize(incomeBins),
+      race:   summarize(raceBins),
+    }
+  }, [records, valueKey])
+
+  if (!computed) return null
+
+  // Domain — pull in to ±25 % unless data exceeds it.
+  const allDevs = [...computed.income, ...computed.race].flatMap((b) => b.ci ? [b.ci.lo, b.ci.hi, b.dev] : (b.dev != null ? [b.dev] : []))
+  const dataMax = Math.max(0.20, ...allDevs.map(Math.abs))
+  const yMax = Math.min(0.40, Math.ceil(dataMax * 20) / 20)  // round up to nearest 5 %
+
+  const innerH = EQUITY_H - EQUITY_PAD_TOP - EQUITY_PAD_BOT
+  const yMid = EQUITY_PAD_TOP + innerH / 2
+  const yScale = innerH / 2 / yMax  // px per unit deviation
+
+  const labelMuted = isDark ? 'rgba(248, 248, 232, 0.55)' : 'rgba(24, 24, 56, 0.55)'
+  const labelFaint = isDark ? 'rgba(248, 248, 232, 0.35)' : 'rgba(24, 24, 56, 0.35)'
+  const axisColor  = isDark ? 'rgba(248, 248, 232, 0.18)' : 'rgba(24, 24, 56, 0.18)'
+
+  // Income bars: blue (paper's left panel). Race bars: red (right panel).
+  const palette = {
+    income: { bandFill: isDark ? 'rgba(67, 147, 195, 0.22)' : 'rgba(67, 147, 195, 0.28)',
+              barFill:  isDark ? 'rgba(67, 147, 195, 0.95)' : '#2166ac' },
+    race:   { bandFill: isDark ? 'rgba(214, 96, 77, 0.22)'  : 'rgba(214, 96, 77, 0.28)',
+              barFill:  isDark ? 'rgba(214, 96, 77, 0.95)'  : '#b2182b' },
+  }
+
+  // Layout: 3 income bars on the left, 3 race bars on the right, divider
+  // in the middle. Compute x-positions for each.
+  const incomeStart = 30
+  const groupW = 3 * EQUITY_BAR_W + 2 * EQUITY_BAR_GAP
+  const incomeXs = [0, 1, 2].map((i) => incomeStart + i * (EQUITY_BAR_W + EQUITY_BAR_GAP))
+  const raceStart = incomeStart + groupW + EQUITY_GROUP_GAP
+  const raceXs = [0, 1, 2].map((i) => raceStart + i * (EQUITY_BAR_W + EQUITY_BAR_GAP))
+  const dividerX = incomeStart + groupW + EQUITY_GROUP_GAP / 2
+
+  function devY(d) { return yMid - d * yScale }
+
+  function renderBar(b, x, fillBand, fillBar) {
+    if (b.dev == null) return null
+    const POINT_H = 3
+    const elements = []
+    // CI band (lighter rectangle)
+    if (b.ci) {
+      const top = devY(b.ci.hi)
+      const bottom = devY(b.ci.lo)
+      elements.push(
+        <rect key='ci' x={x} y={top} width={EQUITY_BAR_W} height={Math.max(2, bottom - top)} fill={fillBand} />,
+      )
+    }
+    // Point estimate — narrow saturated band centered on b.dev
+    elements.push(
+      <rect key='pt' x={x} y={devY(b.dev) - POINT_H / 2} width={EQUITY_BAR_W} height={POINT_H} fill={fillBar} />,
+    )
+    // % label above (or below if negative)
+    const sign = b.dev >= 0 ? '+' : ''
+    const labelY = b.dev >= 0 ? Math.max(8, devY(b.ci?.hi ?? b.dev) - 4) : Math.min(EQUITY_H - EQUITY_AXIS - 2, devY(b.ci?.lo ?? b.dev) + 11)
+    elements.push(
+      <text key='lbl'
+        x={x + EQUITY_BAR_W / 2}
+        y={labelY}
+        fontSize={9}
+        fontFamily={FONT_MONO}
+        fill={labelMuted}
+        textAnchor='middle'>
+        {sign}{(b.dev * 100).toFixed(1)}%
+      </text>,
+    )
+    return <g key={x}>{elements}</g>
+  }
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: labelMuted, marginBottom: 2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+        {metricLabel} · excess relative to region mean
+      </div>
+      <svg
+        viewBox={`0 0 ${EQUITY_W} ${EQUITY_H}`}
+        preserveAspectRatio='none'
+        style={{ width: '100%', height: EQUITY_H, display: 'block' }}
+      >
+        {/* y axis: zero line + ±yMax ticks */}
+        <line x1={0} y1={yMid} x2={EQUITY_W} y2={yMid} stroke={axisColor} strokeWidth={0.8} />
+        <text x={0} y={EQUITY_PAD_TOP + 3} fontSize={8} fontFamily={FONT_MONO} fill={labelFaint}>+{(yMax * 100).toFixed(0)}%</text>
+        <text x={0} y={yMid + 3} fontSize={8} fontFamily={FONT_MONO} fill={labelFaint}>0</text>
+        <text x={0} y={EQUITY_H - EQUITY_AXIS - 2} fontSize={8} fontFamily={FONT_MONO} fill={labelFaint}>−{(yMax * 100).toFixed(0)}%</text>
+
+        {/* divider between income and race groups */}
+        <line x1={dividerX} y1={EQUITY_PAD_TOP - 4} x2={dividerX} y2={EQUITY_H - EQUITY_AXIS + 6}
+              stroke={axisColor} strokeWidth={0.6} strokeDasharray='3 3' />
+
+        {/* Bars */}
+        {computed.income.map((b, i) => renderBar(b, incomeXs[i], palette.income.bandFill, palette.income.barFill))}
+        {computed.race.map((b, i) => renderBar(b, raceXs[i], palette.race.bandFill, palette.race.barFill))}
+
+        {/* x labels */}
+        {['<33ʳᵈ', '33–66ᵗʰ', '>66ᵗʰ'].map((lbl, i) => (
+          <text key={`il${i}`}
+            x={incomeXs[i] + EQUITY_BAR_W / 2}
+            y={EQUITY_H - EQUITY_AXIS + 11}
+            fontSize={9} fontFamily={FONT_MONO}
+            fill={labelMuted} textAnchor='middle'>{lbl}</text>
+        ))}
+        <text x={incomeStart + groupW / 2} y={EQUITY_H - 3} fontSize={8} fontFamily={FONT_MONO} fill={labelFaint} textAnchor='middle'>income tertile →</text>
+        {['<30%', '30–60%', '>60%'].map((lbl, i) => (
+          <text key={`rl${i}`}
+            x={raceXs[i] + EQUITY_BAR_W / 2}
+            y={EQUITY_H - EQUITY_AXIS + 11}
+            fontSize={9} fontFamily={FONT_MONO}
+            fill={labelMuted} textAnchor='middle'>{lbl}</text>
+        ))}
+        <text x={raceStart + groupW / 2} y={EQUITY_H - 3} fontSize={8} fontFamily={FONT_MONO} fill={labelFaint} textAnchor='middle'>% non-Hisp. white →</text>
+      </svg>
+    </div>
+  )
+}
+
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
 export function StatsPanel({ drawnCircle, drawnPolygon, aggregateStats, areaToolActive, activeVariable, isDark, dispatch }) {
@@ -284,6 +494,24 @@ export function StatsPanel({ drawnCircle, drawnPolygon, aggregateStats, areaTool
 
   const count = aggregateStats?.count ?? 0
   const activeVarValues = aggregateStats?.activeVarValues ?? []
+  const equityRecords = aggregateStats?.equityRecords ?? []
+
+  // Pick the value key used by the equity chart. Income & race-bins drive
+  // the x-axis; the y-axis ("excess relative to mean") is computed against
+  // PM₂.₅ or mortality of the current scenario. The four other layers
+  // (population, income, race, etc.) don't make sense as the y-axis, so
+  // we just hide the equity chart for those.
+  const layerId = activeVariable?.layer
+  const scenario = activeVariable?.dimensionValues?.scenario
+  let equityValueKey = null
+  let equityMetricLabel = null
+  if (layerId === 'pm25' && (scenario === 'low' || scenario === 'high')) {
+    equityValueKey = scenario === 'low' ? 'pm25_low' : 'pm25_high'
+    equityMetricLabel = scenario === 'low' ? 'PM₂.₅ exposure · Low-CDR' : 'PM₂.₅ exposure · High-CDR'
+  } else if (layerId === 'mortality' && (scenario === 'low' || scenario === 'high')) {
+    equityValueKey = scenario === 'low' ? 'mort_low' : 'mort_high'
+    equityMetricLabel = scenario === 'low' ? 'Mortality · Low-CDR' : 'Mortality · High-CDR'
+  }
 
   // Compute mean and median — only for numeric (non-categorical) variables
   const { mean, median } = useMemo(() => {
@@ -354,6 +582,20 @@ export function StatsPanel({ drawnCircle, drawnPolygon, aggregateStats, areaTool
       )}
       {hasData && !isCategorical && (
         <MiniHistogram values={activeVarValues} variable={activeVariable} isDark={isDark} />
+      )}
+
+      {/* Equity chart — pop-weighted exposure by income tertile + race
+          bin. Only renders for PM / mortality + low|high-CDR scenarios
+          when the region overlaps city pixels (which carry the income
+          + race fields) with enough records to bin meaningfully. */}
+      {equityValueKey && equityRecords.length >= 30 && (
+        <EquityChart
+          records={equityRecords}
+          valueKey={equityValueKey}
+          metricLabel={equityMetricLabel}
+          unit={activeVariable?.unit ?? ''}
+          isDark={isDark}
+        />
       )}
 
       {/* Stats row */}

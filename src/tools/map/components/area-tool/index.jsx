@@ -268,10 +268,36 @@ export function AreaTool({ map, config, state, dispatch }) {
           })
       : []
 
+    // Equity records — cells that carry the full set of variables needed
+    // for the equity panel (PM, mortality, population, income, %-white).
+    // Only city-tier features (1 km pixels / 3 km bins) have demographics,
+    // so this naturally narrows to the metros. Used by EquityChart in
+    // StatsPanel to bin by income / race quantiles and compute pop-weighted
+    // mean exposures.
+    const equityRecords = filtered
+      .map((f) => f.properties)
+      .filter((p) =>
+        p &&
+        p.population != null && isFinite(p.population) && p.population > 0 &&
+        p.income != null && isFinite(p.income) &&
+        p.percent_white != null && isFinite(p.percent_white) &&
+        p.pm25_low != null && p.pm25_high != null &&
+        p.mort_low != null && p.mort_high != null,
+      )
+      .map((p) => ({
+        pm25_low:  p.pm25_low,
+        pm25_high: p.pm25_high,
+        mort_low:  p.mort_low,
+        mort_high: p.mort_high,
+        population:    p.population,
+        income:        p.income,
+        percent_white: p.percent_white,
+      }))
+
     dispatch({ type: Actions.SET_DRAWN_CIRCLE, circle: { lat, lng, radiusKm } })
     dispatch({
       type: Actions.SET_AGGREGATE_STATS,
-      stats: { ...stats, activeVarValues },
+      stats: { ...stats, activeVarValues, equityRecords },
     })
   }, [map, config, dispatch])
 
@@ -305,9 +331,28 @@ export function AreaTool({ map, config, state, dispatch }) {
           .map((f) => f.properties?.[activeVar.id])
           .filter((v) => v != null && (activeVar.type === 'categorical' ? true : !isNaN(v)))
       : []
+    const equityRecords = filtered
+      .map((f) => f.properties)
+      .filter((p) =>
+        p &&
+        p.population != null && isFinite(p.population) && p.population > 0 &&
+        p.income != null && isFinite(p.income) &&
+        p.percent_white != null && isFinite(p.percent_white) &&
+        p.pm25_low != null && p.pm25_high != null &&
+        p.mort_low != null && p.mort_high != null,
+      )
+      .map((p) => ({
+        pm25_low:  p.pm25_low,
+        pm25_high: p.pm25_high,
+        mort_low:  p.mort_low,
+        mort_high: p.mort_high,
+        population:    p.population,
+        income:        p.income,
+        percent_white: p.percent_white,
+      }))
     dispatch({
       type: Actions.SET_AGGREGATE_STATS,
-      stats: { ...stats, activeVarValues },
+      stats: { ...stats, activeVarValues, equityRecords },
     })
   }, [map, config, dispatch, state.drawnPolygon, state.activeLayer, state.activeDimensions])
 

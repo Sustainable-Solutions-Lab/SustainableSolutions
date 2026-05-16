@@ -261,21 +261,22 @@ const config = {
     },
 
     // ── Race & ethnicity (city pixels + 3 km city bins only) ─────────────
-    // PuOr diverging at 50 so the layer reads visually distinct from PM
-    // (BuRd). Orange side (high values) = non-Hispanic white majority,
-    // purple side = non-white majority.
+    // PRGn diverging at 50: green where the population is >50% non-Hispanic
+    // white, purple where it's >50% non-white. alphaPower=1 makes cells
+    // right at the 50/50 mix fully transparent (dark-mode background
+    // shows through), with full opacity at the asymmetric per-side p99.
     {
       id: 'percent_white',
       label: '% non-Hispanic white',
       unit: '% non-Hispanic white',
-      colormap: 'PuOr',
+      colormap: 'PRGn',
       diverging: true,
       domain: { min: 0, max: 100, zero: 50 },
       alphaFloor: 0,
-      alphaPower: 0,
+      alphaPower: 1,
       layer: 'minority',
       dimensionValues: {},
-      description: 'Share of the local population identifying as non-Hispanic white (PuOr diverging at 50%). Available only inside the 15 metro pixel grids — the national 9 km tier lacks these demographic data.',
+      description: 'Share of the local population identifying as non-Hispanic white (PRGn diverging at 50%). Green = white majority; purple = non-white majority. Available only inside the 15 metro pixel grids — the national 9 km tier lacks these demographic data.',
     },
   ],
 

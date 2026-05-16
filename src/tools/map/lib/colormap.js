@@ -11,6 +11,7 @@ import { scaleSequential, scaleDiverging } from 'd3-scale'
 import {
   interpolateRdBu,
   interpolatePuOr,
+  interpolatePRGn,
   interpolateGreens,
   interpolateOranges,
   interpolateYlOrRd,
@@ -30,6 +31,14 @@ export const INTERPOLATORS = {
   // a positive diff (High CDR is dirtier / kills more people) reads as bad.
   BuRd: (t) => interpolateRdBu(1 - t),
   PuOr: interpolatePuOr,
+  // PRGn — diverging purple ↔ green. t=0 → dark purple, t=1 → dark
+  // green, t=0.5 → near-white. Used by the race / ethnicity layer.
+  PRGn: interpolatePRGn,
+  // GnPu = PRGn flipped, so t=0 is green and t=1 is purple. Lets a
+  // variable that runs "low → high" with green at low and purple at
+  // high (e.g. % non-Hispanic white where high purple means more
+  // non-white) drop into the same diverging color framework.
+  GnPu: (t) => interpolatePRGn(1 - t),
   Greens: interpolateGreens,
   Oranges: interpolateOranges,
   YlOrRd: interpolateYlOrRd,

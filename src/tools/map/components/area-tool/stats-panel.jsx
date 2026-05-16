@@ -334,13 +334,17 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel }) {
 
     // Income tertiles by INCOME value (each pixel weighted equally for
     // breakpoint selection — same as the paper's >33 / 33–66 / >66 split).
-    const byIncome = [...records].sort((a, b) => a.income - b.income)
-    const t1 = quantile(byIncome, 1 / 3)
-    const t2 = quantile(byIncome, 2 / 3)
+    // Pull just the income numbers for the breakpoints — `quantile()` of
+    // an array of records would return a record object, and the
+    // subsequent `r.income <= [object]` comparisons silently coerce to
+    // NaN and drop every record.
+    const incomeValues = records.map((r) => r.income).sort((a, b) => a - b)
+    const t1 = quantile(incomeValues, 1 / 3)
+    const t2 = quantile(incomeValues, 2 / 3)
     const incomeBins = [
-      { label: '<33ʳᵈ',    records: byIncome.filter((r) => r.income <= t1) },
-      { label: '33–66ᵗʰ',  records: byIncome.filter((r) => r.income >  t1 && r.income <= t2) },
-      { label: '>66ᵗʰ',    records: byIncome.filter((r) => r.income >  t2) },
+      { label: '<33ʳᵈ',    records: records.filter((r) => r.income <= t1) },
+      { label: '33–66ᵗʰ',  records: records.filter((r) => r.income >  t1 && r.income <= t2) },
+      { label: '>66ᵗʰ',    records: records.filter((r) => r.income >  t2) },
     ]
 
     // Race bins — same thresholds as the paper.

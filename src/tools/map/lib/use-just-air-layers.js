@@ -378,9 +378,17 @@ function withAlpha(rgbStr, alpha) {
   return rgbStr
 }
 
-function buildColorExpr(variable, isDark, colorRange, tuning) {
+function buildColorExpr(rawVariable, isDark, colorRange, tuning) {
   const t_ = { ...DEFAULT_TUNING, ...(tuning ?? {}) }
-  if (!variable) return '#888888'
+  if (!rawVariable) return '#888888'
+  // `darkColormap` lets a variable swap palettes when the page is in
+  // dark mode — e.g. mortality switches from MagmaR (cream → black,
+  // black gets lost on a navy background) to Magma (black → cream,
+  // high values pop instead). Falls through to the standard colormap
+  // when no dark variant is set.
+  const variable = isDark && rawVariable.darkColormap
+    ? { ...rawVariable, colormap: rawVariable.darkColormap }
+    : rawVariable
   if (variable.type === 'categorical') {
     const expr = ['match', ['get', variable.id]]
     for (const cat of variable.categories ?? []) expr.push(cat.id, cat.color)

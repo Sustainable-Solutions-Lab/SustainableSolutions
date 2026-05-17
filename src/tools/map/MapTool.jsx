@@ -10,6 +10,7 @@ import { Sidebar } from './components/sidebar/index.jsx'
 import { MobileLegend } from './components/sidebar/legend.jsx'
 import { LayerTabs } from './components/sidebar/layer-tabs.jsx'
 import { DimensionControl } from './components/sidebar/dimension-control.jsx'
+import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
 import { MethodsPanel } from './components/methods-panel.jsx'
@@ -108,6 +109,18 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
   const [mobileAboutOpen, setMobileAboutOpen] = useState(false)
+  // City-inequality mobile picker — list of 15 metros, with one
+  // selectable at a time to render the pre-baked equity chart inline.
+  const [cityEquityData, setCityEquityData] = useState(null)
+  const [equityCity, setEquityCity] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    fetch('/tools/just-air/city-equity.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data) setCityEquityData(data) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
   const [mapInstance, setMapInstance] = useState(null)
   const [filterStats, setFilterStats] = useState({ count: null, mean: null, median: null, totalCount: null, allValues: [] })
   const [statewideValues, setStatewideValues] = useState([])
@@ -383,8 +396,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       <div
         className="block md:hidden fixed left-0 right-0 z-[21] bg-paper border-b border-rule overflow-y-auto px-4 pt-3 pb-4"
         style={{
-          top: 124,
-          maxHeight: 'calc(100dvh - 124px)',
+          top: 148,
+          maxHeight: 'calc(100dvh - 148px)',
           transform: mobilePanelOpen ? 'translateY(0)' : 'translateY(-110%)',
           transition: 'transform 0.18s ease',
         }}
@@ -413,39 +426,65 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           )
         })}
 
-        {config.percentileFilter?.enabled && activeVariable && activeVariable.type !== 'categorical' && (
-          <div className="mt-3">
-            <div className="flex gap-3">
-              {[
-                { label: 'Top 10%', value: 90 },
-                { label: 'Top 1%', value: 99 },
-              ].map(({ label, value }) => {
-                const isActive = state.percentileRange.low === value
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() =>
-                      dispatch({
-                        type: Actions.SET_PERCENTILE,
-                        low: isActive ? 0 : value,
-                        high: 100,
-                      })
-                    }
-                    className={[
-                      'cursor-pointer bg-transparent border-0 px-0',
-                      'font-sans text-[11px] uppercase tracking-[0.12em] underline-offset-[3px]',
-                      isActive ? 'font-bold text-ink underline' : 'font-normal text-ink-3 no-underline',
-                    ].join(' ')}
-                    style={{ paddingTop: '2px', paddingBottom: '2px' }}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
+        {/* City inequality picker — only meaningful for PM / mortality
+            under one of the CDR scenarios (the equity bins are computed
+            against those metrics specifically). Replaces the older
+            Top-10%/Top-1% filter buttons on the mobile panel; the
+            desktop sidebar still has the percentile-filter slider
+            on its distribution chart. */}
+        {(() => {
+          const layerId = activeVariable?.layer
+          const scenario = activeVariable?.dimensionValues?.scenario
+          const valueKey =
+            layerId === 'pm25' && scenario === 'low'  ? 'pm25_low'  :
+            layerId === 'pm25' && scenario === 'high' ? 'pm25_high' :
+            layerId === 'mortality' && scenario === 'low'  ? 'mort_low'  :
+            layerId === 'mortality' && scenario === 'high' ? 'mort_high' :
+            null
+          if (!valueKey || !cityEquityData) return null
+          const cities = Object.keys(cityEquityData).sort()
+          const stats = equityCity ? cityEquityData[equityCity]?.[valueKey] : null
+          return (
+            <div className="mt-4 pt-3 border-t border-rule">
+              <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-2 m-0">
+                City inequality
+              </p>
+              <p className="font-sans text-[12px] text-ink-2 mb-2 m-0">
+                Pick a metro to see {layerId === 'pm25' ? 'PM₂.₅' : 'mortality'} binned
+                by income tertile and race within that city.
+              </p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2">
+                {cities.map((c) => {
+                  const isActive = c === equityCity
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setEquityCity(isActive ? null : c)}
+                      className={[
+                        'cursor-pointer bg-transparent border-0 px-0',
+                        'font-sans text-[12px]',
+                        isActive ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+                      ].join(' ')}
+                      style={{ paddingTop: '2px', paddingBottom: '2px' }}
+                    >
+                      {c}
+                    </button>
+                  )
+                })}
+              </div>
+              {stats ? (
+                <CityEquityChart stats={stats} isDark={isDark} />
+              ) : (
+                <p className="font-sans text-[11px] text-ink-3 m-0">
+                  {equityCity
+                    ? 'Not enough pixels in this city for this metric.'
+                    : 'Tap a city above.'}
+                </p>
+              )}
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         <button
           type="button"
@@ -463,7 +502,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       <div
         className="block md:hidden fixed left-0 right-0 bottom-0"
         style={{
-          top: 124,
+          top: 148,
           background: 'rgba(0,0,0,0.52)',
           zIndex: 20,
           opacity: mobilePanelOpen ? 1 : 0,

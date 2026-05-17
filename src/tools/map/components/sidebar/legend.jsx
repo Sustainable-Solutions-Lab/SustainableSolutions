@@ -64,6 +64,16 @@ function withAlpha(cssColor, alpha) {
   return cssColor.replace(/^rgb\(/, 'rgba(').replace(/\)$/, `, ${alpha.toFixed(3)})`)
 }
 
+/** Parse "#rrggbb" → "r,g,b" string; null on anything else. */
+function hexToRgbStr(hex) {
+  if (typeof hex !== 'string' || !hex.startsWith('#') || hex.length !== 7) return null
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  if ([r, g, b].some((n) => Number.isNaN(n))) return null
+  return `${r},${g},${b}`
+}
+
 // (Continuous sidebar legend — currently unused; the distribution chart
 // covers the continuous case in the desktop sidebar. Kept for parity.)
 function ContinuousLegend({ variable, allValues = [], isDark = true }) {
@@ -154,21 +164,50 @@ function MobileContinuousLegend({ variable, allValues = [], isDark }) {
   }
   const { min, max } = effectiveDomain
 
+  // Respect any dark-mode colormap swap (e.g. mortality MagmaR → Magma)
+  // and the historical RdBuBlue/Red light/dark variants.
+  let cm = variable.colormap
+  if (isDark && variable.darkColormap) cm = variable.darkColormap
+  if (cm === 'RdBuBlue') cm = isDark ? 'RdBuBlueDark' : 'RdBuBlueLight'
+  if (cm === 'RdBuRed')  cm = isDark ? 'RdBuRedDark'  : 'RdBuRedLight'
+
+  const hasAnchors = variable.solidColor != null || variable.solidColorNegative != null
+
   let gradient
   let zeroPct = null
-  if (variable.diverging) {
+  if (variable.diverging && hasAnchors) {
+    // Binary anchored mode (diff layers): the two halves are the pinned
+    // solidColor / solidColorNegative; we lay them down respecting the
+    // colormap convention so left side = max value (positive side).
+    const posIsBlue = variable.colormap !== 'BuRd'
+    const fallbackBlue = isDark ? '#4393c3' : '#2166ac'
+    const fallbackRed  = isDark ? '#d6604d' : '#b2182b'
+    const fallbackBlueRgb = isDark ? '67,147,195' : '33,102,172'
+    const fallbackRedRgb  = isDark ? '214,96,77'  : '178,24,43'
+    const pos = variable.solidColor ?? (posIsBlue ? fallbackBlue : fallbackRed)
+    const neg = variable.solidColorNegative ?? (posIsBlue ? fallbackRed : fallbackBlue)
+    const posRgb = hexToRgbStr(pos) ?? (posIsBlue ? fallbackBlueRgb : fallbackRedRgb)
+    const negRgb = hexToRgbStr(neg) ?? (posIsBlue ? fallbackRedRgb : fallbackBlueRgb)
+    const negRange = Math.max(zeroVal - min, 0.001)
+    const posRange = Math.max(max - zeroVal, 0.001)
+    // Left = max (positive end), right = min (negative end). The crossover
+    // sits at the same fraction of the bar as zero sits within (min, max).
+    const crossover = (negRange / (negRange + posRange) * 100)
+    zeroPct = crossover
+    gradient = `linear-gradient(to right, ${pos} 0%, rgba(${posRgb},0) ${crossover.toFixed(1)}%, rgba(${negRgb},0) ${crossover.toFixed(1)}%, ${neg} 100%)`
+  } else if (variable.diverging) {
+    // Continuous diverging — walk the actual colormap so PM (BuRd, red
+    // at high), race (PRGn, green at high), etc. all render correctly.
+    const stops = buildLegendStops({ ...variable, domain: effectiveDomain, colormap: cm }, 30)
+    const parts = stops.map((stop, i) => `${stop.color} ${(i / (stops.length - 1) * 100).toFixed(1)}%`)
+    // Stops walk min→max, so the LEFT end (gradient 100%) is `max`. Use
+    // `to left` to keep the convention left=max consistent with the
+    // sequential branch and the axis labels below.
+    gradient = `linear-gradient(to left, ${parts.join(', ')})`
     const negRange = Math.max(zeroVal - min, 0.001)
     const posRange = Math.max(max - zeroVal, 0.001)
     zeroPct = posRange / (negRange + posRange) * 100
-    const blue = isDark ? '#4393c3' : '#2166ac'
-    const red  = isDark ? '#d6604d' : '#b2182b'
-    const blueRgb = isDark ? '67,147,195' : '33,102,172'
-    const redRgb  = isDark ? '214,96,77'  : '178,24,43'
-    gradient = `linear-gradient(to right, ${blue} 0%, rgba(${blueRgb},0) ${zeroPct.toFixed(1)}%, rgba(${redRgb},0) ${zeroPct.toFixed(1)}%, ${red} 100%)`
   } else {
-    let cm = variable.colormap
-    if (cm === 'RdBuBlue') cm = isDark ? 'RdBuBlueDark' : 'RdBuBlueLight'
-    if (cm === 'RdBuRed')  cm = isDark ? 'RdBuRedDark'  : 'RdBuRedLight'
     const stops = buildLegendStops({ ...variable, domain: effectiveDomain, colormap: cm }, 30)
     const parts = stops.map((stop, i) => {
       const alpha = 0.15 + (i / (stops.length - 1)) * 0.85

@@ -53,6 +53,7 @@ const SRC = '/Users/stevedavis/Library/CloudStorage/Dropbox/Papers/In Press/Just
 const OUT_DIR = resolve(REPO_ROOT, 'dist-tiles/just-air');
 const MANIFEST_OUT = resolve(REPO_ROOT, 'public/tools/just-air/just-air-cities.json');
 const DISTRIBUTIONS_OUT = resolve(REPO_ROOT, 'public/tools/just-air/distributions.json');
+const CITY_EQUITY_OUT  = resolve(REPO_ROOT, 'public/tools/just-air/city-equity.json');
 const US_STATES_GEOJSON = resolve(REPO_ROOT, 'public/us-states.geojson');
 
 // ── CONUS clipping ──────────────────────────────────────────────────────────
@@ -578,12 +579,18 @@ async function main() {
   // and the CONUS 9 km tier later; income / percent_white only exist on
   // city pixels.
   const cityValuesAll = { income: [], percent_white: [] };
+  // Per-city equity records — every city pixel that carries the full set
+  // of variables needed for the city-equity chart (PM, mortality,
+  // population, income, percent_white). Used downstream to bake the
+  // city-equity.json file the mobile "City inequality" picker consumes.
+  const cityRecords = {};
   for (const city of CITIES) {
     const result = await loadCity(city);
     if (!result) continue;
     const { pixels } = result;
     let minLng =  Infinity, minLat =  Infinity, maxLng = -Infinity, maxLat = -Infinity;
     let n = 0;
+    const recs = [];
     for (const p of pixels.values()) {
       const f = cityPixelToPoint(p, city);
       if (!f) continue;
@@ -594,8 +601,28 @@ async function main() {
       if (lat < minLat) minLat = lat; if (lat > maxLat) maxLat = lat;
       if (p.income != null && Number.isFinite(p.income)) cityValuesAll.income.push(p.income);
       if (p.percent_white != null && Number.isFinite(p.percent_white)) cityValuesAll.percent_white.push(p.percent_white);
+      if (
+        p.population != null && Number.isFinite(p.population) && p.population > 0 &&
+        p.income != null && Number.isFinite(p.income) &&
+        p.percent_white != null && Number.isFinite(p.percent_white) &&
+        p.pm25_low != null && Number.isFinite(p.pm25_low) &&
+        p.pm25_high != null && Number.isFinite(p.pm25_high) &&
+        p.mort_low != null && Number.isFinite(p.mort_low) &&
+        p.mort_high != null && Number.isFinite(p.mort_high)
+      ) {
+        recs.push({
+          pm25_low: p.pm25_low,
+          pm25_high: p.pm25_high,
+          mort_low: p.mort_low,
+          mort_high: p.mort_high,
+          population: p.population,
+          income: p.income,
+          percent_white: p.percent_white,
+        });
+      }
       n++;
     }
+    cityRecords[city] = recs;
     cityCount += n;
 
     // 3 km city aggregation tier — bridges 9 km national → 1 km city pixels.
@@ -716,6 +743,89 @@ async function main() {
   await fs.writeFile(DISTRIBUTIONS_OUT, JSON.stringify(distributions));
   const totalVals = Object.values(distributions).reduce((s, a) => s + a.length, 0);
   console.log(`Distributions → ${DISTRIBUTIONS_OUT}  (${totalVals.toLocaleString()} values)`);
+
+  // ── Per-city equity stats ──────────────────────────────────────────────
+  // Pre-bin each city's pixels by income tertile + race bin (the paper's
+  // <30 / 30–60 / >60 thresholds), compute the population-weighted mean
+  // of each metric per bin, and bootstrap a 95 % CI. Output shape:
+  //   { Atlanta: { pm25_low: { overall, income: [{dev, ci}, …],
+  //                            race:   [{dev, ci}, …] }, … }, … }
+  // The mobile City-Inequality picker reads this JSON to render the chart
+  // for any of the 15 metros without needing the full record set on the
+  // client.
+  console.log('Computing per-city equity stats…');
+  function popWeightedMean(records, key) {
+    let num = 0, den = 0;
+    for (const r of records) {
+      const v = r[key];
+      if (v == null || !Number.isFinite(v)) continue;
+      num += v * r.population;
+      den += r.population;
+    }
+    return den > 0 ? num / den : null;
+  }
+  function bootstrapCI(records, key, overall, draws = 200) {
+    if (!records.length || overall == null || overall === 0) return null;
+    const n = records.length;
+    const devs = new Array(draws);
+    for (let d = 0; d < draws; d++) {
+      let num = 0, den = 0;
+      for (let i = 0; i < n; i++) {
+        const r = records[(Math.random() * n) | 0];
+        num += r[key] * r.population;
+        den += r.population;
+      }
+      devs[d] = (num / den - overall) / overall;
+    }
+    devs.sort((a, b) => a - b);
+    return { lo: round(devs[Math.floor(0.025 * draws)], 4), hi: round(devs[Math.floor(0.975 * draws)], 4) };
+  }
+  function computeEquity(records, key) {
+    if (records.length < 30) return null;
+    const overall = popWeightedMean(records, key);
+    if (overall == null || overall === 0) return null;
+    const incomeVals = records.map((r) => r.income).sort((a, b) => a - b);
+    const t1 = incomeVals[Math.floor(incomeVals.length / 3)];
+    const t2 = incomeVals[Math.floor(2 * incomeVals.length / 3)];
+    const incomeBins = [
+      records.filter((r) => r.income <= t1),
+      records.filter((r) => r.income >  t1 && r.income <= t2),
+      records.filter((r) => r.income >  t2),
+    ];
+    const raceBins = [
+      records.filter((r) => r.percent_white <= 30),
+      records.filter((r) => r.percent_white >  30 && r.percent_white <= 60),
+      records.filter((r) => r.percent_white >  60),
+    ];
+    function summarize(bin) {
+      if (bin.length < 5) return null;
+      const m = popWeightedMean(bin, key);
+      if (m == null) return null;
+      return {
+        dev: round((m - overall) / overall, 4),
+        ci:  bootstrapCI(bin, key, overall),
+        n:   bin.length,
+      };
+    }
+    return {
+      overall: round(overall, key.startsWith('mort') ? 6 : 3),
+      income:  incomeBins.map(summarize),
+      race:    raceBins.map(summarize),
+    };
+  }
+  const cityEquity = {};
+  for (const city of Object.keys(cityRecords)) {
+    const recs = cityRecords[city];
+    cityEquity[city] = {
+      pm25_low:  computeEquity(recs, 'pm25_low'),
+      pm25_high: computeEquity(recs, 'pm25_high'),
+      mort_low:  computeEquity(recs, 'mort_low'),
+      mort_high: computeEquity(recs, 'mort_high'),
+      pixels: recs.length,
+    };
+  }
+  await fs.writeFile(CITY_EQUITY_OUT, JSON.stringify(cityEquity, null, 0));
+  console.log(`City equity   → ${CITY_EQUITY_OUT}  (${Object.keys(cityEquity).length} cities)`);
 
   // ── Tippecanoe → mbtiles → PMTiles ─────────────────────────────────────
   // -Z2 -z14: full zoom range. drop-densest-as-needed keeps the sparser

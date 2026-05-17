@@ -161,13 +161,12 @@ function JustAirMethods() {
     <>
       <h2 style={h2Style}>About this map</h2>
       <p style={pStyle}>
-        This map shows projected annual PM₂.₅ concentrations and PM₂.₅-related
-        mortality in 2050 across the 15 most populous U.S. metros under two
-        net-zero scenarios — <em>Low CDR</em>, which reaches net zero with
-        limited carbon-dioxide removal, and <em>High CDR</em>, which leans
-        more heavily on CDR. The difference layer (High − Low) highlights
-        where each scenario yields cleaner or dirtier air, and where the
-        resulting health burden shifts. For details, see{' '}
+        This map shows projected annual PM₂.₅ concentrations and
+        PM₂.₅-related mortality in 2050 across the contiguous United States
+        and 15 major U.S. metros under two net-zero scenarios —{' '}
+        <em>Low CDR</em>, which reaches net zero with limited carbon-dioxide
+        removal, and <em>High CDR</em>, which leans more heavily on CDR.
+        For details, see{' '}
         <strong>Bergero et al., <em>Nature Climate Change</em>, in press</strong>{' '}
         (<a
           href="https://assets-eu.researchsquare.com/files/rs-7359464/v1/e95da285-43f3-4f1b-b892-d899d3335dda.pdf"
@@ -185,43 +184,79 @@ function JustAirMethods() {
         the same net target; the High-CDR scenario tolerates more fossil
         combustion and offsets it with engineered or land-based removals.
         Because PM₂.₅ co-pollutants ride along with fossil combustion, the
-        two scenarios produce different air-quality outcomes in the same year.
+        two scenarios produce different air-quality outcomes in the same
+        year. The map defaults to the High-CDR view; switch via the
+        scenario toggle in the sidebar.
+      </p>
+
+      <h2 style={h2Style}>Layers</h2>
+      <p style={pStyle}>
+        <strong>PM₂.₅</strong> shows annual mean concentration (µg/m³) on a
+        diverging blue → red ramp pivoting at the WHO 5 µg/m³ safe-air
+        threshold; cells right at the threshold render transparent.{' '}
+        <strong>Mortality</strong> shows the PM₂.₅-attributable death rate
+        (deaths/km²) on a cream → orange → wine → black ramp (inverted to
+        wine → orange → cream in dark mode for contrast).{' '}
+        <strong>Δ PM₂.₅</strong> and <strong>Δ Mortality</strong> show the
+        High − Low CDR difference on a sequential red ramp, transparent
+        where the difference is near zero.{' '}
+        <strong>Population density</strong> (people/km²) and the
+        <strong> demographic layers</strong> — household income (USD/household)
+        and race/ethnicity (% non-Hispanic white) — read off the city pixel
+        grid only; the national surface lacks those columns.
       </p>
 
       <h2 style={h2Style}>Spatial resolution</h2>
       <p style={pStyle}>
-        High-resolution pixel data is shown inside the 15 metro boxes that
-        appear on the national view. Outside those boxes, only the
-        background 9 km field is meaningful. As you zoom in, the city-level
-        pixels fade in to reveal block-scale heterogeneity in concentrations
-        and health burden.
+        Air-quality and mortality data come from a CONUS-wide 9 km grid
+        plus native 1 km pixel grids for each of the 15 metros, sourced from
+        the Bergero et al. modeling pipeline. The map tiles between five
+        scales as you zoom: 36 km supercells at the national view
+        (z ≲ 4), 18 km at z 4, 9 km at z 5–7, 3 km city bins at z 6, and
+        native 1 km city pixels from z 7. The 9 km grid is dropped where
+        it would otherwise overlap city pixels, so the city tiers own the
+        intra-metro view.
       </p>
 
       <h2 style={h2Style}>Mortality estimation</h2>
       <p style={pStyle}>
-        PM₂.₅-attributable mortality per pixel is computed using a standard
-        concentration-response function applied to local PM₂.₅ exposure and
-        baseline mortality rates. Per-pixel counts are small (because pixels
-        are small); city-wide totals can be obtained by summing across
-        pixels within a metro using the area-selection tool.
+        PM₂.₅-attributable mortality per pixel is computed using a
+        concentration-response function applied to local PM₂.₅ exposure
+        and baseline mortality rates from the source paper. Values are
+        reported as deaths/km² (per-pixel counts divided by cell area so
+        the national 9 km grid and the 1 km city pixels share a common
+        unit). Use the <strong>region focus</strong> tool to sum cells
+        within a drawn circle or polygon and compute area-level totals.
+      </p>
+
+      <h2 style={h2Style}>Equity chart</h2>
+      <p style={pStyle}>
+        When a region drawn with the region-focus tool overlaps any of the
+        15 metros, the panel under the histogram bins city pixels by income
+        tertile (left) and by % non-Hispanic white into the source paper's
+        three categorical bins (right), then plots the
+        population-weighted mean PM₂.₅ (or mortality) of each bin as
+        percent deviation from the region-wide mean. The lighter rectangle
+        behind each bar is a 95 % bootstrap confidence interval (200
+        resamples). The chart hides itself outside the metros, since the
+        national 9 km surface doesn't carry the demographic columns.
       </p>
 
       <h2 style={h2Style}>Difference layer</h2>
       <p style={pStyle}>
-        Difference = High CDR − Low CDR. <strong>Blue</strong> indicates
-        locations where the High-CDR scenario is cleaner or saves lives;{' '}
-        <strong>red</strong> indicates locations where High CDR results in
-        more PM₂.₅ or more deaths than Low CDR. The diverging scale is
-        centered on zero (no difference).
+        Difference = High CDR − Low CDR. Darker red indicates locations
+        where the High-CDR scenario produces more PM₂.₅ or more deaths
+        than the Low-CDR scenario; cells with near-zero difference fade
+        to transparent.
       </p>
 
-      <h2 style={h2Style}>Caveats</h2>
+      <h2 style={h2Style}>Distribution chart</h2>
       <p style={pStyle}>
-        The 9 km national surface is a placeholder synthesized for layout
-        purposes pending the model's full national output. City-level
-        pixels reflect the published model results. Population, minority
-        share, and income overlays are scaffolded but data have not yet
-        been loaded.
+        The sidebar histogram shows the nationwide value distribution for
+        the active variable, baked into a static JSON at build time so it
+        stays fixed as you pan or zoom — a constant reference for the
+        whole CONUS. Use the region-focus tool when you want the
+        distribution to follow your drawn area instead.
       </p>
     </>
   )

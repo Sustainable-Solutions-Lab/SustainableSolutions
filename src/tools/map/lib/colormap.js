@@ -131,8 +131,8 @@ export function getEquityPalette(variable, isDark) {
   const c1 = interp(t1)
   const c2 = interp(t2)
   return {
-    income: { bar: c1, band: withAlphaRgb(c1, 0.25) },
-    race:   { bar: c2, band: withAlphaRgb(c2, 0.25) },
+    income: { bar: c1, band: c1 },
+    race:   { bar: c2, band: c2 },
   }
 }
 

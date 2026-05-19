@@ -401,14 +401,12 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
 
   function devY(d) { return yMid - d * yScale }
 
-  // High-contrast neutral for the median stripe so it reads as a clear
-  // line on top of the colored CI band (the band and the bar were
-  // previously the same hue, which made the median invisible).
+  // Median line — high-contrast ink/cream stroke matching the weight of
+  // the histogram's mean/median markers (strokeWidth 1.2).
   const medianStroke = isDark ? 'rgba(248, 248, 232, 0.95)' : 'rgba(24, 24, 56, 0.95)'
 
   function renderBar(b, x, fillBand, fillBar) {
     if (b.dev == null) return null
-    const POINT_H = 3
     const elements = []
     if (b.ci) {
       const top = devY(b.ci.hi)
@@ -417,8 +415,9 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
         <rect key='ci' x={x} y={top} width={EQUITY_BAR_W} height={Math.max(2, bottom - top)} fill={fillBand} />,
       )
     }
+    const yMed = devY(b.dev)
     elements.push(
-      <rect key='pt' x={x} y={devY(b.dev) - POINT_H / 2} width={EQUITY_BAR_W} height={POINT_H} fill={medianStroke} />,
+      <line key='med' x1={x} x2={x + EQUITY_BAR_W} y1={yMed} y2={yMed} stroke={medianStroke} strokeWidth={1.2} />,
     )
     return <g key={x}>{elements}</g>
   }

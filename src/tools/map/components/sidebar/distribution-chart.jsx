@@ -295,9 +295,15 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
               the chart reads as a clear distribution; the map's
               alpha-driven fade is conveyed by color choice alone. */}
           {bars.map((bar, i) => {
-            if (bar.count === 0) return null
-            const heightFraction = Math.sqrt(bar.count / maxCount)
-            const h = Math.max(1, heightFraction * CHART_H)
+            // Every bin renders, even empty ones — empty bins paint a
+            // 2-px baseline strip in their bin colour so the chart has
+            // a continuous coloured floor across the full data range.
+            // Without this, sparse distributions (e.g. the diff layers)
+            // leave background-coloured gaps between data-bearing bars,
+            // which read as bright vertical seams against the diff
+            // layers' identical solid red/blue fills.
+            const heightFraction = bar.count > 0 ? Math.sqrt(bar.count / maxCount) : 0
+            const h = bar.count > 0 ? Math.max(2, heightFraction * CHART_H) : 2
             const y = CHART_H - h
             const fill = (isDiverging && hasAnchors)
               ? (bar.binCenter >= zeroRef
@@ -308,12 +314,6 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
               <rect
                 key={i}
                 x={i} y={y}
-                // Wider than 1 SVG unit so adjacent bars overlap, closing
-                // the sub-pixel seams that the SVG's non-integer pixel
-                // scaling would otherwise leave between same-colour bars.
-                // Combined with shapeRendering='geometricPrecision' on
-                // the parent svg so the renderer doesn't snap each rect's
-                // edges to whole pixels independently.
                 width={1.4} height={h}
                 fill={fill}
                 opacity={1}

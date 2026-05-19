@@ -2,26 +2,21 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import MapTool from '../../tools/map/MapTool.jsx';
 import tools from '../../data/tools.json';
-import publications from '../../data/publications.json';
-import type { Tool, Publication } from '../../lib/types';
+import type { Tool } from '../../lib/types';
 
 const tool = (tools as Tool[]).find((t) => t.slug === 'firefuels') ?? null;
-const companionPub = tool?.doi
-  ? (publications as Publication[]).find((p) => p.doi?.toLowerCase() === tool.doi!.toLowerCase()) ?? null
-  : null;
-// Hand-pin the preprint URL for firefuels so the companion link goes
-// straight to the EarthArxiv preprint page instead of bouncing through
-// doi.org. (The publication row's url is the doi.org redirect, which
-// works but adds an extra hop on click.)
-const FIREFUELS_PREPRINT_URL = 'https://eartharxiv.org/repository/view/9858/';
-const companion = companionPub
-  ? {
-      title: companionPub.title,
-      journal: companionPub.journal,
-      year: companionPub.year,
-      url: FIREFUELS_PREPRINT_URL,
-    }
-  : null;
+
+// Hand-pin the firefuels companion paper. The Tools-sheet doi lookup was
+// brittle (one Sheet edit could quietly drop the sidebar card), so we just
+// pin the preprint metadata here. If/when the paper is officially
+// published, swap the URL + journal + year and the card updates everywhere
+// the firefuels tool is loaded.
+const companion = {
+  title: 'Prioritizing wildfire fuel management in California',
+  journal: 'in review',
+  year: 2025,
+  url: 'https://eartharxiv.org/repository/view/9858/',
+};
 ---
 
 <BaseLayout

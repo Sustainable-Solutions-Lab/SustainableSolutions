@@ -308,7 +308,12 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
               <rect
                 key={i}
                 x={i} y={y}
-                width={1} height={h}
+                // 1.02 (vs 1.00) — adjacent bars overlap by ~2 % so the
+                // SVG's non-integer pixel scaling doesn't leave thin
+                // background-coloured seams between them, which read as
+                // white lines on the diff-layer's binary-anchor solid
+                // fills.
+                width={1.02} height={h}
                 fill={fill}
                 opacity={1}
               />

@@ -95,17 +95,19 @@ function ContinuousLegend({ variable, allValues = [], isDark = true }) {
     const negRange = Math.max(zeroVal - min, 0.001)
     const posRange = Math.max(max - zeroVal, 0.001)
     const totalRange = negRange + posRange
-    const zeroPct = (posRange / totalRange * 100).toFixed(1)
+    // Zero sits at fraction (zero - min)/(max - min) from the left
+    // (now the min side).
+    const zeroPct = (negRange / totalRange * 100).toFixed(1)
 
     const blue = isDark ? '#4393c3' : '#2166ac'
     const red  = isDark ? '#d6604d' : '#b2182b'
     const blueRgb = isDark ? '67,147,195' : '33,102,172'
     const redRgb  = isDark ? '214,96,77'  : '178,24,43'
     gradient = `linear-gradient(to right,
-      ${blue} 0%,
-      rgba(${blueRgb},0) ${zeroPct}%,
+      ${red} 0%,
       rgba(${redRgb},0) ${zeroPct}%,
-      ${red} 100%)`
+      rgba(${blueRgb},0) ${zeroPct}%,
+      ${blue} 100%)`
   } else {
     let cm = variable.colormap
     if (cm === 'RdBuBlue') cm = isDark ? 'RdBuBlueDark' : 'RdBuBlueLight'
@@ -115,7 +117,7 @@ function ContinuousLegend({ variable, allValues = [], isDark = true }) {
       const alpha = 0.15 + (i / (stops.length - 1)) * 0.85
       return `${withAlpha(stop.color, alpha)} ${(i / (stops.length - 1) * 100).toFixed(1)}%`
     })
-    gradient = `linear-gradient(to left, ${parts.join(', ')})`
+    gradient = `linear-gradient(to right, ${parts.join(', ')})`
   }
 
   return (
@@ -128,11 +130,11 @@ function ContinuousLegend({ variable, allValues = [], isDark = true }) {
         style={{ height: 10, borderRadius: 'var(--radius-sm)', background: gradient }}
       />
       <div className="flex justify-between">
-        <span className="font-mono text-[11px] text-ink-3">{formatValue(max, unit)}</span>
+        <span className="font-mono text-[11px] text-ink-3">{formatValue(min, unit)}</span>
         {variable.diverging && zero !== undefined && (
           <span className="font-mono text-[11px] text-ink-3">{formatValue(zero, unit)}</span>
         )}
-        <span className="font-mono text-[11px] text-ink-3">{formatValue(min, unit)}</span>
+        <span className="font-mono text-[11px] text-ink-3">{formatValue(max, unit)}</span>
       </div>
     </div>
   )
@@ -176,9 +178,8 @@ function MobileContinuousLegend({ variable, allValues = [], isDark }) {
   let gradient
   let zeroPct = null
   if (variable.diverging && hasAnchors) {
-    // Binary anchored mode (diff layers): the two halves are the pinned
-    // solidColor / solidColorNegative; we lay them down respecting the
-    // colormap convention so left side = max value (positive side).
+    // Binary anchored mode (diff layers). High convention: left=min,
+    // right=max — matches the distribution chart underneath.
     const posIsBlue = variable.colormap !== 'BuRd'
     const fallbackBlue = isDark ? '#4393c3' : '#2166ac'
     const fallbackRed  = isDark ? '#d6604d' : '#b2182b'
@@ -190,30 +191,27 @@ function MobileContinuousLegend({ variable, allValues = [], isDark }) {
     const negRgb = hexToRgbStr(neg) ?? (posIsBlue ? fallbackRedRgb : fallbackBlueRgb)
     const negRange = Math.max(zeroVal - min, 0.001)
     const posRange = Math.max(max - zeroVal, 0.001)
-    // Left = max (positive end), right = min (negative end). The crossover
-    // sits at the same fraction of the bar as zero sits within (min, max).
+    // Zero crossing sits at the value-fraction (zero - min)/(max - min)
+    // from the LEFT (now the min side).
     const crossover = (negRange / (negRange + posRange) * 100)
     zeroPct = crossover
-    gradient = `linear-gradient(to right, ${pos} 0%, rgba(${posRgb},0) ${crossover.toFixed(1)}%, rgba(${negRgb},0) ${crossover.toFixed(1)}%, ${neg} 100%)`
+    gradient = `linear-gradient(to right, ${neg} 0%, rgba(${negRgb},0) ${crossover.toFixed(1)}%, rgba(${posRgb},0) ${crossover.toFixed(1)}%, ${pos} 100%)`
   } else if (variable.diverging) {
-    // Continuous diverging — walk the actual colormap so PM (BuRd, red
-    // at high), race (PRGn, green at high), etc. all render correctly.
+    // Continuous diverging. Stops walk min→max; with `to right` the
+    // LEFT end is offset 0 (min), the RIGHT end is offset 100 (max).
     const stops = buildLegendStops({ ...variable, domain: effectiveDomain, colormap: cm }, 30)
     const parts = stops.map((stop, i) => `${stop.color} ${(i / (stops.length - 1) * 100).toFixed(1)}%`)
-    // Stops walk min→max, so the LEFT end (gradient 100%) is `max`. Use
-    // `to left` to keep the convention left=max consistent with the
-    // sequential branch and the axis labels below.
-    gradient = `linear-gradient(to left, ${parts.join(', ')})`
+    gradient = `linear-gradient(to right, ${parts.join(', ')})`
     const negRange = Math.max(zeroVal - min, 0.001)
     const posRange = Math.max(max - zeroVal, 0.001)
-    zeroPct = posRange / (negRange + posRange) * 100
+    zeroPct = negRange / (negRange + posRange) * 100
   } else {
     const stops = buildLegendStops({ ...variable, domain: effectiveDomain, colormap: cm }, 30)
     const parts = stops.map((stop, i) => {
       const alpha = 0.15 + (i / (stops.length - 1)) * 0.85
       return `${withAlpha(stop.color, alpha)} ${(i / (stops.length - 1) * 100).toFixed(1)}%`
     })
-    gradient = `linear-gradient(to left, ${parts.join(', ')})`
+    gradient = `linear-gradient(to right, ${parts.join(', ')})`
   }
 
   const textColor = isDark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.65)'
@@ -228,13 +226,13 @@ function MobileContinuousLegend({ variable, allValues = [], isDark }) {
       )}
       <div style={{ height: 8, borderRadius: 3, background: gradient, marginBottom: 3 }} />
       <div style={{ position: 'relative', height: 13 }}>
-        <div style={{ ...labelStyle, left: 0 }}>{fmtNum(max)}</div>
+        <div style={{ ...labelStyle, left: 0 }}>{fmtNum(min)}</div>
         {variable.diverging && zeroPct !== null && (
           <div style={{ ...labelStyle, left: `${zeroPct.toFixed(1)}%`, transform: 'translateX(-50%)' }}>
             {fmtNum(zeroVal)}
           </div>
         )}
-        <div style={{ ...labelStyle, right: 0 }}>{fmtNum(min)}</div>
+        <div style={{ ...labelStyle, right: 0 }}>{fmtNum(max)}</div>
       </div>
     </div>
   )

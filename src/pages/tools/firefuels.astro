@@ -9,12 +9,17 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'firefuels') ?? null;
 const companionPub = tool?.doi
   ? (publications as Publication[]).find((p) => p.doi?.toLowerCase() === tool.doi!.toLowerCase()) ?? null
   : null;
+// Hand-pin the preprint URL for firefuels so the companion link goes
+// straight to the EarthArxiv preprint page instead of bouncing through
+// doi.org. (The publication row's url is the doi.org redirect, which
+// works but adds an extra hop on click.)
+const FIREFUELS_PREPRINT_URL = 'https://eartharxiv.org/repository/view/9858/';
 const companion = companionPub
   ? {
       title: companionPub.title,
       journal: companionPub.journal,
       year: companionPub.year,
-      url: companionPub.url ?? (companionPub.doi ? `https://doi.org/${companionPub.doi}` : null),
+      url: FIREFUELS_PREPRINT_URL,
     }
   : null;
 ---

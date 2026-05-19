@@ -253,9 +253,8 @@ function JustAirMethods() {
       <h2 style={h2Style}>Distribution chart</h2>
       <p style={pStyle}>
         The sidebar histogram shows the nationwide value distribution for
-        the active variable, baked into a static JSON at build time so it
-        stays fixed as you pan or zoom — a constant reference for the
-        whole CONUS. Use the region-focus tool when you want the
+        the active variable, which stays fixed as you pan or zoom —
+        a constant reference for the whole CONUS. Use the region-focus tool when you want the
         distribution to follow your drawn area instead.
       </p>
     </>

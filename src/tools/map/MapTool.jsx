@@ -396,8 +396,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       <div
         className="block md:hidden fixed left-0 right-0 z-[21] bg-paper border-b border-rule overflow-y-auto px-4 pt-3 pb-4"
         style={{
-          top: 148,
-          maxHeight: 'calc(100dvh - 148px)',
+          top: 180,
+          maxHeight: 'calc(100dvh - 180px)',
           transform: mobilePanelOpen ? 'translateY(0)' : 'translateY(-110%)',
           transition: 'transform 0.18s ease',
         }}
@@ -502,7 +502,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       <div
         className="block md:hidden fixed left-0 right-0 bottom-0"
         style={{
-          top: 148,
+          top: 180,
           background: 'rgba(0,0,0,0.52)',
           zIndex: 20,
           opacity: mobilePanelOpen ? 1 : 0,

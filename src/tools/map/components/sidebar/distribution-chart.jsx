@@ -279,7 +279,7 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
           ref={svgRef}
           viewBox={`0 0 ${CHART_W} ${CHART_H}`}
           preserveAspectRatio='none'
-          shapeRendering='crispEdges'
+          shapeRendering='geometricPrecision'
           style={{
             width: '100%',
             height: CHART_H,
@@ -308,12 +308,13 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
               <rect
                 key={i}
                 x={i} y={y}
-                // 1.02 (vs 1.00) — adjacent bars overlap by ~2 % so the
-                // SVG's non-integer pixel scaling doesn't leave thin
-                // background-coloured seams between them, which read as
-                // white lines on the diff-layer's binary-anchor solid
-                // fills.
-                width={1.02} height={h}
+                // Wider than 1 SVG unit so adjacent bars overlap, closing
+                // the sub-pixel seams that the SVG's non-integer pixel
+                // scaling would otherwise leave between same-colour bars.
+                // Combined with shapeRendering='geometricPrecision' on
+                // the parent svg so the renderer doesn't snap each rect's
+                // edges to whole pixels independently.
+                width={1.4} height={h}
                 fill={fill}
                 opacity={1}
               />

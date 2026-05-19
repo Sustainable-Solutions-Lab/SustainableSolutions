@@ -289,31 +289,64 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
           }}
           onMouseDown={handleSvgMouseDown}
         >
-          {/* Histogram bars — one per pixel-wide bin, height ∝ √(count) so
-              the long tail of low-frequency bins stays visible alongside
-              the peak. Bars are colored by the bin's center value via the
-              same colormap used on the map. Full opacity throughout so
-              the chart reads as a clear distribution; the map's
-              alpha-driven fade is conveyed by color choice alone. */}
+          {/* Histogram — rendered as a single stepped polygon per
+              colour region so there are no per-bar right edges to
+              antialias against the background. Per-bar rects produced
+              visible vertical "lines" wherever a bar protruded above its
+              shorter right neighbour (the antialiased right edge blended
+              bar colour with paper colour). A single path has only one
+              continuous top edge, eliminating those seams entirely. */}
           {(() => {
             const barW = CHART_W / BIN_COUNT
-            return bars.map((bar, i) => {
-              const heightFraction = bar.count > 0 ? Math.sqrt(bar.count / maxCount) : 0
-              const h = bar.count > 0 ? Math.max(2, heightFraction * CHART_H) : 2
-              const y = CHART_H - h
-              const fill = (isDiverging && hasAnchors)
+            const heightAt = (bar) => {
+              if (bar.count > 0) {
+                const f = Math.sqrt(bar.count / maxCount)
+                return Math.max(2, f * CHART_H)
+              }
+              return 2
+            }
+            // Build one path per contiguous run of identically-coloured
+            // bars. For continuous-colormap variables every bar gets a
+            // distinct colour, so we emit one path per bar there (the
+            // earlier seam doesn't appear since adjacent colours are
+            // nearly identical and antialiasing blends smoothly). For
+            // binary-anchor diff layers, all bars on a side share one
+            // colour — exactly the case that produced visible seams —
+            // and they collapse into a single multi-step path.
+            function colourFor(bar) {
+              return (isDiverging && hasAnchors)
                 ? (bar.binCenter >= zeroRef
                     ? variable.solidColor
                     : (variable.solidColorNegative ?? variable.solidColor))
                 : (variable.solidColor ?? scale(bar.binCenter))
+            }
+            const runs = []
+            let cur = null
+            for (let i = 0; i < bars.length; i++) {
+              const c = colourFor(bars[i])
+              if (!cur || cur.fill !== c) {
+                cur = { fill: c, indices: [i] }
+                runs.push(cur)
+              } else {
+                cur.indices.push(i)
+              }
+            }
+            return runs.map((run, k) => {
+              const pts = []
+              const first = run.indices[0]
+              const last  = run.indices[run.indices.length - 1]
+              pts.push(`${first * barW},${CHART_H}`)
+              for (const i of run.indices) {
+                const y = CHART_H - heightAt(bars[i])
+                pts.push(`${i * barW},${y}`)
+                pts.push(`${(i + 1) * barW},${y}`)
+              }
+              pts.push(`${(last + 1) * barW},${CHART_H}`)
               return (
-                <rect
-                  key={i}
-                  x={i * barW}
-                  y={y}
-                  width={barW * 1.25}
-                  height={h}
-                  fill={fill}
+                <polygon
+                  key={k}
+                  points={pts.join(' ')}
+                  fill={run.fill}
                   opacity={1}
                 />
               )

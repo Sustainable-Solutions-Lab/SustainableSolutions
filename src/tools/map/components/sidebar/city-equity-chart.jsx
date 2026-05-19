@@ -64,16 +64,18 @@ export function CityEquityChart({ stats, isDark, width = W_DEFAULT, variable }) 
 
   function devY(d) { return yMid - d * yScale }
 
-  function renderBar(b, x, bandFill, barFill) {
+  const medianStroke = isDark ? 'rgba(248, 248, 232, 0.95)' : 'rgba(24, 24, 56, 0.95)'
+
+  function renderBar(b, x, bandFill, _barFill) {
     if (!b || b.dev == null) return null
-    const POINT_H = 4
+    const POINT_H = 3
     const elements = []
     if (b.ci) {
       const top = devY(b.ci.hi)
       const bot = devY(b.ci.lo)
       elements.push(<rect key='ci' x={x} y={top} width={BAR_W} height={Math.max(2, bot - top)} fill={bandFill} />)
     }
-    elements.push(<rect key='pt' x={x} y={devY(b.dev) - POINT_H / 2} width={BAR_W} height={POINT_H} fill={barFill} />)
+    elements.push(<rect key='pt' x={x} y={devY(b.dev) - POINT_H / 2} width={BAR_W} height={POINT_H} fill={medianStroke} />)
     return <g key={x}>{elements}</g>
   }
 

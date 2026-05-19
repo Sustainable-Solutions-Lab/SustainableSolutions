@@ -174,8 +174,11 @@ export function useJustAirLayers(map, config, state, tuning) {
         const negDevs = values.filter((x) => x < zero).map((x) => zero - x).sort((a, b) => a - b)
         const colorPct = v.colorPercentile ?? 0.99
         const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(colorPct * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
-        const maxPosDev = p99(posDevs)
-        const maxNegDev = p99(negDevs)
+        // `colorMax` (and `colorMin` for diverging variables) lets a
+        // variable override the data-derived p99 with an explicit clean
+        // cap — e.g. population pinned at 1000 instead of ~862.
+        const maxPosDev = v.colorMax != null ? Math.max(v.colorMax - zero, 0) : p99(posDevs)
+        const maxNegDev = v.colorMin != null ? Math.max(zero - v.colorMin, 0) : p99(negDevs)
         if (maxPosDev > 0 || maxNegDev > 0) {
           colorRangeRef.current = { maxPosDev, maxNegDev }
           if (values.length >= 100) colorRangeLockedRef.current = true
@@ -302,9 +305,9 @@ export function useJustAirLayers(map, config, state, tuning) {
             const posDevs = values.filter((x) => x > zero).map((x) => x - zero).sort((a, b) => a - b)
             const negDevs = values.filter((x) => x < zero).map((x) => zero - x).sort((a, b) => a - b)
             const colorPct = v.colorPercentile ?? 0.99
-        const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(colorPct * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
-            const maxPosDev = p99(posDevs)
-            const maxNegDev = p99(negDevs)
+            const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(colorPct * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
+            const maxPosDev = v.colorMax != null ? Math.max(v.colorMax - zero, 0) : p99(posDevs)
+            const maxNegDev = v.colorMin != null ? Math.max(zero - v.colorMin, 0) : p99(negDevs)
             if (maxPosDev > 0 || maxNegDev > 0) {
               recomputed = { maxPosDev, maxNegDev }
               colorRangeRef.current = recomputed

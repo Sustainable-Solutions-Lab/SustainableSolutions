@@ -246,6 +246,10 @@ const config = {
       // Hard floor in both the chart and the map: cells below 100
       // people/km² drop to alpha 0.
       histogramMin: 100,
+      // Round colour saturation + chart axis cap to a clean 1000, in
+      // place of the data-derived p99 (~862) which surfaced an awkward
+      // axis label.
+      colorMax: 1000,
       alphaFloor: 0,
       alphaPower: 0.8,
       layer: 'pop_density',

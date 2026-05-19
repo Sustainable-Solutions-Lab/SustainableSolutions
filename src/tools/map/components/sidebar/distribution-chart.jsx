@@ -89,7 +89,9 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
     const sorted_ = allValues?.length ? [...allValues].sort((a, b) => a - b) : []
     if (sorted_.length < 2) return buildColorScale(variable)
     const p01 = sorted_[Math.floor(sorted_.length * 0.01)] ?? sorted_[0]
-    const pHi = sorted_[Math.floor(sorted_.length * colorPct)] ?? sorted_[sorted_.length - 1]
+    const pHi = variable.colorMax != null
+      ? variable.colorMax
+      : (sorted_[Math.floor(sorted_.length * colorPct)] ?? sorted_[sorted_.length - 1])
     return buildColorScale({ ...variable, domain: { min: p01, max: pHi } })
   }, [variable, allValues, isCategorical, isDiverging])
 
@@ -121,7 +123,8 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
     if (cutoffIdx < sorted.length * 0.05) return p01idxRaw  // <5% above histMin: ignore the floor
     return Math.max(p99idx + 1, cutoffIdx - 1)
   })()
-  const dataMax = sorted.length ? (sorted[p99idx] ?? sorted[0]) : 1
+  const dataMaxAuto = sorted.length ? (sorted[p99idx] ?? sorted[0]) : 1
+  const dataMax = variable?.colorMax != null ? variable.colorMax : dataMaxAuto
   const dataMin = sorted.length ? (sorted[p01idx] ?? sorted[sorted.length - 1]) : 0
   const dataRange = Math.max(dataMax - dataMin, 1)
 

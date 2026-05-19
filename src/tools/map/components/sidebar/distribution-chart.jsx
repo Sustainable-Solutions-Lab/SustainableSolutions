@@ -26,10 +26,22 @@ function SlidersIcon({ size = 16 }) {
   return <SlidersHorizontal size={size} strokeWidth={1.5} aria-hidden='true' />
 }
 
-export function DistributionChart({ variable, allValues, percentileRange, dispatch, isDark = false }) {
+export function DistributionChart({ variable: rawVariable, allValues, percentileRange, dispatch, isDark = false }) {
   const [filterActive, setFilterActive] = useState(false)
   const svgRef = useRef(null)
   const isDragging = useRef(false)
+
+  // Apply the same dark-mode colormap swap the map uses (e.g. mortality
+  // MagmaR → Magma so high values = cream and low values = black on dark
+  // backgrounds). Without this, the chart and the map walk the colormap
+  // in opposite directions in dark mode.
+  const variable = useMemo(() => {
+    if (!rawVariable) return rawVariable
+    if (isDark && rawVariable.darkColormap) {
+      return { ...rawVariable, colormap: rawVariable.darkColormap }
+    }
+    return rawVariable
+  }, [rawVariable, isDark])
 
   const isCategorical = variable?.type === 'categorical'
 

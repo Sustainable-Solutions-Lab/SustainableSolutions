@@ -168,10 +168,12 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
       counts[idx]++
     }
     return Array.from({ length: N }, (_, i) => {
-      const lowIdx = N - 1 - i  // screen-left = highest bin
-      const binStart = dataMin + lowIdx * width
+      // Screen-left = lowest bin, screen-right = highest. Matches the
+      // standard increasing-x convention; flipped from the original
+      // descending-from-left layout.
+      const binStart = dataMin + i * width
       return {
-        count: counts[lowIdx],
+        count: counts[i],
         binCenter: binStart + width / 2,
       }
     })
@@ -194,16 +196,18 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
   const showZeroLine = variable?.diverging && zero !== undefined && zero >= dataMin && zero <= dataMax
   const zeroY = showZeroLine ? valueToY(zero) : CHART_H
 
-  // Current filter line x position in SVG coords
+  // Current filter line x position in SVG coords. With high values now
+  // on the right, "Showing top X%" places the cutoff line at the (100-X)
+  // percent point measured from the left edge — equivalently, low/100.
   const low = percentileRange?.low ?? 0
-  const filterLineX = ((100 - low) / 100) * CHART_W
+  const filterLineX = (low / 100) * CHART_W
 
   const updateFilterFromMouse = useCallback((clientX) => {
     const svg = svgRef.current
     if (!svg) return
     const rect = svg.getBoundingClientRect()
     const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-    const newLow = Math.round(100 - pct * 100)
+    const newLow = Math.round(pct * 100)
     dispatch({ type: Actions.SET_PERCENTILE, low: newLow, high: 100 })
   }, [dispatch])
 
@@ -238,11 +242,11 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
   const showHighGT = sorted.length > 1 && sorted[0] > dataMax          // top 1% trimmed
   const showLowLT  = sorted.length > 1 && sorted[sorted.length - 1] < dataMin  // bottom 1% trimmed
 
-  // Zero crossover x-position for diverging variables: bins are linearly
-  // spaced from dataMax (left) to dataMin (right), so the zero crossing
-  // sits at the position where binCenter passes through `zero`.
+  // Zero crossover x-position for diverging variables. Bins now run
+  // dataMin (left) → dataMax (right), so the zero crossing sits at the
+  // fraction of the range that `zero` lies above dataMin.
   const zeroCrossoverPct = (isDiverging && zero != null && zero > dataMin && zero < dataMax)
-    ? ((dataMax - zero) / Math.max(dataMax - dataMin, 1e-9)) * 100
+    ? ((zero - dataMin) / Math.max(dataMax - dataMin, 1e-9)) * 100
     : null
 
   if (!variable || isCategorical || !sorted.length) return null
@@ -321,13 +325,13 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
             const gradId = `hist-grad-${variable.id ?? 'default'}`
 
             // Sample the colormap into ~40 linearGradient stops. Bars are
-            // ordered screen-left = highest bin, so offset 0 % maps to
-            // dataMax and 100 % to dataMin.
+            // ordered screen-left = lowest bin, so offset 0 % maps to
+            // dataMin and 100 % to dataMax.
             const STOPS = 40
             const stops = []
             for (let s = 0; s <= STOPS; s++) {
               const t = s / STOPS
-              const v = dataMax - t * (dataMax - dataMin)
+              const v = dataMin + t * (dataMax - dataMin)
               let color
               if (isDiverging && hasAnchors) {
                 color = v >= zeroRef
@@ -387,17 +391,17 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
         </svg>
       </div>
 
-      {/* Axis labels — left=max, right=min, zero label at crossover for diverging */}
+      {/* Axis labels — left=min, right=max, zero label at crossover for diverging */}
       <div className="relative" style={{ height: '14px', marginTop: '3px', marginBottom: '2px' }}>
-        {/* High-end label (left) */}
+        {/* Low-end label (left) */}
         <span className="absolute left-0 font-mono text-[13px] text-ink-3 leading-none">
-          {showHighGT ? '>' : ''}{formatValue(dataMax, '')}
+          {showLowLT ? '<' : ''}{formatValue(dataMin, '')}
         </span>
 
         {/* Zero crossover label — only when diverging and zero falls
             well inside the range. The 18/82 thresholds leave room on
-            either side so the centered "5.0" doesn't crash into the
-            ">7k" or "<20.0" edge labels. */}
+            either side so the centered label doesn't crash into the
+            edge labels. */}
         {zeroCrossoverPct !== null && zeroCrossoverPct > 18 && zeroCrossoverPct < 82 && (
           <span
             className="absolute font-mono text-[13px] text-ink-3 leading-none whitespace-nowrap"
@@ -407,9 +411,9 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
           </span>
         )}
 
-        {/* Low-end label (right) */}
+        {/* High-end label (right) */}
         <span className="absolute right-0 font-mono text-[13px] text-ink-3 leading-none">
-          {showLowLT ? '<' : ''}{formatValue(dataMin, '')}
+          {showHighGT ? '>' : ''}{formatValue(dataMax, '')}
         </span>
       </div>
 

@@ -102,6 +102,45 @@ export function buildColorScale(variable) {
 }
 
 /**
+ * Returns two accent colors drawn from the variable's colormap for use as
+ * the income (left) / race (right) groups on the equity chart, so the chart
+ * palette tracks whichever variable the user is mapping. Each side returns
+ * a fully-opaque `bar` color and a translucent `band` color for the CI
+ * rectangle behind each bar.
+ *
+ * Picks t=0.15 / t=0.85 for diverging colormaps (the two saturated ends —
+ * blue / red on BuRd) and t=0.40 / t=0.70 for sequential ones (a lighter
+ * mid + a deeper near-end stop — e.g. MagmaR gives orange + wine-pink).
+ * Respects `darkColormap` and `colormapStart`.
+ */
+export function getEquityPalette(variable, isDark) {
+  const fallbackBar1 = isDark ? 'rgb(67, 147, 195)' : 'rgb(33, 102, 172)'
+  const fallbackBar2 = isDark ? 'rgb(214, 96, 77)'  : 'rgb(178, 24, 43)'
+  if (!variable) {
+    return {
+      income: { bar: fallbackBar1, band: withAlphaRgb(fallbackBar1, 0.25) },
+      race:   { bar: fallbackBar2, band: withAlphaRgb(fallbackBar2, 0.25) },
+    }
+  }
+  const cmName = (isDark && variable.darkColormap) ? variable.darkColormap : (variable.colormap ?? 'BuRd')
+  const baseInterp = INTERPOLATORS[cmName] ?? INTERPOLATORS.BuRd
+  const start = variable.colormapStart ?? 0
+  const interp = start > 0 ? (t) => baseInterp(start + (1 - start) * t) : baseInterp
+  const t1 = variable.diverging ? 0.15 : 0.40
+  const t2 = variable.diverging ? 0.85 : 0.70
+  const c1 = interp(t1)
+  const c2 = interp(t2)
+  return {
+    income: { bar: c1, band: withAlphaRgb(c1, 0.25) },
+    race:   { bar: c2, band: withAlphaRgb(c2, 0.25) },
+  }
+}
+
+function withAlphaRgb(rgbStr, alpha) {
+  return rgbStr.replace(/^rgb\(/, 'rgba(').replace(/\)$/, `, ${alpha})`)
+}
+
+/**
  * Returns an array of evenly-spaced { value, color } stops for a legend gradient.
  * @param {import('../contracts/project-config').Variable} variable
  * @param {number} n  - number of stops (default 20)

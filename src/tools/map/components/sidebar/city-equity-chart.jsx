@@ -14,6 +14,8 @@
  *   width     — px (chart scales horizontally)
  */
 
+import { getEquityPalette } from '../../lib/colormap.js'
+
 const W_DEFAULT = 280
 const H = 96
 const PAD_TOP = 16
@@ -24,7 +26,7 @@ const BAR_GAP = 12
 const GROUP_GAP = 28
 const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
 
-export function CityEquityChart({ stats, isDark, width = W_DEFAULT }) {
+export function CityEquityChart({ stats, isDark, width = W_DEFAULT, variable }) {
   if (!stats) return null
 
   // Find the widest |dev| across bins to size the y-axis. Default to ±20 %.
@@ -45,16 +47,10 @@ export function CityEquityChart({ stats, isDark, width = W_DEFAULT }) {
   const labelFaint = isDark ? 'rgba(248, 248, 232, 0.35)' : 'rgba(24, 24, 56, 0.35)'
   const axisColor  = isDark ? 'rgba(248, 248, 232, 0.18)' : 'rgba(24, 24, 56, 0.18)'
 
-  const palette = {
-    income: {
-      band: isDark ? 'rgba(67, 147, 195, 0.22)' : 'rgba(67, 147, 195, 0.28)',
-      bar:  isDark ? 'rgba(67, 147, 195, 0.95)' : '#2166ac',
-    },
-    race: {
-      band: isDark ? 'rgba(214, 96, 77, 0.22)'  : 'rgba(214, 96, 77, 0.28)',
-      bar:  isDark ? 'rgba(214, 96, 77, 0.95)'  : '#b2182b',
-    },
-  }
+  // Pull income / race accent colors from the active variable's colormap so
+  // the chart palette tracks the map (PM₂.₅ BuRd → blue + red, mortality
+  // MagmaR → orange + wine-pink, etc.).
+  const palette = getEquityPalette(variable, isDark)
 
   // Compute x positions
   const groupW = 3 * BAR_W + 2 * BAR_GAP

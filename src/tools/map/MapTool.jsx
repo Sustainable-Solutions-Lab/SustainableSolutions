@@ -474,7 +474,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                 })}
               </div>
               {stats ? (
-                <CityEquityChart stats={stats} isDark={isDark} />
+                <CityEquityChart stats={stats} isDark={isDark} variable={activeVariable} />
               ) : (
                 <p className="font-sans text-[11px] text-ink-3 m-0">
                   {equityCity

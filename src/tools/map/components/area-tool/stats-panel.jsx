@@ -17,7 +17,7 @@
 import { useMemo } from 'react'
 import { X } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
-import { buildColorScale } from '../../lib/colormap.js'
+import { buildColorScale, getEquityPalette } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
 
 const POS_COLOR = '#4393c3'
@@ -326,7 +326,7 @@ function bootstrapDeviationCI(records, valueKey, overallMean, draws = 200) {
   }
 }
 
-function EquityChart({ records, valueKey, isDark, unit, metricLabel }) {
+function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable }) {
   const computed = useMemo(() => {
     if (records.length < 30) return null
     const overall = popWeightedMean(records, valueKey)
@@ -385,13 +385,10 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel }) {
   const labelFaint = isDark ? 'rgba(248, 248, 232, 0.35)' : 'rgba(24, 24, 56, 0.35)'
   const axisColor  = isDark ? 'rgba(248, 248, 232, 0.18)' : 'rgba(24, 24, 56, 0.18)'
 
-  // Income bars: blue (paper's left panel). Race bars: red (right panel).
-  const palette = {
-    income: { bandFill: isDark ? 'rgba(67, 147, 195, 0.22)' : 'rgba(67, 147, 195, 0.28)',
-              barFill:  isDark ? 'rgba(67, 147, 195, 0.95)' : '#2166ac' },
-    race:   { bandFill: isDark ? 'rgba(214, 96, 77, 0.22)'  : 'rgba(214, 96, 77, 0.28)',
-              barFill:  isDark ? 'rgba(214, 96, 77, 0.95)'  : '#b2182b' },
-  }
+  // Income / race accents are drawn from the active variable's colormap so
+  // the chart reads as a sibling of the map (e.g. BuRd → blue + red on PM₂.₅,
+  // MagmaR → orange + wine-pink on mortality).
+  const palette = getEquityPalette(variable, isDark)
 
   // Layout: 3 income bars on the left, 3 race bars on the right, divider
   // in the middle. Compute x-positions for each.
@@ -467,8 +464,8 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel }) {
               stroke={axisColor} strokeWidth={0.6} strokeDasharray='3 3' />
 
         {/* Bars */}
-        {computed.income.map((b, i) => renderBar(b, incomeXs[i], palette.income.bandFill, palette.income.barFill))}
-        {computed.race.map((b, i) => renderBar(b, raceXs[i], palette.race.bandFill, palette.race.barFill))}
+        {computed.income.map((b, i) => renderBar(b, incomeXs[i], palette.income.band, palette.income.bar))}
+        {computed.race.map((b, i) => renderBar(b, raceXs[i], palette.race.band, palette.race.bar))}
 
         {/* x labels — bin names only (the direction is in the headers
             above so the under-axis row stays uncluttered). */}
@@ -642,6 +639,7 @@ export function StatsPanel({ drawnCircle, drawnPolygon, aggregateStats, areaTool
           metricLabel={equityMetricLabel}
           unit={activeVariable?.unit ?? ''}
           isDark={isDark}
+          variable={activeVariable}
         />
       )}
 

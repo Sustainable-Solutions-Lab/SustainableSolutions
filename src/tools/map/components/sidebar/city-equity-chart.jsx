@@ -64,7 +64,7 @@ export function CityEquityChart({ stats, isDark, width = W_DEFAULT, variable }) 
 
   function devY(d) { return yMid - d * yScale }
 
-  const medianStroke = isDark ? 'rgba(248, 248, 232, 0.95)' : 'rgba(24, 24, 56, 0.95)'
+  const medianStroke = 'rgba(248, 248, 232, 0.95)'
 
   function renderBar(b, x, bandFill, _barFill) {
     if (!b || b.dev == null) return null

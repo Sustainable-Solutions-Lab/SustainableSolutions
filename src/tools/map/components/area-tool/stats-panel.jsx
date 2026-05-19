@@ -401,9 +401,10 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
 
   function devY(d) { return yMid - d * yScale }
 
-  // Median line — high-contrast ink/cream stroke matching the weight of
-  // the histogram's mean/median markers (strokeWidth 1.2).
-  const medianStroke = isDark ? 'rgba(248, 248, 232, 0.95)' : 'rgba(24, 24, 56, 0.95)'
+  // Median line — cream stroke in both modes (the dark ink line was hard
+  // to pick out against the saturated colored bars in light mode) at the
+  // same 1.2 stroke weight as the histogram's mean/median markers.
+  const medianStroke = 'rgba(248, 248, 232, 0.95)'
 
   function renderBar(b, x, fillBand, fillBar) {
     if (b.dev == null) return null

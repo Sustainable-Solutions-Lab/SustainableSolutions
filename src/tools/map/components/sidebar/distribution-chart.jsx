@@ -167,13 +167,39 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
       const idx = Math.min(N - 1, Math.max(0, Math.floor((v - dataMin) / width)))
       counts[idx]++
     }
-    return Array.from({ length: N }, (_, i) => {
+
+    // Fill empty bins by interpolating between the surrounding
+    // non-empty ones. Necessary because some variables (notably
+    // pm25_diff) are baked at lower precision (0.01) than the chart's
+    // bin width (~0.005), which leaves regularly-spaced empty bins
+    // that previously rendered as 2-px-tall slivers — read by the eye
+    // as vertical white lines. Interpolating restores a continuous
+    // histogram shape independent of data quantization.
+    const filled = counts.slice()
+    let i = 0
+    while (i < N) {
+      if (filled[i] !== 0) { i++; continue }
+      let r = i
+      while (r < N && filled[r] === 0) r++
+      // [i, r) are empty. Interpolate between filled[i-1] (or 0 if at
+      // the left edge) and filled[r] (or filled[i-1] if past the
+      // right edge).
+      const leftVal  = i > 0 ? filled[i - 1] : (r < N ? filled[r] : 0)
+      const rightVal = r < N ? filled[r] : leftVal
+      const span = r - i + 1
+      for (let j = i; j < r; j++) {
+        const t = (j - i + 1) / span
+        filled[j] = leftVal * (1 - t) + rightVal * t
+      }
+      i = r
+    }
+
+    return Array.from({ length: N }, (_, k) => {
       // Screen-left = lowest bin, screen-right = highest. Matches the
-      // standard increasing-x convention; flipped from the original
-      // descending-from-left layout.
-      const binStart = dataMin + i * width
+      // standard increasing-x convention.
+      const binStart = dataMin + k * width
       return {
-        count: counts[i],
+        count: filled[k],
         binCenter: binStart + width / 2,
       }
     })

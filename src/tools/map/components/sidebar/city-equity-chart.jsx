@@ -84,9 +84,9 @@ export function CityEquityChart({ stats, isDark, width = W_DEFAULT, variable }) 
       <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: labelMuted, marginBottom: 2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
         Excess relative to city mean
       </div>
-      <div style={{ display: 'flex', fontFamily: FONT_MONO, fontSize: 9, color: labelFaint, marginBottom: 2 }}>
-        <span style={{ flex: 1, textAlign: 'center' }}>higher income →</span>
-        <span style={{ flex: 1, textAlign: 'center' }}>more white →</span>
+      <div style={{ display: 'flex', fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, marginBottom: 2 }}>
+        <span style={{ flex: 1, textAlign: 'center', color: palette.income.bar }}>higher income →</span>
+        <span style={{ flex: 1, textAlign: 'center', color: palette.race.bar }}>more white →</span>
       </div>
       <svg viewBox={`0 0 ${width} ${H}`} preserveAspectRatio='none' style={{ width: '100%', height: H, display: 'block' }}>
         <line x1={0} y1={yMid} x2={width} y2={yMid} stroke={axisColor} strokeWidth={0.8} />

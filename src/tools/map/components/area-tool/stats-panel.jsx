@@ -433,9 +433,9 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
       </div>
       {/* Direction labels — "higher income →" and "more white →" sit
           directly above their bar groups. */}
-      <div style={{ display: 'flex', fontFamily: FONT_MONO, fontSize: 9, color: labelFaint, marginBottom: 2 }}>
-        <span style={{ flex: 1, textAlign: 'center' }}>higher income →</span>
-        <span style={{ flex: 1, textAlign: 'center' }}>more white →</span>
+      <div style={{ display: 'flex', fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, marginBottom: 2 }}>
+        <span style={{ flex: 1, textAlign: 'center', color: palette.income.bar }}>higher income →</span>
+        <span style={{ flex: 1, textAlign: 'center', color: palette.race.bar }}>more white →</span>
       </div>
       <svg
         viewBox={`0 0 ${EQUITY_W} ${EQUITY_H}`}

@@ -372,10 +372,13 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
 
   if (!computed) return null
 
-  // Domain — pull in to ±25 % unless data exceeds it.
+  // Y-axis range: at least ±20 %, expanding to encompass the widest bar
+  // (including CI extents) rounded up to the nearest 5 %. No hard upper
+  // cap, since clipping bars off-chart is worse than a slightly taller
+  // panel on regions with extreme deviations.
   const allDevs = [...computed.income, ...computed.race].flatMap((b) => b.ci ? [b.ci.lo, b.ci.hi, b.dev] : (b.dev != null ? [b.dev] : []))
   const dataMax = Math.max(0.20, ...allDevs.map(Math.abs))
-  const yMax = Math.min(0.40, Math.ceil(dataMax * 20) / 20)  // round up to nearest 5 %
+  const yMax = Math.ceil(dataMax * 20) / 20
 
   const innerH = EQUITY_H - EQUITY_PAD_TOP - EQUITY_PAD_BOT
   const yMid = EQUITY_PAD_TOP + innerH / 2

@@ -185,9 +185,12 @@ const config = {
       colormapStart: 0.15,
       diverging: false,
       domain: { min: 0, max: 1 },
-      histogramMin: 0.05,
+      // Show rural / low-density cells as faint cream rather than
+      // transparent, matching the source paper's CONUS figure where
+      // even sparsely-populated cells carry a pale-pink wash.
+      histogramMin: 0.005,
       alphaFloor: 0,
-      alphaPower: 0.8,
+      alphaPower: 0.35,
       colorPercentile: 0.995,
       layer: 'mortality',
       dimensionValues: { scenario: 'low' },
@@ -202,9 +205,9 @@ const config = {
       colormapStart: 0.15,
       diverging: false,
       domain: { min: 0, max: 1 },
-      histogramMin: 0.05,
+      histogramMin: 0.005,
       alphaFloor: 0,
-      alphaPower: 0.8,
+      alphaPower: 0.35,
       colorPercentile: 0.995,
       layer: 'mortality',
       dimensionValues: { scenario: 'high' },

@@ -524,7 +524,13 @@ function buildColorExpr(rawVariable, isDark, colorRange, tuning) {
     }
     return gated(expr)
   }
-  const scale = buildColorScale(variable)
+  // Rebuild the scale on the data-derived [min, max] so the colormap
+  // walks end-to-end across the *actual* data range. Otherwise variables
+  // whose configured domain max is well above the p99 data value (e.g.
+  // mortality cfgMax=1 with p99 ≈ 0.5) would only sample the lower half
+  // of the colormap, and the deep-wine / black end shown in the legend
+  // and distribution chart would never appear on the map.
+  const scale = buildColorScale({ ...variable, domain: { min, max, zero } })
   for (let i = 0; i <= steps; i++) {
     const v = min + (i / steps) * (max - min)
     const a = alphaForValue(v)

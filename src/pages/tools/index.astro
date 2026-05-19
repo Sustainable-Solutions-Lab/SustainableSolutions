@@ -16,6 +16,19 @@ for (const p of publications as Publication[]) {
   if (p.doi) pubsByDoi.set(p.doi.toLowerCase(), p);
 }
 
+// Per-slug companion overrides — used when a tool's companion paper isn't
+// (yet) a row in the Publications sheet, or when we want to force a
+// specific URL (e.g. a preprint page rather than the doi.org redirect).
+// Shape matches the Publication fields the card template reads.
+const COMPANION_OVERRIDES: Record<string, { title: string; journal: string | null; year: number | null; url: string }> = {
+  firefuels: {
+    title: 'Prioritizing wildfire fuel management in California',
+    journal: 'in review',
+    year: 2025,
+    url: 'https://eartharxiv.org/repository/view/9858/',
+  },
+};
+
 function resolveImage(filename: string | null): string | null {
   if (!filename) return null;
   for (const folder of ['tools', 'images']) {
@@ -25,9 +38,13 @@ function resolveImage(filename: string | null): string | null {
 }
 
 const cards = sorted.map((t) => {
-  const companion = t.doi ? pubsByDoi.get(t.doi.trim().toLowerCase()) ?? null : null;
-  const companionUrl = companion?.url ?? (companion?.doi ? `https://doi.org/${companion.doi}` : null);
-  const companionCitations = companion ? totalCitations(companion) : 0;
+  const override = COMPANION_OVERRIDES[t.slug];
+  const sheetCompanion = t.doi ? pubsByDoi.get(t.doi.trim().toLowerCase()) ?? null : null;
+  const companion = override ?? sheetCompanion;
+  const companionUrl = override
+    ? override.url
+    : (sheetCompanion?.url ?? (sheetCompanion?.doi ? `https://doi.org/${sheetCompanion.doi}` : null));
+  const companionCitations = sheetCompanion ? totalCitations(sheetCompanion) : 0;
   return {
     ...t,
     imgUrl: resolveImage(t.image_filename),

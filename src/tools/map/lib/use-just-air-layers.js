@@ -172,7 +172,8 @@ export function useJustAirLayers(map, config, state, tuning) {
         // dark red sooner than dark blue).
         const posDevs = values.filter((x) => x > zero).map((x) => x - zero).sort((a, b) => a - b)
         const negDevs = values.filter((x) => x < zero).map((x) => zero - x).sort((a, b) => a - b)
-        const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(0.99 * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
+        const colorPct = v.colorPercentile ?? 0.99
+        const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(colorPct * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
         const maxPosDev = p99(posDevs)
         const maxNegDev = p99(negDevs)
         if (maxPosDev > 0 || maxNegDev > 0) {
@@ -300,7 +301,8 @@ export function useJustAirLayers(map, config, state, tuning) {
             const zero = v.domain?.zero ?? v.domain?.min ?? 0
             const posDevs = values.filter((x) => x > zero).map((x) => x - zero).sort((a, b) => a - b)
             const negDevs = values.filter((x) => x < zero).map((x) => zero - x).sort((a, b) => a - b)
-            const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(0.99 * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
+            const colorPct = v.colorPercentile ?? 0.99
+        const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(colorPct * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
             const maxPosDev = p99(posDevs)
             const maxNegDev = p99(negDevs)
             if (maxPosDev > 0 || maxNegDev > 0) {

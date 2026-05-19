@@ -64,14 +64,19 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
     // (asymmetric — matches the map's color expression). Sequential:
     // p1/p99 of the full data so colors saturate at the actual data
     // extremes instead of the configured-but-too-wide domain.
+    // `colorPercentile` (per-variable, default 0.99) relaxes the high-end
+    // cap — e.g. mortality at 0.995 keeps the brightest cells from all
+    // clipping to the same saturated color, so we see more variation
+    // across metros.
+    const colorPct = variable.colorPercentile ?? 0.99
     if (isDiverging) {
       if (allValues?.length >= 10) {
         const zero = variable.domain?.zero ?? 0
         const posDevs = allValues.filter((v) => v > zero).map((v) => v - zero).sort((a, b) => a - b)
         const negDevs = allValues.filter((v) => v < zero).map((v) => zero - v).sort((a, b) => a - b)
-        const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(0.99 * (arr.length - 1))] ?? arr[arr.length - 1]) : null
-        const maxPos = p99(posDevs)
-        const maxNeg = p99(negDevs)
+        const pHi = (arr) => arr.length > 0 ? (arr[Math.floor(colorPct * (arr.length - 1))] ?? arr[arr.length - 1]) : null
+        const maxPos = pHi(posDevs)
+        const maxNeg = pHi(negDevs)
         if (maxPos != null && maxNeg != null && (maxPos > 0 || maxNeg > 0)) {
           return buildColorScale({
             ...variable,
@@ -84,8 +89,8 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
     const sorted_ = allValues?.length ? [...allValues].sort((a, b) => a - b) : []
     if (sorted_.length < 2) return buildColorScale(variable)
     const p01 = sorted_[Math.floor(sorted_.length * 0.01)] ?? sorted_[0]
-    const p99 = sorted_[Math.floor(sorted_.length * 0.99)] ?? sorted_[sorted_.length - 1]
-    return buildColorScale({ ...variable, domain: { min: p01, max: p99 } })
+    const pHi = sorted_[Math.floor(sorted_.length * colorPct)] ?? sorted_[sorted_.length - 1]
+    return buildColorScale({ ...variable, domain: { min: p01, max: pHi } })
   }, [variable, allValues, isCategorical, isDiverging])
 
   // Sort all values descending (highest value = leftmost bar)
@@ -100,7 +105,8 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
   // A project variable may also pin the low-end at `histogramMin` (e.g. 8 µg/m³
   // for PM₂.₅) to cut the long tail of background-noise low values out of the
   // visual; values below that threshold are dropped from the histogram entirely.
-  const p99idx = Math.floor(sorted.length * 0.01)
+  const colorPct = variable?.colorPercentile ?? 0.99
+  const p99idx = Math.floor(sorted.length * (1 - colorPct))
   const p01idxRaw = Math.floor(sorted.length * 0.99)
   const histMin = variable?.histogramMin
   // `histogramMin` clips the low tail of the distribution (e.g. PM₂.₅ < 8

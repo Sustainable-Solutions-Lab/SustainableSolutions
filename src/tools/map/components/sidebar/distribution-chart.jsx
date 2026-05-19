@@ -289,13 +289,14 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
           }}
           onMouseDown={handleSvgMouseDown}
         >
-          {/* Histogram — rendered as a single stepped polygon per
-              colour region so there are no per-bar right edges to
-              antialias against the background. Per-bar rects produced
-              visible vertical "lines" wherever a bar protruded above its
-              shorter right neighbour (the antialiased right edge blended
-              bar colour with paper colour). A single path has only one
-              continuous top edge, eliminating those seams entirely. */}
+          {/* Histogram — rendered as a SINGLE polygon (the full stepped
+              outline of the histogram) filled with a linearGradient that
+              samples the colormap along its length. Per-bar rects /
+              polygons antialiased each bar's right edge against the
+              paper background wherever the bar protruded above its
+              shorter right neighbour, producing visible vertical lines.
+              A single polygon has only one continuous top edge — no
+              internal right-edges, no seams. */}
           {(() => {
             const barW = CHART_W / BIN_COUNT
             const heightAt = (bar) => {
@@ -305,52 +306,51 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
               }
               return 2
             }
-            // Build one path per contiguous run of identically-coloured
-            // bars. For continuous-colormap variables every bar gets a
-            // distinct colour, so we emit one path per bar there (the
-            // earlier seam doesn't appear since adjacent colours are
-            // nearly identical and antialiasing blends smoothly). For
-            // binary-anchor diff layers, all bars on a side share one
-            // colour — exactly the case that produced visible seams —
-            // and they collapse into a single multi-step path.
-            function colourFor(bar) {
-              return (isDiverging && hasAnchors)
-                ? (bar.binCenter >= zeroRef
-                    ? variable.solidColor
-                    : (variable.solidColorNegative ?? variable.solidColor))
-                : (variable.solidColor ?? scale(bar.binCenter))
-            }
-            const runs = []
-            let cur = null
+
+            // One stepped polygon over all bars.
+            const pts = [`0,${CHART_H}`]
             for (let i = 0; i < bars.length; i++) {
-              const c = colourFor(bars[i])
-              if (!cur || cur.fill !== c) {
-                cur = { fill: c, indices: [i] }
-                runs.push(cur)
-              } else {
-                cur.indices.push(i)
-              }
+              const y = CHART_H - heightAt(bars[i])
+              pts.push(`${i * barW},${y}`)
+              pts.push(`${(i + 1) * barW},${y}`)
             }
-            return runs.map((run, k) => {
-              const pts = []
-              const first = run.indices[0]
-              const last  = run.indices[run.indices.length - 1]
-              pts.push(`${first * barW},${CHART_H}`)
-              for (const i of run.indices) {
-                const y = CHART_H - heightAt(bars[i])
-                pts.push(`${i * barW},${y}`)
-                pts.push(`${(i + 1) * barW},${y}`)
+            pts.push(`${CHART_W},${CHART_H}`)
+
+            // Build a unique gradient id per variable so co-mounted charts
+            // (if any) don't collide.
+            const gradId = `hist-grad-${variable.id ?? 'default'}`
+
+            // Sample the colormap into ~40 linearGradient stops. Bars are
+            // ordered screen-left = highest bin, so offset 0 % maps to
+            // dataMax and 100 % to dataMin.
+            const STOPS = 40
+            const stops = []
+            for (let s = 0; s <= STOPS; s++) {
+              const t = s / STOPS
+              const v = dataMax - t * (dataMax - dataMin)
+              let color
+              if (isDiverging && hasAnchors) {
+                color = v >= zeroRef
+                  ? variable.solidColor
+                  : (variable.solidColorNegative ?? variable.solidColor)
+              } else {
+                color = variable.solidColor ?? scale(v)
               }
-              pts.push(`${(last + 1) * barW},${CHART_H}`)
-              return (
-                <polygon
-                  key={k}
-                  points={pts.join(' ')}
-                  fill={run.fill}
-                  opacity={1}
-                />
+              stops.push(
+                <stop key={s} offset={`${(t * 100).toFixed(2)}%`} stopColor={color} />,
               )
-            })
+            }
+
+            return (
+              <>
+                <defs>
+                  <linearGradient id={gradId} x1="0" y1="0" x2={CHART_W} y2="0" gradientUnits="userSpaceOnUse">
+                    {stops}
+                  </linearGradient>
+                </defs>
+                <polygon points={pts.join(' ')} fill={`url(#${gradId})`} />
+              </>
+            )
           })()}
 
           {/* Vertical zero line for diverging variables — sits at the

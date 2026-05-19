@@ -36,7 +36,7 @@ export function CityEquityChart({ stats, isDark, width = W_DEFAULT, variable }) 
     Math.abs(b.ci?.lo ?? 0),
     Math.abs(b.ci?.hi ?? 0),
   ])
-  const dataMax = Math.max(0.20, ...allEdges)
+  const dataMax = Math.max(0.05, ...allEdges)
   const yMax = Math.ceil(dataMax * 20) / 20
 
   const innerH = H - PAD_TOP - PAD_BOT

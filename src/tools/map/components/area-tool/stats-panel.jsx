@@ -372,12 +372,13 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
 
   if (!computed) return null
 
-  // Y-axis range: at least ±20 %, expanding to encompass the widest bar
-  // (including CI extents) rounded up to the nearest 5 %. No hard upper
-  // cap, since clipping bars off-chart is worse than a slightly taller
-  // panel on regions with extreme deviations.
+  // Y-axis range: rounded up to the nearest 5 % around the widest bar
+  // (including CI extents). Floor at ±5 % so very tight distributions
+  // (PM₂.₅, where deviations sit at a few percent) still render as
+  // visible bars instead of thin slivers; no upper cap so bars never
+  // clip off-axis on heavily-skewed metros.
   const allDevs = [...computed.income, ...computed.race].flatMap((b) => b.ci ? [b.ci.lo, b.ci.hi, b.dev] : (b.dev != null ? [b.dev] : []))
-  const dataMax = Math.max(0.20, ...allDevs.map(Math.abs))
+  const dataMax = Math.max(0.05, ...allDevs.map(Math.abs))
   const yMax = Math.ceil(dataMax * 20) / 20
 
   const innerH = EQUITY_H - EQUITY_PAD_TOP - EQUITY_PAD_BOT

@@ -6673,5 +6673,2514 @@
         "count": 0
       }
     ]
+  },
+  "WHBERAHVdrEC": {
+    "id": "WHBERAHVdrEC",
+    "title": "Climate effects of China's efforts to improve its air quality",
+    "authors": "Yixuan Zheng, Qiang Zhang, Dan Tong, Steven J. Davis, Ken Caldeira",
+    "publication_date": "2020/9/29",
+    "journal": "Environmental Research Letters",
+    "volume": "15",
+    "issue": "10",
+    "pages": "104052",
+    "publisher": "IOP",
+    "abstract": "Facing severe air pollution issues, China has implemented a series of clean air policies aimed to improve the country’s air quality. These policies largely focused on reducing emissions of major air pollutants such as sulfur dioxide (SO 2 ) and primary aerosols. However, changes in such pollution also affect radiative forcing. To understand the climate consequences of these clean air actions in China, we evaluate the near-equilibrium climate response to sustained changes in aerosol (and precursors) emission rates equivalent to those that occurred in China between 2006 and 2017. During this period, China’s SO 2 emissions declined by ∼70%, and black carbon emissions declined by ∼30%. Climate simulations that used a fully coupled ocean and atmosphere climate model indicate that China’s reductions in aerosol emission rates from 2006 to 2017 may exert a net increase in global radiative forcing of 0.09 ± 0.03 …",
+    "journal_link": "https://iopscience.iop.org/article/10.1088/1748-9326/ab9e21/meta",
+    "doi": "10.1088/1748-9326/ab9e21/pdf",
+    "total_citations": 41,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 4
+      },
+      {
+        "year": 2022,
+        "count": 6
+      },
+      {
+        "year": 2023,
+        "count": 5
+      },
+      {
+        "year": 2024,
+        "count": 9
+      },
+      {
+        "year": 2025,
+        "count": 15
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "v7SMsomtfXcC": {
+    "id": "v7SMsomtfXcC",
+    "title": "Rebound effects could offset more than half of avoided food loss and waste",
+    "authors": "Margaret Hegwood, Matthew G. Burgess, Erin M. Costigliolo, Pete Smith, Bojana Bajželj, Harry Saunders, Steven J. Davis",
+    "publication_date": "2023/7/20",
+    "journal": "Nature Food",
+    "volume": "4",
+    "issue": "",
+    "pages": "585-595",
+    "publisher": "Springer",
+    "abstract": "Reducing food loss and waste (FLW) could lessen the environmental impacts of food systems and improve food security. However, rebound effects—whereby efficiency improvements cause price decreases and consumption increases—may offset some avoided FLW. Here we model rebounds in food consumption under a scenario of costless FLW reduction. We project that consumption rebound could offset 53–71% of avoided FLW. Such rebounds would imply similar percentage reductions in environmental benefits (carbon emissions, land use, water use) and improvements in food security benefits (increased calorie availability), highlighting a tension between these two objectives. Evidence from energy systems suggests that indirect effects not included in our analysis could further increase rebounds. However, costs of reducing FLW would reduce rebounds. Rebound effects are therefore important to consider in …",
+    "journal_link": "https://www.nature.com/articles/s43016-023-00792-z",
+    "doi": null,
+    "total_citations": 40,
+    "citations": [
+      {
+        "year": 2023,
+        "count": 2
+      },
+      {
+        "year": 2024,
+        "count": 14
+      },
+      {
+        "year": 2025,
+        "count": 16
+      },
+      {
+        "year": 2026,
+        "count": 8
+      }
+    ]
+  },
+  "g9YHGIZn7mcC": {
+    "id": "g9YHGIZn7mcC",
+    "title": "The global mismatch between equitable carbon dioxide removal liability and capacity",
+    "authors": "Pu Yang, Zhifu Mi, Yi-Ming Wei, Steef V Hanssen, Lan-Cui Liu, D’Maris Coffman, Xinlu Sun, Hua Liao, Yun-Fei Yao, Jia-Ning Kang, Peng-Tao Wang, Steven J Davis",
+    "publication_date": "2023/12",
+    "journal": "National Science Review",
+    "volume": "10",
+    "issue": "12",
+    "pages": "nwad254",
+    "publisher": "Oxford University Press",
+    "abstract": "Limiting climate change to 1.5°C and achieving net-zero emissions would entail substantial carbon dioxide removal (CDR) from the atmosphere by the mid-century, but how much CDR is needed at country level over time is unclear. The purpose of this paper is to provide a detailed description of when and how much CDR is required at country level in order to achieve 1.5°C and how much CDR countries can carry out domestically. We allocate global CDR pathways among 170 countries according to 6 equity principles and assess these allocations with respect to countries’ biophysical and geophysical capacity to deploy CDR. Allocating global CDR to countries based on these principles suggests that CDR will, on average, represent ∼4% of nations’ total emissions in 2030, rising to ∼17% in 2040. Moreover, equitable allocations of CDR, in many cases, exceed implied land and carbon storage capacities. We …",
+    "journal_link": "https://academic.oup.com/nsr/article-abstract/10/12/nwad254/7287603",
+    "doi": null,
+    "total_citations": 39,
+    "citations": [
+      {
+        "year": 2023,
+        "count": 1
+      },
+      {
+        "year": 2024,
+        "count": 14
+      },
+      {
+        "year": 2025,
+        "count": 18
+      },
+      {
+        "year": 2026,
+        "count": 3
+      }
+    ]
+  },
+  "ExNiBuTMO9IC": {
+    "id": "ExNiBuTMO9IC",
+    "title": "Food without agriculture",
+    "authors": "Steven J. Davis, Kathleen Alexander, Juan Moreno-Cruz, Chaopeng Hong, Matthew Shaner, Ken Caldeira, Ian McKay",
+    "publication_date": "2023/11/6",
+    "journal": "Nature Sustainability",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Nature",
+    "abstract": "Efforts to make food systems more sustainable have emphasized reducing adverse environmental impacts of agriculture. In contrast, chemical and biological processes that could produce food without agriculture have received comparatively little attention or resources. Although there is a possibility that someday a wide array of attractive foods could be produced chemosynthetically, here we show that dietary fats could be synthesized with <0.8 g CO 2 -eq kcal −1 , which is much less than the >1.5 g CO 2 -eq kcal −1 now emitted to produce palm oil in Brazil or Indonesia. Although scaling up such synthesis could disrupt agricultural economies and depend on consumer acceptance, the enormous potential reductions in greenhouse gas emissions as well as in land and water use represent a realistic possibility for mitigating the environmental footprint of agriculture over the coming decade.",
+    "journal_link": "https://www.nature.com/articles/s41893-023-01241-2",
+    "doi": null,
+    "total_citations": 38,
+    "citations": [
+      {
+        "year": 2023,
+        "count": 1
+      },
+      {
+        "year": 2024,
+        "count": 11
+      },
+      {
+        "year": 2025,
+        "count": 20
+      },
+      {
+        "year": 2026,
+        "count": 5
+      }
+    ]
+  },
+  "dj1AAMDQi3QC": {
+    "id": "dj1AAMDQi3QC",
+    "title": "Environmental justice, infrastructure provisioning, and environmental impact assessment: Evidence from the California Environmental Quality Act",
+    "authors": "Jie Wang, Nicola Ulibarri, Tyler A Scott, Steven J Davis",
+    "publication_date": "2023/8/1",
+    "journal": "Environmental Science & Policy",
+    "volume": "146",
+    "issue": "",
+    "pages": "66-75",
+    "publisher": "Elsevier",
+    "abstract": "Environmental impact assessment (EIA) is a decision support tool that analyzes the environmental and social impacts of infrastructure projects. This paper focuses on the California Environmental Quality Act (CEQA), a law requiring EIA use in California, to examine where new infrastructure is proposed and whether EIA can shape infrastructure distribution and environmental justice through the review process. We analyze the temporal and spatial distribution of more than 7000 infrastructure projects and their environmental impacts as proposed under CEQA from 2011 to 2020. Using fixed-effects negative binomial regression to model the association between the number of initiated projects and existing socioeconomic and environmental conditions by census tract, and multinomial logistic regression to investigate determinants of a project’s level of environmental review, we find an unequal distribution of infrastructure …",
+    "journal_link": "https://www.sciencedirect.com/science/article/pii/S1462901123001272",
+    "doi": null,
+    "total_citations": 38,
+    "citations": [
+      {
+        "year": 2023,
+        "count": 8
+      },
+      {
+        "year": 2024,
+        "count": 11
+      },
+      {
+        "year": 2025,
+        "count": 14
+      },
+      {
+        "year": 2026,
+        "count": 4
+      }
+    ]
+  },
+  "M7C5BM2v8n8C": {
+    "id": "M7C5BM2v8n8C",
+    "title": "Flight delays due to air pollution in China",
+    "authors": "Xiaoguang Chen, Luoye Chen, Wei Xie, Nathaniel D Mueller, Steven J Davis",
+    "publication_date": "2023/5/1",
+    "journal": "Journal of Environmental Economics and Management",
+    "volume": "119",
+    "issue": "",
+    "pages": "102810",
+    "publisher": "Academic Press",
+    "abstract": "Using a newly-compiled dataset of airport traffic, air pollution, and weather from 2015 to 2017, we evaluate the effect of PM 2.5 pollution levels on flight departure delays in China. We instrument for PM 2.5 levels using changes in atmospheric thermal inversions and wind direction. We find that a one-standard-deviation increase in the daily PM 2.5 concentration levels leads to roughly 4.5–6.4 additional minutes in departure delays per flight. We estimate that reductions in China's PM 2.5 pollution levels due to the Air Pollution Prevention and Control Action Plan avoided 13–18% of the increases in national average flight delays and saved US $54 to $69 million in passenger time in 2017 alone.",
+    "journal_link": "https://www.sciencedirect.com/science/article/pii/S0095069623000281",
+    "doi": null,
+    "total_citations": 35,
+    "citations": [
+      {
+        "year": 2023,
+        "count": 3
+      },
+      {
+        "year": 2024,
+        "count": 9
+      },
+      {
+        "year": 2025,
+        "count": 14
+      },
+      {
+        "year": 2026,
+        "count": 9
+      }
+    ]
+  },
+  "4uoR24qA-WYC": {
+    "id": "4uoR24qA-WYC",
+    "title": "The adaptive benefits of agricultural water markets in California",
+    "authors": "Jesus Arellano-Gonzalez, Amir AghaKouchak, Morgan C Levy, Yue Qin, Jennifer A Burney, Steven J Davis, Frances C. Moore",
+    "publication_date": "2021/1/21",
+    "journal": "Environmental Research Letters",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "IOP",
+    "abstract": "Climate change is expected to increase the scarcity and variability of fresh water supplies in some regions with important implications for irrigated agriculture. By allowing for increased flexibility in response to scarcity and by incentivizing the allocation of water to higher value use, markets can play an important role in limiting the economic losses associated with droughts. Using data on water demand, the seniority of water rights, county agricultural reports, high-resolution data on cropping patterns, and agronomic estimates of crop water requirements, we estimate the benefits of market-based allocations of surface water for California’s Central Valley. Specifically, we estimate the value of irrigation water and compare the agricultural costs of water shortages under the existing legal framework and under an alternate system that allows for trading of water. We find that a more efficient allocation of curtailments could …",
+    "journal_link": "https://iopscience.iop.org/article/10.1088/1748-9326/abde5b/meta",
+    "doi": "10.1088/1748-9326/abde5b/pdf",
+    "total_citations": 35,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 5
+      },
+      {
+        "year": 2023,
+        "count": 9
+      },
+      {
+        "year": 2024,
+        "count": 9
+      },
+      {
+        "year": 2025,
+        "count": 9
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "T_0gP6tLVL0C": {
+    "id": "T_0gP6tLVL0C",
+    "title": "Data and analysis toolbox for modeling the nexus of food, energy, and water",
+    "authors": "M Sadegh, A AghaKouchak, I Mallaakpour, LS Huning, O Mazdiyasni, M Niknejad, E Foufoula-Gergiou, FC Moore, J Brouwer, JA Burney, A Farid, A Martinez, ND Mueller, SJ Davis",
+    "publication_date": "2020/5/22",
+    "journal": "Sustainable Cities and Society",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Elsevier",
+    "abstract": "Energy, water, and food resources are highly interdependent. Agricultural irrigation accounts for 84% of global consumptive freshwater use, the food supply chain demands up to 30% of global primary energy use, and roughly 80% of global electricity generation depends on water for cooling (an average of nearly 100 L of water withdrawn per kWh). Improving understanding of the complex interactions of this resource nexus is, therefore, a top priority for human well-being, sustainable development, and policymaking. Here, we present an interactive analysis toolbox, Nexus of Food, Energy, and W ater (NeFEW), that synthesizes available global data to enable modeling and analysis of these resources and their interdependencies at the country-level and for user-specified categories and quantities. Sample analyses also presented here include country-specific estimates of water resources required to produce different …",
+    "journal_link": "https://www.sciencedirect.com/science/article/pii/S2210670720305023",
+    "doi": null,
+    "total_citations": 35,
+    "citations": [
+      {
+        "year": 2020,
+        "count": 2
+      },
+      {
+        "year": 2021,
+        "count": 8
+      },
+      {
+        "year": 2022,
+        "count": 8
+      },
+      {
+        "year": 2023,
+        "count": 6
+      },
+      {
+        "year": 2024,
+        "count": 4
+      },
+      {
+        "year": 2025,
+        "count": 3
+      },
+      {
+        "year": 2026,
+        "count": 4
+      }
+    ]
+  },
+  "hrkNWuzUpWwC": {
+    "id": "hrkNWuzUpWwC",
+    "title": "Drivers and projections of global surface temperature anomalies at the local scale",
+    "authors": "Susanne A Benz, Steven J Davis, Jennifer A Burney",
+    "publication_date": "2021/6/17",
+    "journal": "Environmental Research Letters",
+    "volume": "16",
+    "issue": "",
+    "pages": "064093",
+    "publisher": "IOP",
+    "abstract": "More than half of the world’s population now lives in urban areas, and trends in rural-to-urban migration are expected to continue through the end of the century. Although cities create efficiencies that drive innovation and economic growth, they also alter the local surface energy balance, resulting in urban temperatures that can differ dramatically from surrounding areas. Here we introduce a global 1 km resolution data set of seasonal and diurnal anomalies in urban surface temperatures relative to their rural surroundings. We then use satellite-observable parameters in a simple model informed by the surface energy balance to understand the dominant drivers of present urban heating, the heat-related impacts of projected future urbanization, and the potential for policies to mitigate those damages. At present, urban populations live in areas with daytime surface summer temperatures that are 3.21 ∘ C (−3.97, 9.24, 5th …",
+    "journal_link": "https://iopscience.iop.org/article/10.1088/1748-9326/ac0661/meta",
+    "doi": "10.1088/1748-9326/ac0661/pdf",
+    "total_citations": 34,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 2
+      },
+      {
+        "year": 2022,
+        "count": 5
+      },
+      {
+        "year": 2023,
+        "count": 6
+      },
+      {
+        "year": 2024,
+        "count": 8
+      },
+      {
+        "year": 2025,
+        "count": 10
+      },
+      {
+        "year": 2026,
+        "count": 3
+      }
+    ]
+  },
+  "8rLWgkbgOXQC": {
+    "id": "8rLWgkbgOXQC",
+    "title": "Would firm generators facilitate or deter variable renewable energy in a carbon-free electricity system?",
+    "authors": "Mengyao Yuan, FanTong, Lei Duan, Jacqueline A. Dowling, Steven J. Davis, Nathan S. Lewis, Ken Caldeira",
+    "publication_date": "2020/9/15",
+    "journal": "Applied Energy",
+    "volume": "279",
+    "issue": "",
+    "pages": "115789",
+    "publisher": "",
+    "abstract": "To reduce atmospheric carbon dioxide emissions and mitigate impacts of climate change, countries across the world have mandated quotas for renewable electricity. But a question has remained largely unexplored: would low-cost, firm, zero-carbon electricity generation technologies enhance—or would they displace—deployment of variable renewable electricity generation technologies, i.e., wind and solar photovoltaics, in a least-cost, fully reliable, and deeply decarbonized electricity system? To address this question, we modeled idealized electricity systems based on historical weather data and considered only technoeconomic factors. We did not apply a predetermined use model. We found that cost reductions in firm generation technologies (starting at current costs, ramping down to nearly zero) uniformly resulted in increased penetration of the firm technologies and decreased penetration of variable …",
+    "journal_link": "https://www.sciencedirect.com/science/article/pii/S0306261920312733",
+    "doi": null,
+    "total_citations": 33,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 4
+      },
+      {
+        "year": 2022,
+        "count": 10
+      },
+      {
+        "year": 2023,
+        "count": 2
+      },
+      {
+        "year": 2024,
+        "count": 11
+      },
+      {
+        "year": 2025,
+        "count": 5
+      },
+      {
+        "year": 2026,
+        "count": 1
+      }
+    ]
+  },
+  "oFn-K-OQSCAC": {
+    "id": "oFn-K-OQSCAC",
+    "title": "Reply to Lopez et al.: Consumption-based accounting helps mitigate global air pollution",
+    "authors": "Dabo Guan, Jintai Lin, Steven J Davis, Da Pan, Kebin He, Can Wang, Donald J Wuebbles, David G Streets, Qiang Zhang",
+    "publication_date": "2014/7/1",
+    "journal": "Proceedings of the National Academy of Sciences",
+    "volume": "111",
+    "issue": "26",
+    "pages": "E2631-E2631",
+    "publisher": "National Academy of Sciences",
+    "abstract": "In their letter (1), López et al. propose “control-based” accounting of air pollution that assigns pollution to countries according to the nationality of corporations producing the pollution. For example, pollution produced in China by US corporations would be assigned to the United States regardless of where the related goods are sold. Such a control-based approach is a variation of the dominant production-based accounting that assigns pollution to the parties producing related goods. Control-based accounting could encourage leadership by multinational corporations to invest in cleaner production technologies and help these technologies diffuse, although influences by multinationals are likely to decrease as the number of production layers of their supply chains increases (2). This is because each additional production layer further down the supply chain would reach more suppliers who may be constrained with …",
+    "journal_link": "https://www.pnas.org/doi/abs/10.1073/pnas.1407383111",
+    "doi": "10.1073/pnas.1407383111",
+    "total_citations": 33,
+    "citations": [
+      {
+        "year": 2014,
+        "count": 1
+      },
+      {
+        "year": 2015,
+        "count": 4
+      },
+      {
+        "year": 2016,
+        "count": 6
+      },
+      {
+        "year": 2017,
+        "count": 3
+      },
+      {
+        "year": 2018,
+        "count": 3
+      },
+      {
+        "year": 2019,
+        "count": 2
+      },
+      {
+        "year": 2020,
+        "count": 2
+      },
+      {
+        "year": 2021,
+        "count": 3
+      },
+      {
+        "year": 2022,
+        "count": 3
+      },
+      {
+        "year": 2023,
+        "count": 2
+      },
+      {
+        "year": 2024,
+        "count": 3
+      },
+      {
+        "year": 2025,
+        "count": 1
+      },
+      {
+        "year": 2026,
+        "count": 0
+      }
+    ]
+  },
+  "Kv9jytqXTosC": {
+    "id": "Kv9jytqXTosC",
+    "title": "Regional and county flows of particulate matter damage in the U.S.",
+    "authors": "Brian Sergi, Ines Azevedo, Steven J. Davis, Nicholas Z. Muller",
+    "publication_date": "2020/9/8",
+    "journal": "Environmental Research Letters",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "IOP",
+    "abstract": "Despite several decades of declining emissions, the health costs of particulate matter (PM 2.5 ) in the US remain substantial, with more than $1 trillion in annual damages. We analyze the inter-county impacts of PM 2.5 for 2008, 2011, and 2014 and find that even though emissions from point sources have fallen over this period, the share of PM 2.5 attributable to pollution transported across county and state boundaries is still considerable in many localities. Importantly, the benefits of reduced emissions are not uniformly distributed nationwide, with 26% of counties—concentrated in the South, Midwest, and Pacific Northwest—experiencing worsening health damages since 2008. Around 30% of all US counties receive 90% of their health damages from emissions in other counties, and these damage-importing counties also tend to have lower median incomes. Our results support continued state and federal cooperation …",
+    "journal_link": "https://iopscience.iop.org/article/10.1088/1748-9326/abb429/meta",
+    "doi": "10.1088/1748-9326/abb429/pdf",
+    "total_citations": 32,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 5
+      },
+      {
+        "year": 2022,
+        "count": 6
+      },
+      {
+        "year": 2023,
+        "count": 7
+      },
+      {
+        "year": 2024,
+        "count": 4
+      },
+      {
+        "year": 2025,
+        "count": 7
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "LzOrNEA7mwcC": {
+    "id": "LzOrNEA7mwcC",
+    "title": "Reliance on fossil fuels increases during extreme temperature events in the continental United States",
+    "authors": "Wenli Zhao, Biqing Zhu, Steven J Davis, Philippe Ciais, Chaopeng Hong, Zhu Liu, Pierre Gentine",
+    "publication_date": "2023/12/13",
+    "journal": "Communications Earth & Environment",
+    "volume": "4",
+    "issue": "1",
+    "pages": "473",
+    "publisher": "Nature Publishing Group UK",
+    "abstract": "Increasing extreme climate events driven by climate change raise the question of their impacts on the power production system, and implications for renewable versus fossil power supply. Here, using climate reanalysis data and daily electricity generation (2018–2023), we systematically quantify the impact of extreme climate events, specifically extreme cold events and extreme hot events on United States state-level carbon emissions and on the carbon intensity of electricity. We find that extreme climate events increase the carbon intensity of the energy production, increasing the reliance on fossil-based sources of energy and reducing the capacity of renewables. The states with more renewable electricity generation were also more affected by extreme temperatures. Our results reveal the extent to which the reliability and resilience of the current United States electricity system depends on fossil energy during …",
+    "journal_link": "https://www.nature.com/articles/s43247-023-01147-z",
+    "doi": null,
+    "total_citations": 28,
+    "citations": [
+      {
+        "year": 2024,
+        "count": 4
+      },
+      {
+        "year": 2025,
+        "count": 16
+      },
+      {
+        "year": 2026,
+        "count": 8
+      }
+    ]
+  },
+  "vkuYBMKU6wEC": {
+    "id": "vkuYBMKU6wEC",
+    "title": "Climate effects of aerosols reduce economic inequality",
+    "authors": "Yixuan Zheng, Steven J. Davis, Geeta G. Persad, Ken Caldeira",
+    "publication_date": "2020/2/17",
+    "journal": "Nature Climate Change",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Macmillan",
+    "abstract": "The climate effects of anthropogenic aerosols have masked some of the warming induced by GHGs along with some impacts of that warming. These temperature effects may be beneficial but are almost certainly overwhelmed by aerosols’ negative health impacts. Recent analyses of economic impacts have concluded that warming harms economies in warm climates, but provides economic benefits in cold climates. Here we investigate whether aerosol-induced cooling would have a positive effect on less wealthy economies in hotter regions and a negative effect on wealthier economies in colder regions. Climate simulations over the historical period both with and without anthropogenic aerosol emissions, using a fully coupled ocean and atmosphere climate model, indicate that in year 2010 anthropogenic aerosol emissions were cooling the Earth by 0.72 ± 0.02 °C relative to a scenario without such emissions …",
+    "journal_link": "https://www.nature.com/articles/s41558-020-0699-y",
+    "doi": null,
+    "total_citations": 28,
+    "citations": [
+      {
+        "year": 2020,
+        "count": 4
+      },
+      {
+        "year": 2021,
+        "count": 4
+      },
+      {
+        "year": 2022,
+        "count": 4
+      },
+      {
+        "year": 2023,
+        "count": 5
+      },
+      {
+        "year": 2024,
+        "count": 5
+      },
+      {
+        "year": 2025,
+        "count": 4
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "HAmI6pRF5skC": {
+    "id": "HAmI6pRF5skC",
+    "title": "Impact of lockdowns and winter temperatures on natural gas consumption in Europe",
+    "authors": "Philippe Ciais, François-Marie Bréon, Stijn Dellaert, Yilong Wang, Katsumasa Tanaka, Léna Gurriaran, Yann Françoise, Steven Davis, Chaopeng Hong, Josep Penuelas, Ivan Janssens, Michael Obersteiner, Zhu Deng, Zhu Liu",
+    "publication_date": "2021/12/22",
+    "journal": "Earth's Future",
+    "volume": "",
+    "issue": "e2021EF002250",
+    "pages": "",
+    "publisher": "AGU",
+    "abstract": "As the COVID‐19 virus spread over the world, governments restricted mobility to slow transmission. Public health measures had different intensities across European countries but all had significant impact on people's daily lives and economic activities, causing a drop of CO 2 emissions of about 10% for the whole year 2020. Here, we analyze changes in natural gas use in the industry and gas distribution to the built environment during the first half of year 2020 with daily gas flows data from pipeline and storage facilities in Europe. We find that reductions of industrial gas use reflect decreases in industrial production across most countries. Surprisingly, natural gas use in the built environment also decreased despite most people being confined at home and cold spells in March 2020. Those reductions that we attribute to the impacts of COVID‐19 remain of comparable magnitude to previous variations induced by cold …",
+    "journal_link": "https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/2021EF002250",
+    "doi": "10.1029/2021EF002250",
+    "total_citations": 27,
+    "citations": [
+      {
+        "year": 2022,
+        "count": 2
+      },
+      {
+        "year": 2023,
+        "count": 8
+      },
+      {
+        "year": 2024,
+        "count": 8
+      },
+      {
+        "year": 2025,
+        "count": 5
+      },
+      {
+        "year": 2026,
+        "count": 4
+      }
+    ]
+  },
+  "LlXTz_FrCmAC": {
+    "id": "LlXTz_FrCmAC",
+    "title": "Understanding the energy consumption and greenhouse gas emissions and the implication for achieving climate change mitigation targets",
+    "authors": "Zhu Liu, Kuishuang Feng, Steven J Davis, Dabo Guan, Bin Chen, Klaus Hubacek, Jinyue Yan",
+    "publication_date": "2016/12/15",
+    "journal": "Applied Energy",
+    "volume": "184",
+    "issue": "",
+    "pages": "737-741",
+    "publisher": "",
+    "abstract": "Background Anthropogenic greenhouses gases (GHGs), mainly released during the combustion of fossil fuels (coal, oil and natural gas) and industrial production processes, are the major contributors to global climate change and considered as one of the most serious challenges facing sustainable development. Despite global efforts on curbing human-induced climate change, greenhouse gas emissions (GHGs) have been rapidly increasing since the signing of the Kyoto protocol in 1997 [1]. Understanding the dynamics of energy consumption and associated greenhouse gas emissions at the global and regional level will be critical for achieving mitigation targets and a low carbon economy. Facing such challenges, countries are taking actions to curb fossil fuel energy consumption to mitigate GHGs and to seek a low-carbon developmental path. Measures include the investment into renewables and emission reduction technologies, as well as changes to current wasteful consumption patters, all of which are important steps towards a low-carbon economy. However, there are considerable knowledge gaps r to guide this process: First, the amount of energy consumption and associated emissions are estimated based on energy statistics rather than direct measurements, which contributes to the uncertainty and inconsistency of GHG accounts and mitigation targets [2], especially at the sub-national (regions, cities) level. Quantification and accurate baselines of GHG emissions are considered a precondition towards mitigation. Moreover, GHGs are related with other air-pollutions, which makes emission accounts critical for achieving co-benefits of …",
+    "journal_link": "https://ueaeprints.uea.ac.uk/id/eprint/61689/1/Editorial_Final.pdf",
+    "doi": null,
+    "total_citations": 27,
+    "citations": [
+      {
+        "year": 2017,
+        "count": 2
+      },
+      {
+        "year": 2018,
+        "count": 4
+      },
+      {
+        "year": 2019,
+        "count": 6
+      },
+      {
+        "year": 2020,
+        "count": 1
+      },
+      {
+        "year": 2021,
+        "count": 2
+      },
+      {
+        "year": 2022,
+        "count": 4
+      },
+      {
+        "year": 2023,
+        "count": 1
+      },
+      {
+        "year": 2024,
+        "count": 2
+      },
+      {
+        "year": 2025,
+        "count": 3
+      },
+      {
+        "year": 2026,
+        "count": 1
+      }
+    ]
+  },
+  "pwA0zy_liR0C": {
+    "id": "pwA0zy_liR0C",
+    "title": "Natural gas supply from Russia derived from daily pipeline flow data and potential solutions for filling a shortage of Russian supply in the European Union (EU)",
+    "authors": "Chuanlong Zhou, Biqing Zhu, Steven J Davis, Zhu Liu, Antoine Halff, Simon Ben Arous, Hugo de Almeida Rodrigues, Philippe Ciais",
+    "publication_date": "2023/3/1",
+    "journal": "Earth System Science Data",
+    "volume": "15",
+    "issue": "2",
+    "pages": "949-961",
+    "publisher": "Copernicus Publications",
+    "abstract": "Russia is the largest natural gas supplier to the European Union (EU). The invasion of Ukraine was followed by a cutoff of gas supplies from Russia to many EU countries, and the EU is planning to ban or drastically reduce its dependence on Russia. We provide a dataset of daily gas consumption in five sectors (household and public building heating, power, industry, and other sectors) with supply source shares in the EU27 (27 EU member countries) and UK from 2016 to 2022. The datasets are available at Zenodo platform: https://doi.org/10.5281/zenodo.7549233 (Zhou et al., 2022). The dataset separates the contributions of Russian imports, liquefied natural gas (LNG) imports, and other supply sources to both direct supply and storage supply for gas consumption estimations. The dataset was developed with a gas network flow simulation model based on mass flow balance by combining data from multiple datasets including daily ENTSOG (European Network of Transmission System Operators for Gas) pipeline gas transport and storage, ENTSOE (European Network of Transmission System Operators for Electricity) daily power production from gas, and Eurostat monthly gas consumption statistics per sector. The annual consumption data were validated against the BP Statistical Review of World Energy and Eurostat datasets. We secondly analyzed the share of gas supplied by Russia in each country to quantify the “gap” that would result from a cessation of all Russian exports to Europe. Thirdly, we collected multiple data sources to assess how national gaps could be alleviated by (1) reducing the demand for heating in a plausible way using the …",
+    "journal_link": "https://essd.copernicus.org/articles/15/949/2023/essd-15-949-2023.html",
+    "doi": "10.5281/zenodo.7549233",
+    "total_citations": 25,
+    "citations": [
+      {
+        "year": 2022,
+        "count": 1
+      },
+      {
+        "year": 2023,
+        "count": 10
+      },
+      {
+        "year": 2024,
+        "count": 9
+      },
+      {
+        "year": 2025,
+        "count": 4
+      },
+      {
+        "year": 2026,
+        "count": 1
+      }
+    ]
+  },
+  "UY3hNwcQ290C": {
+    "id": "UY3hNwcQ290C",
+    "title": "Global mitigation efforts cannot neglect emerging emitters",
+    "authors": "Can Cui, Dabo Guan, Daoping Wang, Jing Meng, Vicky Chemutai, Paul Brenton, Shaohui Zhang, Yuli Shan, Qiang Zhang, Steven Davis",
+    "publication_date": "2022/4/18",
+    "journal": "National Science Review",
+    "volume": "9",
+    "issue": "12",
+    "pages": "nwac223",
+    "publisher": "Oxford University Press",
+    "abstract": "International efforts to avoid dangerous climate change have historically focused on reducing energy-related CO 2 emissions from countries with either the largest economies (e.g. the EU and the USA) and/or the largest populations (e.g. China and India). However, in recent years, emissions have surged among a different and much less-examined group of countries, raising concerns that a next generation of high-emitting economies will obviate current mitigation targets. Here, we analyse the trends and drivers of emissions in each of the 59 countries where emissions in 2010–2018 grew faster than the global average (excluding China and India), project their emissions under a range of longer-term energy scenarios and estimate the costs of decarbonization pathways. Total emissions from these ‘emerging emitters’ reach as much as 7.5 GtCO 2 /year in the baseline 2.5° scenario—substantially greater than the …",
+    "journal_link": "https://academic.oup.com/nsr/article-abstract/9/12/nwac223/6763423",
+    "doi": null,
+    "total_citations": 25,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 3
+      },
+      {
+        "year": 2023,
+        "count": 8
+      },
+      {
+        "year": 2024,
+        "count": 6
+      },
+      {
+        "year": 2025,
+        "count": 5
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "ibZ2AwG9z6wC": {
+    "id": "ibZ2AwG9z6wC",
+    "title": "Environmental benefit-detriment thresholds for flow battery energy storage systems: A case study in California",
+    "authors": "Shan Tian, Haoyang He, Alissa Kendall, Steven J. Davis, Oladele A. Ogunseitan, Julie M. Schoenung, Scott Samuelsen",
+    "publication_date": "2021/7/17",
+    "journal": "Applied Energy",
+    "volume": "300",
+    "issue": "",
+    "pages": "117354",
+    "publisher": "Elsevier",
+    "abstract": "Energy storage systems are critical for enabling the environmental benefits associated with capturing renewable energy to displace fossil fuel-based generation, yet producing these systems also contributes to environmental impacts through their materials use and manufacturing. As energy storage capacity is scaled up to support increasingly renewable grids, the environmental benefits from their use may scale at different rates than the environmental impacts from their production. This implies the existence of capacity thresholds beyond which installing additional storage capacity may be environmentally detrimental. Identifying such thresholds are important for ensuring that energy storage capacity selection in future grids are consistent with net emissions reduction goals, but such thresholds have not been studied in the present literature. To identify such thresholds, here we combine electric grid dispatch modeling …",
+    "journal_link": "https://www.sciencedirect.com/science/article/pii/S0306261921007613",
+    "doi": null,
+    "total_citations": 24,
+    "citations": [
+      {
+        "year": 2022,
+        "count": 5
+      },
+      {
+        "year": 2023,
+        "count": 7
+      },
+      {
+        "year": 2024,
+        "count": 8
+      },
+      {
+        "year": 2025,
+        "count": 2
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "uGrg30pLAbkC": {
+    "id": "uGrg30pLAbkC",
+    "title": "Trade risks to energy security in net-zero emissions energy scenarios",
+    "authors": "Jing Cheng, Dan Tong, Hongyan Zhao, Ruochong Xu, Yue Qin, Qiang Zhang, Karan Bhuwalka, Ken Caldeira, Steven J. Davis",
+    "publication_date": "2025/4/9",
+    "journal": "Nature Climate Change",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Nature",
+    "abstract": "Secure access to energy services is a prerequisite to economic productivity and a chief strategic concern of national governments, yet it is unclear how the trade in fuels and critical materials in scenarios with net-zero emissions relates to energy security risks. Here we find that overall trade risks decrease in most countries (70%) in net-zero scenarios due to reduced reliance on imported fossil fuels, but trade risks to either electricity or transportation systems increase in the majority (82%) of countries that become more dependent on imported materials. Countries with abundant mineral reserves (for example, Australia and China) become much less dependent on imports, but the opposite is true of countries with large fossil fuel reserves (for example, Russia and the Middle East). We further evaluate the sensitivity of countries’ trade risks to differences in trading networks, energy systems, the material intensities of …",
+    "journal_link": "https://www.nature.com/articles/s41558-025-02305-1",
+    "doi": null,
+    "total_citations": 23,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 15
+      },
+      {
+        "year": 2026,
+        "count": 8
+      }
+    ]
+  },
+  "3WNXLiBY60kC": {
+    "id": "3WNXLiBY60kC",
+    "title": "Committed Emissions of the U.S. Power Sector, 2000–2018",
+    "authors": "Christine Shearer, Dan Tong, Robert Fofrich, Steven J. Davis",
+    "publication_date": "2020/9/3",
+    "journal": "AGU Advances",
+    "volume": "1",
+    "issue": "3",
+    "pages": "",
+    "publisher": "agu",
+    "abstract": "Annual carbon dioxide (CO 2 ) emissions from the U.S. power sector decreased 24% from 2000 to 2018, while carbon intensity (CO 2 per unit of electricity generated) declined by 34%. These reductions have been attributed in part to a shift from coal to natural gas, as gas‐fired plants emit roughly half the CO 2 emissions as coal plants. To date, no analysis has looked at the coal‐to‐gas shift from the perspective of commitment accounting—the cumulative future CO 2 emissions expected from power infrastructure. We estimate that between 2000 and 2018, committed emissions in the U.S. power sector decreased 12% (six GtCO 2 ), from 49 to 43 GtCO 2 , assuming average generator lifetimes and capacity factors. Taking into consideration methane leakage during the life cycle of coal and gas plants, this decrease in committed emissions is further offset (e.g., assuming a 3% leakage rate, there is effectively no reduction at …",
+    "journal_link": "https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/2020AV000162",
+    "doi": "10.1029/2020AV000162",
+    "total_citations": 21,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 5
+      },
+      {
+        "year": 2022,
+        "count": 6
+      },
+      {
+        "year": 2023,
+        "count": 4
+      },
+      {
+        "year": 2024,
+        "count": 3
+      },
+      {
+        "year": 2025,
+        "count": 1
+      },
+      {
+        "year": 2026,
+        "count": 0
+      }
+    ]
+  },
+  "CMPXdcK5v8EC": {
+    "id": "CMPXdcK5v8EC",
+    "title": "Turning Paris into reality at the University of California",
+    "authors": "David G. Victor, Ahmed Abdulla, David Auston, Wendell Brase, Karl Brown, Steven J. Davis, Carrie V. Kappel, Alan Meier, Mark Modera, Rebecca Zarin Pass, David Phillips, Jordan Sager, David Weil",
+    "publication_date": "2018/2/27",
+    "journal": "Nature Climate Change",
+    "volume": "",
+    "issue": "",
+    "pages": "doi:10.1038/s41558-018-0103-3",
+    "publisher": "Macmillan Springer",
+    "abstract": "The Paris Agreement highlights the need for local climate leadership. The University Of California’s approach to deep decarbonization offers lessons in efficiency, alternative fuels and electrification. Bending the emissions curve globally requires efforts that blend academic insights with practical solutions.",
+    "journal_link": "https://www.nature.com/articles/s41558-018-0103-3",
+    "doi": "10.1038/s41558-018-0103-3",
+    "total_citations": 20,
+    "citations": [
+      {
+        "year": 2018,
+        "count": 1
+      },
+      {
+        "year": 2019,
+        "count": 6
+      },
+      {
+        "year": 2020,
+        "count": 1
+      },
+      {
+        "year": 2021,
+        "count": 4
+      },
+      {
+        "year": 2022,
+        "count": 7
+      },
+      {
+        "year": 2023,
+        "count": 1
+      },
+      {
+        "year": 2024,
+        "count": 0
+      },
+      {
+        "year": 2025,
+        "count": 0
+      },
+      {
+        "year": 2026,
+        "count": 0
+      }
+    ]
+  },
+  "P-MJmu9ZMwQC": {
+    "id": "P-MJmu9ZMwQC",
+    "title": "Quantifying Social Inequalities in Flood Risk",
+    "authors": "Brett F Sanders, David Brady, Jochen E Schubert, Eva-Marie H Martin, Steven J Davis, Katharine J Mach",
+    "publication_date": "2024/12/31",
+    "journal": "ASCE OPEN: Multidisciplinary Journal of Civil Engineering",
+    "volume": "2",
+    "issue": "1",
+    "pages": "04024004",
+    "publisher": "American Society of Civil Engineers",
+    "abstract": "The distribution and inequalities of flood risks across space and social groups are important considerations for infrastructure design and adaptation. However, neither civil infrastructure practitioners nor researchers routinely assess inequalities quantitatively, which limits opportunities to address them. The Lorenz curve method has been used in many fields to study inequalities in both resource and risk distributions across populations, and it supports a quantitative measure of inequality, the Gini index. Here we present the formulation of Lorenz curves and a data analysis workflow to measure inequalities in both flood damages and flood exposure using flood hazard, flood damage, and social data. We define flood exposure as flood depth multiplied by population density, whereas flood damages are taken strictly as a measure of economic losses. We then show that Lorenz curves for flood damages have the potential …",
+    "journal_link": "https://ascelibrary.org/doi/abs/10.1061/AOMJAH.AOENG-0017",
+    "doi": "10.1061/AOMJAH.AOENG-0017",
+    "total_citations": 19,
+    "citations": [
+      {
+        "year": 2024,
+        "count": 2
+      },
+      {
+        "year": 2025,
+        "count": 12
+      },
+      {
+        "year": 2026,
+        "count": 5
+      }
+    ]
+  },
+  "O0MA3yP7Y3UC": {
+    "id": "O0MA3yP7Y3UC",
+    "title": "Introduction to the special issue on Net-Zero Energy Systems",
+    "authors": "Inês Azevedo, Christopher Bataille, John Bistline, Leon Clarke, Steven Davis",
+    "publication_date": "2021/12/1",
+    "journal": "Energy and Climate Change",
+    "volume": "2",
+    "issue": "",
+    "pages": "100066",
+    "publisher": "Elsevier",
+    "abstract": "This article introduces the Energy and Climate Change special issue on “Net-Zero Energy Systems.” Net-zero emissions energy systems are important for limiting global temperature change to any level. Although net-zero emissions pledges by countries, subnational jurisdictions, and other entities have grown, detailed research on net-zero energy systems has only recently emerged in the literature. This introductory article motivates the special issue and summarizes key insights.",
+    "journal_link": "https://www.sciencedirect.com/science/article/pii/S266627872100043X",
+    "doi": null,
+    "total_citations": 19,
+    "citations": [
+      {
+        "year": 2022,
+        "count": 2
+      },
+      {
+        "year": 2023,
+        "count": 8
+      },
+      {
+        "year": 2024,
+        "count": 7
+      },
+      {
+        "year": 2025,
+        "count": 2
+      }
+    ]
+  },
+  "l7iSsH4_Im4C": {
+    "id": "l7iSsH4_Im4C",
+    "title": "Mitigating climate change and ozone pollution will improve Chinese food security",
+    "authors": "Shouxiu Li, Yang Gao, Junxi Zhang, Chaopeng Hong, Shaoqing Zhang, Deliang Chen, Oliver Wild, Zhaozhong Feng, Yansen Xu, Xiuwen Guo, Wenbin Kou, Feifan Yan, Mingchen Ma, Xiaohong Yao, Huiwang Gao, Steven J Davis",
+    "publication_date": "2025/2/21",
+    "journal": "One Earth",
+    "volume": "8",
+    "issue": "2",
+    "pages": "",
+    "publisher": "Elsevier",
+    "abstract": "Competition for land, partly driven by the trade-off between ensuring sufficient food production and expanding forest carbon sinks, intensifies the challenge of addressing climate change. This issue is further exacerbated by damage to plant stomata from ground-level ozone, reducing crop yields. Stomatal opening is regulated by meteorological processes that may change significantly under warming climate, but this effect has been largely overlooked in prior studies of crop ozone damage. Here, we show historical crop losses across China are 39 Tg annually, valued at roughly $15 billion. In a scenario where carbon emissions reach net zero in 2060, projected crop production losses could decline most, enough to provide an additional 87,000 kcal per capita in China, or enabling a net absorption of 22 million tons of CO 2 annually through reverting surplus cropland to natural ecosystems. Our findings provide policy …",
+    "journal_link": "https://www.cell.com/one-earth/abstract/S2590-3322(24)00596-7",
+    "doi": null,
+    "total_citations": 18,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 15
+      },
+      {
+        "year": 2026,
+        "count": 3
+      }
+    ]
+  },
+  "EsrhoZGmrkoC": {
+    "id": "EsrhoZGmrkoC",
+    "title": "Dislocated interests and climate change",
+    "authors": "Steven J. Davis, Noah Diffenbaugh",
+    "publication_date": "2016/5/31",
+    "journal": "Environmental Research Letters",
+    "volume": "11",
+    "issue": "",
+    "pages": "061001",
+    "publisher": "IOP Publishing Ltd",
+    "abstract": "The predicted effects of climate change on surface temperatures are now emergent and quantifiable. The recent letter by Hansen and Sato (2016 Environ. Res. Lett. 11 034009) adds to a growing number of studies showing that warming over the past four decades has shifted the distribution of temperatures higher almost everywhere, with the largest relative effects on summer temperatures in developing regions such as Africa, South America, southeast Asia, and the Middle East (e.g., Diffenbaugh and Scherer 2011 Clim. Change 107 615–24; Anderson 2011 Clim. Change 108 581; Mahlstein et al 2012 Geophys. Res. Lett. 39 L21711). Hansen and Sato emphasize that although these regions are warming disproportionately, their role in causing climate change—measured by cumulative historical CO 2 emissions produced—is small …",
+    "journal_link": "https://iopscience.iop.org/article/10.1088/1748-9326/11/6/061001/meta",
+    "doi": "10.1088/1748-9326/11/6/061001/meta",
+    "total_citations": 17,
+    "citations": [
+      {
+        "year": 2017,
+        "count": 4
+      },
+      {
+        "year": 2018,
+        "count": 3
+      },
+      {
+        "year": 2019,
+        "count": 2
+      },
+      {
+        "year": 2020,
+        "count": 3
+      },
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 1
+      },
+      {
+        "year": 2023,
+        "count": 2
+      },
+      {
+        "year": 2024,
+        "count": 1
+      },
+      {
+        "year": 2025,
+        "count": 0
+      }
+    ]
+  },
+  "oXKBmVzQOggC": {
+    "id": "oXKBmVzQOggC",
+    "title": "A crack in the natural-gas bridge",
+    "authors": "Steven J Davis, Christine Shearer",
+    "publication_date": "2014/10",
+    "journal": "Nature",
+    "volume": "514",
+    "issue": "7523",
+    "pages": "436-437",
+    "publisher": "Nature Publishing Group",
+    "abstract": "Integrated assessment models show that, without new climate policies, abundant supplies of natural gas will have little impact on greenhouse-gas emissions and climate change. See Letter p.482",
+    "journal_link": "https://www.nature.com/articles/nature13927",
+    "doi": null,
+    "total_citations": 17,
+    "citations": [
+      {
+        "year": 2016,
+        "count": 1
+      },
+      {
+        "year": 2017,
+        "count": 1
+      },
+      {
+        "year": 2018,
+        "count": 3
+      },
+      {
+        "year": 2019,
+        "count": 3
+      },
+      {
+        "year": 2020,
+        "count": 2
+      },
+      {
+        "year": 2021,
+        "count": 3
+      },
+      {
+        "year": 2022,
+        "count": 2
+      },
+      {
+        "year": 2023,
+        "count": 1
+      },
+      {
+        "year": 2024,
+        "count": 0
+      },
+      {
+        "year": 2025,
+        "count": 0
+      }
+    ]
+  },
+  "Qh5Z_vBjo80C": {
+    "id": "Qh5Z_vBjo80C",
+    "title": "Unraveling climate change-induced compound low-solar-low-wind extremes in China",
+    "authors": "Licheng Wang, Yawen Liu, Lei Zhao, Xi Lu, Liangdian Huang, Yana Jin, Steven J Davis, Amir Aghakouchak, Xin Huang, Tong Zhu, Yue Qin",
+    "publication_date": "2025/1",
+    "journal": "National Science Review",
+    "volume": "12",
+    "issue": "1",
+    "pages": "nwae424",
+    "publisher": "Oxford University Press",
+    "abstract": "China's pursuit of carbon neutrality targets hinges on a profound shift towards low-carbon energy, primarily reliant on intermittent and variable, yet crucial, solar and wind power sources. In particular, low-solar-low-wind (LSLW) compound extremes present a critical yet largely ignored threat to the reliability of renewable electricity generation. While existing studies have largely evaluated the impacts of average climate-induced changes in renewable energy resources, comprehensive analyses of the compound extremes and, particularly, the underpinning dynamic mechanisms remain scarce. Here we show the dynamic evolution of compound LSLW extremes and their underlying mechanisms across China via coupling multi-model simulations with diagnostic analysis. Our results unveil a strong topographic dependence in the frequency of compound LSLW extremes, with a national average frequency of 16.4 …",
+    "journal_link": "https://academic.oup.com/nsr/article-abstract/12/1/nwae424/7908526",
+    "doi": null,
+    "total_citations": 16,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 10
+      },
+      {
+        "year": 2026,
+        "count": 6
+      }
+    ]
+  },
+  "bFuYayV9R1gC": {
+    "id": "bFuYayV9R1gC",
+    "title": "Perceptions of carbon dioxide emission reductions and future warming among climate experts",
+    "authors": "Seth Wynes, Steven J Davis, Mitchell Dickau, Susan Ly, Edward Maibach, Joeri Rogelj, Kirsten Zickfeld, H Damon Matthews",
+    "publication_date": "2024/9/12",
+    "journal": "Communications Earth & Environment",
+    "volume": "5",
+    "issue": "1",
+    "pages": "498",
+    "publisher": "Nature Publishing Group UK",
+    "abstract": "The Intergovernmental Panel on Climate Change (IPCC) employs emission scenarios to explore a range of future climate outcomes but refrains from assigning probabilities to individual scenarios. However, IPCC authors have their own views on the likelihood of different climate outcomes, which are valuable to understand because authors possess both expert insight and considerable influence. Here we report the results of a survey of 211 IPCC authors about the likelihood of four key climate outcomes. We found that most authors are skeptical that warming will be limited to the Paris targets of well below 2 °C, but are more optimistic that net zero CO 2 emissions will be reached during the second half of this century. When asked about the beliefs of their peers, author responses showed strong correlations between personal and peer beliefs, suggesting that participants with extreme beliefs perceive their own …",
+    "journal_link": "https://www.nature.com/articles/s43247-024-01661-8",
+    "doi": null,
+    "total_citations": 16,
+    "citations": [
+      {
+        "year": 2024,
+        "count": 3
+      },
+      {
+        "year": 2025,
+        "count": 11
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "BKYZGPsuSFYC": {
+    "id": "BKYZGPsuSFYC",
+    "title": "International Trade Reshapes the Decoupling of Emissions from Economic Growth",
+    "authors": "Shaojian Wang, Jieyu Wang, Chuanglin Fang, Xiangjie Chen, Junyi Liang, Yu Liu, Shuang Gao, Klaus Hubacek, Xiaoping Liu, Chunshan Zhou, Yuli Shan, Kuishuang Feng, Zhu Liu, Chaopeng Hong, Steven J Davis",
+    "publication_date": "2024/8/7",
+    "journal": "Environmental Science & Technology",
+    "volume": "58",
+    "issue": "33",
+    "pages": "14662-14674",
+    "publisher": "American Chemical Society",
+    "abstract": "Efforts to stabilize the global climate change while also continuing human development depend upon “decoupling” economic growth from fossil fuel CO 2 emissions. However, evaluations of such decoupling have typically relied on production-based emissions, which do not account for emissions embodied in international trade. Yet international trade can greatly change emissions accounting and reshape the decoupling between emissions and economic growth. Here, we evaluate decoupling of economic growth from different accounts of emissions in each of the 159 countries and analyze the drivers of decoupling. We find that between 1995 and 2015, although 29 countries exhibited strong decoupling of territorial emissions (growing economies and decreasing emissions), only 19 countries achieved economic growth while their consumption-based emissions decreased. Most developed countries have achieved …",
+    "journal_link": "https://pubs.acs.org/doi/abs/10.1021/acs.est.4c03995",
+    "doi": "10.1021/acs.est.4c03995",
+    "total_citations": 16,
+    "citations": [
+      {
+        "year": 2024,
+        "count": 2
+      },
+      {
+        "year": 2025,
+        "count": 8
+      },
+      {
+        "year": 2026,
+        "count": 6
+      }
+    ]
+  },
+  "43LB_KcVqeAC": {
+    "id": "43LB_KcVqeAC",
+    "title": "CarbonMonitor-Power near-real-time monitoring of global power generation on hourly to daily scales",
+    "authors": "Biqing Zhu, Zhu Deng, Xuanren Song, Wenli Zhao, Da Huo, Taochun Sun, Piyu Ke, Duo Cui, Chenxi Lu, Haiwang Zhong, Chaopeng Hong, Jian Qiu, Steven J Davis, Pierre Gentine, Philippe Ciais, Zhu Liu",
+    "publication_date": "2023/4/17",
+    "journal": "Scientific Data",
+    "volume": "10",
+    "issue": "1",
+    "pages": "217",
+    "publisher": "Nature Publishing Group UK",
+    "abstract": "We constructed a frequently updated, near-real-time global power generation dataset: CarbonMonitor-Power since January, 2016 at national levels with near-global coverage and hourly-to-daily time resolution. The data presented here are collected from 37 countries across all continents for eight source groups, including three types of fossil sources (coal, gas, and oil), nuclear energy and four groups of renewable energy sources (solar energy, wind energy, hydro energy and other renewables including biomass, geothermal, etc.). The global near-real-time power dataset shows the dynamics of the global power system, including its hourly, daily, weekly and seasonal patterns as influenced by daily periodical activities, weekends, seasonal cycles, regular and irregular events (i.e., holidays) and extreme events (i.e., the COVID-19 pandemic). The CarbonMonitor-Power dataset reveals that the COVID-19 pandemic …",
+    "journal_link": "https://www.nature.com/articles/s41597-023-02094-2",
+    "doi": null,
+    "total_citations": 16,
+    "citations": [
+      {
+        "year": 2023,
+        "count": 1
+      },
+      {
+        "year": 2024,
+        "count": 4
+      },
+      {
+        "year": 2025,
+        "count": 3
+      },
+      {
+        "year": 2026,
+        "count": 8
+      }
+    ]
+  },
+  "M8meJADSprsC": {
+    "id": "M8meJADSprsC",
+    "title": "Integration of energy systems",
+    "authors": "Douglas J. Arent, Clayton Barrows, Steven Davis, Gary Grim, Joshua Schaidle, Ben Kroposki, Mark Ruth, Brooke Van Zandt",
+    "publication_date": "2022/1/5",
+    "journal": "MRS Bulletin",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "This article in MRS Bulletin and the framework set out in the introductory article articulate a scenario of renewable electrons and electrification of end use appliances and industrial processes as a plausible paradigm to realize a carbon-free energy economy. The subsequent articles cover specific sectoral or chemical applications of those renewable electrons (e.g., for hydrogen, transportation, building use, electrochemical storage, and within the chemical industry). This article addresses the intersections among and across those sectors. We describe the importance of considering integrated systems and systems of systems as we consider pathways to a decarbonized energy economy. Further, we review and summarize key insights into the innovation challenges that reside at the particular integration interfaces among sectors, and highlight the opportunity for advances in materials and processes that will be critical to …",
+    "journal_link": "https://link.springer.com/article/10.1557/s43577-021-00244-8",
+    "doi": "10.1557/s43577-021-00244-8",
+    "total_citations": 15,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 1
+      },
+      {
+        "year": 2023,
+        "count": 4
+      },
+      {
+        "year": 2024,
+        "count": 2
+      },
+      {
+        "year": 2025,
+        "count": 6
+      },
+      {
+        "year": 2026,
+        "count": 1
+      }
+    ]
+  },
+  "_TjUWtciUekC": {
+    "id": "_TjUWtciUekC",
+    "title": "Corrigendum to\" Assessment of China's virtual air pollution transport embodied in trade by using a consumption-based emission inventory\" published in Atmos. Chem. Phys., 15 …",
+    "authors": "HY Zhao, Q Zhang, D Guan, SJ Davis, Z Liu, H Huo, JT Lin, WD Liu, KB He",
+    "publication_date": "2015/6/19",
+    "journal": "Atmospheric Chemistry and Physics",
+    "volume": "15",
+    "issue": "12",
+    "pages": "6815-6815",
+    "publisher": "Copernicus GmbH",
+    "abstract": "Corrigendum to \"Assessment of China's virtual air pollution transport embodied in trade by using a consumption-based emission inventory\" published in Atmos. Chem. Phys., 15, 5443–5456, 2015 Skip to main content eScholarship Open Access Publications from the University of California Search eScholarship Refine Search All of eScholarship This Series UC Irvine UC Irvine Previously Published Works banner UC Irvine Deposit ManageSubmissions Menu About eScholarship UC Open Access Policies Journals Academic Units RSS eScholarship UC Irvine UC Irvine Previously Published Works Download PDF Main PDF Share EmailFacebook Corrigendum to \"Assessment of China's virtual air pollution transport embodied in trade by using a consumption-based emission inventory\" published in Atmos. Chem. Phys., 15, 5443–5456, 2015 2015 Zhao, HY; Zhang, Q; Guan, D; Davis, SJ; Liu, Z; Huo, H; Lin, JT; Liu, WD; …",
+    "journal_link": "https://escholarship.org/uc/item/16s7740g",
+    "doi": null,
+    "total_citations": 15,
+    "citations": [
+      {
+        "year": 2017,
+        "count": 3
+      },
+      {
+        "year": 2018,
+        "count": 4
+      },
+      {
+        "year": 2019,
+        "count": 3
+      },
+      {
+        "year": 2020,
+        "count": 3
+      },
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 1
+      },
+      {
+        "year": 2023,
+        "count": 0
+      }
+    ]
+  },
+  "PcT55Ow6fAIC": {
+    "id": "PcT55Ow6fAIC",
+    "title": "Mitigation",
+    "authors": "Steven J Davis, Rebecca S Dodder, David D Turner, Ines ML Azevedo, Morgan Bazilian, John Bistline, Sanya Carley, Christopher TM Clack, Joseph E Fargione, Emily Grubert, Jason Hill, Adrienne L Hollis, Alan Jenn, Ryan A Jones, Eric Masanet, Erin N Mayfield, Matteo Muratori, Wei Peng, Brittany C Sellers",
+    "publication_date": "2023",
+    "journal": "",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "US Global Change Research Program",
+    "abstract": "",
+    "journal_link": "https://milwaukee.pauldavis.com/wp-content/uploads/sites/964/2016/04/PaulDavis_CampusMap_2016.pdf",
+    "doi": null,
+    "total_citations": 14,
+    "citations": [
+      {
+        "year": 2024,
+        "count": 5
+      },
+      {
+        "year": 2025,
+        "count": 8
+      }
+    ]
+  },
+  "DPO9WFcz7UcC": {
+    "id": "DPO9WFcz7UcC",
+    "title": "The Carbon Footprint of Fat Tire® Amber Ale",
+    "authors": "Steven J. Davis, James Sweeney",
+    "publication_date": "2008",
+    "journal": "The Climate Conservancy, http://www.ess.uci.edu/~sjdavis/pubs/Fat_Tire_2008.pdf",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 14,
+    "citations": [
+      {
+        "year": 2010,
+        "count": 2
+      },
+      {
+        "year": 2011,
+        "count": 1
+      },
+      {
+        "year": 2012,
+        "count": 2
+      },
+      {
+        "year": 2013,
+        "count": 1
+      },
+      {
+        "year": 2014,
+        "count": 3
+      },
+      {
+        "year": 2015,
+        "count": 1
+      },
+      {
+        "year": 2016,
+        "count": 1
+      },
+      {
+        "year": 2017,
+        "count": 2
+      },
+      {
+        "year": 2018,
+        "count": 1
+      },
+      {
+        "year": 2019,
+        "count": 0
+      },
+      {
+        "year": 2020,
+        "count": 0
+      },
+      {
+        "year": 2021,
+        "count": 0
+      },
+      {
+        "year": 2022,
+        "count": 0
+      },
+      {
+        "year": 2023,
+        "count": 0
+      },
+      {
+        "year": 2024,
+        "count": 0
+      },
+      {
+        "year": 2025,
+        "count": 0
+      },
+      {
+        "year": 2026,
+        "count": 0
+      }
+    ]
+  },
+  "5UUbrqTvKfUC": {
+    "id": "5UUbrqTvKfUC",
+    "title": "Defining ‘abated’fossil fuel and industrial process emissions",
+    "authors": "Christopher Bataille, Alaa Al Khourdajie, Heleen de Coninck, Kiane de Kleijne, Lars J Nilsson, Igor Bashmakov, Steven J Davis, Paul S Fennell",
+    "publication_date": "2025/12/1",
+    "journal": "Energy and Climate Change",
+    "volume": "6",
+    "issue": "",
+    "pages": "100203",
+    "publisher": "Elsevier",
+    "abstract": "There is scientific consensus that limiting warming in line with the Paris Agreement goals requires reaching net zero CO 2 emissions by mid-century and net negative emissions thereafter. Because of the entrenchment of current fossil fuel energy and feedstock demand estimated in almost all global modelled scenarios, 'abated' fossil fuel and industrial process and product use (IPPU) CO 2 emissions, using carbon capture and storage (CCS) technologies to perform carbon management, are likely to be part of any transition. In addition to fossil fuel combustion, this will be primarily in cement & lime kilns, chemical production, and possibly waste incineration and iron and steel making, in processes producing maximally concentrated CO 2 waste streams. Abated fossil fuel and IPPU CO 2 emissions in the context of recent commitments, however, requires consideration of capture rates for fuel processing and end-use …",
+    "journal_link": "https://www.sciencedirect.com/science/article/pii/S2666278725000303",
+    "doi": null,
+    "total_citations": 11,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 7
+      },
+      {
+        "year": 2026,
+        "count": 4
+      }
+    ]
+  },
+  "MvIMIWP2nqIC": {
+    "id": "MvIMIWP2nqIC",
+    "title": "Uses and limits of national decarbonization scenarios to inform net-zero transitions",
+    "authors": "John Bistline, Morgan Browning, Julianne DeAngelo, Daniel Huppmann, Ryan Jones, James McFarland, Anahi Molar-Cruz, Steven Rose, Steven J Davis",
+    "publication_date": "2024/10/16",
+    "journal": "Joule",
+    "volume": "8",
+    "issue": "10",
+    "pages": "2721-2726",
+    "publisher": "Elsevier",
+    "abstract": "Decarbonization scenario ensembles are increasingly used for policy design, company strategy, and stakeholder engagement. However, the limitations of these scenarios may not be adequately understood. We summarize the uses and challenges with applying decarbonization scenarios to inform policy and planning decisions by using a novel database of U.S. net-zero CO 2 emissions scenarios. Models agree that power sector emissions reductions, wind and solar deployment, end-use electrification, energy efficiency, and carbon removal help to reach economy-wide net-zero emissions; however, there is considerable variation in these changes, which may not be reflected in current third-party guidance or international pledges. We show how there is more regional variation in decarbonization pathways than national modeling indicates. The analysis also compares U.S. national scenarios with corresponding U.S …",
+    "journal_link": "https://www.cell.com/joule/abstract/S2542-4351(24)00423-9?uuid=uuid%3A19fcda59-26f6-4f27-9eed-c348ec0778a6",
+    "doi": null,
+    "total_citations": 10,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 5
+      },
+      {
+        "year": 2026,
+        "count": 5
+      }
+    ]
+  },
+  "WTSGYGHz1bkC": {
+    "id": "WTSGYGHz1bkC",
+    "title": "Opportunities and constraints of hydrogen energy storage systems",
+    "authors": "Jacqueline A Dowling, Tyler H Ruggles, Edgar A Virgüez, Natasha D Reich, Zachary P Ifkovits, Steven J Davis, Anna X Li, Kathleen M Kennedy, Katherine Z Rinaldi, Lei Duan, Ken Caldeira, Nathan S Lewis",
+    "publication_date": "2024/7/22",
+    "journal": "Environmental Research: Energy",
+    "volume": "1",
+    "issue": "3",
+    "pages": "035004",
+    "publisher": "IOP Publishing",
+    "abstract": "In contrast to battery storage systems, power-to-hydrogen-to-power (P-H 2 -P) storage systems provide opportunities to separately optimize the costs and efficiency of the system’s charging, storage, and discharging components. The value of capital cost reduction relative to round-trip efficiency improvements of P-H 2 -P systems is not well understood in electricity systems with abundant curtailed power. Here, we used a macro-energy model to evaluate the sensitivity of system costs to techno-economic characteristics of P-H 2 -P systems in stylized wind-solar-battery electricity systems with restricted natural gas generation. Assuming current costs and current round-trip P-H 2 -P efficiencies, least-cost wind and solar electricity systems had large amounts of excess variable renewable generation capacity. These systems included P-H 2 -P in the least-cost solution, despite its low round-trip efficiency and relatively high P-H 2 -P …",
+    "journal_link": "https://iopscience.iop.org/article/10.1088/2753-3751/ad58e5/meta",
+    "doi": "10.1088/2753-3751/ad58e5/meta",
+    "total_citations": 10,
+    "citations": [
+      {
+        "year": 2024,
+        "count": 1
+      },
+      {
+        "year": 2025,
+        "count": 7
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "Cy13deThEpcC": {
+    "id": "Cy13deThEpcC",
+    "title": "Europe’s adaptation to the energy crisis: Reshaped gas supply-transmission-consumption structures and driving factors from 2022 to 2024",
+    "authors": "Chuanlong Zhou, Biqing Zhu, Antoine Halff, Steven J Davis, Zhu Liu, Simon Bowring, Simon Ben Arous, Philippe Ciais",
+    "publication_date": "2024/7/15",
+    "journal": "Earth System Science Data Discussions",
+    "volume": "2024",
+    "issue": "",
+    "pages": "1-21",
+    "publisher": "",
+    "abstract": "The 2022 invasion of Ukraine by Russia triggered a significant energy crisis in the EU27 (27 EU member countries) and UK (hereafter EU27&UK), leading to profound changes in their natural gas supply, transmission, and consumption dynamics. To analyze those pattern shifts, we first update our natural gas supply dataset, EUGasSC, with daily country- and sector-specific supply sources. We then provide a newly constructed daily intra-EU (European Union) natural gas transmission dataset, EUGasNet, with specified supply sources utilizing the ENTSOG (European Network of Transmission System Operators for Gas) and EUGasSC data. To further understand the economic and climatic impacts, we finally developed EUGasImpact, a daily dataset with sector-specific driving factors of consumption changes based on change attribution models using multiple open datasets. Those datasets are available on the Zenodo platform: 10.5281/zenodo.11175364 (Zhou et al., 2024). On the supply side, Russian gas supply to the EU27&UK was cut by 87.8 % (976.8 TW h per winter) during the post-invasion winters compared to the previous winters. Liquefied natural gas (LNG) imports became the largest gas supply source, rising from 20.7 % to 37.5 % of the total gas supply. Our intra-EU gas transmission analysis showed that the gas transmission network was adjusted to mitigate the large gas shortfalls in Germany and distribute LNG arrivals. Total gas consumption fell by 19.0 %, which was driven by (1) consumer behavioral changes in household heating (contributed to 29 % of the total reduction; the following numbers are also percentage contributions …",
+    "journal_link": "https://essd.copernicus.org/articles/17/3431/2025/",
+    "doi": "10.5281/zenodo.11175364",
+    "total_citations": 10,
+    "citations": [
+      {
+        "year": 2024,
+        "count": 1
+      },
+      {
+        "year": 2025,
+        "count": 6
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "w9ZB08sdvuUC": {
+    "id": "w9ZB08sdvuUC",
+    "title": "Energy Systems",
+    "authors": "Peter J Marcotullio, Lori Bruhwiler, Steven Davis, Jill Engel-Cox, John Field, Conor Gately, Kevin Robert Gurney, Daniel M Kammen, Emily McGlynn, James McMahon, William R Morrow III, Ilissa B Ocko, Ralph Torrie",
+    "publication_date": "2018/11/1",
+    "journal": "",
+    "volume": "",
+    "issue": "NREL/CH-6A50-72475",
+    "pages": "",
+    "publisher": "National Renewable Energy Laboratory (NREL), Golden, CO (United States)",
+    "abstract": "The focus of SOCCR-2 is on the scientific understanding of U.S. and North American carbon cycle stocks and fluxes, in the context of and interactions with global scale budgets and climate change impacts in managed and unmanaged systems. Carbon stocks and fluxes in soils, water (including oceans), vegetation, aquatic-terrestrial interfaces (coastal/ estuaries/ wetlands), human settlements, agriculture, forestry etc. are included. This chapter assesses the contribution of the North American energy system to the global carbon cycle, including the identification of pathways to greater energy efficiency with lower emissions. The system - defined by energy-related activities in Canada, Mexico, and the United States - includes primary energy sources; the infrastructure to extract, transport, convert, transmit, distribute, and use these resources; and the socioeconomic and political structures and dynamics associated with these processes (Romero-Lankao et al., 2014).",
+    "journal_link": "https://www.osti.gov/biblio/1545978",
+    "doi": null,
+    "total_citations": 10,
+    "citations": [
+      {
+        "year": 2018,
+        "count": 2
+      },
+      {
+        "year": 2019,
+        "count": 3
+      },
+      {
+        "year": 2020,
+        "count": 1
+      },
+      {
+        "year": 2021,
+        "count": 2
+      },
+      {
+        "year": 2022,
+        "count": 2
+      },
+      {
+        "year": 2023,
+        "count": 0
+      }
+    ]
+  },
+  "rDsFeusoTZkC": {
+    "id": "rDsFeusoTZkC",
+    "title": "University of california strategies for decarbonization: replacing natural gas",
+    "authors": "A Meier, SJ Davis, DG Victor, K Brown, L McNeilly, M Modera, RZ Pass, J Sager, D Weil, D Auston, A Abdulla, F Bockmiller, W Brase, J Brouwer, C Diamond, E Dowey, J Elliott, R Eng, S Kaffka, CV Kappel, M Kloss, I Mezić, J Morejohn, D Phillips, E Ritzinger, S Weissman, J Williams",
+    "publication_date": "2018",
+    "journal": "UC TomKat Carbon Neutrality Project",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "",
+    "journal_link": "https://scholar.google.com/scholar?cluster=10584653586773651861&hl=en&oi=scholarr",
+    "doi": null,
+    "total_citations": 10,
+    "citations": [
+      {
+        "year": 2018,
+        "count": 1
+      },
+      {
+        "year": 2019,
+        "count": 4
+      },
+      {
+        "year": 2020,
+        "count": 2
+      },
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 1
+      },
+      {
+        "year": 2023,
+        "count": 1
+      },
+      {
+        "year": 2024,
+        "count": 0
+      },
+      {
+        "year": 2025,
+        "count": 0
+      }
+    ]
+  },
+  "n1qY4L4uFdgC": {
+    "id": "n1qY4L4uFdgC",
+    "title": "Drivers of natural gas use in U.S. residential buildings",
+    "authors": "Rohith Teja Mittakola, Philippe Ciais, Jochen E. Schubert, David Makowski, Chuanlong Zhou, Hassan Bazzi, Taochun Sun, Zhu Liu, Steven J. Davis",
+    "publication_date": "2024/4/3",
+    "journal": "Science Advances",
+    "volume": "10",
+    "issue": "14",
+    "pages": "",
+    "publisher": "AAAS",
+    "abstract": "Natural gas is the primary fuel used in U.S. residences, yet little is known about its consumption patterns and drivers. We use daily county-level gas consumption data to assess the spatial patterns of the relationships and the sensitivities of gas consumption to outdoor air temperature across U.S. households. We fitted linear-plus-plateau functions to daily gas consumption data in 1000 counties, and derived two key coefficients: the heating temperature threshold ( T crit ) and the gas consumption rate change per 1°C temperature drop (Slope). We identified the main predictors of T crit and Slope (like income, employment rate, and building type) using interpretable machine learning models built on census data. Finally, we estimated a potential 2.47 million MtCO 2 annual emission reduction in U.S. residences by gas savings due to household insulation improvements and hypothetical behavioral change toward reduced …",
+    "journal_link": "https://www.science.org/doi/abs/10.1126/sciadv.adh5543",
+    "doi": "10.1126/sciadv.adh5543",
+    "total_citations": 9,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 5
+      },
+      {
+        "year": 2026,
+        "count": 4
+      }
+    ]
+  },
+  "mu2_AnMl8iYC": {
+    "id": "mu2_AnMl8iYC",
+    "title": "The global hydrogen budget",
+    "authors": "Zutao Ouyang, Robert B. Jackson, Marielle Saunois, Josep G. Canadell, Yuanhong Zhao, Catherine Morfopoulos, Paul B. Krummel, Prabir K. Patra, Glen P. Peters, Fraser Dennison, Thomas Gasser, Alexander T. Archibald, Vivek Arora, Gabriel Baudoin, Naveen Chandra, Philippe Ciais, Steven J. Davis, Sarah Feron, Fangzhou Guo, Didier Hauglustaine, Christopher D. Jones, Matthew W. Jones, Etsushi Kato, Daniel Kennedy, Jürgen Knauer, Sebastian Lienert, Danica Lombardozzi, Joe R. Melton, Julia E.M.S. Nabel, Michael O’ Sullivan, Gabrielle Pétron, Benjamin Poulter, Joeri Rogelj, David Sandoval Calle, Pete Smith, Parvadha Suntharalingam, Hanqin Tian, Chenghao Wang, Andy Wiltshire",
+    "publication_date": "2025/12/17",
+    "journal": "Nature",
+    "volume": "648",
+    "issue": "",
+    "pages": "616-624",
+    "publisher": "Nature Springer",
+    "abstract": "Hydrogen (H 2 ) will play a part in decarbonizing the global energy system. However, hydrogen interacts with methane, ozone, and stratospheric water vapour, leading to an indirect 100-year global warming potential of 11 ± 4 (refs. , , – ). This raises concerns about the climate consequences of increasing H 2 use under future hydrogen economies , . A comprehensive accounting of H 2 sources and sinks is essential for assessing changes and mitigating environmental risks. Here we analyse trends in global H 2 sources and sinks from 1990 to 2020 and construct a comprehensive budget for the decade 2010–2020. H 2 sources increased from 1990 to 2020, primarily because of the oxidation of methane and anthropogenic non-methane volatile organic compounds, biogenic nitrogen fixation, and leakage from H 2 production. Sinks also increased in response to rising atmospheric H 2 . Estimated global H 2 sources and …",
+    "journal_link": "https://www.nature.com/articles/s41586-025-09806-1",
+    "doi": null,
+    "total_citations": 8,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 1
+      },
+      {
+        "year": 2026,
+        "count": 7
+      }
+    ]
+  },
+  "PuYkdpj8xa4C": {
+    "id": "PuYkdpj8xa4C",
+    "title": "Scaling traffic variables from sensors sample to the entire city at high spatiotemporal resolution with machine learning: applications to the Paris megacity",
+    "authors": "Xavier Bonnemaizon, Philippe Ciais, Chuanlong Zhou, Simon Ben Arous, Steven J Davis, Nicolas Megel",
+    "publication_date": "2024/8/28",
+    "journal": "Environmental Research: Infrastructure and Sustainability",
+    "volume": "4",
+    "issue": "3",
+    "pages": "035010",
+    "publisher": "IOP Publishing",
+    "abstract": "Road transportation accounts for up to 35% of carbon dioxide and 49% of nitrogen oxides emissions in the Paris region. However, estimates of city traffic patterns are often incomplete and of coarse spatio-temporal resolution, even where extensive networks of sensors exist. This study uses a machine learning approach to analyze data from 2086 magnetic road sensors across Paris, generating a detailed dataset of hourly traffic flow and road occupancy covering 6846 road segments from 2018 to 2022. Our model captures flow and occupancy with a symmetric mean absolute percentage error of 37% and 54% respectively, providing high-resolution insights into traffic patterns. These insights allow for the creation of a comprehensive map of hourly transportation patterns in Paris, offering a robust framework for assessing traffic variables for each significant road link in the city. The model’s ability to incorporate an …",
+    "journal_link": "https://iopscience.iop.org/article/10.1088/2634-4505/ad6bbf/meta",
+    "doi": "10.1088/2634-4505/ad6bbf/meta",
+    "total_citations": 8,
+    "citations": [
+      {
+        "year": 2024,
+        "count": 1
+      },
+      {
+        "year": 2025,
+        "count": 3
+      },
+      {
+        "year": 2026,
+        "count": 4
+      }
+    ]
+  },
+  "0Kh4an1R61UC": {
+    "id": "0Kh4an1R61UC",
+    "title": "Near-real-time and state-level monitoring of US CO2 emissions",
+    "authors": "Chaopeng Hong, Philippe Ciais, Zhu Liu, Olivier Boucher, Wenli Zhao, Pierre Gentine, Yilong Wang, Zhu Deng, Steven J Davis",
+    "publication_date": "2021/4/7",
+    "journal": "",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "EarthArXiv",
+    "abstract": "As the ambition and urgency of climate mitigation efforts across the U.S. increase, annual estimates of national CO2 emissions provide only vague and outdated information about changes and progress. Using near-real-time activity data compiled from numerous sources, here we present and analyze daily, state-level estimates of fossil fuel CO2 emissions from January 2019 through December 2020. Our results quantify the abrupt but temporary decreases in emissions due to the COVID-19 pandemic (particularly related to transportation in April and May of 2020), but also reveal substantial variations across states according to the stringency of their public health responses. We also find that decreases in commercial demand for natural gas and electricity were partially but not fully offset by increases in residential demands in most places. Further, the carbon intensity of electricity and the share of electricity from coal decreased in many states in the first half of 2020 as compared to 2019, but then rebounded in the second half of 2020 when natural gas prices increased. In the future, as COVID-related restrictions dissipate and energy infrastructure evolves, our data and methods will allow state policymakers and energy analysts to closely monitor emissions trends, decarbonization progress and more quickly adjust policies and programs.",
+    "journal_link": "https://eartharxiv.org/repository/view/2233/",
+    "doi": null,
+    "total_citations": 7,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 2
+      },
+      {
+        "year": 2023,
+        "count": 2
+      },
+      {
+        "year": 2024,
+        "count": 2
+      },
+      {
+        "year": 2025,
+        "count": 0
+      },
+      {
+        "year": 2026,
+        "count": 0
+      }
+    ]
+  },
+  "sfsSB7lKuh0C": {
+    "id": "sfsSB7lKuh0C",
+    "title": "Predicting unpredictability",
+    "authors": "Steven J. Davis",
+    "publication_date": "2018/3/26",
+    "journal": "Nature Energy",
+    "volume": "",
+    "issue": "",
+    "pages": "doi.org/10.1038/s4",
+    "publisher": "Springer Macmillan",
+    "abstract": "Analysts and markets have struggled to predict a number of phenomena, such as the rise of natural gas, in US energy markets over the past decade or so. Research shows the challenge may grow because the industry — and consequently the market — is becoming increasingly volatile.",
+    "journal_link": "https://www.nature.com/articles/s41560-018-0127-y",
+    "doi": "10.1038/s4",
+    "total_citations": 7,
+    "citations": [
+      {
+        "year": 2019,
+        "count": 1
+      },
+      {
+        "year": 2020,
+        "count": 2
+      },
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 1
+      },
+      {
+        "year": 2023,
+        "count": 1
+      },
+      {
+        "year": 2024,
+        "count": 1
+      },
+      {
+        "year": 2025,
+        "count": 0
+      }
+    ]
+  },
+  "-ZoC36zw86wC": {
+    "id": "-ZoC36zw86wC",
+    "title": "Executive summary of the report\" Bending the Curve: 10 scalable solutions for carbon neutrality and climate stability\"",
+    "authors": "Veerabhadran Ramanathan, Juliann E Allison, Maximilian Auffhammer, David Auston, Anthony D Barnosky, Lifang Chiang, William D Collins, Steven J Davis, Fonna Forman, Susanna B Hecht, Daniel Kammen",
+    "publication_date": "2015",
+    "journal": "",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "University of California",
+    "abstract": "This executive summary of the full report, Bending the Curve: 10 scalable solutions for carbon neutrality and climate stability, presents pragmatic paths for achieving carbon neutrality and climate stability in California, the United States and the world. More than 50 researchers and scholars—from a wide range of disciplines across the University of California system—formed a climate solutions group and came together in recent months to identify these solutions, many of which emerge from UC research as well as the research of colleagues around the world. Taken together, these solutions can bend the curve of climate change. The full report will be published in spring 2016 after peer review. This report is inspired by California’s recent pledge to reduce carbon emissions by 40 percent below 1990 levels by 2030, and by the University of California’s pledge to become carbon neutral by 2025. What is taking place in California today is exactly the sort of large-scale demonstration project the planet needs. And this statewide demonstration project is composed of many of the kinds of solutions that can be scaled up around the world.",
+    "journal_link": "https://repository.graduateinstitute.ch/record/294608/files/Bending-the-Curve.pdf",
+    "doi": null,
+    "total_citations": 7,
+    "citations": [
+      {
+        "year": 2016,
+        "count": 2
+      },
+      {
+        "year": 2017,
+        "count": 1
+      },
+      {
+        "year": 2018,
+        "count": 3
+      },
+      {
+        "year": 2019,
+        "count": 1
+      },
+      {
+        "year": 2020,
+        "count": 0
+      },
+      {
+        "year": 2021,
+        "count": 0
+      }
+    ]
+  },
+  "w5CyTnyFq80C": {
+    "id": "w5CyTnyFq80C",
+    "title": "De-carbonization of global energy use during the COVID-19 pandemic",
+    "authors": "Zhu Liu, Biqing Zhu, Philippe Ciais, Steven J Davis, Chenxi Lu, Haiwang Zhong, Piyu Ke, Yanan Cui, Zhu Deng, Duo Cui, Taochun Sun, Xinyu Dou, Jianguang Tan, Rui Guo, Bo Zheng, Katsumasa Tanaka, Wenli Zhao, Pierre Gentine",
+    "publication_date": "2021/2/5",
+    "journal": "arXiv preprint arXiv:2102.03240",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "The COVID-19 pandemic has disrupted human activities, leading to unprecedented decreases in both global energy demand and GHG emissions. Yet a little known that there is also a low carbon shift of the global energy system in 2020. Here, using the near-real-time data on energy-related GHG emissions from 30 countries (about 70% of global power generation), we show that the pandemic caused an unprecedented de-carbonization of global power system, representing by a dramatic decrease in the carbon intensity of power sector that reached a historical low of 414.9 tCO2eq/GWh in 2020. Moreover, the share of energy derived from renewable and low-carbon sources (nuclear, hydro-energy, wind, solar, geothermal, and biomass) exceeded that from coal and oil for the first time in history in May of 2020. The decrease in global net energy demand (-1.3% in the first half of 2020 relative to the average of the period in 2016-2019) masks a large down-regulation of fossil-fuel-burning power plants supply (-6.1%) coincident with a surge of low-carbon sources (+6.2%). Concomitant changes in the diurnal cycle of electricity demand also favored low-carbon generators, including a flattening of the morning ramp, a lower midday peak, and delays in both the morning and midday load peaks in most countries. However, emission intensities in the power sector have since rebounded in many countries, and a key question for climate mitigation is thus to what extent countries can achieve and maintain lower, pandemic-level carbon intensities of electricity as part of a green recovery.",
+    "journal_link": "https://arxiv.org/abs/2102.03240",
+    "doi": null,
+    "total_citations": 6,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 5
+      }
+    ]
+  },
+  "nnITTVbzT6kC": {
+    "id": "nnITTVbzT6kC",
+    "title": "Journal of Environmental Economics and Management",
+    "authors": "Xiaoguang Chen, Luoye Chen, Wei Xie, Nathaniel D Mueller, Steven J Davis",
+    "publication_date": "2023",
+    "journal": "Journal of Environmental Economics and Management",
+    "volume": "119",
+    "issue": "",
+    "pages": "102810",
+    "publisher": "",
+    "abstract": "Using a newly-compiled dataset of airport traffic, air pollution, and weather from 2015 to 2017, we evaluate the effect of PM2. 5 pollution levels on flight departure delays in China. We instrument for PM2. 5 levels using changes in atmospheric thermal inversions and wind direction. We find that a one-standard-deviation increase in the daily PM2. 5 concentration levels leads to roughly 4.5–6.4 additional minutes in departure delays per flight. We estimate that reductions in China’s PM2. 5 pollution levels due to the Air Pollution Prevention and Control Action Plan avoided 13–18% of the increases in national average flight delays and saved US $54 to $69 million in passenger time in 2017 alone.",
+    "journal_link": "http://www.ccap.pku.edu.cn/docs/2024-01/20240105105405556129.pdf",
+    "doi": null,
+    "total_citations": 5,
+    "citations": [
+      {
+        "year": 1992,
+        "count": 2
+      },
+      {
+        "year": 1993,
+        "count": 1
+      },
+      {
+        "year": 1994,
+        "count": 1
+      },
+      {
+        "year": 1995,
+        "count": 1
+      },
+      {
+        "year": 1996,
+        "count": 0
+      },
+      {
+        "year": 1997,
+        "count": 0
+      },
+      {
+        "year": 1998,
+        "count": 0
+      }
+    ]
+  },
+  "V63Ir2N1OTwC": {
+    "id": "V63Ir2N1OTwC",
+    "title": "Public lands fly under climate radar",
+    "authors": "Nathan Ratledge, Steven J Davis, Laura Zachary",
+    "publication_date": "2019/2",
+    "journal": "Nature Climate Change",
+    "volume": "9",
+    "issue": "2",
+    "pages": "92-93",
+    "publisher": "Nature Publishing Group",
+    "abstract": "Global greenhouse gas emissions are set to rise again in 2018. New research from the United States Geological Survey casts light on emissions from fuels produced on federal lands and finds that they accounted for over 20% of US emissions in recent years.",
+    "journal_link": "https://www.nature.com/articles/s41558-019-0399-7",
+    "doi": null,
+    "total_citations": 4,
+    "citations": [
+      {
+        "year": 2019,
+        "count": 2
+      },
+      {
+        "year": 2020,
+        "count": 1
+      },
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 0
+      },
+      {
+        "year": 2023,
+        "count": 0
+      },
+      {
+        "year": 2024,
+        "count": 0
+      }
+    ]
+  },
+  "wTekDMGr9GkC": {
+    "id": "wTekDMGr9GkC",
+    "title": "Cost-competitive plant-by-plant strategy for spatially resolved CCUS deployment toward carbon neutrality in global key industries",
+    "authors": "Xizhe Yan, Dan Tong, Steven J Davis, Yu Liu, Wei Li, Huaxuan Wang, Dongsheng Zheng, Yaqin Guo, Yang Liu, Ruochong Xu, Xinying Qin, Yujia Fu, Qingyang Xiao, Qiang Zhang",
+    "publication_date": "2025/9/19",
+    "journal": "One Earth",
+    "volume": "8",
+    "issue": "9",
+    "pages": "",
+    "publisher": "Elsevier",
+    "abstract": "Global key industries (e.g., thermal power, iron and steel, and cement) that together contribute >50% of anthropogenic CO 2 emissions are expected to deploy carbon capture, utilization, and storage (CCUS) to achieve carbon neutrality in most scenarios. However, plant-level strategies that can cost-effectively coordinate deployment across industrial sectors remain underexplored. Here, using a plant-by-plant pathway optimization model, we find that technical attributes alone (e.g., plant age, capacity, and emissions) are insufficient to ensure cost-competitive CCUS deployment without spatial considerations. Strategic deployment can unlock substantial near-term benefits, reducing cumulative unit costs by over 18.5 USD/t globally by 2030. Notably, some old/small facilities considered low CCUS priority present unexpected low-cost opportunities: in China, ∼20% of retrofitted facilities that have operated >20 years …",
+    "journal_link": "https://www.cell.com/one-earth/fulltext/S2590-3322(25)00204-0",
+    "doi": null,
+    "total_citations": 3,
+    "citations": [
+      {
+        "year": 2026,
+        "count": 3
+      }
+    ]
+  },
+  "Gs1AF5H0x94C": {
+    "id": "Gs1AF5H0x94C",
+    "title": "Harmonized Annual Averaged Traffic Data at Street Segment Level for European Cities",
+    "authors": "Xavier Bonnemaizon, Philippe Ciais, Chuanlong Zhou, Qinren Shi, Rohith Teja Mittakola, Clément Goldmann, Simon Ben Arous, Nicolas Megel, Steven J Davis",
+    "publication_date": "2025/8/5",
+    "journal": "Scientific Data",
+    "volume": "12",
+    "issue": "1",
+    "pages": "1365",
+    "publisher": "Nature Publishing Group UK",
+    "abstract": "Traffic flow data in Europe are collected locally by city authorities using different systems and standards, making it difficult to compare cities or evaluate large-scale maps, such as those used for emission inventories. To address this gap, we compiled and harmonized publicly available traffic data for 36 European cities, linking geolocalized information to road segments, spanning years from 2015 to 2024 depending on data availability. Annual Average Daily (or Weekday) Traffic is provided, and supplementary variables (e.g., truck flow percentages and speed metrics) are included where available. The data are georeferenced, with geometries corresponding to each measurement location. The dataset was enriched with additional attributes through map matching of traffic measurement locations to OpenStreetMap. Code and methodology for transforming raw data into a uniform structure are documented in Python …",
+    "journal_link": "https://www.nature.com/articles/s41597-025-05698-y",
+    "doi": null,
+    "total_citations": 3,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 1
+      },
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "0iM-huCvmk0C": {
+    "id": "0iM-huCvmk0C",
+    "title": "Large CO2 removal potential of woody debris preservation in managed forests",
+    "authors": "Yiqi Luo, Ning Wei, Xingjie Lu, Yu Zhou, Feng Tao, Quan Quan, Cuijuan Liao, Lifen Jiang, Jianyang Xia, Yuanyuan Huang, Shuli Niu, Xiangtao Xu, Ying Sun, Ning Zeng, Charles Koven, Liqing Peng, Steven J. Davis, Pete Smith, Fengqi You, Yu Jiang, Lailiang Cheng, Benjamin Houlton",
+    "publication_date": "2025/6/25",
+    "journal": "Nature Geoscience",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Nature",
+    "abstract": "Limiting climate warming to 1.5 °C requires reductions in greenhouse gas emissions and CO 2 removal. While various CO 2 removal strategies have been explored to achieve global net-zero greenhouse gas emissions and account for legacy emissions, additional exploration is warranted to examine more durable, scalable and sustainable approaches to achieve climate targets. Here we show that preserving woody debris in managed forests can remove gigatonnes of CO 2 from the atmosphere sustainably based on a carbon cycle analysis using three Earth system models. Woody debris is produced from logging, sawmill wastes and abandoned woody products, and can be preserved in deep soil to lengthen its residence time (a measure of durability) by thousands of years. Preserving annual woody debris production in managed forests has the capacity to remove 769–937 GtCO 2 from the atmosphere cumulatively …",
+    "journal_link": "https://www.nature.com/articles/s41561-025-01731-2",
+    "doi": null,
+    "total_citations": 3,
+    "citations": [
+      {
+        "year": 2026,
+        "count": 3
+      }
+    ]
+  },
+  "_u2aKJ9e-CoC": {
+    "id": "_u2aKJ9e-CoC",
+    "title": "Securing the supply of graphite for batteries",
+    "authors": "Karan Bhuwalka, Hari Ramachandran, Swati Narasimhan, Adrian Yao, Julia Frohmann, Leopold Peiseler, William Chueh, Adam Boies, Steven J Davis, Sally Benson",
+    "publication_date": "2025/3/27",
+    "journal": "arXiv preprint arXiv:2503.21521",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "Surging demand for graphite in energy storage applications has led to concerns about supply chai security for manufacturers and nations globally. Currently, China produces over 92% of graphite for anodes, posing a risk for industries reliant on graphite supply. Here, we systematically assess the costs of producing natural and synthetic battery-grade graphite in the U.S. and China using process-based cost models. We find that production costs in the U.S. are higher than those in China by 100-200%, so scaling production in the short-term will require significant policy support. We use our models to explore opportunities to improve the competitiveness of graphite production outside China, finding that lower financing rates and improved shaping yields can together reduce costs by 25-30%. Further implementing other cost reduction strategies, such as improving process throughput or lowering equipment costs, can achieve 35-40% lower costs. Finally, we discuss how innovative graphite production processes like methane pyrolysis and catalytic graphitization may provide competitive pathways.",
+    "journal_link": "https://arxiv.org/abs/2503.21521",
+    "doi": null,
+    "total_citations": 3,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 2
+      },
+      {
+        "year": 2026,
+        "count": 1
+      }
+    ]
+  },
+  "qQc65DSaYXMC": {
+    "id": "qQc65DSaYXMC",
+    "title": "Historical trends in snowmelt used for irrigation",
+    "authors": "Eva Kinnebrew, Lindsey L Sloat, Yue Qin, Steven J Davis, John T Abatzoglou, Stefan Siebert, Nathaniel D Mueller",
+    "publication_date": "2025/2/6",
+    "journal": "Environmental Research: Food Systems",
+    "volume": "2",
+    "issue": "1",
+    "pages": "015012",
+    "publisher": "IOP Publishing",
+    "abstract": "Many agricultural regions rely on snowmelt runoff as a source of water for irrigation, but climate change is altering runoff dynamics, making it difficult to meet increasing irrigation water demands. It remains unclear whether irrigation water shortages are systematically occurring in snow-dependent regions across the globe. Here, we study global trends in surface runoff used to meet irrigation demands by linking rainfall and snowmelt runoff data with irrigation consumption data (1985–2020). Focusing on the most snow-dependent agricultural basins, we find that surface water runoff volumes have slightly decreased and snowmelt runoff is occurring significantly earlier in time (advancing an average of 8 d). These changes, coupled with an almost universal trend of increasing irrigation water consumption, have made snowmelt runoff less able to meet irrigation needs during crop growing seasons and increased reliance …",
+    "journal_link": "https://iopscience.iop.org/article/10.1088/2976-601X/adacec/meta",
+    "doi": "10.1088/2976-601X/adacec/pdf",
+    "total_citations": 3,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 2
+      },
+      {
+        "year": 2026,
+        "count": 1
+      }
+    ]
+  },
+  "JTtNqH-x4gYC": {
+    "id": "JTtNqH-x4gYC",
+    "title": "Without a back-up plan",
+    "authors": "Steven J. Davis, Jay Taneja",
+    "publication_date": "2018/10/15",
+    "journal": "Nature Sustainability",
+    "volume": "1",
+    "issue": "",
+    "pages": "538-539",
+    "publisher": "SPRINGER NATURE",
+    "abstract": "A reliable power supply in developing countries can help socio-economic development efforts. Now research shows that it would also avoid significant environmental impacts.",
+    "journal_link": "https://www.nature.com/articles/s41893-018-0158-1",
+    "doi": null,
+    "total_citations": 3,
+    "citations": [
+      {
+        "year": 2021,
+        "count": 1
+      },
+      {
+        "year": 2022,
+        "count": 1
+      },
+      {
+        "year": 2023,
+        "count": 1
+      },
+      {
+        "year": 2024,
+        "count": 0
+      },
+      {
+        "year": 2025,
+        "count": 0
+      }
+    ]
+  },
+  "CB6W3GmKGOEC": {
+    "id": "CB6W3GmKGOEC",
+    "title": "Ownership of power plants stranded by climate mitigation",
+    "authors": "Robert Fofrich Navarro, Lauren Liebermann, Frances C. Moore, Christine Shearer, Steven J. Davis",
+    "publication_date": "2025/12/11",
+    "journal": "Nature Sustainability",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Nature",
+    "abstract": "",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": 2,
+    "citations": [
+      {
+        "year": 2026,
+        "count": 2
+      }
+    ]
+  },
+  "rAN7mHg6NlYC": {
+    "id": "rAN7mHg6NlYC",
+    "title": "Drivers of CO2 emissions from road transport in U.S. urban areas",
+    "authors": "Xavier Bonnemaizon, Philippe Ciais, Chuanlong Zhou, Simon Ben Arous, Nicolas Megel, Gunnar Berghäuser, Steven J. Davis",
+    "publication_date": "2025/12/23",
+    "journal": "Environmental Research Letters",
+    "volume": "7",
+    "issue": "",
+    "pages": "125028",
+    "publisher": "IOP",
+    "abstract": "Road transportation in U.S. urban areas accounts for roughly two-thirds of on-road CO 2 emissions. Yet the drivers of those transportation emissions and differences among cities are not well-understood owing to limited availability of detailed data until recently. Here, we use high-resolution Floating Car Data based on GPS records of position and speed onboard individual vehicles to analyze street-level transportation emissions in 454 U.S. urban areas (hereinafter referred to as cities) in 2022. Per capita emissions were decomposed into three key drivers: the traffic demand per capita, the vehicle fleet and the congestion effect. Our study confirms the primary importance of travel demand and the well-known trend of its decrease with higher density but finds no significant increase in emissions related to traffic congestion, which account for only 1%–13% of total emissions in urban areas. Among the secondary drivers …",
+    "journal_link": "https://iopscience.iop.org/article/10.1088/2515-7620/ae2bcc/meta",
+    "doi": "10.1088/2515-7620/ae2bcc/meta",
+    "total_citations": 1,
+    "citations": [
+      {
+        "year": 2026,
+        "count": 1
+      }
+    ]
+  },
+  "KYgttONoxcsC": {
+    "id": "KYgttONoxcsC",
+    "title": "A near-real time daily European Power Consumption and Carbon Intensity Dataset (ECON-PowerCI)",
+    "authors": "Shujie Zhang, Wenli Zhao, Biqing Zhu, Chunhua Yan, Xuanren Song, Hou Jiang, Jianing Fang, Philippe Ciais, Ning Xuan, Pierre Gentine, Steven J Davis, Zhu Liu, Guo Yu Qiu",
+    "publication_date": "2025/10/27",
+    "journal": "Scientific Data",
+    "volume": "12",
+    "issue": "1",
+    "pages": "1693",
+    "publisher": "Nature Publishing Group UK",
+    "abstract": "We present a near-real-time daily European Consumption-based Power Carbon Intensity Dataset (ECON-PowerCI), developed from the CarbonMonitor power production dataset for Europe. Spanning from January 2015 to December 2024, the dataset encompasses 35 European countries, with daily updates and a one-day latency. ECON-PowerCI provides consumption-based power carbon intensity at the national level, accounting for cross-border electricity net imports in the country of consumption. By integrating ENTSO-E (The European Network of Transmission System Operators for Electricity) data, ECON-PowerCI enables comprehensive analysis of carbon intensity trends shaped by cross-border transmissions, extreme weather events, and disruptions like the COVID-19 pandemic and geopolitical conflicts. This dataset facilitates in-depth study of the effect of cross-border electricity flows on national carbon …",
+    "journal_link": "https://www.nature.com/articles/s41597-025-05978-7",
+    "doi": null,
+    "total_citations": 1,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 1
+      }
+    ]
+  },
+  "MtS25d97-7AC": {
+    "id": "MtS25d97-7AC",
+    "title": "A path to US Tribal energy sovereignty",
+    "authors": "Shane Seibel, Richard Luarkie, Daniel Cardenas, Cody Mayer, Ramon Sanchez, Matt Dannenberg, Bazile Minogiizhigaabo Panek, Albert Bond, Zane Gordon, Demi Morishige, Kourtney Hadrick, Graham Stahnk, Robert Fofrich, Steven J. Davis, Richard Tallman, Brooke Bowser, Morgan D Bazilian",
+    "publication_date": "2025/1/17",
+    "journal": "Science",
+    "volume": "387",
+    "issue": "",
+    "pages": "372",
+    "publisher": "",
+    "abstract": "In the 4 June 2010 issue, Science published the Report “FCHo proteins are nucleators of clathrin-mediated endocytosis” by WM Henne et al.(1). The editors and authors have been made aware of potential data integrity issues in several figures. We are alerting readers to this concern while we work with the institution and the authors to determine an appropriate course of action. H. Holden Thorp",
+    "journal_link": "https://www.science.org/doi/abs/10.1126/science.adt7820",
+    "doi": "10.1126/science.adt7820",
+    "total_citations": 1,
+    "citations": [
+      {
+        "year": 2026,
+        "count": 1
+      }
+    ]
+  },
+  "1pC5hbHeJ6IC": {
+    "id": "1pC5hbHeJ6IC",
+    "title": "Los Angeles 100-year flood risk",
+    "authors": "Jochen Schubert, Brett Sanders, Daniel Kahl, Katharine Mach, David Brady, Amir AghaKouchak, Fonna Forman, Richard Matthew, Nicola Ulibarri, Steven Davis",
+    "publication_date": "2022",
+    "journal": "Zenodo",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "Flood risks in the US have historically been underestimated, particularly with respect to human well-being and within low-wealth and marginalized communities. Here, we characterize a fuller range of risks in Los Angeles, California, using a quantitative framework that intersects flood hazards from rainfall, streamflow, and storm tides with measures of exposure and vulnerability including ethnicity, race, and socioeconomic disadvantage. We find that between 197 and 974 thousand (K) people (median= 425K), and between $36 and $108 billion (B) in property (median= $56 B), are exposed to flooding greater than 30 cm within the 100-year flood zone, risk levels far above federally defined floodplains and similar to the most damaging hurricanes in US history. These risks are disproportionately higher for non-Hispanic Black and disadvantaged populations, burdening communities that may have greater challenges …",
+    "journal_link": "https://ui.adsabs.harvard.edu/abs/2022zndo...6965044S/abstract",
+    "doi": null,
+    "total_citations": 1,
+    "citations": [
+      {
+        "year": 2025,
+        "count": 1
+      }
+    ]
+  },
+  "XR3BWSlh_xcC": {
+    "id": "XR3BWSlh_xcC",
+    "title": "Impact of lockdowns and winter temperatures on natural gas consumption in Europe",
+    "authors": "Ciais Philippe, François-Marie Bréon, Stijn NC Dellaert, Yilong Wang, Katsumasa Tanaka, Léna Gurriaran, Yann Françoise, Steven J Davis, Chaopeng Hong, Josep Penuelas, Ivan Janssens, Michael Obersteiner, Zhu Deng, Zhu Liu",
+    "publication_date": "2021/6/18",
+    "journal": "Earth and Space Science Open Archive ESSOAr",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "American Geophysical Union",
+    "abstract": "As the COVID-19 virus spread over the world, governments restricted mobility to slow transmission. Public health measures had different intensities across European countries but all had significant impact on people’s daily lives and economic activities, causing a drop of CO2 emissions of about 10% for the whole year 2020. Here, we analyze changes in natural gas use in the industry and built environment sectors during the first half of year 2020 with daily gas flows data from pipeline and storage facilities in Europe. We find that reductions of industrial gas use reflect decreases in industrial production across most countries. Surprisingly, natural gas use in buildings also decreased despite most people being confined at home and cold spells in March 2020. Those reductions that we attribute to the impacts of COVID-19 remain of comparable magnitude to previous variations induced by cold or warm climate anomalies …",
+    "journal_link": "https://essopenarchive.org/doi/abs/10.1002/essoar.10507326",
+    "doi": "10.1002/essoar.10507326.1",
+    "total_citations": 1,
+    "citations": [
+      {
+        "year": 2022,
+        "count": 1
+      }
+    ]
+  },
+  "_AkkBXT-jcoC": {
+    "id": "_AkkBXT-jcoC",
+    "title": "Greenhouse gas emissions due to beef cattle, pork and chickens in the last fifty years",
+    "authors": "Dario Caro, Steven Davis, Simone Bastianoni, Ken Caldeira",
+    "publication_date": "2017",
+    "journal": "",
+    "volume": "",
+    "issue": "",
+    "pages": "27-37",
+    "publisher": "Springer",
+    "abstract": "Greenhouse gas emissions due to beef cattle, pork and chickens in the last fifty years - Aarhus University Skip to main navigation Skip to search Skip to main content Aarhus University Home Aarhus University Logo Help & FAQ English Dansk Home Profiles Research units Projects Research output Datasets Prizes Activities Courses Press/Media Search by expertise, name or affiliation Greenhouse gas emissions due to beef cattle, pork and chickens in the last fifty years Dario Caro , Steven Davis , Simone Bastianoni , Ken Caldeira Research output: Contribution to book/anthology/report/proceeding › Book chapter › Research › peer-review Overview Original language English Title of host publication Quantification of climate variability, adaptation and mitigation for agricultural sustainability Publisher Springer Publication date 2017 Pages 27-37 ISBN (Print) 978-3-319-32059-5 Publication status Published - 2017 Library …",
+    "journal_link": "https://pure.au.dk/portal/en/publications/greenhouse-gas-emissions-due-to-beef-cattle-pork-and-chickens-in-/",
+    "doi": null,
+    "total_citations": 1,
+    "citations": [
+      {
+        "year": 2024,
+        "count": 1
+      }
+    ]
+  },
+  "uQVPmWFBlwUC": {
+    "id": "uQVPmWFBlwUC",
+    "title": "Chapter 3. Science and Pathways for Bending the Curve",
+    "authors": "William D Collins, Steven J Davis, Roger Bales, Jennifer Burney, Ryan McCarthy, Eric Rignot, William Torre, David Victor",
+    "publication_date": "2016",
+    "journal": "Collabra",
+    "volume": "2",
+    "issue": "1",
+    "pages": "17",
+    "publisher": "University of California Press",
+    "abstract": "Greenhouse gas emissions from fossil fuel combustion and land use are changing the radiative budget of the Earth and changing its climate. The negative impacts of this climate change on natural and human systems are already emergent. The solution is to eliminate greenhouse gas emissions altogether as soon as possible, but the rate at which these emissions can decrease is limited by human reliance on fossil fuels for energy and the infrastructural, socio-economic, and behavioral inertia of current systems around the world. In this chapter, we discuss the physical impacts as well as the many challenges and obstacles to ‘bending the curve’, and provide a framework of possible solutions.",
+    "journal_link": "https://online.ucpress.edu/collabra/article-abstract/2/1/17/112697",
+    "doi": null,
+    "total_citations": 1,
+    "citations": [
+      {
+        "year": 2018,
+        "count": 1
+      }
+    ]
+  },
+  "G887dSk7Sz8C": {
+    "id": "G887dSk7Sz8C",
+    "title": "Review of cement materials carbon sink",
+    "authors": "Xi Fengming, Shi Tiemao, Wang Jiaoyue, Bing Longfei, Zhang Ying, Liu Zhu, Steven Joseph Davis",
+    "publication_date": "2015/7/31",
+    "journal": "Advances in climate change research",
+    "volume": "11",
+    "issue": "4",
+    "pages": "288",
+    "publisher": "",
+    "abstract": "This paper summarized the research progress on the cement carbonation principles, impact factors, concrete carbonation, cement mortar carbonation, and the cement kiln dust carbonation. Numerous studies showed that the carbonation rate coefficients are mainly impacted by material and environmental factors; the concrete cement carbon sequestration in service stage can be quantitatively calculated by the carbonation depth, and the calculation methods of cement carbon sequestration in demolition and crushing stage, and waste treatment and secondary use stage are still lack; the carbonation rate coefficients in mortar cement and cement kiln dust are higher than those in the concrete, but their carbon sequestration calculation methods have not been established. Future researches should focus on:(1) the carbonation rate coefficients of cement materials should be clarified, and the cement carbon sink …",
+    "journal_link": "https://scholar.google.com/scholar?cluster=15485634506146908523&hl=en&oi=scholarr",
+    "doi": null,
+    "total_citations": 1,
+    "citations": [
+      {
+        "year": 2022,
+        "count": 1
+      }
+    ]
+  },
+  "xEMdJR0kL_sC": {
+    "id": "xEMdJR0kL_sC",
+    "title": "Supplying process heat using concentrated solar thermal energy with molten salt storage",
+    "authors": "Alicia Wongel, Jacqueline A Dowling, Gerhard Weinrebe, Steven J Davis, Ken Caldeira",
+    "publication_date": "2026/6/30",
+    "journal": "Environmental Research: Energy",
+    "volume": "3",
+    "issue": "2",
+    "pages": "025004",
+    "publisher": "IOP Publishing",
+    "abstract": "Industrial process heat accounts for about a quarter of global energy use and one-fifth of carbon dioxide emissions. Carbon-free sources of heat are limited, particularly at medium-to-high temperatures (between about 200 °C and 550 °C). Concentrated solar thermal (CST) technologies offer a promising solution for heat demands at temperatures under about 500 °C in regions with strong solar resources. This study evaluates the potential of CST, combined with molten salt thermal storage, to supply industrial heat demand in that temperature range in competition with natural gas. Using a stylized model, we quantify the CST share in least-cost systems globally, providing steady, reliable heat under varying gas fuel costs. At a gas fuel cost of $50/MWh (for example, about $48/MWh has been observed during a seasonal peak of the industrial gas prices in California during February 2025), in most regions below 45° …",
+    "journal_link": "https://iopscience.iop.org/article/10.1088/2753-3751/ae4eea/meta",
+    "doi": "10.1088/2753-3751/ae4eea/pdf",
+    "total_citations": null,
+    "citations": []
+  },
+  "fc7zyzPI2QAC": {
+    "id": "fc7zyzPI2QAC",
+    "title": "Global carbon emissions and decarbonization in 2025: Climate chronicles",
+    "authors": "Zhu Deng, Biqing Zhu, Steven J Davis, Philippe Ciais, Zhu Liu",
+    "publication_date": "2026/4/14",
+    "journal": "Nature Reviews Earth & Environment",
+    "volume": "",
+    "issue": "",
+    "pages": "1-3",
+    "publisher": "Nature Publishing Group UK",
+    "abstract": "Global CO 2 emissions from fossil fuel combustion and industrial processes increased by +0.7% within 2025. However, large-scale deployment of clean electricity sources during the year avoided 10.3 Gt of global CO 2 emissions, so that power sector emissions declined by –0.9% relative to 2024. As the remaining carbon budget for limiting global warming to 1.5 °C is projected to be exhausted by 2029 at a 50% likelihood, further accelerating the shift away from fossil fuels is essential for staying within the 2 °C temperature rise limit.",
+    "journal_link": "https://www.nature.com/articles/s43017-026-00780-4",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "ve7iT2ZEuL4C": {
+    "id": "ve7iT2ZEuL4C",
+    "title": "Global daily CO2 emissions from 1970 to 2024",
+    "authors": "Tao Li, Lixing Wang, Zihan Qiu, Philippe Ciais, Steven J Davis, Zhu Deng, Yufei Zhao, Glen P Peters, Piyu Ke, Matthew W Jones, Robbie M Andrew, Ye Hao, Taochun Sun, Xiaoting Huang, Robert B Jackson, Pierre Friedlingstein, Chenxi Lu, Duo Cui, Zhu Liu",
+    "publication_date": "2026/2/24",
+    "journal": "Scientific Data",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Nature Publishing Group",
+    "abstract": "As extreme temperature events become increasingly frequent, there is a growing need for daily CO 2 emissions data to quantify their impacts. However, such data are available only from 2019 onward. To address this gap, we compiled over two million near-real-time observations of electricity generation, traffic activity, natural gas consumption or heating degree days (HDD), and industrial output since 2019, and used these high-frequency data to construct a daily CO 2 emissions dataset for 2019–2024. We then applied machine-learning models and degree-day methods to disaggregate non-residential and residential monthly CO 2 emissions for 1970–2018 to a daily basis. The historical dataset was then merged with the 2019–2024 dataset to produce a global daily CO 2 emissions dataset spanning 1970 to 2024 for 14 countries and regions, covering four sectors: power, industry, residential, and transport (including …",
+    "journal_link": "https://www.nature.com/articles/s41597-026-06621-9",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "2TuIPqOg0e0C": {
+    "id": "2TuIPqOg0e0C",
+    "title": "The effect of land costs on the economic and sustainability performance of solar photovoltaics in China",
+    "authors": "Shi Chen, Xi Lu, Jiming Hao, Edgar Virgüez, Ken Caldeira, Steven J Davis",
+    "publication_date": "2026/2/24",
+    "journal": "Proceedings of the National Academy of Sciences",
+    "volume": "123",
+    "issue": "8",
+    "pages": "e2512930123",
+    "publisher": "National Academy of Sciences",
+    "abstract": "Scaling up solar photovoltaics (PV) is essential for global decarbonization, particularly in China—the world’s largest greenhouse gas (GHG) emitter. Despite leading in PV installations, China has yet to widely adopt the more efficient tracking technologies for capturing solar radiation (12% adoption rate), in stark contrast to the United States (90%). To examine the rationale behind this divergence and its consequences, we develop a spatially explicit, integrated model to evaluate and compare tracking and fixed-tilt systems in China—comparing power generation, land use, cost, sustainability, and policy resilience. We find that although single-axis tracking provides electricity gains and appears technically more cost-effective, rising land prices in China could offset its benefits. Land costs increase the levelized cost of electricity by 20% for tracking systems, compared to 8% for fixed-tilt, making the latter cheaper in real …",
+    "journal_link": "https://www.pnas.org/doi/abs/10.1073/pnas.2512930123",
+    "doi": "10.1073/pnas.2512930123",
+    "total_citations": null,
+    "citations": []
+  },
+  "uQdrZ3qaPmcC": {
+    "id": "uQdrZ3qaPmcC",
+    "title": "The importance of multiregional accounting for corporate carbon emissions",
+    "authors": "Steven J Davis, Andrew Dumit, Mo Li, Yohanna Maldonado, Michael Steffen, Martha Stevenson, Tatiana Boldyreva, Sangwon Suh",
+    "publication_date": "2026",
+    "journal": "Nature Communications",
+    "volume": "17",
+    "issue": "1",
+    "pages": "1-10",
+    "publisher": "Nature",
+    "abstract": "Corporations routinely use environmentally-extended input-output models to estimate and report greenhouse gas emissions upstream in their supply chains. However, the most widely used models assume that supply chains and emissions intensities of industries match those of a single region—usually the U.S. or the U.K. Here, we use a high-resolution multiregional input-output model to demonstrate the scale and pattern of emissions that may be missed by single-region models. We find that the upstream emissions of the companies reporting to CDP are together greater by 2.0 gigatons of CO 2 -equivalent emissions (~10%) when estimated by a multiregional model instead of a U.S.-based single-region model, with the largest differences in manufacturing sectors of moderate emissions intensity. Widespread adoption of multiregional models could thus improve the accuracy of corporate emissions inventories and …",
+    "journal_link": "https://www.nature.com/articles/s41467-025-67759-5",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "S0RksyIsHSIC": {
+    "id": "S0RksyIsHSIC",
+    "title": "Balancing thermal power decarbonization and energy security under hydroclimatic risks",
+    "authors": "Shiyu Li, Junguo Liu, Gang Yan, Steven J Davis, Amir AghaKouchak, Xin Liu, Chaopeng Hong, Yixuan Zheng, Qingsong Jiang, Yong Liu, Yue Qin",
+    "publication_date": "2025/12/9",
+    "journal": "Nature Sustainability",
+    "volume": "",
+    "issue": "",
+    "pages": "1-2",
+    "publisher": "Nature Publishing Group UK",
+    "abstract": "",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "qt-6tCTBDsQC": {
+    "id": "qt-6tCTBDsQC",
+    "title": "Global hydroclimatic risks and strategic decommissioning pathways for thermal power units",
+    "authors": "Shiyu Li, Yong Liu, Junguo Liu, Gang Yan, Hannes Müller Schmied, Steven J. Davis, Amir AghaKouchak, Niko Wanders, Qingsong Jiang, Yixuan Zheng, Joyce Bosmans, Xin Liu, Chaopeng Hong, Yue Qin",
+    "publication_date": "2025/12/9",
+    "journal": "Nature Sustainability",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "Hydroclimatic risks, such as increased water temperatures and water shortages, can impair the cooling efficiency of thermal power plants, threatening energy security. These risks worsen when decommissioning strategies for the low-carbon transition prioritize retiring smaller but lower-risk plants while keeping larger yet higher-risk ones. Yet, how hydroclimatic risks interact with these strategies remain poorly understood. Here we develop a global unit-level, capacity-specific framework to systematically assess hydroclimatic risks to thermal power generation under climate change. This framework maps risk intensification and risk-level escalation, and evaluates how integrating hydroclimatic risks into decommissioning plans can enhance energy security. We find that by the 2050s, ~60.5% of global thermal power capacity would face greater hydroclimatic risks under SSP370, as indicated by declining usable capacity …",
+    "journal_link": "https://www.nature.com/articles/s41893-025-01692-9",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "OkrdTXRNpVkC": {
+    "id": "OkrdTXRNpVkC",
+    "title": "Economic development, air conditioning and adaptation to warming",
+    "authors": "Alicia Wongel, Lyssa M Freese, Edgar Virgüez, Steven J Davis, Ken Caldeira",
+    "publication_date": "2025/12/2",
+    "journal": "Environmental Research Letters",
+    "volume": "20",
+    "issue": "12",
+    "pages": "124045",
+    "publisher": "IOP",
+    "abstract": "Rising global temperatures increase the potential for heat-related adverse impacts, while economic growth, by enabling greater adoption of air conditioning, can help reduce them. This makes it unclear in which countries the net effect will lead to a worsening or easing of these potential impacts as the climate and economies change. We define a Cooling Deficit Index as the product of cooling degree days and the fraction of the population without air conditioning to indicate the extent to which high temperatures are experienced without access to cooling. We used this index to investigate the relationship between global warming, economic growth, and the fraction of population exposed to high temperatures without the benefits of air conditioning. We find that populations in lower-income countries tend to experience the greatest number of high-temperature days without access to cooling and are likely to face the largest …",
+    "journal_link": "https://iopscience.iop.org/article/10.1088/1748-9326/ae1f2a/meta",
+    "doi": "10.1088/1748-9326/ae1f2a/pdf",
+    "total_citations": null,
+    "citations": []
+  },
+  "FKYJxdYMdFIC": {
+    "id": "FKYJxdYMdFIC",
+    "title": "Variability of technology learning rates",
+    "authors": "Angelo Carlino, Alicia Wongel, Lei Duan, Edgar Virguez, Steven J Davis, Morgan R Edwards, Ken Caldeira",
+    "publication_date": "2025/10/28",
+    "journal": "Advances in Applied Energy",
+    "volume": "",
+    "issue": "",
+    "pages": "100252",
+    "publisher": "Elsevier",
+    "abstract": "Climate and energy policy analysts and researchers often forecast the cost of low-carbon energy technologies using Wright’s model of technological innovation. The learning rate, i.e., the percentage cost reduction per doubling of cumulative production, is assumed constant in this model. Here, we analyze the relationship between cost and scale for 87 technologies in the Performance Curve Database spanning multiple sectors. We find that stepwise changes in learning rates provide a better fit for 58 of these technologies and produce forecasts with equal or significantly lower errors compared to constant learning rates for 36 and 30 technologies, respectively. While costs generally decrease with increasing production, past learning rates are not good predictors of future learning rates. We show that these results affect technological change projections in the short and long term, focusing on three key mitigation …",
+    "journal_link": "https://www.sciencedirect.com/science/article/pii/S2666792425000460",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "peNFRSk4lDYC": {
+    "id": "peNFRSk4lDYC",
+    "title": "Prioritizing wildfire fuel management in California",
+    "authors": "Jing Cheng, Michael Goulden, Jim Randerson, Shane Coffield, Park Williams, Qiang Zhang, Michael Mastrandrea, Michael Wara, Steven J Davis",
+    "publication_date": "2025/8/7",
+    "journal": "",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "EarthArXiv",
+    "abstract": "The resources available for managing wildfire risk are insufficient and ultimately finite, while the risk of catastrophic fires is enormous and growing. Prioritization of responses is thus critical, but the basis for comparing the costs and societal benefits of alternative investments in wildfire mitigation is inadequate. Here, we assess and compare the costs of landscape-scale fuel treatment in California to the benefits of avoided destruction of property and smoke-related health impacts, and identify areas where the net benefits are greatest statewide. We find that re-prioritizing treatment areas could increase net benefits by a factor of more than 6.5 relative to historical treatments, with average net benefits in the top decile of areas (i.e., 28,000 km2) of >$220k per km2 (as compared to an estimated $90k per km2 of past treatments). By integrating physical, epidemiological, and economic methods, our results reveal large opportunities for improving the cost-effectiveness of fuel treatments, and demonstrate a general framework that can be applied by land managers in all wildfire-prone areas.",
+    "journal_link": "https://eartharxiv.org/repository/view/9858/",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "tBp-nognM3UC": {
+    "id": "tBp-nognM3UC",
+    "title": "Europe's adaptation to the energy crisis: reshaped gas supply–transmission–consumption structures and driving factors from 2022 to 2024",
+    "authors": "Chuanlong Zhou, Biqing Zhu, Antoine Halff, Steven J Davis, Zhu Liu, Simon Bowring, Simon Ben Arous, Philippe Ciais",
+    "publication_date": "2025/7/21",
+    "journal": "Earth System Science Data",
+    "volume": "17",
+    "issue": "7",
+    "pages": "3431-3446",
+    "publisher": "Copernicus GmbH",
+    "abstract": "",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "INdAjOZKYREC": {
+    "id": "INdAjOZKYREC",
+    "title": "The climate implications of failing to manage carbon",
+    "authors": "Candelaria Bergero, Elina Brutschin, Matthew J Gidden, Zebedee Nicholls, Emily Grubert, Steven J Davis",
+    "publication_date": "2025/7/1",
+    "journal": "CDRXIV",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "In scenarios that limit the increase in global mean temperature (GMT) this century to 1.5 or 2 C, large quantities of carbon are managed by both carbon capture and storage (CCS) at point sources and atmospheric carbon dioxide removal (CDR). Such carbon management may be used to offset ongoing (“residual”) emissions from hard-to-abate sectors and to decrease the concentration of carbon dioxide in the atmosphere if various feasibility and sustainability challenges are overcome. Here, in over 16 million simulations of the simple climate model MAGICC, we systematically analyze the climate implications of failing to manage carbon to the degree called for in 407 different climate mitigation scenarios. We find that entirely failing to manage carbon relates to~ 0.5 C higher GMT in 2100, making it impossible to meet the 1.5 C target, but leaving 2 C in reach this century–assuming the projected decreases in emissions still occur. Our results also show that peak temperatures are especially sensitive to land-based CDR (afforestation and reforestation) that often ramps up quickly in the scenarios, whereas end-of-century temperatures depend more on levels of engineered CDR (bioenergy with carbon capture and storage, direct air capture with storage). What is clear, though, is that the quantity of carbon in avoided emissions is vastly larger than carbon managed in every climate mitigation scenario. Limiting the increase in global mean temperature to 1.5 or 2 C (the Paris Agreement goal) requires decreases in net carbon dioxide (CO2) emissions of roughly 83% and 78% between 2020 and the net-zero CO2 year, respectively (reaching net-zero …",
+    "journal_link": "https://cdrxiv.org/repository/object/395/download/500",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "4WewbtJKmRkC": {
+    "id": "4WewbtJKmRkC",
+    "title": "Carbon dioxide removal could perpetuate community-scale inequalities of US air pollution in net-zero scenarios",
+    "authors": "Candelaria Bergero, Jing Cheng, Qiang Zhang, Yang Ou, Haewon McJeon, Destenie Nock, Ines Azevedo, Steven J Davis",
+    "publication_date": "2024/11/28",
+    "journal": "",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "EarthArXiv",
+    "abstract": "Pathways to net-zero reduce GHG emissions and improve air quality, but the magnitude and distribution of these improvements will depend on specific mitigation decisions, such as the amount of carbon dioxide removals (CDR). Here, we combine a series of models and datasets to analyze community-scale PM2.5 impacts across the contiguous U.S. of net-zero scenarios with different levels of CDR. Both the high- and low-CDR scenarios avoid many PM2.5-related deaths compared to a reference scenario, decreasing from around 200,000 to 160,000 and 130,000 deaths in 2050 in the high- and low-CDR scenarios, respectively. However, the low-CDR pathway leads to lower residual emissions and brings larger health benefits that disproportionately affect non-white and low-income groups. Our results thus suggest that in the absence of concerted transition planning, large-scale CDR deployment could be at odds with the equal distribution of climate mitigation-related health benefits in the U.S.",
+    "journal_link": "https://eartharxiv.org/repository/view/8136/",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "f13iAvnbnnYC": {
+    "id": "f13iAvnbnnYC",
+    "title": "Carbon Monitor: a near-real-time daily dataset of global CO2 emission from fossil fuel and cement production (preprint)",
+    "authors": "Zhu Liu, Philippe Ciais, Zhu Deng, Steven J Davis, Bo Zheng, Yilong Wang, Duo Cui, Biqing Zhu, Xinyu Dou, Piyu Ke, Taochun Sun, Rui Guo, Olivier Boucher, Francois-Marie Breon, Chenxi Lu, Runtao Guo, Eulalie Boucher, Frederic Chevallier",
+    "publication_date": "2020",
+    "journal": "",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "",
+    "journal_link": null,
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "S_fw-_riRmcC": {
+    "id": "S_fw-_riRmcC",
+    "title": "Author Correction: Near-real-time monitoring of global CO2 emissions reveals the effects of the COVID-19 pandemic",
+    "authors": "Yimin Wei",
+    "publication_date": "2020",
+    "journal": "",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "Author Correction: Near-real-time monitoring of global CO2 emissions reveals the effects of the COVID-19 pandemic Page 1 Author Correction: Near-real-time monitoring of global CO2 emissions reveals the effects of the COVID-19 pandemic Zhu Liu , Philippe Ciais , Zhu Deng , Ruixue Lei , Steven J. Davis , Sha Feng , Bo Zheng , Duo Cui, Xinyu Dou , Biqing Zhu , Rui Guo , Piyu Ke , Taochun Sun , Chenxi Lu, Pan He, Yuan Wang, Xu Yue , Yilong Wang, Yadong Lei, Hao Zhou, Zhaonan Cai, Yuhui Wu, Runtao Guo, Tingxuan Han, Jinjun Xue , Olivier Boucher, Eulalie Boucher , Frédéric Chevallier , Katsumasa Tanaka , Yiming Wei , Haiwang Zhong, Chongqing Kang, Ning Zhang, Bin Chen, Fengming Xi, Miaomiao Liu, François-Marie Bréon , Yonglong Lu , Qiang Zhang , Dabo Guan, Peng Gong , Daniel M. Kammen , Kebin He & Hans Joachim Schellnhuber Correction to: Nature Communications https://doi.org/…",
+    "journal_link": "https://www.scienceopen.com/document_file/1fd7f647-c9b1-464b-bf13-a2a37404f02e/PubMedCentral/1fd7f647-c9b1-464b-bf13-a2a37404f02e.pdf",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "f2PrUAIjnKUC": {
+    "id": "f2PrUAIjnKUC",
+    "title": "An unprecedented push for low-carbon energy innovation",
+    "authors": "Mason Inman, Daniel L Sanchez, Michael D Mastrandrea, Steven J Davis, Karen Fries",
+    "publication_date": "2016/5",
+    "journal": "",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "To ensure that low-carbon energy sources continue growing rapidly with the aim of cutting energy-sector greenhouse gas emissions to near-zero, governments around the world have been focused on two major efforts: a “push” from innovation that helps make low-carbon energy cheaper and more versatile, and a “pull” from policies and market design that encourage the commercial scale-up of low-carbon energy.",
+    "journal_link": "https://scholar.google.com/scholar?cluster=10297057907005693739&hl=en&oi=scholarr",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
   }
 }

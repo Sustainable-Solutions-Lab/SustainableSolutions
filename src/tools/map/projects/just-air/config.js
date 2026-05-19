@@ -267,6 +267,8 @@ const config = {
       diverging: false,
       domain: { min: 20000, max: 150000 },
       histogramMin: 25000,
+      // Pin the saturation + chart axis to a clean $200k cap.
+      colorMax: 200000,
       layer: 'income',
       dimensionValues: {},
       description: 'Median household income within the metro pixel grid.',
@@ -286,6 +288,10 @@ const config = {
       domain: { min: 0, max: 100, zero: 50 },
       alphaFloor: 0,
       alphaPower: 1,
+      // Pin saturation to a clean 2–99 % range instead of the data-derived
+      // per-side p99s.
+      colorMin: 2,
+      colorMax: 99,
       layer: 'minority',
       dimensionValues: {},
       description: 'Share of the local population identifying as non-Hispanic white (PRGn diverging at 50%). Green = white majority; purple = non-white majority. Available only inside the 15 metro pixel grids — the national 9 km tier lacks these demographic data.',

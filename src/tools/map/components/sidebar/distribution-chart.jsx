@@ -75,8 +75,10 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
         const posDevs = allValues.filter((v) => v > zero).map((v) => v - zero).sort((a, b) => a - b)
         const negDevs = allValues.filter((v) => v < zero).map((v) => zero - v).sort((a, b) => a - b)
         const pHi = (arr) => arr.length > 0 ? (arr[Math.floor(colorPct * (arr.length - 1))] ?? arr[arr.length - 1]) : null
-        const maxPos = pHi(posDevs)
-        const maxNeg = pHi(negDevs)
+        const autoPos = pHi(posDevs)
+        const autoNeg = pHi(negDevs)
+        const maxPos = variable.colorMax != null ? Math.max(variable.colorMax - zero, 0) : autoPos
+        const maxNeg = variable.colorMin != null ? Math.max(zero - variable.colorMin, 0) : autoNeg
         if (maxPos != null && maxNeg != null && (maxPos > 0 || maxNeg > 0)) {
           return buildColorScale({
             ...variable,
@@ -124,8 +126,9 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
     return Math.max(p99idx + 1, cutoffIdx - 1)
   })()
   const dataMaxAuto = sorted.length ? (sorted[p99idx] ?? sorted[0]) : 1
+  const dataMinAuto = sorted.length ? (sorted[p01idx] ?? sorted[sorted.length - 1]) : 0
   const dataMax = variable?.colorMax != null ? variable.colorMax : dataMaxAuto
-  const dataMin = sorted.length ? (sorted[p01idx] ?? sorted[sorted.length - 1]) : 0
+  const dataMin = variable?.colorMin != null ? variable.colorMin : dataMinAuto
   const dataRange = Math.max(dataMax - dataMin, 1)
 
   // Domain range for zero-line placement + asymmetric opacity denominators (diverging only)

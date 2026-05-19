@@ -153,16 +153,19 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
   // clipped data range. Left = highest value, right = lowest (matches the
   // diverging-chart convention: red on the left, blue on the right). Each
   // bar carries its bin's count and its center value for coloring.
+  // 80 bins across the chart (each bar ~2.75 SVG units wide). Narrower
+  // bin counts make per-bin noise on sparse distributions (e.g. the
+  // diff layers) read as visible vertical lines; wider bars also hide
+  // any sub-pixel rendering seams between adjacent rects.
+  const BIN_COUNT = 80
   const bars = useMemo(() => {
     if (!sorted.length) return []
     if (!allValues?.length) return []
-    const N = CHART_W
+    const N = BIN_COUNT
     const width = Math.max(dataMax - dataMin, 1e-9) / N
     const counts = new Array(N).fill(0)
     for (const v of allValues) {
       if (v < dataMin || v > dataMax) continue
-      // Lowest bin index for the lowest value; we'll flip the array
-      // when emitting so the screen-left bar is the highest-value bin.
       const idx = Math.min(N - 1, Math.max(0, Math.floor((v - dataMin) / width)))
       counts[idx]++
     }
@@ -294,32 +297,33 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
               same colormap used on the map. Full opacity throughout so
               the chart reads as a clear distribution; the map's
               alpha-driven fade is conveyed by color choice alone. */}
-          {bars.map((bar, i) => {
-            // Every bin renders, even empty ones — empty bins paint a
-            // 2-px baseline strip in their bin colour so the chart has
-            // a continuous coloured floor across the full data range.
-            // Without this, sparse distributions (e.g. the diff layers)
-            // leave background-coloured gaps between data-bearing bars,
-            // which read as bright vertical seams against the diff
-            // layers' identical solid red/blue fills.
-            const heightFraction = bar.count > 0 ? Math.sqrt(bar.count / maxCount) : 0
-            const h = bar.count > 0 ? Math.max(2, heightFraction * CHART_H) : 2
-            const y = CHART_H - h
-            const fill = (isDiverging && hasAnchors)
-              ? (bar.binCenter >= zeroRef
-                  ? variable.solidColor
-                  : (variable.solidColorNegative ?? variable.solidColor))
-              : (variable.solidColor ?? scale(bar.binCenter))
-            return (
-              <rect
-                key={i}
-                x={i} y={y}
-                width={1.4} height={h}
-                fill={fill}
-                opacity={1}
-              />
-            )
-          })}
+          {(() => {
+            const barW = CHART_W / BIN_COUNT
+            return bars.map((bar, i) => {
+              // Every bin renders, even empty ones — empty bins paint a
+              // 2-px baseline strip in their bin colour so the chart has
+              // a continuous coloured floor across the full data range.
+              const heightFraction = bar.count > 0 ? Math.sqrt(bar.count / maxCount) : 0
+              const h = bar.count > 0 ? Math.max(2, heightFraction * CHART_H) : 2
+              const y = CHART_H - h
+              const fill = (isDiverging && hasAnchors)
+                ? (bar.binCenter >= zeroRef
+                    ? variable.solidColor
+                    : (variable.solidColorNegative ?? variable.solidColor))
+                : (variable.solidColor ?? scale(bar.binCenter))
+              return (
+                <rect
+                  key={i}
+                  x={i * barW}
+                  y={y}
+                  width={barW + 0.5}
+                  height={h}
+                  fill={fill}
+                  opacity={1}
+                />
+              )
+            })
+          })()}
 
           {/* Vertical zero line for diverging variables — sits at the
               x-position of the bin whose center is the diverging zero. */}

@@ -153,9 +153,8 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
   // clipped data range. Left = highest value, right = lowest (matches the
   // diverging-chart convention: red on the left, blue on the right). Each
   // bar carries its bin's count and its center value for coloring.
-  // 220 bins (one per SVG-unit column). Bar width is 1.05 units on
-  // render, giving a 5 % overlap that closes the sub-pixel seams the
-  // diff layers' identical solid fills would otherwise show.
+  // 220 bins (one per SVG-unit column). Bars render at 1.25 × column
+  // width — a 25 % overlap that comfortably closes sub-pixel seams.
   const BIN_COUNT = 220
   const bars = useMemo(() => {
     if (!sorted.length) return []
@@ -312,7 +311,7 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
                   key={i}
                   x={i * barW}
                   y={y}
-                  width={barW * 1.05}
+                  width={barW * 1.25}
                   height={h}
                   fill={fill}
                   opacity={1}

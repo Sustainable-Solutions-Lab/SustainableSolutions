@@ -153,11 +153,10 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
   // clipped data range. Left = highest value, right = lowest (matches the
   // diverging-chart convention: red on the left, blue on the right). Each
   // bar carries its bin's count and its center value for coloring.
-  // 80 bins across the chart (each bar ~2.75 SVG units wide). Narrower
-  // bin counts make per-bin noise on sparse distributions (e.g. the
-  // diff layers) read as visible vertical lines; wider bars also hide
-  // any sub-pixel rendering seams between adjacent rects.
-  const BIN_COUNT = 80
+  // 220 bins (one per SVG-unit column). Bar width is 1.05 units on
+  // render, giving a 5 % overlap that closes the sub-pixel seams the
+  // diff layers' identical solid fills would otherwise show.
+  const BIN_COUNT = 220
   const bars = useMemo(() => {
     if (!sorted.length) return []
     if (!allValues?.length) return []
@@ -300,9 +299,6 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
           {(() => {
             const barW = CHART_W / BIN_COUNT
             return bars.map((bar, i) => {
-              // Every bin renders, even empty ones — empty bins paint a
-              // 2-px baseline strip in their bin colour so the chart has
-              // a continuous coloured floor across the full data range.
               const heightFraction = bar.count > 0 ? Math.sqrt(bar.count / maxCount) : 0
               const h = bar.count > 0 ? Math.max(2, heightFraction * CHART_H) : 2
               const y = CHART_H - h
@@ -316,7 +312,7 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
                   key={i}
                   x={i * barW}
                   y={y}
-                  width={barW + 0.5}
+                  width={barW * 1.05}
                   height={h}
                   fill={fill}
                   opacity={1}

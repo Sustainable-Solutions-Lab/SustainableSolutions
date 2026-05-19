@@ -403,9 +403,8 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
 
   function renderBar(b, x, fillBand, fillBar) {
     if (b.dev == null) return null
-    const POINT_H = 3
+    const POINT_H = 4
     const elements = []
-    // CI band (lighter rectangle)
     if (b.ci) {
       const top = devY(b.ci.hi)
       const bottom = devY(b.ci.lo)
@@ -413,23 +412,8 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
         <rect key='ci' x={x} y={top} width={EQUITY_BAR_W} height={Math.max(2, bottom - top)} fill={fillBand} />,
       )
     }
-    // Point estimate — narrow saturated band centered on b.dev
     elements.push(
       <rect key='pt' x={x} y={devY(b.dev) - POINT_H / 2} width={EQUITY_BAR_W} height={POINT_H} fill={fillBar} />,
-    )
-    // % label above (or below if negative)
-    const sign = b.dev >= 0 ? '+' : ''
-    const labelY = b.dev >= 0 ? Math.max(8, devY(b.ci?.hi ?? b.dev) - 4) : Math.min(EQUITY_H - EQUITY_AXIS - 2, devY(b.ci?.lo ?? b.dev) + 11)
-    elements.push(
-      <text key='lbl'
-        x={x + EQUITY_BAR_W / 2}
-        y={labelY}
-        fontSize={9}
-        fontFamily={FONT_MONO}
-        fill={labelMuted}
-        textAnchor='middle'>
-        {sign}{(b.dev * 100).toFixed(1)}%
-      </text>,
     )
     return <g key={x}>{elements}</g>
   }

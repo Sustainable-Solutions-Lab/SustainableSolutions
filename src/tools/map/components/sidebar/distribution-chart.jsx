@@ -352,8 +352,23 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
 
             // Sample the colormap into ~40 linearGradient stops. Bars are
             // ordered screen-left = lowest bin, so offset 0 % maps to
-            // dataMin and 100 % to dataMax.
+            // dataMin and 100 % to dataMax. Diverging variables fade the
+            // stops to fully transparent at `zero` so the chart matches
+            // the map's behaviour where mid-range cells render
+            // transparent (e.g. PM₂.₅ at the 5 µg/m³ WHO threshold).
             const STOPS = 40
+            const negSpan = Math.max(zeroRef - dataMin, 1e-9)
+            const posSpan = Math.max(dataMax - zeroRef, 1e-9)
+            const alphaPower = variable.alphaPower ?? 1
+            const alphaFloor = variable.alphaFloor ?? 0
+            function divergingAlpha(v) {
+              const tc = v >= zeroRef
+                ? Math.min(1, (v - zeroRef) / posSpan)
+                : Math.min(1, (zeroRef - v) / negSpan)
+              if (tc <= alphaFloor) return 0
+              const tr = (tc - alphaFloor) / (1 - alphaFloor)
+              return Math.min(1, Math.pow(tr, alphaPower))
+            }
             const stops = []
             for (let s = 0; s <= STOPS; s++) {
               const t = s / STOPS
@@ -366,8 +381,14 @@ export function DistributionChart({ variable: rawVariable, allValues, percentile
               } else {
                 color = variable.solidColor ?? scale(v)
               }
+              const opacity = isDiverging ? divergingAlpha(v) : 1
               stops.push(
-                <stop key={s} offset={`${(t * 100).toFixed(2)}%`} stopColor={color} />,
+                <stop
+                  key={s}
+                  offset={`${(t * 100).toFixed(2)}%`}
+                  stopColor={color}
+                  stopOpacity={opacity}
+                />,
               )
             }
 

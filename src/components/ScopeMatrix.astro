@@ -88,26 +88,28 @@ for (const sys of SYSTEMS) {
 }
 
 // Rank-percentile color: the data is heavy-tailed at every metric, so
-// value scales pile cells into one half of the palette. Sorting non-zero
-// values per metric and mapping by rank gives even spread blue→wine
-// regardless of distribution skew. Computed per metric so each mode has
-// its own ramp anchored to that metric's own min/max/distribution.
-function sortedNonZero(map: Record<string, number>): number[] {
-  return Object.values(map).filter((n) => n > 0).sort((a, b) => a - b);
+// value scales pile cells into one half of the palette. Rank each cell
+// by its *unique value* (not raw position) so the lowest non-zero
+// value always lands at rank 0 (full blue) and the highest at rank 1
+// (full wine) — even when many cells tie at the low end. Mid-rank
+// ties otherwise pulled "1 paper" cells off the blue extreme into the
+// teal middle, hiding the bottom of the palette.
+function uniqueAscending(map: Record<string, number>): number[] {
+  return Array.from(new Set(Object.values(map).filter((n) => n > 0))).sort((a, b) => a - b);
 }
 const rankLists = {
-  papers:           sortedNonZero(cellPapers),
-  citations:        sortedNonZero(cellCitations),
-  'recent-cites':   sortedNonZero(cellRecentCites),
-  'recent-papers':  sortedNonZero(cellRecentPapers),
+  papers:           uniqueAscending(cellPapers),
+  citations:        uniqueAscending(cellCitations),
+  'recent-cites':   uniqueAscending(cellRecentCites),
+  'recent-papers':  uniqueAscending(cellRecentPapers),
 };
 
-function cellBg(value: number, sorted: number[]): string {
+function cellBg(value: number, uniques: number[]): string {
   if (!value) return 'var(--paper-2)';
-  const lower = sorted.filter((n) => n < value).length;
-  const equal = sorted.filter((n) => n === value).length;
-  const denom = Math.max(1, sorted.length - 1);
-  const rank = (lower + (equal - 1) / 2) / denom;
+  if (uniques.length <= 1) return 'var(--spectral-5)';
+  const pos = uniques.indexOf(value);
+  if (pos < 0) return 'var(--paper-2)';
+  const rank = pos / (uniques.length - 1);
   const idx = Math.max(1, Math.min(10, Math.round(10 - rank * 9)));
   return `var(--spectral-${idx})`;
 }
@@ -417,15 +419,12 @@ const labelPapers = (n: number) => `${n} paper${n === 1 ? '' : 's'}`;
     const cells = grid.querySelectorAll('.cell');
     const buttons = document.querySelectorAll('.mode-btn');
 
-    function cellBg(value, sortedList) {
-      if (!value || !sortedList || !sortedList.length) return 'var(--paper-2)';
-      let lower = 0, equal = 0;
-      for (const n of sortedList) {
-        if (n < value) lower++;
-        else if (n === value) equal++;
-      }
-      const denom = Math.max(1, sortedList.length - 1);
-      const rank = (lower + (equal - 1) / 2) / denom;
+    function cellBg(value, uniques) {
+      if (!value || !uniques || !uniques.length) return 'var(--paper-2)';
+      if (uniques.length <= 1) return 'var(--spectral-5)';
+      const pos = uniques.indexOf(value);
+      if (pos < 0) return 'var(--paper-2)';
+      const rank = pos / (uniques.length - 1);
       const idx = Math.max(1, Math.min(10, Math.round(10 - rank * 9)));
       return 'var(--spectral-' + idx + ')';
     }

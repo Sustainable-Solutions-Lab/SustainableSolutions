@@ -17,6 +17,11 @@ const companion = companionPub
       url: companionPub.url ?? (companionPub.doi ? `https://doi.org/${companionPub.doi}` : null),
     }
   : null;
+
+const repoLinks = {
+  github: 'https://github.com/CandeBergero/CDR_PM2.5_distribution_paper',
+  zenodo: 'https://doi.org/10.5281/zenodo.20045877',
+};
 ---
 
 <BaseLayout
@@ -33,6 +38,7 @@ const companion = companionPub
         client:only="react"
         projectId="just-air"
         companion={companion}
+        repoLinks={repoLinks}
         display={tool ? { title: tool.title, eyebrow: tool.eyebrow, summary: tool.summary } : null}
       />
     </div>

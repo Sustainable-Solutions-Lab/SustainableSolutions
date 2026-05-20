@@ -100,7 +100,7 @@ function seedStateForProject(projectId) {
   }
 }
 
-export default function MapTool({ projectId = 'fuel-treatment', companion = null, display = null }) {
+export default function MapTool({ projectId = 'fuel-treatment', companion = null, display = null, repoLinks = null }) {
   const initialScheme = readSiteScheme()
   const [state, dispatch] = useReducer(
     reducer,
@@ -318,6 +318,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             dispatch={dispatch}
             allValues={statewideValues}
             companion={companion}
+            repoLinks={repoLinks}
           />
         </div>
 

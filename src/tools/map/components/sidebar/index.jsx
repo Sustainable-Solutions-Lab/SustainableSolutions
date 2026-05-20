@@ -14,7 +14,7 @@ import { Legend } from './legend.jsx'
 import { DistributionChart } from './distribution-chart.jsx'
 import { ZipInput } from './zip-input.jsx'
 
-export function Sidebar({ config, state, dispatch, allValues = [], companion = null }) {
+export function Sidebar({ config, state, dispatch, allValues = [], companion = null, repoLinks = null }) {
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
   const activeDimensionIds = activeLayerConfig?.dimensionIds ?? []
@@ -84,6 +84,41 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
               >
                 <em className="not-italic">{companion.journal}</em> · {companion.year}
               </span>
+            )}
+          </div>
+        )}
+
+        {repoLinks && (repoLinks.github || repoLinks.zenodo || repoLinks.website) && (
+          <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs uppercase tracking-wider">
+            {repoLinks.website && (
+              <a
+                href={repoLinks.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink-2 hover:text-ink border-b-0"
+              >
+                Website ↗
+              </a>
+            )}
+            {repoLinks.github && (
+              <a
+                href={repoLinks.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink-2 hover:text-ink border-b-0"
+              >
+                GitHub ↗
+              </a>
+            )}
+            {repoLinks.zenodo && (
+              <a
+                href={repoLinks.zenodo}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink-2 hover:text-ink border-b-0"
+              >
+                Zenodo ↗
+              </a>
             )}
           </div>
         )}

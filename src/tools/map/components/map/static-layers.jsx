@@ -155,24 +155,34 @@ const USA_CITIES = {
 }
 
 /**
- * Build a GeoJSON FeatureCollection of graticule lines covering California.
- * @param {number} [latStep=2]
- * @param {number} [lonStep=2]
+ * Build a GeoJSON FeatureCollection of graticule lines over an arbitrary
+ * lat/lon bounding box.
+ *
+ * @param {object} [opts]
+ * @param {number} [opts.latStep=2]
+ * @param {number} [opts.lonStep=2]
+ * @param {[number, number, number, number]} [opts.bounds=[-125, 32, -113, 43]]
+ *   [minLon, minLat, maxLon, maxLat]. Default is California.
  * @returns {object} GeoJSON FeatureCollection
  */
-export function buildGraticule(latStep = 2, lonStep = 2) {
+export function buildGraticule(opts = {}) {
+  const latStep = opts.latStep ?? 2
+  const lonStep = opts.lonStep ?? 2
+  const [minLon, minLat, maxLon, maxLat] = opts.bounds ?? [-125, 32, -113, 43]
   const features = []
-  for (let lat = 32; lat <= 43; lat += latStep) {
+  const firstLat = Math.ceil(minLat / latStep) * latStep
+  for (let lat = firstLat; lat <= maxLat; lat += latStep) {
     features.push({
       type: 'Feature',
-      geometry: { type: 'LineString', coordinates: [[-125, lat], [-113, lat]] },
+      geometry: { type: 'LineString', coordinates: [[minLon, lat], [maxLon, lat]] },
       properties: { label: `${lat}°N`, type: 'lat' },
     })
   }
-  for (let lon = -124; lon <= -113; lon += lonStep) {
+  const firstLon = Math.ceil(minLon / lonStep) * lonStep
+  for (let lon = firstLon; lon <= maxLon; lon += lonStep) {
     features.push({
       type: 'Feature',
-      geometry: { type: 'LineString', coordinates: [[lon, 32], [lon, 43]] },
+      geometry: { type: 'LineString', coordinates: [[lon, minLat], [lon, maxLat]] },
       properties: { label: `${Math.abs(lon)}°W`, type: 'lon' },
     })
   }
@@ -409,11 +419,18 @@ export function addStaticLayers(map, scheme, opts = {}) {
 
   // ── 3. Graticule ──────────────────────────────────────────────────────────
 
+  // CONUS-wide projects get a 5°-spaced graticule across the lower 48;
+  // CA-only projects keep the 2°-spaced California-extent default.
+  const graticuleData = usOverlays
+    ? buildGraticule({ latStep: 5, lonStep: 5, bounds: [-125, 24, -66, 50] })
+    : buildGraticule()
   if (!map.getSource('graticule')) {
     map.addSource('graticule', {
       type: 'geojson',
-      data: buildGraticule(),
+      data: graticuleData,
     })
+  } else {
+    map.getSource('graticule').setData(graticuleData)
   }
 
   if (!map.getLayer('graticule')) {

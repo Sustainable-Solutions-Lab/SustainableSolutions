@@ -128,6 +128,19 @@ export const materialsConfig: ExplorerConfig = {
       },
     },
     {
+      id: 'world-map',
+      title: 'World map of material intensity',
+      blurb: 'Per-capita material use by country, 2023. Switch material or year in the sidebar.',
+      spec: {
+        chart: 'choropleth',
+        measure: 'per_capita',
+        yearRange: [1970, 2024],
+        singleYear: 2023,
+        filters: { geo: [], material: [], flow: [] },
+        groupings: { material: 'group' },
+      },
+    },
+    {
       id: 'phase-plot',
       title: 'Phase plot — material intensity vs prosperity',
       blurb: 'Mat/GDP on x, GDP/cap on y, 1970–2024 trajectories for each region.',

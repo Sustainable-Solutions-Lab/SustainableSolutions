@@ -418,6 +418,66 @@ async function buildCountryFlows() {
   };
 }
 
+// ── World boundary TopoJSON (for the choropleth) ───────────────────────────
+//
+// Reads the Natural-Earth-derived world-atlas TopoJSON shipped via npm.
+// Walks each country geometry, resolves world-atlas's country name to a
+// UNEP_name from Dict_Countries (with a small alias table for the common
+// abbreviations world-atlas uses), and writes the alias back as
+// properties.unep_name. The choropleth then joins by unep_name directly,
+// no runtime lookup table needed.
+//
+// Countries with no UNEP match (Antarctica, Kosovo, N. Cyprus, etc.) keep
+// their existing name and render as 'no data' in the chart.
+
+const WORLD_ATLAS_ALIASES = {
+  'Bosnia and Herz.': 'Bosnia and Herzegovina',
+  'Brunei': 'Brunei Darussalam',
+  'Central African Rep.': 'Central African Republic',
+  'Congo': 'Rep Congo',
+  'Czechia': 'Czech Republic',
+  "Côte d'Ivoire": "Cote d'Ivoire",
+  'Dem. Rep. Congo': 'DR Congo',
+  'Dominican Rep.': 'Dominican Republic',
+  'Eq. Guinea': 'Equatorial Guinea',
+  'Falkland Is.': 'Falkland Islands (Malvinas)',
+  'Fiji': 'Fiji Islands',
+  'Macedonia': 'North Macedonia',
+  'Russia': 'Russian Federation',
+  'S. Sudan': 'South Sudan',
+  'Solomon Is.': 'Solomon Islands',
+  'Vietnam': 'Viet Nam',
+  'W. Sahara': 'Western Sahara',
+  'eSwatini': 'Swaziland',
+};
+
+async function buildWorldBoundaries() {
+  const topoPath = resolve('node_modules/world-atlas/countries-110m.json');
+  if (!existsSync(topoPath)) {
+    console.warn(`[build-materials] world-atlas not installed; skipping world boundaries`);
+    return null;
+  }
+  const topo = JSON.parse(await readFile(topoPath, 'utf8'));
+  const unepNames = new Set(readUnepIsoMap().map((d) => d.name));
+  let matched = 0;
+  let unmatched = [];
+  for (const g of topo.objects.countries.geometries) {
+    const raw = g.properties?.name ?? '';
+    const candidate = WORLD_ATLAS_ALIASES[raw] ?? raw;
+    if (unepNames.has(candidate)) {
+      g.properties.unep_name = candidate;
+      matched++;
+    } else {
+      unmatched.push(raw);
+    }
+  }
+  console.log(
+    `[build-materials] world boundaries: ${matched}/${topo.objects.countries.geometries.length} matched to UNEP names`,
+  );
+  if (unmatched.length) console.log(`  unmatched: ${unmatched.join(', ')}`);
+  return topo;
+}
+
 async function buildStocks2024() {
   const totalRows = await readCsv(resolve(PARAMETERS_DIR, 'stock_2024_total.csv'));
 
@@ -502,6 +562,18 @@ async function run() {
     console.log(`[build-materials] wrote ${name}  (${kb} KB)`);
   }
   console.log(`[build-materials] done. ${outputs.length} eager files in ${OUT_DIR}`);
+
+  // World boundary TopoJSON for the choropleth — bake in UNEP_name on each
+  // country geometry so the chart can look up values without a runtime alias
+  // table. ~110 KB raw, well within the eager bundle.
+  const worldTopo = await buildWorldBoundaries();
+  if (worldTopo) {
+    const path = resolve(OUT_DIR, 'world-countries-110m.json');
+    const json = JSON.stringify(worldTopo);
+    await writeFile(path, json, 'utf8');
+    const kb = (json.length / 1024).toFixed(1);
+    console.log(`[build-materials] wrote world-countries-110m.json (${kb} KB)`);
+  }
 
   // Lazy country layer — too big for the eager bundle; uploaded to R2.
   const countryFlows = await buildCountryFlows();

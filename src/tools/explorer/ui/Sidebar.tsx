@@ -53,7 +53,7 @@ export default function Sidebar({ config, meta, countries }: Props) {
         </Section>
       )}
 
-      {spec.chart === 'treemap' && (
+      {(spec.chart === 'treemap' || spec.chart === 'choropleth') && (
         <Section title="Year">
           <SingleYearPicker
             min={meta.years[0]}

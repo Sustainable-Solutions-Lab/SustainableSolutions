@@ -67,6 +67,19 @@ export type ScatterData = {
   yLabel: string;
 };
 
+// ── Choropleth-shaped output ────────────────────────────────────────────────
+
+export type ChoroplethData = {
+  year: number;
+  /** Country UNEP_name → value at the chosen year. */
+  byCountry: Record<string, number>;
+  units: string;
+  min: number;
+  max: number;
+  /** Count of countries with at least some data; useful for the subtitle. */
+  matched: number;
+};
+
 // ── Palettes (design-system Spectral + brand neutrals for geo) ──────────────
 
 // 11-step Spectral, used for materials/groups. Picked from CLAUDE.md.
@@ -487,4 +500,61 @@ function labelForMeasure(measure: string): string {
     case 'cumulative': return 'Cumulative material';
     default: return measure;
   }
+}
+
+// ── Choropleth derivation ───────────────────────────────────────────────────
+//
+// Single-year per-country value across the whole world. Sources from the
+// lazy country layer; returns empty if it hasn't been loaded yet.
+
+export function deriveChoropleth(data: DataBundle, spec: Spec): ChoroplethData {
+  const meta = data.meta as Meta;
+  const gdpPop = data.gdpPop as GdpPop;
+  const flowsCountries = data.flowsCountries as FlowsCountries | undefined;
+
+  const year = spec.singleYear ?? spec.yearRange[1];
+  const yearIdx = meta.years.indexOf(year);
+
+  if (!flowsCountries || yearIdx < 0) {
+    return { year, byCountry: {}, units: unitsFor(spec.measure), min: 0, max: 0, matched: 0 };
+  }
+
+  const matFilter = spec.filters.material ?? [];
+  const matGrouping = spec.groupings?.material ?? 'category';
+  const matSelections = resolveMaterialSelections(meta, matGrouping, matFilter);
+
+  // Project every country in the layer (not just selected ones).
+  const regionalShape = countriesToRegionalShape(
+    flowsCountries,
+    flowsCountries.countries,
+    'DMC',
+  );
+
+  const byCountry: Record<string, number> = {};
+  let min = Infinity;
+  let max = -Infinity;
+
+  for (const country of flowsCountries.countries) {
+    const matByYear = regionalShape[country];
+    if (!matByYear) continue;
+    const summed = sumMaterials(matByYear, matSelections, meta.years);
+    const transformed = applyMeasure(summed, country, spec.measure, gdpPop, meta.years);
+    const v = transformed[yearIdx];
+    if (v == null || !Number.isFinite(v) || v === 0) continue;
+    byCountry[country] = v;
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+
+  if (!Number.isFinite(min)) min = 0;
+  if (!Number.isFinite(max)) max = 0;
+
+  return {
+    year,
+    byCountry,
+    units: unitsFor(spec.measure),
+    min,
+    max,
+    matched: Object.keys(byCountry).length,
+  };
 }

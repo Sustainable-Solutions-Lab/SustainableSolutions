@@ -179,13 +179,6 @@ export function derive(data: DataBundle, spec: Spec): DerivedData {
     effectiveRegions = flowsRegions.regions;
   }
 
-  // Per-capita and per-GDP measures aren't available at country level
-  // because we don't ship country-level GDP/population yet. Charts get
-  // an empty series in that case so the empty-state nudge appears.
-  if (geoLevel === 'country' && (spec.measure === 'per_capita' || spec.measure === 'per_gdp')) {
-    return { series: [], units: unitsFor(spec.measure), years };
-  }
-
   // Decide what each series represents.
   //   - empty geo OR single geo → series are materials (color by material/group)
   //   - multiple geos           → series are regions (summed over selected materials)
@@ -432,18 +425,7 @@ export function deriveScatter(data: DataBundle, spec: Spec): ScatterData {
   const flowsWorld = data.flowsWorld as FlowsWorld;
   const flowsRegions = data.flowsRegions as FlowsRegions;
   const gdpPop = data.gdpPop as GdpPop;
-
-  // Country level has no GDP/population yet, so scatter (which usually
-  // needs at least one normalized measure) is region-only for v1.
-  if ((spec.geoLevel ?? 'world') === 'country') {
-    return {
-      series: [],
-      xUnits: '',
-      yUnits: '',
-      xLabel: 'Country-level scatter requires GDP/pop data (coming in v2)',
-      yLabel: '',
-    };
-  }
+  const flowsCountries = data.flowsCountries as FlowsCountries | undefined;
 
   const xMeasure = spec.scatterX ?? 'per_gdp';
   const yMeasure = spec.measure;
@@ -452,6 +434,7 @@ export function deriveScatter(data: DataBundle, spec: Spec): ScatterData {
   const years = meta.years.filter((y) => y >= yStart && y <= yEnd);
   const yearIndexes = years.map((y) => meta.years.indexOf(y));
 
+  const geoLevel = spec.geoLevel ?? 'world';
   const geoFilter = spec.filters.geo ?? [];
   // Default to all 8 regions when no specific filter — a phase plot of
   // only the world isn't very informative.
@@ -461,9 +444,16 @@ export function deriveScatter(data: DataBundle, spec: Spec): ScatterData {
   const matGrouping = spec.groupings?.material ?? 'category';
   const matSelections = resolveMaterialSelections(meta, matGrouping, matFilter);
 
+  // At country level, source from the lazy country layer (filtered to DMC).
+  const countryRegional =
+    geoLevel === 'country' && flowsCountries
+      ? countriesToRegionalShape(flowsCountries, geos, 'DMC')
+      : null;
+
   const series: ScatterSeries[] = geos.map((geo, i) => {
     const matByYear =
-      geo === 'World' ? flowsWorld.materials : flowsRegions.regions[geo] ?? {};
+      countryRegional?.[geo] ??
+      (geo === 'World' ? flowsWorld.materials : flowsRegions.regions[geo] ?? {});
     const summed = sumMaterials(matByYear, matSelections, meta.years);
     const xValues = applyMeasure(summed, geo, xMeasure, gdpPop, meta.years);
     const yValues = applyMeasure(summed, geo, yMeasure, gdpPop, meta.years);

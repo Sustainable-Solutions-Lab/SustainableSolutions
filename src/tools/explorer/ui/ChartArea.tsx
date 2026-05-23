@@ -31,18 +31,6 @@ export default function ChartArea({ config, data }: Props) {
 
 function ChartSwitch({ spec, data }: { spec: Spec; data: DataBundle }) {
   const geoLevel = spec.geoLevel ?? 'world';
-  const countryMeasureGated =
-    geoLevel === 'country' && (spec.measure === 'per_capita' || spec.measure === 'per_gdp');
-
-  if (countryMeasureGated) {
-    return (
-      <EmptyState>
-        <strong>Per-capita and per-GDP measures are not yet available at country level.</strong>
-        <br />
-        Switch the measure to Absolute or Cumulative, or step down to Region geography.
-      </EmptyState>
-    );
-  }
   if (geoLevel === 'country' && (spec.filters.geo ?? []).length === 0) {
     return <EmptyState>Pick one or more countries from the sidebar to draw the chart.</EmptyState>;
   }
@@ -65,14 +53,6 @@ function ChartSwitch({ spec, data }: { spec: Spec; data: DataBundle }) {
       return <TreemapChart data={derived} />;
     }
     case 'scatter': {
-      if (geoLevel === 'country') {
-        return (
-          <EmptyState>
-            The phase plot needs GDP and population, which we don't ship at country level
-            yet. Switch geography to Region to view scatter trajectories.
-          </EmptyState>
-        );
-      }
       const derived = deriveScatter(data, spec);
       if (derived.series.length === 0) return <EmptyState>No data for the current selection.</EmptyState>;
       return <ScatterChart data={derived} />;

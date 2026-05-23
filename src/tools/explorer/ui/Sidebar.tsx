@@ -185,28 +185,22 @@ function MeasurePicker({
   const setMeasure = useStore((s: { setMeasure: (m: MeasureName) => void }) => s.setMeasure);
   const setScatterX = useStore((s: { setScatterX: (m: MeasureName) => void }) => s.setScatterX);
   const setter = field === 'scatterX' ? setScatterX : setMeasure;
+  void geoLevel;
   return (
     <div className="explorer-chip-group" role="radiogroup">
-      {config.measures.map((m) => {
-        // Per-capita and per-GDP need country-level GDP/pop, which v1
-        // doesn't ship. Gate them at country level.
-        const disabled =
-          geoLevel === 'country' && (m.name === 'per_capita' || m.name === 'per_gdp');
-        return (
-          <button
-            key={m.name}
-            role="radio"
-            aria-checked={m.name === active}
-            className={`explorer-chip ${m.name === active ? 'is-active' : ''}`}
-            onClick={() => !disabled && setter(m.name)}
-            type="button"
-            disabled={disabled}
-            title={disabled ? 'Country-level GDP / population arrives in v2' : m.units}
-          >
-            {m.label}
-          </button>
-        );
-      })}
+      {config.measures.map((m) => (
+        <button
+          key={m.name}
+          role="radio"
+          aria-checked={m.name === active}
+          className={`explorer-chip ${m.name === active ? 'is-active' : ''}`}
+          onClick={() => setter(m.name)}
+          type="button"
+          title={m.units}
+        >
+          {m.label}
+        </button>
+      ))}
     </div>
   );
 }

@@ -10,9 +10,10 @@
 // (flows-countries.json) is built separately and uploaded to R2.
 
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { homedir } from 'node:os';
+import * as XLSX from 'xlsx';
 
 // ── Sources ─────────────────────────────────────────────────────────────────
 // PROCESSED: Pablo's "Processed data (results)" — DMC + GDP + historical pop.
@@ -215,7 +216,126 @@ async function buildGdpPop(years) {
     if (idx >= 0) population[r.Region][idx] = Number(r.population);
   }
 
+  // Country-level GDP (World Bank) and population (UN) — joined to UNEP
+  // country names via the ISO3 codes in Dict_Countries.xlsx.
+  const countryStats = readCountryStats(years);
+  Object.assign(gdp, countryStats.gdp);
+  Object.assign(population, countryStats.population);
+
   return { years, gdp, population };
+}
+
+// ── Country-level GDP + population (lookup helpers) ─────────────────────────
+//
+// Three source files:
+//   Dict_Countries.xlsx                  UNEP_name → ISO3 → Region
+//   WorldBank/API_NY.GDP.MKTP.KD_*.xls   GDP (constant 2015 US$), 1960–2025
+//   UN/WPP2024_GEN_F01_*.xlsx            mid-year population, 1950–2023
+//
+// Keyed on UNEP_name in the output so the explorer's existing geo-string
+// lookups (which use UNEP names everywhere) work without translation.
+
+function readCountryStats(years) {
+  const dict = readUnepIsoMap();
+  const gdpByIso = readWorldBankGdp();
+  const popByIso = readUnPopulation();
+
+  const gdp = {};
+  const population = {};
+  let missing = { gdp: 0, pop: 0 };
+
+  for (const { name, iso3 } of dict) {
+    const g = gdpByIso.get(iso3);
+    const p = popByIso.get(iso3);
+    if (g) {
+      gdp[name] = years.map((y) => (typeof g.get(y) === 'number' ? g.get(y) : null));
+    } else missing.gdp++;
+    if (p) {
+      population[name] = years.map((y) => (typeof p.get(y) === 'number' ? p.get(y) : null));
+    } else missing.pop++;
+  }
+
+  console.log(
+    `[build-materials] country GDP: ${Object.keys(gdp).length}/${dict.length} matched, ${missing.gdp} missing`,
+  );
+  console.log(
+    `[build-materials] country pop: ${Object.keys(population).length}/${dict.length} matched, ${missing.pop} missing`,
+  );
+
+  return { gdp, population };
+}
+
+function readUnepIsoMap() {
+  const path = resolve(INPUTS_DIR, 'Dict_Countries.xlsx');
+  if (!existsSync(path)) return [];
+  const wb = XLSX.read(readFileSync(path));
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  return rows
+    .map((r) => ({ name: String(r.UNEP_name ?? '').trim(), iso3: String(r.ISO3 ?? '').trim() }))
+    .filter((r) => r.name && r.iso3);
+}
+
+function readWorldBankGdp() {
+  const path = resolve(INPUTS_DIR, 'WorldBank/API_NY.GDP.MKTP.KD_DS2_en_excel_v2_753.xls');
+  if (!existsSync(path)) return new Map();
+  const wb = XLSX.read(readFileSync(path));
+  // Header row is row 3 (0-indexed) per the file's structure.
+  const sheet = wb.Sheets['Data'] ?? wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  const headerRow = rows[3];
+  const yearCols = headerRow
+    .map((v, i) => ({ year: Number(v), col: i }))
+    .filter((c) => Number.isFinite(c.year) && c.year >= 1900 && c.year <= 2100);
+  const isoCol = headerRow.indexOf('Country Code');
+
+  const map = new Map(); // iso3 → Map<year, value>
+  for (let i = 4; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row) continue;
+    const iso = String(row[isoCol] ?? '').trim();
+    if (!iso) continue;
+    const perYear = new Map();
+    for (const { year, col } of yearCols) {
+      const v = row[col];
+      if (typeof v === 'number' && Number.isFinite(v)) perYear.set(year, v);
+    }
+    if (perYear.size > 0) map.set(iso, perYear);
+  }
+  return map;
+}
+
+function readUnPopulation() {
+  const path = resolve(INPUTS_DIR, 'UN/WPP2024_GEN_F01_DEMOGRAPHIC_INDICATORS_COMPACT.xlsx');
+  if (!existsSync(path)) return new Map();
+  const wb = XLSX.read(readFileSync(path));
+  const sheet = wb.Sheets['Estimates'];
+  if (!sheet) return new Map();
+  // The "Estimates" sheet has a header row at row 16 (0-indexed).
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 16 });
+  const header = rows[0];
+  const isoCol = header.indexOf('ISO3 Alpha-code');
+  const typeCol = header.indexOf('Type');
+  const yearCol = header.indexOf('Year');
+  const popCol = header.indexOf('Total Population, as of 1 July (thousands)');
+  if (isoCol < 0 || yearCol < 0 || popCol < 0) {
+    console.warn('[build-materials] UN file missing expected columns');
+    return new Map();
+  }
+
+  const map = new Map();
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row) continue;
+    if (typeCol >= 0 && row[typeCol] !== 'Country/Area') continue;
+    const iso = String(row[isoCol] ?? '').trim();
+    if (!iso) continue;
+    const year = Number(row[yearCol]);
+    const popThousands = Number(row[popCol]);
+    if (!Number.isFinite(year) || !Number.isFinite(popThousands)) continue;
+    if (!map.has(iso)) map.set(iso, new Map());
+    map.get(iso).set(year, popThousands * 1000); // thousands → persons
+  }
+  return map;
 }
 
 // ── Country-level lazy layer ────────────────────────────────────────────────

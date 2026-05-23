@@ -37,27 +37,29 @@ export default function Explorer({ config }: Props) {
   return (
     <SpecStoreProvider store={useStore}>
       <div className="explorer">
-        <header className="explorer-titlebar">
-          <h1 className="explorer-title" title={config.description}>
-            {config.title}
-          </h1>
-          <span className="explorer-eyebrow">INTERACTIVE EXPLORER</span>
-        </header>
-
-        {load.status === 'loading' && (
-          <div className="explorer-state">Loading {Object.keys(config.data.eagerLayers).length} data layers…</div>
-        )}
-        {load.status === 'error' && (
-          <div className="explorer-state explorer-state-error">
-            <p>Failed to load explorer data.</p>
-            <pre>{load.message}</pre>
-          </div>
-        )}
+        {load.status === 'loading' && <LoadingState config={config} />}
+        {load.status === 'error' && <ErrorState message={load.message} />}
         {load.status === 'ready' && <ReadyView config={config} data={load.data} />}
-
         <style>{styles}</style>
       </div>
     </SpecStoreProvider>
+  );
+}
+
+function LoadingState({ config }: { config: ExplorerConfig }) {
+  return (
+    <div className="explorer-fullscreen-state">
+      Loading {Object.keys(config.data.eagerLayers).length} data layers…
+    </div>
+  );
+}
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div className="explorer-fullscreen-state explorer-fullscreen-state-error">
+      <p>Failed to load explorer data.</p>
+      <pre>{message}</pre>
+    </div>
   );
 }
 
@@ -72,101 +74,104 @@ function ReadyView({ config, data }: { config: ExplorerConfig; data: DataBundle 
 
   if (!meta) {
     return (
-      <div className="explorer-state explorer-state-error">
+      <div className="explorer-fullscreen-state explorer-fullscreen-state-error">
         <p>meta.json layer was not loaded; cannot render explorer.</p>
       </div>
     );
   }
 
   return (
-    <div className="explorer-layout">
+    <>
       <aside className="explorer-sidebar" aria-label="Explorer controls">
-        <Sidebar config={config} meta={meta} />
+        <header className="explorer-sidebar-header">
+          <p className="explorer-sidebar-eyebrow">INTERACTIVE EXPLORER</p>
+          <h1 className="explorer-sidebar-title" title={config.description}>
+            {config.title}
+          </h1>
+        </header>
+        <div className="explorer-sidebar-scroll">
+          <Sidebar config={config} meta={meta} />
+        </div>
       </aside>
       <main className="explorer-chart-area" aria-label="Chart">
         <ChartArea config={config} data={data} />
       </main>
-    </div>
+    </>
   );
 }
 
 const styles = `
   .explorer {
     display: flex;
-    flex-direction: column;
-    min-height: 100%;
-    padding: 12px clamp(12px, 2vw, 24px) 16px;
-    color: var(--ink);
+    width: 100%;
+    height: 100%;
     background: var(--paper);
-    font-family: var(--font-sans, Inter, system-ui, sans-serif);
-  }
-  /* Compact one-row title bar. Description hides into the title's
-     browser tooltip; this keeps the chart pane above the fold. */
-  .explorer-titlebar {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--rule);
-  }
-  .explorer-title {
-    font-family: var(--font-serif, 'Source Serif 4', Georgia, serif);
-    font-size: 19px;
-    line-height: 1.2;
-    margin: 0;
     color: var(--ink);
+    font-family: var(--font-sans, Inter, system-ui, sans-serif);
+    overflow: hidden;
   }
-  .explorer-eyebrow {
+
+  /* Fixed-width, full-height sidebar — same shape as the map tools */
+  .explorer-sidebar {
+    flex: 0 0 280px;
+    display: flex;
+    flex-direction: column;
+    background: var(--paper-2);
+    border-right: 1px solid var(--rule);
+    overflow: hidden;
+  }
+  .explorer-sidebar-header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--rule);
+    flex: 0 0 auto;
+  }
+  .explorer-sidebar-eyebrow {
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
     font-size: 10px;
     letter-spacing: 0.08em;
     color: var(--ink-3);
+    margin: 0 0 4px;
   }
-  .explorer-state {
-    padding: 24px;
-    border: 1px solid var(--rule);
-    background: var(--paper-2);
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
-    font-size: 13px;
-    color: var(--ink-2);
+  .explorer-sidebar-title {
+    font-family: var(--font-serif, 'Source Serif 4', Georgia, serif);
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--ink);
+    margin: 0;
   }
-  .explorer-state-error { color: #b00020; }
-  .explorer-state-error pre {
-    margin: 8px 0 0;
-    white-space: pre-wrap;
-    color: var(--ink-3);
+  .explorer-sidebar-scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 14px 16px 24px;
   }
 
-  /* Two-column layout — sidebar 260px, chart fills remaining width */
-  .explorer-layout {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 16px;
-    align-items: stretch;
-    flex: 1;
-    min-height: 0;
-  }
-  @media (max-width: 800px) {
-    .explorer-layout { grid-template-columns: 1fr; }
-  }
-  .explorer-sidebar {
-    border: 1px solid var(--rule);
-    background: var(--paper-2);
-    padding: 12px;
-    overflow-y: auto;
-    max-height: calc(100vh - 56px - 64px); /* site nav + titlebar + padding */
-  }
-  @media (max-width: 800px) {
-    .explorer-sidebar { max-height: none; }
-  }
+  /* Chart fills the remaining width edge-to-edge — no inner border */
   .explorer-chart-area {
-    border: 1px solid var(--rule);
-    background: var(--paper-2);
-    padding: 16px;
-    min-height: 0;
+    flex: 1 1 auto;
+    min-width: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    padding: 16px 24px;
+  }
+
+  /* Fallback states fill the whole frame */
+  .explorer-fullscreen-state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-size: 13px;
+    color: var(--ink-3);
+  }
+  .explorer-fullscreen-state-error { color: #b00020; flex-direction: column; gap: 8px; }
+  .explorer-fullscreen-state-error pre {
+    margin: 0;
+    color: var(--ink-3);
+    font-size: 11px;
+    white-space: pre-wrap;
   }
 
   /* Sidebar sections */
@@ -317,51 +322,5 @@ const styles = `
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
     font-size: 10px;
     color: var(--ink-4);
-  }
-
-  /* Chart area placeholder */
-  .explorer-chart-placeholder {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .explorer-chart-status {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    color: var(--ink-3);
-    margin: 0;
-  }
-  .explorer-spec-readout {
-    margin: 0;
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: 4px 16px;
-    font-size: 14px;
-  }
-  .explorer-spec-row {
-    display: contents;
-  }
-  .explorer-spec-row dt {
-    color: var(--ink-3);
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
-    font-size: 12px;
-    align-self: center;
-  }
-  .explorer-spec-row dd {
-    margin: 0;
-    color: var(--ink);
-  }
-  .explorer-spec-raw {
-    margin-top: 24px;
-    font-size: 12px;
-    color: var(--ink-3);
-  }
-  .explorer-spec-raw pre {
-    background: var(--paper-3);
-    padding: 12px;
-    overflow-x: auto;
-    font-size: 11px;
-    color: var(--ink-2);
   }
 `;

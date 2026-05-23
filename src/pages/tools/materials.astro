@@ -21,11 +21,14 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
 </BaseLayout>
 
 <style is:global>
-  body:has(.materials-frame) { overflow: auto; }
+  body:has(.materials-frame) { overflow: hidden; }
   .materials-frame {
+    position: relative;
     width: 100%;
-    min-height: calc(100vh - 56px);
-    min-height: calc(100dvh - 56px);
+    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
     background: var(--paper);
+    overflow: hidden;
   }
+  .materials-frame > * { width: 100%; height: 100%; }
 </style>

@@ -4,6 +4,7 @@ import { derive } from '../data/derive';
 import LineChart from '../charts/LineChart';
 import AreaChart from '../charts/AreaChart';
 import BarChart from '../charts/BarChart';
+import Legend from '../charts/Legend';
 
 type Props = {
   config: ExplorerConfig;
@@ -14,16 +15,34 @@ export default function ChartArea({ config, data }: Props) {
   const useStore = useSpecStoreHook();
   const spec = useStore((s: { spec: Spec }) => s.spec);
   const derived = derive(data, spec);
+  const supported = chartSupported(spec.chart);
 
   return (
     <div className="explorer-chart-pane">
       <ChartHeader spec={spec} derived={derived} config={config} />
       <div className="explorer-chart-body">
-        <RenderChart chart={spec.chart} derived={derived} />
+        {supported && derived.series.length > 0 ? (
+          <RenderChart chart={spec.chart} derived={derived} />
+        ) : (
+          <div className="explorer-chart-empty">
+            {derived.series.length === 0
+              ? 'No data for the current selection.'
+              : `${labelFor(spec.chart)} arrives in a later milestone. Try Line, Stacked area, or Bar.`}
+          </div>
+        )}
       </div>
+      {supported && derived.series.length > 0 && <Legend series={derived.series} />}
       <style>{styles}</style>
     </div>
   );
+}
+
+function chartSupported(chart: Spec['chart']): boolean {
+  return chart === 'line' || chart === 'area' || chart === 'bar';
+}
+
+function labelFor(chart: Spec['chart']): string {
+  return chart.charAt(0).toUpperCase() + chart.slice(1);
 }
 
 function RenderChart({
@@ -33,9 +52,6 @@ function RenderChart({
   chart: Spec['chart'];
   derived: ReturnType<typeof derive>;
 }) {
-  if (derived.series.length === 0) {
-    return <div className="explorer-chart-empty">No data for the current selection.</div>;
-  }
   switch (chart) {
     case 'line':
       return <LineChart data={derived} />;
@@ -44,11 +60,7 @@ function RenderChart({
     case 'bar':
       return <BarChart data={derived} />;
     default:
-      return (
-        <div className="explorer-chart-empty">
-          <strong>{chart}</strong> chart arrives in a later milestone. Try Line, Stacked area, or Bar.
-        </div>
-      );
+      return null;
   }
 }
 
@@ -77,12 +89,12 @@ const styles = `
   .explorer-chart-pane {
     display: flex;
     flex-direction: column;
+    width: 100%;
     height: 100%;
     min-height: 0;
+    gap: 8px;
   }
-  .explorer-chart-header {
-    margin-bottom: 8px;
-  }
+  .explorer-chart-header { flex: 0 0 auto; }
   .explorer-chart-subtitle {
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
     font-size: 11px;
@@ -91,21 +103,16 @@ const styles = `
     margin: 0;
   }
   .explorer-chart-body {
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
     display: flex;
-    flex-direction: column;
-  }
-  .chart-with-legend {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
   }
   .explorer-chart-empty {
-    padding: 24px;
-    background: var(--paper-3);
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--ink-3);
-    text-align: center;
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
     font-size: 12px;
   }

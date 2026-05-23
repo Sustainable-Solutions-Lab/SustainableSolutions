@@ -8,6 +8,7 @@ import type { DerivedData } from '../data/derive';
 
 type Props = {
   data: DerivedData;
+  /** Optional fixed height. If omitted, the chart fills its container vertically. */
   height?: number;
   margin?: { top: number; right: number; bottom: number; left: number };
   /** If provided, overrides the auto-computed y domain. Useful for stacked charts. */
@@ -26,14 +27,14 @@ const DEFAULT_MARGIN = { top: 12, right: 16, bottom: 28, left: 56 };
 
 export default function ChartFrame({
   data,
-  height = 480,
+  height,
   margin = DEFAULT_MARGIN,
   yDomain,
   zeroBased = true,
   children,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [width, setWidth] = useState(800);
+  const [size, setSize] = useState({ width: 800, height: 400 });
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -41,15 +42,18 @@ export default function ChartFrame({
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const w = entry.contentRect.width;
-        if (w > 0) setWidth(Math.floor(w));
+        const h = entry.contentRect.height;
+        if (w > 0 && h > 0) setSize({ width: Math.floor(w), height: Math.floor(h) });
       }
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
+  const width = size.width;
+  const effectiveHeight = height ?? size.height;
   const innerWidth = Math.max(80, width - margin.left - margin.right);
-  const innerHeight = Math.max(80, height - margin.top - margin.bottom);
+  const innerHeight = Math.max(80, effectiveHeight - margin.top - margin.bottom);
 
   const xScale = useMemo(() => {
     const years = data.years;
@@ -79,7 +83,7 @@ export default function ChartFrame({
 
   return (
     <div className="chart-frame" ref={containerRef}>
-      <svg width={width} height={height} className="chart-svg" role="img">
+      <svg width={width} height={effectiveHeight} className="chart-svg" role="img">
         <g transform={`translate(${margin.left},${margin.top})`}>
           {/* Y gridlines + ticks */}
           {yTicks.map((t) => (
@@ -132,12 +136,14 @@ function formatTick(v: number): string {
 const frameStyles = `
   .chart-frame {
     width: 100%;
+    height: 100%;
+    min-height: 0;
     overflow: hidden;
   }
   .chart-svg {
     display: block;
     width: 100%;
-    height: auto;
+    height: 100%;
     overflow: visible;
   }
   .chart-gridline {

@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { scaleBand } from 'd3-scale';
 import ChartFrame from './ChartFrame';
-import Legend from './Legend';
 import type { DerivedData } from '../data/derive';
 
 // Grouped bar chart: each x-tick is a year, each tick gets one bar per
@@ -10,19 +9,17 @@ import type { DerivedData } from '../data/derive';
 
 type Props = {
   data: DerivedData;
-  height?: number;
 };
 
-export default function BarChart({ data, height = 480 }: Props) {
+export default function BarChart({ data }: Props) {
   const yearBand = useMemo(
     () => scaleBand<number>().domain(data.years).range([0, 1]).padding(0.2),
     [data.years],
   );
 
   return (
-    <div className="chart-with-legend">
-      <ChartFrame data={data} height={height}>
-        {({ xScale, yScale, innerWidth, innerHeight }) => {
+    <ChartFrame data={data}>
+      {({ xScale, yScale, innerWidth, innerHeight }) => {
           // Compute pixel-space band width based on the year spacing the
           // linear xScale provides. We don't reuse yearBand directly for
           // positioning because the parent x scale is linear; instead we
@@ -69,8 +66,6 @@ export default function BarChart({ data, height = 480 }: Props) {
             </g>
           );
         }}
-      </ChartFrame>
-      <Legend series={data.series} />
-    </div>
+    </ChartFrame>
   );
 }

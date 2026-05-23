@@ -23,8 +23,14 @@ const PROCESSED_DIR =
 const PARAMETERS_DIR =
   process.env.MATERIALS_PARAMETERS_DIR ??
   resolve(homedir(), 'Claude Projects/material-intensity/Parameters');
+const INPUTS_DIR =
+  process.env.MATERIALS_INPUTS_DIR ??
+  resolve(homedir(), 'Claude Projects/material-intensity/Inputs');
 
 const OUT_DIR = resolve('public/tools/materials');
+// Lazy layer (country-level) is too big for the eager bundle. Goes to R2,
+// fetched on demand by the explorer when a country is selected.
+const LAZY_OUT_DIR = resolve('dist-materials-lazy');
 
 // ── 22 UNEP material categories → 6 high-level groups ───────────────────────
 // Mirrors the grouping used in Busch et al.'s figures. The Sankey-style
@@ -212,6 +218,86 @@ async function buildGdpPop(years) {
   return { years, gdp, population };
 }
 
+// ── Country-level lazy layer ────────────────────────────────────────────────
+//
+// Source: Inputs/UNEP/mfa13_export.csv (249 countries × 22 mats × 6 flows
+// × 55 years, ~25k rows, 37 MB raw). Packed shape:
+//
+//   { schema, years, countries[], materials[], flows[],
+//     data: [ [c_idx, m_idx, f_idx, ...55 year values], … ] }
+//
+// String dimensions are stored once; data rows use integer ids. Empty
+// rows (all-zero / all-blank) are dropped. Target ~3 MB JSON.
+
+async function buildCountryFlows() {
+  const path = resolve(INPUTS_DIR, 'UNEP/mfa13_export.csv');
+  if (!existsSync(path)) {
+    console.warn(`[build-materials] skipping country layer; missing: ${path}`);
+    return null;
+  }
+
+  const rows = await readCsv(path);
+  const yearKeys = Object.keys(rows[0] ?? {}).filter((k) => /^\d{4}$/.test(k));
+  const years = yearKeys.map(Number).sort((a, b) => a - b);
+
+  // Collect unique dimensions (preserve appearance order so ids are stable).
+  const countries = [];
+  const materials = [];
+  const flows = [];
+  const seen = { c: new Map(), m: new Map(), f: new Map() };
+  const intern = (set, list, value) => {
+    if (set.has(value)) return set.get(value);
+    const id = list.length;
+    list.push(value);
+    set.set(value, id);
+    return id;
+  };
+
+  const data = [];
+  let dropped = 0;
+
+  for (const r of rows) {
+    const country = (r.Country ?? '').trim();
+    const material = (r.Category ?? '').trim();
+    const flow = (r['Flow code'] ?? '').trim();
+    if (!country || !material || !flow) {
+      dropped++;
+      continue;
+    }
+    const values = yearKeys.map((k) => {
+      const v = r[k];
+      if (v === '' || v == null) return 0;
+      const n = Number(v);
+      if (!Number.isFinite(n)) return 0;
+      // tonnes → Mt, rounded to 4 decimal places (0.0001 Mt = 100 t precision,
+      // well below the noise floor of national MFA estimates and a big help
+      // for JSON size).
+      return Math.round((n / 1e6) * 10000) / 10000;
+    });
+    if (values.every((v) => v === 0)) {
+      dropped++;
+      continue;
+    }
+    const cIdx = intern(seen.c, countries, country);
+    const mIdx = intern(seen.m, materials, material);
+    const fIdx = intern(seen.f, flows, flow);
+    data.push([cIdx, mIdx, fIdx, ...values]);
+  }
+
+  console.log(
+    `[build-materials] countries: ${countries.length} | mats: ${materials.length} | flows: ${flows.length} | rows: ${data.length} | dropped: ${dropped}`,
+  );
+
+  return {
+    schema: 'country-flat-v1',
+    years,
+    countries,
+    materials,
+    flows,
+    data,
+  };
+}
+
 async function buildStocks2024() {
   const totalRows = await readCsv(resolve(PARAMETERS_DIR, 'stock_2024_total.csv'));
 
@@ -295,7 +381,20 @@ async function run() {
     const kb = (json.length / 1024).toFixed(1);
     console.log(`[build-materials] wrote ${name}  (${kb} KB)`);
   }
-  console.log(`[build-materials] done. ${outputs.length} files in ${OUT_DIR}`);
+  console.log(`[build-materials] done. ${outputs.length} eager files in ${OUT_DIR}`);
+
+  // Lazy country layer — too big for the eager bundle; uploaded to R2.
+  const countryFlows = await buildCountryFlows();
+  if (countryFlows) {
+    await mkdir(LAZY_OUT_DIR, { recursive: true });
+    const path = resolve(LAZY_OUT_DIR, 'flows-countries.json');
+    const json = JSON.stringify(countryFlows);
+    await writeFile(path, json, 'utf8');
+    const mb = (json.length / 1024 / 1024).toFixed(2);
+    console.log(`[build-materials] wrote flows-countries.json (${mb} MB) → ${path}`);
+    console.log('[build-materials] upload to R2:');
+    console.log(`  rclone copy "${path}" r2:ssl-data/materials/derived/`);
+  }
 }
 
 run().catch((err) => {

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DataBundle, ExplorerConfig } from './types';
-import { loadEagerLayers } from './data/loader';
+import { loadEagerLayers, loadLazyLayer } from './data/loader';
 import { createSpecStore } from './store/spec-store';
 import { SpecStoreProvider } from './store/context';
+import { LazyLayerProvider } from './data/lazy-context';
 import Sidebar from './ui/Sidebar';
 import ChartArea from './ui/ChartArea';
 
@@ -17,6 +18,11 @@ type LoadState =
 
 export default function Explorer({ config }: Props) {
   const [load, setLoad] = useState<LoadState>({ status: 'loading' });
+  const [lazy, setLazy] = useState<DataBundle>({});
+  const [lazyState, setLazyState] = useState<{
+    loading: Record<string, boolean>;
+    errors: Record<string, string | null>;
+  }>({ loading: {}, errors: {} });
   // Store is created once per Explorer mount; survives re-renders.
   const useStore = useMemo(() => createSpecStore(config), [config]);
 
@@ -34,14 +40,39 @@ export default function Explorer({ config }: Props) {
     };
   }, [config]);
 
+  const requestLazy = useCallback(
+    (name: string) => {
+      if (lazy[name] !== undefined) return;
+      if (lazyState.loading[name]) return;
+      setLazyState((s) => ({ ...s, loading: { ...s.loading, [name]: true }, errors: { ...s.errors, [name]: null } }));
+      loadLazyLayer(config, name)
+        .then((data) => {
+          setLazy((prev) => ({ ...prev, [name]: data }));
+          setLazyState((s) => ({ ...s, loading: { ...s.loading, [name]: false } }));
+        })
+        .catch((err: Error) => {
+          setLazyState((s) => ({
+            ...s,
+            loading: { ...s.loading, [name]: false },
+            errors: { ...s.errors, [name]: err.message },
+          }));
+        });
+    },
+    [config, lazy, lazyState.loading],
+  );
+
+  const combined = load.status === 'ready' ? { ...load.data, ...lazy } : null;
+
   return (
     <SpecStoreProvider store={useStore}>
-      <div className="explorer">
-        {load.status === 'loading' && <LoadingState config={config} />}
-        {load.status === 'error' && <ErrorState message={load.message} />}
-        {load.status === 'ready' && <ReadyView config={config} data={load.data} />}
-        <style>{styles}</style>
-      </div>
+      <LazyLayerProvider value={{ loading: lazyState.loading, errors: lazyState.errors, request: requestLazy }}>
+        <div className="explorer">
+          {load.status === 'loading' && <LoadingState config={config} />}
+          {load.status === 'error' && <ErrorState message={load.message} />}
+          {load.status === 'ready' && combined && <ReadyView config={config} data={combined} />}
+          <style>{styles}</style>
+        </div>
+      </LazyLayerProvider>
     </SpecStoreProvider>
   );
 }
@@ -80,6 +111,9 @@ function ReadyView({ config, data }: { config: ExplorerConfig; data: DataBundle 
     );
   }
 
+  const flowsCountries = data.flowsCountries as { countries?: string[] } | undefined;
+  const countries = flowsCountries?.countries;
+
   return (
     <>
       <aside className="explorer-sidebar" aria-label="Explorer controls">
@@ -90,7 +124,7 @@ function ReadyView({ config, data }: { config: ExplorerConfig; data: DataBundle 
           </h1>
         </header>
         <div className="explorer-sidebar-scroll">
-          <Sidebar config={config} meta={meta} />
+          <Sidebar config={config} meta={meta} countries={countries} />
         </div>
       </aside>
       <main className="explorer-chart-area" aria-label="Chart">
@@ -258,6 +292,24 @@ const styles = `
     border-color: var(--ink);
   }
   .explorer-chip-small { font-size: 11px; padding: 3px 7px; }
+  .explorer-chip[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  .explorer-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .explorer-search-input:focus {
+    outline: none;
+    border-color: var(--ink);
+  }
+  .explorer-search-input:disabled { color: var(--ink-4); }
 
   /* Grouping toggle */
   .explorer-toggle-row {

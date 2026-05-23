@@ -1,5 +1,7 @@
+import { useEffect, useMemo, useState } from 'react';
 import type { ChartType, ExplorerConfig, MeasureName, PresetSpec, Spec } from '../types';
 import { useSpecStoreHook } from '../store/context';
+import { useLazyLayer } from '../data/lazy-context';
 
 // Knob panel for the explorer. Reads the current spec from the per-Explorer
 // Zustand store; writes changes back. Chart-aware: knobs not relevant to
@@ -16,11 +18,13 @@ type Meta = {
 type Props = {
   config: ExplorerConfig;
   meta: Meta;
+  countries?: string[];
 };
 
-export default function Sidebar({ config, meta }: Props) {
+export default function Sidebar({ config, meta, countries }: Props) {
   const useStore = useSpecStoreHook();
   const spec = useStore((s: { spec: Spec }) => s.spec);
+  const geoLevel = spec.geoLevel ?? 'world';
 
   return (
     <div className="explorer-sidebar-inner">
@@ -35,7 +39,7 @@ export default function Sidebar({ config, meta }: Props) {
       </Section>
 
       <Section title={spec.chart === 'scatter' ? 'Y measure' : 'Measure'}>
-        <MeasurePicker config={config} active={spec.measure} field="measure" />
+        <MeasurePicker config={config} active={spec.measure} field="measure" geoLevel={geoLevel} />
       </Section>
 
       {spec.chart === 'scatter' && (
@@ -44,6 +48,7 @@ export default function Sidebar({ config, meta }: Props) {
             config={config}
             active={spec.scatterX ?? 'per_gdp'}
             field="scatterX"
+            geoLevel={geoLevel}
           />
         </Section>
       )}
@@ -59,7 +64,14 @@ export default function Sidebar({ config, meta }: Props) {
       )}
 
       <Section title="Geography">
-        <GeoPicker regions={meta.regions} selected={spec.filters.geo ?? []} />
+        <GeoLevelToggle active={geoLevel} />
+        {geoLevel === 'world' && <p className="explorer-hint">Showing world total.</p>}
+        {geoLevel === 'region' && (
+          <RegionPicker regions={meta.regions} selected={spec.filters.geo ?? []} />
+        )}
+        {geoLevel === 'country' && (
+          <CountryPicker countries={countries} selected={spec.filters.geo ?? []} />
+        )}
       </Section>
 
       <Section title="Material">
@@ -154,10 +166,12 @@ function MeasurePicker({
   config,
   active,
   field,
+  geoLevel,
 }: {
   config: ExplorerConfig;
   active: MeasureName;
   field: 'measure' | 'scatterX';
+  geoLevel: 'world' | 'region' | 'country';
 }) {
   const useStore = useSpecStoreHook();
   const setMeasure = useStore((s: { setMeasure: (m: MeasureName) => void }) => s.setMeasure);
@@ -165,19 +179,26 @@ function MeasurePicker({
   const setter = field === 'scatterX' ? setScatterX : setMeasure;
   return (
     <div className="explorer-chip-group" role="radiogroup">
-      {config.measures.map((m) => (
-        <button
-          key={m.name}
-          role="radio"
-          aria-checked={m.name === active}
-          className={`explorer-chip ${m.name === active ? 'is-active' : ''}`}
-          onClick={() => setter(m.name)}
-          type="button"
-          title={m.units}
-        >
-          {m.label}
-        </button>
-      ))}
+      {config.measures.map((m) => {
+        // Per-capita and per-GDP need country-level GDP/pop, which v1
+        // doesn't ship. Gate them at country level.
+        const disabled =
+          geoLevel === 'country' && (m.name === 'per_capita' || m.name === 'per_gdp');
+        return (
+          <button
+            key={m.name}
+            role="radio"
+            aria-checked={m.name === active}
+            className={`explorer-chip ${m.name === active ? 'is-active' : ''}`}
+            onClick={() => !disabled && setter(m.name)}
+            type="button"
+            disabled={disabled}
+            title={disabled ? 'Country-level GDP / population arrives in v2' : m.units}
+          >
+            {m.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -208,7 +229,28 @@ function SingleYearPicker({ min, max, value }: { min: number; max: number; value
   );
 }
 
-function GeoPicker({ regions, selected }: { regions: string[]; selected: string[] }) {
+function GeoLevelToggle({ active }: { active: 'world' | 'region' | 'country' }) {
+  const useStore = useSpecStoreHook();
+  const setGeoLevel = useStore(
+    (s: { setGeoLevel: (l: 'world' | 'region' | 'country') => void }) => s.setGeoLevel,
+  );
+  return (
+    <div className="explorer-toggle-row">
+      {(['world', 'region', 'country'] as const).map((level) => (
+        <button
+          key={level}
+          type="button"
+          className={`explorer-toggle ${active === level ? 'is-active' : ''}`}
+          onClick={() => setGeoLevel(level)}
+        >
+          {level === 'world' ? 'World' : level === 'region' ? 'Regions' : 'Countries'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function RegionPicker({ regions, selected }: { regions: string[]; selected: string[] }) {
   const useStore = useSpecStoreHook();
   const toggle = useStore(
     (s: { toggleFilterValue: (dim: string, v: string) => void }) => s.toggleFilterValue,
@@ -216,7 +258,7 @@ function GeoPicker({ regions, selected }: { regions: string[]; selected: string[
   const setFilter = useStore(
     (s: { setFilter: (dim: string, v: string[]) => void }) => s.setFilter,
   );
-  const allSelected = selected.length === 0; // empty = all
+  const allSelected = selected.length === 0;
   return (
     <>
       <div className="explorer-chip-group">
@@ -225,7 +267,7 @@ function GeoPicker({ regions, selected }: { regions: string[]; selected: string[
           className={`explorer-chip ${allSelected ? 'is-active' : ''}`}
           onClick={() => setFilter('geo', [])}
         >
-          World
+          All
         </button>
         {regions.map((r) => (
           <button
@@ -239,7 +281,101 @@ function GeoPicker({ regions, selected }: { regions: string[]; selected: string[
         ))}
       </div>
       <p className="explorer-hint">
-        {allSelected ? 'Showing world total' : `${selected.length} region(s) selected`}
+        {allSelected ? 'All 8 regions' : `${selected.length} region${selected.length === 1 ? '' : 's'} selected`}
+      </p>
+    </>
+  );
+}
+
+const COUNTRY_SOFT_CAP = 15;
+
+function CountryPicker({
+  countries,
+  selected,
+}: {
+  countries: string[] | undefined;
+  selected: string[];
+}) {
+  const useStore = useSpecStoreHook();
+  const toggle = useStore(
+    (s: { toggleFilterValue: (dim: string, v: string) => void }) => s.toggleFilterValue,
+  );
+  const setFilter = useStore(
+    (s: { setFilter: (dim: string, v: string[]) => void }) => s.setFilter,
+  );
+  const lazy = useLazyLayer('flowsCountries');
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    lazy.request();
+  }, [lazy]);
+
+  const lc = query.trim().toLowerCase();
+  const matches = useMemo(() => {
+    if (!countries) return [];
+    if (!lc) return countries.slice(0, 12);
+    return countries.filter((c) => c.toLowerCase().includes(lc)).slice(0, 20);
+  }, [countries, lc]);
+
+  return (
+    <>
+      {selected.length > 0 && (
+        <div className="explorer-chip-group">
+          {selected.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className="explorer-chip is-active"
+              onClick={() => toggle('geo', c)}
+              title="Click to remove"
+            >
+              {c} ×
+            </button>
+          ))}
+          <button
+            type="button"
+            className="explorer-chip"
+            onClick={() => setFilter('geo', [])}
+            title="Clear all"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+      <input
+        type="text"
+        className="explorer-search-input"
+        placeholder={countries ? `Search ${countries.length} countries…` : 'Loading countries…'}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        disabled={!countries}
+      />
+      {lazy.loading && !countries && <p className="explorer-hint">Loading ~7 MB country layer…</p>}
+      {lazy.error && <p className="explorer-hint" style={{ color: '#b00020' }}>Failed to load: {lazy.error}</p>}
+      {countries && (
+        <div className="explorer-chip-group">
+          {matches.map((c) => {
+            const isSelected = selected.includes(c);
+            const atCap = !isSelected && selected.length >= COUNTRY_SOFT_CAP;
+            return (
+              <button
+                key={c}
+                type="button"
+                className={`explorer-chip explorer-chip-small ${isSelected ? 'is-active' : ''}`}
+                onClick={() => toggle('geo', c)}
+                disabled={atCap}
+                title={atCap ? `Soft cap of ${COUNTRY_SOFT_CAP}; remove one first` : undefined}
+              >
+                {c}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <p className="explorer-hint">
+        {selected.length === 0
+          ? 'Pick countries to compare. World totals show if none selected.'
+          : `${selected.length} selected${selected.length >= COUNTRY_SOFT_CAP ? ' (soft cap)' : ''}.`}
       </p>
     </>
   );

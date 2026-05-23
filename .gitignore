@@ -33,3 +33,4 @@ EXPLORER_TOOLS_PLAN.md
 dist-zips/
 templates/ca-zip-codes-geo.min.json
 dist-tiles/
+dist-materials-lazy/

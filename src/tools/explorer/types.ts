@@ -79,6 +79,9 @@ export type Spec = {
 
   chart: ChartType;
 
+  /** Geography aggregation level. Determines which data layer the chart sources from. */
+  geoLevel?: 'world' | 'region' | 'country';
+
   /** Dimension filter selections: dimension name → list of selected value ids. */
   filters: Record<string, string[]>;
   /** Optional grouping per dimension (e.g. 'category' vs 'group' for material). */

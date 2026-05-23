@@ -117,6 +117,41 @@ type FlowsWorld = { years: number[]; materials: Record<string, number[]> };
 type FlowsRegions = { years: number[]; regions: Record<string, Record<string, number[]>> };
 type GdpPop = { years: number[]; gdp: Record<string, number[]>; population: Record<string, number[]> };
 
+type FlowsCountries = {
+  years: number[];
+  countries: string[];
+  materials: string[];
+  flows: string[];
+  data: number[][];
+};
+
+// Reshape a sliced subset of the flat country layer into the same shape
+// flowsRegions uses, so derive can treat country-level data identically.
+// Filters to the chosen flow (default DMC) — the regional/world layers are
+// DMC-only, so this keeps parity.
+function countriesToRegionalShape(
+  layer: FlowsCountries,
+  selectedCountries: string[],
+  flow: string = 'DMC',
+): Record<string, Record<string, number[]>> {
+  const fIdx = layer.flows.indexOf(flow);
+  if (fIdx < 0) return {};
+  const wantIdx = new Set(
+    selectedCountries.map((c) => layer.countries.indexOf(c)).filter((i) => i >= 0),
+  );
+  const out: Record<string, Record<string, number[]>> = {};
+  for (const row of layer.data) {
+    const [c, m, f] = row;
+    if (f !== fIdx) continue;
+    if (!wantIdx.has(c)) continue;
+    const country = layer.countries[c];
+    const material = layer.materials[m];
+    if (!out[country]) out[country] = {};
+    out[country][material] = row.slice(3);
+  }
+  return out;
+}
+
 // ── Derivation ──────────────────────────────────────────────────────────────
 
 export function derive(data: DataBundle, spec: Spec): DerivedData {
@@ -124,14 +159,32 @@ export function derive(data: DataBundle, spec: Spec): DerivedData {
   const flowsWorld = data.flowsWorld as FlowsWorld;
   const flowsRegions = data.flowsRegions as FlowsRegions;
   const gdpPop = data.gdpPop as GdpPop;
+  const flowsCountries = data.flowsCountries as FlowsCountries | undefined;
 
   const [yStart, yEnd] = spec.yearRange;
   const years = meta.years.filter((y) => y >= yStart && y <= yEnd);
   const yearIndexes = years.map((y) => meta.years.indexOf(y));
 
+  const geoLevel = spec.geoLevel ?? 'world';
   const geoFilter = spec.filters.geo ?? [];
   const matFilter = spec.filters.material ?? [];
   const matGrouping = spec.groupings?.material ?? 'category';
+
+  // At country level, re-source the regional data layer from the country
+  // file (filtered to the user's selections + the DMC flow).
+  let effectiveRegions: Record<string, Record<string, number[]>>;
+  if (geoLevel === 'country' && flowsCountries) {
+    effectiveRegions = countriesToRegionalShape(flowsCountries, geoFilter, 'DMC');
+  } else {
+    effectiveRegions = flowsRegions.regions;
+  }
+
+  // Per-capita and per-GDP measures aren't available at country level
+  // because we don't ship country-level GDP/population yet. Charts get
+  // an empty series in that case so the empty-state nudge appears.
+  if (geoLevel === 'country' && (spec.measure === 'per_capita' || spec.measure === 'per_gdp')) {
+    return { series: [], units: unitsFor(spec.measure), years };
+  }
 
   // Decide what each series represents.
   //   - empty geo OR single geo → series are materials (color by material/group)
@@ -145,23 +198,27 @@ export function derive(data: DataBundle, spec: Spec): DerivedData {
   const series: Series[] = [];
 
   if (compareGeos) {
-    // One series per selected region; each is the sum of selected materials.
-    geoFilter.forEach((region, i) => {
-      const matByYear = flowsRegions.regions[region] ?? {};
+    // One series per selected geography; each is the sum of selected materials.
+    geoFilter.forEach((geo, i) => {
+      const matByYear = effectiveRegions[geo] ?? {};
       const summed = sumMaterials(matByYear, matSelections, meta.years);
-      const transformed = applyMeasure(summed, region, spec.measure, gdpPop, meta.years);
+      const transformed = applyMeasure(summed, geo, spec.measure, gdpPop, meta.years);
       series.push({
-        key: region,
-        label: region,
-        color: colorFor('geo', region, i),
+        key: geo,
+        label: geo,
+        color: colorFor('geo', geo, i),
         dimension: 'geo',
         points: years.map((y, idx) => ({ year: y, value: transformed[yearIndexes[idx]] })),
       });
     });
   } else {
     // One series per material/group; values are the world total (or single
-    // selected region's total).
-    const sourceByMaterial = singleGeoMaterialSeries(geoFilter[0], flowsWorld, flowsRegions);
+    // selected geography's total).
+    const sourceByMaterial = singleGeoMaterialSeries(
+      geoFilter[0],
+      flowsWorld,
+      { years: meta.years, regions: effectiveRegions },
+    );
     const seriesKey = geoFilter[0] ?? 'World';
 
     matSelections.forEach((sel, i) => {
@@ -316,22 +373,29 @@ export function deriveTreemap(data: DataBundle, spec: Spec): TreemapData {
   const meta = data.meta as Meta;
   const flowsWorld = data.flowsWorld as FlowsWorld;
   const flowsRegions = data.flowsRegions as FlowsRegions;
+  const flowsCountries = data.flowsCountries as FlowsCountries | undefined;
 
   const year = spec.singleYear ?? spec.yearRange[1];
   const yearIdx = meta.years.indexOf(year);
 
+  const geoLevel = spec.geoLevel ?? 'world';
   const geoFilter = spec.filters.geo ?? [];
   const matGrouping = spec.groupings?.material ?? 'category';
   const matFilter = spec.filters.material ?? [];
   const matSelections = resolveMaterialSelections(meta, matGrouping, matFilter);
 
+  const effectiveRegions =
+    geoLevel === 'country' && flowsCountries
+      ? countriesToRegionalShape(flowsCountries, geoFilter, 'DMC')
+      : flowsRegions.regions;
+
   // Sum the selected geographies' contribution for each material/group.
   const matByYear: Record<string, number[]> =
     geoFilter.length === 0
       ? flowsWorld.materials
-      : geoFilter.reduce<Record<string, number[]>>((acc, region) => {
-          const regionMats = flowsRegions.regions[region] ?? {};
-          for (const [m, arr] of Object.entries(regionMats)) {
+      : geoFilter.reduce<Record<string, number[]>>((acc, geo) => {
+          const geoMats = effectiveRegions[geo] ?? {};
+          for (const [m, arr] of Object.entries(geoMats)) {
             if (!acc[m]) acc[m] = new Array(meta.years.length).fill(0);
             for (let i = 0; i < arr.length; i++) acc[m][i] += arr[i] ?? 0;
           }
@@ -368,6 +432,18 @@ export function deriveScatter(data: DataBundle, spec: Spec): ScatterData {
   const flowsWorld = data.flowsWorld as FlowsWorld;
   const flowsRegions = data.flowsRegions as FlowsRegions;
   const gdpPop = data.gdpPop as GdpPop;
+
+  // Country level has no GDP/population yet, so scatter (which usually
+  // needs at least one normalized measure) is region-only for v1.
+  if ((spec.geoLevel ?? 'world') === 'country') {
+    return {
+      series: [],
+      xUnits: '',
+      yUnits: '',
+      xLabel: 'Country-level scatter requires GDP/pop data (coming in v2)',
+      yLabel: '',
+    };
+  }
 
   const xMeasure = spec.scatterX ?? 'per_gdp';
   const yMeasure = spec.measure;

@@ -157,6 +157,9 @@ export const materialsConfig: ExplorerConfig = {
 
   data: {
     eagerLayers,
-    // lazyLayers added in milestone 7 (country detail from R2).
+    lazyLayers: {
+      flowsCountries:
+        'https://pub-4152429430274d988725593fd52db3ae.r2.dev/materials/derived/flows-countries.json',
+    },
   },
 };

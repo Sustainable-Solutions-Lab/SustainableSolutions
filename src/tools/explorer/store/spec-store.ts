@@ -15,6 +15,7 @@ type SpecStore = {
   setScatterX: (measure: MeasureName) => void;
   setSingleYear: (year: number) => void;
   setYearRange: (range: [number, number]) => void;
+  setGeoLevel: (level: 'world' | 'region' | 'country') => void;
   setFilter: (dim: string, values: string[]) => void;
   toggleFilterValue: (dim: string, value: string) => void;
   setGrouping: (dim: string, grouping: string) => void;
@@ -53,6 +54,15 @@ export function createSpecStore(config: ExplorerConfig) {
     setScatterX: (scatterX) => get().setSpec((s) => ({ ...s, scatterX, preset: undefined })),
     setSingleYear: (singleYear) => get().setSpec((s) => ({ ...s, singleYear, preset: undefined })),
     setYearRange: (yearRange) => get().setSpec((s) => ({ ...s, yearRange, preset: undefined })),
+    setGeoLevel: (geoLevel) =>
+      get().setSpec((s) => ({
+        ...s,
+        geoLevel,
+        // Switching level invalidates the current filter — country names
+        // aren't valid region selections and vice versa.
+        filters: { ...s.filters, geo: [] },
+        preset: undefined,
+      })),
     setFilter: (dim, values) =>
       get().setSpec((s) => ({
         ...s,

@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Explorer from '../../tools/explorer/Explorer';
+import { materialsConfig } from '../../tools/materials/config';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+
+const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
+---
+
+<BaseLayout
+  title={tool?.title ?? materialsConfig.title}
+  description={tool?.summary ?? materialsConfig.description}
+  hideFooter={true}
+>
+  <section aria-label="Materials explorer">
+    <div class="materials-frame">
+      <Explorer client:only="react" config={materialsConfig} />
+    </div>
+  </section>
+</BaseLayout>
+
+<style is:global>
+  body:has(.materials-frame) { overflow: auto; }
+  .materials-frame {
+    width: 100%;
+    min-height: calc(100vh - 56px);
+    min-height: calc(100dvh - 56px);
+    background: var(--paper);
+  }
+</style>

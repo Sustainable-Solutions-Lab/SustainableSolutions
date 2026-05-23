@@ -12,7 +12,9 @@ type Props = {
   data: ScatterData;
 };
 
-const MARGIN = { top: 12, right: 16, bottom: 36, left: 64 };
+// Right margin is generous so labels next to the most-recent point have
+// room. left and bottom hold the axis labels with breathing room.
+const MARGIN = { top: 16, right: 72, bottom: 44, left: 72 };
 
 export default function ScatterChart({ data }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);

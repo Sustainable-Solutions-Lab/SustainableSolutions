@@ -111,7 +111,8 @@ const styles = `
     overflow: hidden;
   }
 
-  /* Fixed-width, full-height sidebar — same shape as the map tools */
+  /* Fixed-width, full-height sidebar — same shape as the map tools.
+     Shrinks slightly on narrow desktops so the chart pane keeps room. */
   .explorer-sidebar {
     flex: 0 0 280px;
     display: flex;
@@ -119,6 +120,9 @@ const styles = `
     background: var(--paper-2);
     border-right: 1px solid var(--rule);
     overflow: hidden;
+  }
+  @media (max-width: 1100px) {
+    .explorer-sidebar { flex-basis: 240px; }
   }
   .explorer-sidebar-header {
     padding: 14px 16px 12px;
@@ -146,14 +150,16 @@ const styles = `
     padding: 14px 16px 24px;
   }
 
-  /* Chart fills the remaining width with a little breathing room */
+  /* Chart fills the remaining width with comfortable breathing room.
+     clamp() shrinks padding on narrow screens so the chart still has
+     working space, but never below a usable minimum. */
   .explorer-chart-area {
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    padding: 24px 36px 28px;
+    padding: clamp(20px, 3vw, 40px) clamp(24px, 4vw, 56px) clamp(24px, 3vw, 40px);
   }
 
   /* Fallback states fill the whole frame */

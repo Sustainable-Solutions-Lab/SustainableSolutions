@@ -23,7 +23,7 @@ type Props = {
   }) => React.ReactNode;
 };
 
-const DEFAULT_MARGIN = { top: 12, right: 16, bottom: 28, left: 56 };
+const DEFAULT_MARGIN = { top: 16, right: 24, bottom: 32, left: 60 };
 
 export default function ChartFrame({
   data,

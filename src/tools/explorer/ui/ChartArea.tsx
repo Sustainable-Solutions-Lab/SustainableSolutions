@@ -2,13 +2,20 @@ import { useEffect } from 'react';
 import type { DataBundle, ExplorerConfig, Spec } from '../types';
 import { useSpecStoreHook } from '../store/context';
 import { useLazyLayer } from '../data/lazy-context';
-import { derive, deriveTreemap, deriveScatter, deriveChoropleth } from '../data/derive';
+import {
+  derive,
+  deriveTreemap,
+  deriveScatter,
+  deriveChoropleth,
+  deriveContour,
+} from '../data/derive';
 import LineChart from '../charts/LineChart';
 import AreaChart from '../charts/AreaChart';
 import BarChart from '../charts/BarChart';
 import TreemapChart from '../charts/TreemapChart';
 import ScatterChart from '../charts/ScatterChart';
 import Choropleth from '../charts/Choropleth';
+import ContourChart from '../charts/ContourChart';
 import Legend from '../charts/Legend';
 
 type Props = {
@@ -74,6 +81,12 @@ function ChartSwitch({
       if (derived.series.length === 0) return <EmptyState>No data for the current selection.</EmptyState>;
       return <ScatterChart data={derived} />;
     }
+    case 'contour': {
+      const derived = deriveContour(data, spec);
+      if (derived.series.length === 0)
+        return <EmptyState>No data for the current selection.</EmptyState>;
+      return <ContourChart data={derived} />;
+    }
     case 'choropleth': {
       if (!data.flowsCountries) {
         return (
@@ -109,9 +122,10 @@ function ChartHeader({ spec, config }: { spec: Spec; config: ExplorerConfig }) {
   let subtitle = '';
   if (spec.chart === 'treemap' || spec.chart === 'choropleth') {
     subtitle = `${spec.singleYear ?? spec.yearRange[1]} snapshot · ${measure?.label ?? spec.measure}`;
-  } else if (spec.chart === 'scatter') {
+  } else if (spec.chart === 'scatter' || spec.chart === 'contour') {
     const xMeasure = config.measures.find((m) => m.name === (spec.scatterX ?? 'per_gdp'));
-    subtitle = `${spec.yearRange[0]}–${spec.yearRange[1]} · ${xMeasure?.label ?? 'X'} vs ${measure?.label ?? 'Y'}`;
+    const op = spec.chart === 'contour' ? ` · ${spec.contourOp ?? 'product'} heatmap` : '';
+    subtitle = `${spec.yearRange[0]}–${spec.yearRange[1]} · ${xMeasure?.label ?? 'X'} vs ${measure?.label ?? 'Y'}${op}`;
   } else {
     subtitle = `${spec.yearRange[0]}–${spec.yearRange[1]} · ${measure?.label ?? spec.measure}`;
   }
@@ -125,7 +139,12 @@ function ChartHeader({ spec, config }: { spec: Spec; config: ExplorerConfig }) {
 function ChartFooter({ spec, data }: { spec: Spec; data: DataBundle }) {
   // Treemap legend is the rects themselves; scatter labels each series on
   // the chart already; choropleth has its own color-bar legend in-chart.
-  if (spec.chart === 'treemap' || spec.chart === 'scatter' || spec.chart === 'choropleth')
+  if (
+    spec.chart === 'treemap' ||
+    spec.chart === 'scatter' ||
+    spec.chart === 'choropleth' ||
+    spec.chart === 'contour'
+  )
     return null;
   const derived = derive(data, spec);
   if (derived.series.length === 0) return null;

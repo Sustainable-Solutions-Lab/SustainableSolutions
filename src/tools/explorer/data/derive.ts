@@ -67,6 +67,35 @@ export type ScatterData = {
   yLabel: string;
 };
 
+// ── Contour-shaped output ───────────────────────────────────────────────────
+
+export type ContourPoint = {
+  year: number;
+  x: number;
+  y: number;
+};
+
+export type ContourSeries = {
+  key: string;
+  label: string;
+  color: string;
+  points: ContourPoint[];
+};
+
+export type ContourData = {
+  series: ContourSeries[];
+  xUnits: string;
+  yUnits: string;
+  xLabel: string;
+  yLabel: string;
+  /** How the heatmap z value is derived from x and y. */
+  combineOp: 'product' | 'sum';
+  /** Human label for the derived z field, e.g. "Material per capita". */
+  zLabel: string;
+  /** Units string for z, e.g. "(kg/$1000) × ($/person)". */
+  zUnits: string;
+};
+
 // ── Choropleth-shaped output ────────────────────────────────────────────────
 
 export type ChoroplethData = {
@@ -500,6 +529,92 @@ function labelForMeasure(measure: string): string {
     case 'cumulative': return 'Cumulative material';
     default: return measure;
   }
+}
+
+// ── Contour derivation (phase plot with iso-curves) ────────────────────────
+//
+// Same input shape as deriveScatter: pairs of (x, y) per geography over the
+// year range. The chart side adds the iso-curve heatmap from a combine
+// function (product or sum) on top of x and y. We don't compute the
+// heatmap here — only the observed points and the labels needed to render
+// it sensibly.
+
+export function deriveContour(data: DataBundle, spec: Spec): ContourData {
+  const meta = data.meta as Meta;
+  const flowsWorld = data.flowsWorld as FlowsWorld;
+  const flowsRegions = data.flowsRegions as FlowsRegions;
+  const gdpPop = data.gdpPop as GdpPop;
+  const flowsCountries = data.flowsCountries as FlowsCountries | undefined;
+
+  const xMeasure = spec.scatterX ?? 'per_gdp';
+  const yMeasure = spec.measure;
+  const combineOp = spec.contourOp ?? 'product';
+
+  const [yStart, yEnd] = spec.yearRange;
+  const years = meta.years.filter((y) => y >= yStart && y <= yEnd);
+  const yearIndexes = years.map((y) => meta.years.indexOf(y));
+
+  const geoLevel = spec.geoLevel ?? 'world';
+  const geoFilter = spec.filters.geo ?? [];
+  const geos = geoFilter.length > 0 ? geoFilter : meta.regions;
+
+  const matFilter = spec.filters.material ?? [];
+  const matGrouping = spec.groupings?.material ?? 'category';
+  const matSelections = resolveMaterialSelections(meta, matGrouping, matFilter);
+
+  const countryRegional =
+    geoLevel === 'country' && flowsCountries
+      ? countriesToRegionalShape(flowsCountries, geos, 'DMC')
+      : null;
+
+  const series: ContourSeries[] = geos.map((geo, i) => {
+    const matByYear =
+      countryRegional?.[geo] ??
+      (geo === 'World' ? flowsWorld.materials : flowsRegions.regions[geo] ?? {});
+    const summed = sumMaterials(matByYear, matSelections, meta.years);
+    const xValues = applyMeasure(summed, geo, xMeasure, gdpPop, meta.years);
+    const yValues = applyMeasure(summed, geo, yMeasure, gdpPop, meta.years);
+    const points: ContourPoint[] = [];
+    for (let idx = 0; idx < years.length; idx++) {
+      const xV = xValues[yearIndexes[idx]];
+      const yV = yValues[yearIndexes[idx]];
+      if (xV != null && yV != null && Number.isFinite(xV) && Number.isFinite(yV)) {
+        points.push({ year: years[idx], x: xV, y: yV });
+      }
+    }
+    return {
+      key: geo,
+      label: geo,
+      color: colorFor('geo', geo, i),
+      points,
+    };
+  });
+
+  const xUnits = unitsFor(xMeasure);
+  const yUnits = unitsFor(yMeasure);
+  const xLabel = labelForMeasure(xMeasure);
+  const yLabel = labelForMeasure(yMeasure);
+  // Special-case the most useful framing — Mat/GDP × GDP/cap → Mat/cap —
+  // so the legend reads naturally rather than as "(kg/$1000) × ($/person)".
+  const isClassicProduct =
+    combineOp === 'product' && xMeasure === 'per_gdp' && yMeasure === 'per_capita';
+  const zLabel = isClassicProduct
+    ? 'Material per capita (derived)'
+    : `${xLabel} ${combineOp === 'product' ? '×' : '+'} ${yLabel}`;
+  const zUnits = isClassicProduct
+    ? '(kg/$1000) × ($/person)'
+    : `${xUnits} ${combineOp === 'product' ? '×' : '+'} ${yUnits}`;
+
+  return {
+    series,
+    xUnits,
+    yUnits,
+    xLabel,
+    yLabel,
+    combineOp,
+    zLabel,
+    zUnits,
+  };
 }
 
 // ── Choropleth derivation ───────────────────────────────────────────────────

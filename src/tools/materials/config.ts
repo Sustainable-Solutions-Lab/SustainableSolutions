@@ -166,6 +166,34 @@ export const materialsConfig: ExplorerConfig = {
         groupings: { material: 'group' },
       },
     },
+    {
+      id: 'decoupling-contour',
+      title: 'Decoupling contour — Mat/cap iso-lines',
+      blurb:
+        'Phase plot with constant-Mat/capita iso-lines (heatmap = Mat/GDP × GDP/cap). Region trajectories show how prosperity and intensity have co-moved.',
+      spec: {
+        chart: 'contour',
+        measure: 'per_capita',
+        scatterX: 'per_gdp',
+        contourOp: 'product',
+        yearRange: [1970, 2024],
+        filters: {
+          geo: [
+            'East Asia',
+            'Europe & Russia',
+            'Latin America',
+            'Middle East & North Africa',
+            'North America',
+            'Oceania',
+            'South Asia',
+            'Sub-Saharan Africa',
+          ],
+          material: [],
+          flow: [],
+        },
+        groupings: { material: 'group' },
+      },
+    },
   ],
 
   data: {

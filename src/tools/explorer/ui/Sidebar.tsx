@@ -38,11 +38,11 @@ export default function Sidebar({ config, meta, countries }: Props) {
         <ChartTypeToggle chartTypes={config.chartTypes} active={spec.chart} />
       </Section>
 
-      <Section title={spec.chart === 'scatter' ? 'Y measure' : 'Measure'}>
+      <Section title={spec.chart === 'scatter' || spec.chart === 'contour' ? 'Y measure' : 'Measure'}>
         <MeasurePicker config={config} active={spec.measure} field="measure" geoLevel={geoLevel} />
       </Section>
 
-      {spec.chart === 'scatter' && (
+      {(spec.chart === 'scatter' || spec.chart === 'contour') && (
         <Section title="X measure">
           <MeasurePicker
             config={config}
@@ -50,6 +50,12 @@ export default function Sidebar({ config, meta, countries }: Props) {
             field="scatterX"
             geoLevel={geoLevel}
           />
+        </Section>
+      )}
+
+      {spec.chart === 'contour' && (
+        <Section title="Heatmap field">
+          <ContourOpPicker active={spec.contourOp ?? 'product'} />
         </Section>
       )}
 
@@ -202,6 +208,34 @@ function MeasurePicker({
         </button>
       ))}
     </div>
+  );
+}
+
+function ContourOpPicker({ active }: { active: 'product' | 'sum' }) {
+  const useStore = useSpecStoreHook();
+  const setContourOp = useStore(
+    (s: { setContourOp: (op: 'product' | 'sum') => void }) => s.setContourOp,
+  );
+  return (
+    <>
+      <div className="explorer-toggle-row">
+        {(['product', 'sum'] as const).map((op) => (
+          <button
+            key={op}
+            type="button"
+            className={`explorer-toggle ${active === op ? 'is-active' : ''}`}
+            onClick={() => setContourOp(op)}
+          >
+            {op === 'product' ? 'x × y' : 'x + y'}
+          </button>
+        ))}
+      </div>
+      <p className="explorer-hint">
+        {active === 'product'
+          ? 'Heatmap shows the product of the two measures (e.g. Mat/GDP × GDP/cap = Mat/cap).'
+          : 'Heatmap shows the sum — only meaningful if both axes share units.'}
+      </p>
+    </>
   );
 }
 

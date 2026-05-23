@@ -14,6 +14,7 @@ type SpecStore = {
   setMeasure: (measure: MeasureName) => void;
   setScatterX: (measure: MeasureName) => void;
   setSingleYear: (year: number) => void;
+  setContourOp: (op: 'product' | 'sum') => void;
   setYearRange: (range: [number, number]) => void;
   setGeoLevel: (level: 'world' | 'region' | 'country') => void;
   setFilter: (dim: string, values: string[]) => void;
@@ -53,6 +54,8 @@ export function createSpecStore(config: ExplorerConfig) {
     setMeasure: (measure) => get().setSpec((s) => ({ ...s, measure, preset: undefined })),
     setScatterX: (scatterX) => get().setSpec((s) => ({ ...s, scatterX, preset: undefined })),
     setSingleYear: (singleYear) => get().setSpec((s) => ({ ...s, singleYear, preset: undefined })),
+    setContourOp: (contourOp: 'product' | 'sum') =>
+      get().setSpec((s) => ({ ...s, contourOp, preset: undefined })),
     setYearRange: (yearRange) => get().setSpec((s) => ({ ...s, yearRange, preset: undefined })),
     setGeoLevel: (geoLevel) =>
       get().setSpec((s) => ({

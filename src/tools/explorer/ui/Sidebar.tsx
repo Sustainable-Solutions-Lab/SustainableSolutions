@@ -1,4 +1,4 @@
-import type { ChartType, ExplorerConfig, MeasureName, Spec } from '../types';
+import type { ChartType, ExplorerConfig, MeasureName, PresetSpec, Spec } from '../types';
 import { useSpecStoreHook } from '../store/context';
 
 // Knob panel for the explorer. Reads the current spec from the per-Explorer
@@ -24,6 +24,12 @@ export default function Sidebar({ config, meta }: Props) {
 
   return (
     <div className="explorer-sidebar-inner">
+      {config.presets.length > 0 && (
+        <Section title="Presets">
+          <PresetList presets={config.presets} activeId={spec.preset} />
+        </Section>
+      )}
+
       <Section title="Chart">
         <ChartTypeToggle chartTypes={config.chartTypes} active={spec.chart} />
       </Section>
@@ -64,6 +70,30 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h3 className="explorer-section-title">{title}</h3>
       {children}
     </section>
+  );
+}
+
+// ── Preset list (was the top strip; now lives in the sidebar) ──────────────
+
+function PresetList({ presets, activeId }: { presets: PresetSpec[]; activeId?: string }) {
+  const useStore = useSpecStoreHook();
+  const loadPreset = useStore(
+    (s: { loadPreset: (spec: PresetSpec['spec']) => void }) => s.loadPreset,
+  );
+  return (
+    <div className="explorer-preset-list">
+      {presets.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          className={`explorer-preset-card ${activeId === p.id ? 'is-active' : ''}`}
+          onClick={() => loadPreset({ ...p.spec, preset: p.id })}
+        >
+          <span className="explorer-preset-title">{p.title}</span>
+          <span className="explorer-preset-blurb">{p.blurb}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 

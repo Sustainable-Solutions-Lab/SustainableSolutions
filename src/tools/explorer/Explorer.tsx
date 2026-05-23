@@ -5,7 +5,6 @@ import { createSpecStore } from './store/spec-store';
 import { SpecStoreProvider } from './store/context';
 import Sidebar from './ui/Sidebar';
 import ChartArea from './ui/ChartArea';
-import PresetStrip from './ui/PresetStrip';
 
 type Props = {
   config: ExplorerConfig;
@@ -38,10 +37,11 @@ export default function Explorer({ config }: Props) {
   return (
     <SpecStoreProvider store={useStore}>
       <div className="explorer">
-        <header className="explorer-header">
-          <p className="explorer-eyebrow">INTERACTIVE EXPLORER</p>
-          <h1 className="explorer-title">{config.title}</h1>
-          <p className="explorer-summary">{config.description}</p>
+        <header className="explorer-titlebar">
+          <h1 className="explorer-title" title={config.description}>
+            {config.title}
+          </h1>
+          <span className="explorer-eyebrow">INTERACTIVE EXPLORER</span>
         </header>
 
         {load.status === 'loading' && (
@@ -79,17 +79,14 @@ function ReadyView({ config, data }: { config: ExplorerConfig; data: DataBundle 
   }
 
   return (
-    <>
-      <PresetStrip presets={config.presets} />
-      <div className="explorer-layout">
-        <aside className="explorer-sidebar" aria-label="Explorer controls">
-          <Sidebar config={config} meta={meta} />
-        </aside>
-        <main className="explorer-chart-area" aria-label="Chart">
-          <ChartArea config={config} />
-        </main>
-      </div>
-    </>
+    <div className="explorer-layout">
+      <aside className="explorer-sidebar" aria-label="Explorer controls">
+        <Sidebar config={config} meta={meta} />
+      </aside>
+      <main className="explorer-chart-area" aria-label="Chart">
+        <ChartArea config={config} data={data} />
+      </main>
+    </div>
   );
 }
 
@@ -98,30 +95,33 @@ const styles = `
     display: flex;
     flex-direction: column;
     min-height: 100%;
-    padding: clamp(16px, 4vw, 48px);
+    padding: 12px clamp(12px, 2vw, 24px) 16px;
     color: var(--ink);
     background: var(--paper);
     font-family: var(--font-sans, Inter, system-ui, sans-serif);
   }
-  .explorer-header { max-width: 720px; margin-bottom: 24px; }
-  .explorer-eyebrow {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    color: var(--ink-3);
-    margin: 0 0 8px;
+  /* Compact one-row title bar. Description hides into the title's
+     browser tooltip; this keeps the chart pane above the fold. */
+  .explorer-titlebar {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
   }
   .explorer-title {
     font-family: var(--font-serif, 'Source Serif 4', Georgia, serif);
-    font-size: clamp(28px, 4vw, 41px);
-    line-height: 1.12;
-    margin: 0 0 12px;
-  }
-  .explorer-summary {
-    color: var(--ink-2);
-    font-size: 16px;
-    line-height: 1.5;
+    font-size: 19px;
+    line-height: 1.2;
     margin: 0;
+    color: var(--ink);
+  }
+  .explorer-eyebrow {
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
   }
   .explorer-state {
     padding: 24px;
@@ -138,49 +138,14 @@ const styles = `
     color: var(--ink-3);
   }
 
-  /* Preset strip */
-  .explorer-preset-strip {
-    display: flex;
-    gap: 12px;
-    overflow-x: auto;
-    margin-bottom: 24px;
-    padding-bottom: 4px;
-  }
-  .explorer-preset-card {
-    flex: 0 0 280px;
-    text-align: left;
-    padding: 12px 14px;
-    background: var(--paper-2);
-    border: 1px solid var(--rule);
-    color: var(--ink);
-    font-family: inherit;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    transition: border-color 0.1s, background 0.1s;
-  }
-  .explorer-preset-card:hover { border-color: var(--rule-strong); background: var(--paper-3); }
-  .explorer-preset-card.is-active {
-    border-color: var(--ink);
-    background: var(--paper);
-  }
-  .explorer-preset-title {
-    font-weight: 600;
-    font-size: 14px;
-  }
-  .explorer-preset-blurb {
-    font-size: 12px;
-    color: var(--ink-3);
-    line-height: 1.4;
-  }
-
-  /* Two-column layout */
+  /* Two-column layout — sidebar 260px, chart fills remaining width */
   .explorer-layout {
     display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 24px;
-    align-items: start;
+    grid-template-columns: 260px 1fr;
+    gap: 16px;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
   }
   @media (max-width: 800px) {
     .explorer-layout { grid-template-columns: 1fr; }
@@ -188,27 +153,56 @@ const styles = `
   .explorer-sidebar {
     border: 1px solid var(--rule);
     background: var(--paper-2);
-    padding: 16px;
-    position: sticky;
-    top: 76px;
-    max-height: calc(100vh - 96px);
+    padding: 12px;
     overflow-y: auto;
+    max-height: calc(100vh - 56px - 64px); /* site nav + titlebar + padding */
   }
   @media (max-width: 800px) {
-    .explorer-sidebar { position: static; max-height: none; }
+    .explorer-sidebar { max-height: none; }
   }
   .explorer-chart-area {
     border: 1px solid var(--rule);
     background: var(--paper-2);
-    min-height: 480px;
-    padding: 24px;
+    padding: 16px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   /* Sidebar sections */
   .explorer-sidebar-inner {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
+  }
+  .explorer-preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .explorer-preset-card {
+    text-align: left;
+    padding: 8px 10px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: border-color 0.1s, background 0.1s;
+  }
+  .explorer-preset-card:hover { border-color: var(--rule-strong); background: var(--paper-3); }
+  .explorer-preset-card.is-active {
+    border-color: var(--ink);
+    background: var(--paper-3);
+  }
+  .explorer-preset-title { font-weight: 600; font-size: 12px; }
+  .explorer-preset-blurb {
+    font-size: 11px;
+    color: var(--ink-3);
+    line-height: 1.4;
   }
   .explorer-section {
     display: flex;

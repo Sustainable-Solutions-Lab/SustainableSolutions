@@ -29,6 +29,44 @@ export type DerivedData = {
   years: number[];
 };
 
+// ── Treemap-shaped output ───────────────────────────────────────────────────
+
+export type TreemapSlice = {
+  key: string;
+  label: string;
+  color: string;
+  value: number;
+};
+
+export type TreemapData = {
+  year: number;
+  slices: TreemapSlice[];
+  units: string;
+};
+
+// ── Scatter (phase-plot) output ─────────────────────────────────────────────
+
+export type ScatterPoint = {
+  year: number;
+  x: number | null;
+  y: number | null;
+};
+
+export type ScatterSeries = {
+  key: string;
+  label: string;
+  color: string;
+  points: ScatterPoint[];
+};
+
+export type ScatterData = {
+  series: ScatterSeries[];
+  xUnits: string;
+  yUnits: string;
+  xLabel: string;
+  yLabel: string;
+};
+
 // ── Palettes (design-system Spectral + brand neutrals for geo) ──────────────
 
 // 11-step Spectral, used for materials/groups. Picked from CLAUDE.md.
@@ -264,5 +302,123 @@ function unitsFor(measure: string): string {
     case 'per_gdp': return 'kg / $1000';
     case 'cumulative': return 'Gt (cumulative)';
     default: return '';
+  }
+}
+
+// ── Treemap derivation ──────────────────────────────────────────────────────
+//
+// Single-year snapshot. One slice per material (or material group, depending
+// on spec.groupings.material). World by default; switches to a chosen
+// single region if exactly one is selected. Multi-region selection is
+// summed across selected regions.
+
+export function deriveTreemap(data: DataBundle, spec: Spec): TreemapData {
+  const meta = data.meta as Meta;
+  const flowsWorld = data.flowsWorld as FlowsWorld;
+  const flowsRegions = data.flowsRegions as FlowsRegions;
+
+  const year = spec.singleYear ?? spec.yearRange[1];
+  const yearIdx = meta.years.indexOf(year);
+
+  const geoFilter = spec.filters.geo ?? [];
+  const matGrouping = spec.groupings?.material ?? 'category';
+  const matFilter = spec.filters.material ?? [];
+  const matSelections = resolveMaterialSelections(meta, matGrouping, matFilter);
+
+  // Sum the selected geographies' contribution for each material/group.
+  const matByYear: Record<string, number[]> =
+    geoFilter.length === 0
+      ? flowsWorld.materials
+      : geoFilter.reduce<Record<string, number[]>>((acc, region) => {
+          const regionMats = flowsRegions.regions[region] ?? {};
+          for (const [m, arr] of Object.entries(regionMats)) {
+            if (!acc[m]) acc[m] = new Array(meta.years.length).fill(0);
+            for (let i = 0; i < arr.length; i++) acc[m][i] += arr[i] ?? 0;
+          }
+          return acc;
+        }, {});
+
+  const slices: TreemapSlice[] = matSelections.map((sel, i) => {
+    let v = 0;
+    for (const leaf of sel.leaves) {
+      const arr = matByYear[leaf];
+      if (arr && typeof arr[yearIdx] === 'number') v += arr[yearIdx];
+    }
+    return {
+      key: sel.key,
+      label: sel.label,
+      color: colorFor(matGrouping === 'group' ? 'group' : 'material', sel.key, i),
+      value: v,
+    };
+  });
+
+  return { year, slices, units: 'Mt' };
+}
+
+// ── Scatter derivation (phase plot) ─────────────────────────────────────────
+//
+// One series per geography (defaulting to all 8 regions if no filter set),
+// with (x, y) pairs over time. x and y are independent measures resolved
+// the same way as time-series measures — they can be absolute, per-capita,
+// per-GDP, etc. The chart connects points chronologically to show a
+// trajectory in (x, y) space.
+
+export function deriveScatter(data: DataBundle, spec: Spec): ScatterData {
+  const meta = data.meta as Meta;
+  const flowsWorld = data.flowsWorld as FlowsWorld;
+  const flowsRegions = data.flowsRegions as FlowsRegions;
+  const gdpPop = data.gdpPop as GdpPop;
+
+  const xMeasure = spec.scatterX ?? 'per_gdp';
+  const yMeasure = spec.measure;
+
+  const [yStart, yEnd] = spec.yearRange;
+  const years = meta.years.filter((y) => y >= yStart && y <= yEnd);
+  const yearIndexes = years.map((y) => meta.years.indexOf(y));
+
+  const geoFilter = spec.filters.geo ?? [];
+  // Default to all 8 regions when no specific filter — a phase plot of
+  // only the world isn't very informative.
+  const geos = geoFilter.length > 0 ? geoFilter : meta.regions;
+
+  const matFilter = spec.filters.material ?? [];
+  const matGrouping = spec.groupings?.material ?? 'category';
+  const matSelections = resolveMaterialSelections(meta, matGrouping, matFilter);
+
+  const series: ScatterSeries[] = geos.map((geo, i) => {
+    const matByYear =
+      geo === 'World' ? flowsWorld.materials : flowsRegions.regions[geo] ?? {};
+    const summed = sumMaterials(matByYear, matSelections, meta.years);
+    const xValues = applyMeasure(summed, geo, xMeasure, gdpPop, meta.years);
+    const yValues = applyMeasure(summed, geo, yMeasure, gdpPop, meta.years);
+    const points: ScatterPoint[] = years.map((y, idx) => ({
+      year: y,
+      x: xValues[yearIndexes[idx]] ?? null,
+      y: yValues[yearIndexes[idx]] ?? null,
+    }));
+    return {
+      key: geo,
+      label: geo,
+      color: colorFor('geo', geo, i),
+      points,
+    };
+  });
+
+  return {
+    series,
+    xUnits: unitsFor(xMeasure),
+    yUnits: unitsFor(yMeasure),
+    xLabel: labelForMeasure(xMeasure),
+    yLabel: labelForMeasure(yMeasure),
+  };
+}
+
+function labelForMeasure(measure: string): string {
+  switch (measure) {
+    case 'absolute': return 'Material (Mt)';
+    case 'per_capita': return 'Material per capita';
+    case 'per_gdp': return 'Material per GDP';
+    case 'cumulative': return 'Cumulative material';
+    default: return measure;
   }
 }

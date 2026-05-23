@@ -146,14 +146,14 @@ const styles = `
     padding: 14px 16px 24px;
   }
 
-  /* Chart fills the remaining width edge-to-edge — no inner border */
+  /* Chart fills the remaining width with a little breathing room */
   .explorer-chart-area {
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    padding: 16px 24px;
+    padding: 24px 36px 28px;
   }
 
   /* Fallback states fill the whole frame */

@@ -114,6 +114,45 @@ export const materialsConfig: ExplorerConfig = {
         groupings: { material: 'group' },
       },
     },
+    {
+      id: 'composition-2024',
+      title: '2024 composition treemap',
+      blurb: 'World material consumption in 2024, broken into the 6 material groups.',
+      spec: {
+        chart: 'treemap',
+        measure: 'absolute',
+        yearRange: [1970, 2024],
+        singleYear: 2024,
+        filters: { geo: [], material: [], flow: [] },
+        groupings: { material: 'group' },
+      },
+    },
+    {
+      id: 'phase-plot',
+      title: 'Phase plot — material intensity vs prosperity',
+      blurb: 'Mat/GDP on x, GDP/cap on y, 1970–2024 trajectories for each region.',
+      spec: {
+        chart: 'scatter',
+        measure: 'per_capita',
+        scatterX: 'per_gdp',
+        yearRange: [1970, 2024],
+        filters: {
+          geo: [
+            'East Asia',
+            'Europe & Russia',
+            'Latin America',
+            'Middle East & North Africa',
+            'North America',
+            'Oceania',
+            'South Asia',
+            'Sub-Saharan Africa',
+          ],
+          material: [],
+          flow: [],
+        },
+        groupings: { material: 'group' },
+      },
+    },
   ],
 
   data: {

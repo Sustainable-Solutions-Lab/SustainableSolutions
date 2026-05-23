@@ -34,9 +34,29 @@ export default function Sidebar({ config, meta }: Props) {
         <ChartTypeToggle chartTypes={config.chartTypes} active={spec.chart} />
       </Section>
 
-      <Section title="Measure">
-        <MeasurePicker config={config} active={spec.measure} />
+      <Section title={spec.chart === 'scatter' ? 'Y measure' : 'Measure'}>
+        <MeasurePicker config={config} active={spec.measure} field="measure" />
       </Section>
+
+      {spec.chart === 'scatter' && (
+        <Section title="X measure">
+          <MeasurePicker
+            config={config}
+            active={spec.scatterX ?? 'per_gdp'}
+            field="scatterX"
+          />
+        </Section>
+      )}
+
+      {spec.chart === 'treemap' && (
+        <Section title="Year">
+          <SingleYearPicker
+            min={meta.years[0]}
+            max={meta.years[meta.years.length - 1]}
+            value={spec.singleYear ?? meta.years[meta.years.length - 1]}
+          />
+        </Section>
+      )}
 
       <Section title="Geography">
         <GeoPicker regions={meta.regions} selected={spec.filters.geo ?? []} />
@@ -130,9 +150,19 @@ function ChartTypeToggle({ chartTypes, active }: { chartTypes: ChartType[]; acti
   );
 }
 
-function MeasurePicker({ config, active }: { config: ExplorerConfig; active: MeasureName }) {
+function MeasurePicker({
+  config,
+  active,
+  field,
+}: {
+  config: ExplorerConfig;
+  active: MeasureName;
+  field: 'measure' | 'scatterX';
+}) {
   const useStore = useSpecStoreHook();
   const setMeasure = useStore((s: { setMeasure: (m: MeasureName) => void }) => s.setMeasure);
+  const setScatterX = useStore((s: { setScatterX: (m: MeasureName) => void }) => s.setScatterX);
+  const setter = field === 'scatterX' ? setScatterX : setMeasure;
   return (
     <div className="explorer-chip-group" role="radiogroup">
       {config.measures.map((m) => (
@@ -141,13 +171,39 @@ function MeasurePicker({ config, active }: { config: ExplorerConfig; active: Mea
           role="radio"
           aria-checked={m.name === active}
           className={`explorer-chip ${m.name === active ? 'is-active' : ''}`}
-          onClick={() => setMeasure(m.name)}
+          onClick={() => setter(m.name)}
           type="button"
           title={m.units}
         >
           {m.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+function SingleYearPicker({ min, max, value }: { min: number; max: number; value: number }) {
+  const useStore = useSpecStoreHook();
+  const setSingleYear = useStore((s: { setSingleYear: (y: number) => void }) => s.setSingleYear);
+  return (
+    <div className="explorer-year-range">
+      <div className="explorer-year-readout">
+        <span>{value}</span>
+      </div>
+      <div className="explorer-range-track">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          value={value}
+          onChange={(e) => setSingleYear(Number(e.target.value))}
+          aria-label="Year"
+        />
+      </div>
+      <div className="explorer-year-bounds">
+        <span>{min}</span>
+        <span>{max}</span>
+      </div>
     </div>
   );
 }

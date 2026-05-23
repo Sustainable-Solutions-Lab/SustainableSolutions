@@ -12,6 +12,8 @@ type SpecStore = {
   setSpec: (updater: Spec | ((prev: Spec) => Spec)) => void;
   setChart: (chart: ChartType) => void;
   setMeasure: (measure: MeasureName) => void;
+  setScatterX: (measure: MeasureName) => void;
+  setSingleYear: (year: number) => void;
   setYearRange: (range: [number, number]) => void;
   setFilter: (dim: string, values: string[]) => void;
   toggleFilterValue: (dim: string, value: string) => void;
@@ -48,6 +50,8 @@ export function createSpecStore(config: ExplorerConfig) {
 
     setChart: (chart) => get().setSpec((s) => ({ ...s, chart, preset: undefined })),
     setMeasure: (measure) => get().setSpec((s) => ({ ...s, measure, preset: undefined })),
+    setScatterX: (scatterX) => get().setSpec((s) => ({ ...s, scatterX, preset: undefined })),
+    setSingleYear: (singleYear) => get().setSpec((s) => ({ ...s, singleYear, preset: undefined })),
     setYearRange: (yearRange) => get().setSpec((s) => ({ ...s, yearRange, preset: undefined })),
     setFilter: (dim, values) =>
       get().setSpec((s) => ({

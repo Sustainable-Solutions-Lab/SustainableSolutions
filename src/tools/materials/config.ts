@@ -48,8 +48,73 @@ export const materialsConfig: ExplorerConfig = {
 
   chartTypes: ['line', 'area', 'bar', 'treemap', 'choropleth', 'scatter', 'contour'],
 
-  // Presets fill in as charts arrive. Empty for milestone 3.
-  presets: [],
+  // A few placeholder presets to exercise the URL-load path. The full
+  // preset library (8+ entries from EXPLORER_TOOLS_PLAN.md §5) fills in
+  // as charts arrive in milestones 5+.
+  presets: [
+    {
+      id: 'global-flow',
+      title: 'Global material flow over time',
+      blurb: 'Stacked area, world, all 22 materials → 6 groups, 1970–2024.',
+      spec: {
+        chart: 'area',
+        measure: 'absolute',
+        yearRange: [1970, 2024],
+        filters: { geo: [], material: [], flow: [] },
+        groupings: { material: 'group' },
+      },
+    },
+    {
+      id: 'per-capita-regions',
+      title: 'Per-capita comparison across regions',
+      blurb: 'Multi-line, 8 regions, all materials summed, per capita, 1970–2024.',
+      spec: {
+        chart: 'line',
+        measure: 'per_capita',
+        yearRange: [1970, 2024],
+        filters: {
+          geo: [
+            'East Asia',
+            'Europe & Russia',
+            'Latin America',
+            'Middle East & North Africa',
+            'North America',
+            'Oceania',
+            'South Asia',
+            'Sub-Saharan Africa',
+          ],
+          material: [],
+          flow: [],
+        },
+        groupings: { material: 'group' },
+      },
+    },
+    {
+      id: 'decoupling',
+      title: 'Decoupling — material intensity over time',
+      blurb: 'Per-GDP material intensity for 8 regions, 1970–2024.',
+      spec: {
+        chart: 'line',
+        measure: 'per_gdp',
+        yearRange: [1970, 2024],
+        filters: {
+          geo: [
+            'East Asia',
+            'Europe & Russia',
+            'Latin America',
+            'Middle East & North Africa',
+            'North America',
+            'Oceania',
+            'South Asia',
+            'Sub-Saharan Africa',
+          ],
+          material: [],
+          flow: [],
+        },
+        groupings: { material: 'group' },
+      },
+    },
+  ],
 
   data: {
     eagerLayers,

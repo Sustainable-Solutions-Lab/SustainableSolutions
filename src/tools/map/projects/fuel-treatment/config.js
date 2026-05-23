@@ -518,14 +518,14 @@ const config = {
     // Per-ZIP polygon GeoJSON files (one per California ZIP) live at this
     // R2 prefix. Built locally with scripts/build-ca-zip-polygons.js, then
     // uploaded to R2. A 404 on a ZIP means it's outside California.
-    zipsBaseUrl: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/zips/',
+    zipsBaseUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/firemap/zips/',
   },
 
   // ── Data ─────────────────────────────────────────────────────────────────
   // Replace with the Cloudflare R2 URL once tiles are built:
   //   python scripts/build_tiles.py --input data.csv --output fuel-treatment.pmtiles
   //   # upload to R2, then:
-  tilesUrl: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/fuel-treatment.pmtiles',
+  tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/firemap/fuel-treatment.pmtiles',
   methodsPath: '/projects/fuel-treatment/methods',
 }
 

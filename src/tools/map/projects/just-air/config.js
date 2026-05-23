@@ -332,7 +332,7 @@ const config = {
   // (use-just-air-layers.js) adds one circle layer per scales[] entry,
   // filtered to that scale value, with the listed zoom band controlling
   // visibility. Bands overlap by 1 zoom step so transitions cross-fade.
-  tilesUrl: 'https://pub-9500e4b2ab2d433e9764e9ffc95b119c.r2.dev/just-air.pmtiles',
+  tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/just-air/just-air.pmtiles',
   sourceLayer: 'just-air',
   // Disjoint zoom bands enforce "one circle size per area at any zoom".
   // The 9 km layer has no maxZoom because outside the 15 metro bboxes

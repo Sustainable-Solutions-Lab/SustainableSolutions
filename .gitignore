@@ -20,6 +20,9 @@ design-system/
 design-system.raw
 design-system.bin
 
+# planning docs (kept locally, not in git)
+EXPLORER_TOOLS_PLAN.md
+
 # OS
 .DS_Store
 

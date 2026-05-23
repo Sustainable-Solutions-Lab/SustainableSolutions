@@ -179,17 +179,21 @@ const styles = `
     margin: 0;
   }
   .explorer-sidebar-scroll {
-    flex: 1 1 auto;
+    flex: 1 1 0;
+    min-height: 0;
     overflow-y: auto;
     padding: 14px 16px 24px;
   }
 
   /* Chart fills the remaining width with comfortable breathing room.
      clamp() shrinks padding on narrow screens so the chart still has
-     working space, but never below a usable minimum. */
+     working space, but never below a usable minimum.
+     flex: 1 (= 1 1 0) + min-height: 0 lets the chart shrink to fit the
+     viewport instead of pushing the page taller than the frame. */
   .explorer-chart-area {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-width: 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -220,35 +224,19 @@ const styles = `
     flex-direction: column;
     gap: 16px;
   }
-  .explorer-preset-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .explorer-preset-card {
-    text-align: left;
-    padding: 8px 10px;
+  .explorer-preset-select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--ink);
     background: var(--paper);
     border: 1px solid var(--rule);
-    color: var(--ink);
-    font-family: inherit;
+    border-radius: 2px;
     cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    transition: border-color 0.1s, background 0.1s;
   }
-  .explorer-preset-card:hover { border-color: var(--rule-strong); background: var(--paper-3); }
-  .explorer-preset-card.is-active {
-    border-color: var(--ink);
-    background: var(--paper-3);
-  }
-  .explorer-preset-title { font-weight: 600; font-size: 12px; }
-  .explorer-preset-blurb {
-    font-size: 11px;
-    color: var(--ink-3);
-    line-height: 1.4;
-  }
+  .explorer-preset-select:focus { outline: none; border-color: var(--ink); }
   .explorer-section {
     display: flex;
     flex-direction: column;

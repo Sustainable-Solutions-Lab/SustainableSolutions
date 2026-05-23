@@ -29,8 +29,8 @@ export default function Sidebar({ config, meta, countries }: Props) {
   return (
     <div className="explorer-sidebar-inner">
       {config.presets.length > 0 && (
-        <Section title="Presets">
-          <PresetList presets={config.presets} activeId={spec.preset} />
+        <Section title="Preset">
+          <PresetSelect presets={config.presets} activeId={spec.preset} />
         </Section>
       )}
 
@@ -105,27 +105,35 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-// ── Preset list (was the top strip; now lives in the sidebar) ──────────────
+// ── Preset selector (dropdown — keeps the sidebar compact) ────────────────
 
-function PresetList({ presets, activeId }: { presets: PresetSpec[]; activeId?: string }) {
+function PresetSelect({ presets, activeId }: { presets: PresetSpec[]; activeId?: string }) {
   const useStore = useSpecStoreHook();
   const loadPreset = useStore(
     (s: { loadPreset: (spec: PresetSpec['spec']) => void }) => s.loadPreset,
   );
+  const active = presets.find((p) => p.id === activeId);
   return (
-    <div className="explorer-preset-list">
-      {presets.map((p) => (
-        <button
-          key={p.id}
-          type="button"
-          className={`explorer-preset-card ${activeId === p.id ? 'is-active' : ''}`}
-          onClick={() => loadPreset({ ...p.spec, preset: p.id })}
-        >
-          <span className="explorer-preset-title">{p.title}</span>
-          <span className="explorer-preset-blurb">{p.blurb}</span>
-        </button>
-      ))}
-    </div>
+    <>
+      <select
+        className="explorer-preset-select"
+        value={activeId ?? ''}
+        onChange={(e) => {
+          const next = presets.find((p) => p.id === e.target.value);
+          if (next) loadPreset({ ...next.spec, preset: next.id });
+        }}
+      >
+        <option value="" disabled>
+          {activeId ? '— custom (modified) —' : 'Pick a starting view…'}
+        </option>
+        {presets.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.title}
+          </option>
+        ))}
+      </select>
+      {active && <p className="explorer-hint">{active.blurb}</p>}
+    </>
   );
 }
 

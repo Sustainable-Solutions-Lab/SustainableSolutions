@@ -129,6 +129,7 @@ const styles = `
     height: 100%;
     min-height: 0;
     gap: 8px;
+    overflow: hidden;
   }
   .explorer-chart-header { flex: 0 0 auto; }
   .explorer-chart-subtitle {
@@ -139,9 +140,10 @@ const styles = `
     margin: 0;
   }
   .explorer-chart-body {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-height: 0;
     display: flex;
+    overflow: hidden;
   }
   .explorer-chart-empty {
     flex: 1;

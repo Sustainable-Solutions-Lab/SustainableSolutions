@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { scaleLinear, type ScaleLinear } from 'd3-scale';
 import type { DerivedData } from '../data/derive';
+import Tooltip from '../ui/Tooltip';
 
 // Shared wrapper for line / area / bar charts. Handles responsive sizing,
 // margins, x/y scales, axes, and the y-units label. Children render the
@@ -15,6 +16,8 @@ type Props = {
   yDomain?: [number, number];
   /** Force y axis to start at zero (default true). */
   zeroBased?: boolean;
+  /** Enable the shared year-cursor hover overlay (line/area/bar). */
+  enableHover?: boolean;
   children: (ctx: {
     xScale: ScaleLinear<number, number>;
     yScale: ScaleLinear<number, number>;
@@ -31,10 +34,16 @@ export default function ChartFrame({
   margin = DEFAULT_MARGIN,
   yDomain,
   zeroBased = true,
+  enableHover = false,
   children,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 800, height: 400 });
+  const [hover, setHover] = useState<{
+    yearIdx: number;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -115,11 +124,87 @@ export default function ChartFrame({
           </text>
 
           {children({ xScale, yScale, innerWidth, innerHeight })}
+
+          {/* Year-cursor overlay: vertical guide + capture rect. Renders
+              last so it sits above the chart marks. */}
+          {enableHover && hover && (
+            <line
+              x1={xScale(data.years[hover.yearIdx] ?? 0)}
+              x2={xScale(data.years[hover.yearIdx] ?? 0)}
+              y1={0}
+              y2={innerHeight}
+              stroke="var(--ink-3)"
+              strokeDasharray="2 3"
+              strokeWidth={1}
+              pointerEvents="none"
+            />
+          )}
+          {enableHover && (
+            <rect
+              x={0}
+              y={0}
+              width={innerWidth}
+              height={innerHeight}
+              fill="transparent"
+              onMouseMove={(e) => {
+                const ct = (e.currentTarget as SVGGraphicsElement).getBoundingClientRect();
+                const xPx = e.clientX - ct.left;
+                const yearF = xScale.invert(xPx);
+                let nearest = 0;
+                let bestD = Infinity;
+                for (let i = 0; i < data.years.length; i++) {
+                  const d = Math.abs(data.years[i] - yearF);
+                  if (d < bestD) { bestD = d; nearest = i; }
+                }
+                // Mouse position relative to the chart-frame container (so
+                // the Tooltip positions correctly with absolute layout).
+                const frame = containerRef.current?.getBoundingClientRect();
+                setHover({
+                  yearIdx: nearest,
+                  mouseX: e.clientX - (frame?.left ?? 0),
+                  mouseY: e.clientY - (frame?.top ?? 0),
+                });
+              }}
+              onMouseLeave={() => setHover(null)}
+            />
+          )}
         </g>
       </svg>
+
+      {/* Tooltip — DOM sibling of the SVG, positioned by the parent's
+          relative layout. */}
+      {enableHover && hover && (
+        <Tooltip visible x={hover.mouseX} y={hover.mouseY}>
+          <div className="tt-title">{data.years[hover.yearIdx]}</div>
+          {data.series.map((s) => {
+            const v = s.points[hover.yearIdx]?.value;
+            return (
+              <div className="tt-row" key={s.key}>
+                <span>
+                  <span className="tt-swatch" style={{ background: s.color }} />
+                  {s.label}
+                </span>
+                <span>
+                  {v == null ? '—' : formatVal(v)} {data.units}
+                </span>
+              </div>
+            );
+          })}
+        </Tooltip>
+      )}
+
       <style>{frameStyles}</style>
     </div>
   );
+}
+
+function formatVal(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000) return (v / 1_000_000).toFixed(2) + 'M';
+  if (abs >= 1_000) return (v / 1_000).toFixed(2) + 'k';
+  if (abs >= 100) return v.toFixed(0);
+  if (abs >= 1) return v.toFixed(2);
+  return v.toPrecision(3);
 }
 
 // Tick formatter — large values get k/M suffixes; smaller get fixed precision.

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { hierarchy, treemap, type HierarchyRectangularNode } from 'd3-hierarchy';
 import type { TreemapData, TreemapSlice } from '../data/derive';
+import Tooltip from '../ui/Tooltip';
 
 // Squarified treemap. One rect per slice, sized by value, colored by the
 // slice's pre-computed color. Labels render inside rects when there's
@@ -15,6 +16,7 @@ type Node = { name: string; value?: number; children?: Node[]; slice?: TreemapSl
 export default function TreemapChart({ data }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ w: 800, h: 400 });
+  const [hover, setHover] = useState<{ slice: TreemapSlice; x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -44,6 +46,7 @@ export default function TreemapChart({ data }: Props) {
     .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
   treemap<Node>().size([size.w, size.h]).padding(2).round(true)(h as HierarchyRectangularNode<Node>);
   const leaves = (h as HierarchyRectangularNode<Node>).leaves();
+  const total = leaves.reduce((acc, l) => acc + (l.data.slice?.value ?? 0), 0);
 
   return (
     <div className="chart-frame" ref={ref}>
@@ -58,13 +61,31 @@ export default function TreemapChart({ data }: Props) {
           const showLabel = w >= 64 && ht >= 24;
           return (
             <g key={`${slice.key}-${i}`}>
-              <rect x={x} y={y} width={w} height={ht} fill={slice.color} stroke="var(--paper-2)" strokeWidth={1} />
+              <rect
+                x={x}
+                y={y}
+                width={w}
+                height={ht}
+                fill={slice.color}
+                stroke="var(--paper-2)"
+                strokeWidth={1}
+                onMouseMove={(e) => {
+                  const frame = ref.current?.getBoundingClientRect();
+                  setHover({
+                    slice,
+                    x: e.clientX - (frame?.left ?? 0),
+                    y: e.clientY - (frame?.top ?? 0),
+                  });
+                }}
+                onMouseLeave={() => setHover(null)}
+              />
               {showLabel && (
                 <text
                   x={x + 6}
                   y={y + 14}
                   className="chart-treemap-label"
                   style={{ fill: contrastInk(slice.color) }}
+                  pointerEvents="none"
                 >
                   {slice.label}
                 </text>
@@ -75,6 +96,7 @@ export default function TreemapChart({ data }: Props) {
                   y={y + 28}
                   className="chart-treemap-value"
                   style={{ fill: contrastInk(slice.color) }}
+                  pointerEvents="none"
                 >
                   {formatMt(slice.value)} Mt
                 </text>
@@ -83,6 +105,22 @@ export default function TreemapChart({ data }: Props) {
           );
         })}
       </svg>
+      {hover && (
+        <Tooltip visible x={hover.x} y={hover.y}>
+          <div className="tt-title">
+            <span className="tt-swatch" style={{ background: hover.slice.color }} />
+            {hover.slice.label}
+          </div>
+          <div className="tt-row">
+            <span>Value</span>
+            <span>{formatMt(hover.slice.value)} {data.units}</span>
+          </div>
+          <div className="tt-row">
+            <span>Share</span>
+            <span>{total > 0 ? ((hover.slice.value / total) * 100).toFixed(1) : '0'}%</span>
+          </div>
+        </Tooltip>
+      )}
       <style>{styles}</style>
     </div>
   );

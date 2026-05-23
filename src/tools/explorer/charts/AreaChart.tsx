@@ -39,7 +39,7 @@ export default function AreaChart({ data }: Props) {
   void keys;
 
   return (
-    <ChartFrame data={data} yDomain={[0, stackMax]}>
+    <ChartFrame data={data} yDomain={[0, stackMax]} enableHover>
       {({ xScale, yScale }) => {
         const gen = d3Area<{ data: Row; 0: number; 1: number }>()
           .x((d) => xScale(d.data.year))

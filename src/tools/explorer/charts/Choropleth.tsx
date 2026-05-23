@@ -6,6 +6,7 @@ import { feature } from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import type { Feature, Geometry } from 'geojson';
 import type { ChoroplethData } from '../data/derive';
+import Tooltip from '../ui/Tooltip';
 
 // World choropleth using Natural Earth (110m) boundaries augmented at build
 // time with UNEP_name on each country geometry. Color scale: sequential
@@ -26,6 +27,13 @@ export default function Choropleth({ data }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ w: 800, h: 500 });
   const [topo, setTopo] = useState<Topology | null>(null);
+  const [hover, setHover] = useState<{
+    name: string;
+    unep: string | null;
+    value: number | null;
+    x: number;
+    y: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -97,7 +105,8 @@ export default function Choropleth({ data }: Props) {
             />
           )}
           {features.map((feat, i) => {
-            const unep = (feat.properties as CountryProps | undefined)?.unep_name;
+            const props = feat.properties as CountryProps | undefined;
+            const unep = props?.unep_name ?? null;
             const value = unep ? data.byCountry[unep] : undefined;
             const fill =
               value != null && color ? color(value) : 'var(--paper-3)';
@@ -108,6 +117,17 @@ export default function Choropleth({ data }: Props) {
                 fill={fill}
                 stroke="var(--paper-2)"
                 strokeWidth={0.4}
+                onMouseMove={(e) => {
+                  const frame = ref.current?.getBoundingClientRect();
+                  setHover({
+                    name: props?.name ?? unep ?? '—',
+                    unep,
+                    value: value ?? null,
+                    x: e.clientX - (frame?.left ?? 0),
+                    y: e.clientY - (frame?.top ?? 0),
+                  });
+                }}
+                onMouseLeave={() => setHover(null)}
               />
             );
           })}
@@ -125,6 +145,17 @@ export default function Choropleth({ data }: Props) {
           />
         )}
       </svg>
+      {hover && (
+        <Tooltip visible x={hover.x} y={hover.y}>
+          <div className="tt-title">{hover.unep ?? hover.name}</div>
+          <div className="tt-row">
+            <span>Value</span>
+            <span>
+              {hover.value == null ? 'no data' : `${formatLegend(hover.value)} ${data.units}`}
+            </span>
+          </div>
+        </Tooltip>
+      )}
     </div>
   );
 }

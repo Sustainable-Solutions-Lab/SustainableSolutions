@@ -4,6 +4,7 @@ import { interpolateYlOrRd } from 'd3-scale-chromatic';
 import { contours as d3contours } from 'd3-contour';
 import { line as d3Line } from 'd3-shape';
 import type { ContourData, ContourPoint } from '../data/derive';
+import Tooltip from '../ui/Tooltip';
 
 // Two-measure phase plot with an iso-curve heatmap underneath. The
 // heatmap field z(x, y) = combineOp(x, y); contour bands fill the plane
@@ -22,6 +23,13 @@ const N_BANDS = 9; // number of contour bands
 export default function ContourChart({ data }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ w: 800, h: 480 });
+  const [hover, setHover] = useState<{
+    series: string;
+    color: string;
+    point: ContourPoint;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -200,7 +208,27 @@ export default function ContourChart({ data }: Props) {
                   opacity={0.55}
                 />
                 {s.points.map((p: ContourPoint) => (
-                  <circle key={p.year} cx={xScale(p.x)} cy={yScale(p.y)} r={1.5} fill={s.color} />
+                  <circle
+                    key={`hit-${p.year}`}
+                    cx={xScale(p.x)}
+                    cy={yScale(p.y)}
+                    r={5}
+                    fill="transparent"
+                    onMouseEnter={(e) => {
+                      const frame = ref.current?.getBoundingClientRect();
+                      setHover({
+                        series: s.label,
+                        color: s.color,
+                        point: p,
+                        mouseX: e.clientX - (frame?.left ?? 0),
+                        mouseY: e.clientY - (frame?.top ?? 0),
+                      });
+                    }}
+                    onMouseLeave={() => setHover(null)}
+                  />
+                ))}
+                {s.points.map((p: ContourPoint) => (
+                  <circle key={p.year} cx={xScale(p.x)} cy={yScale(p.y)} r={1.5} fill={s.color} pointerEvents="none" />
                 ))}
                 {last && (
                   <g>
@@ -232,8 +260,41 @@ export default function ContourChart({ data }: Props) {
           </text>
         </g>
       </svg>
+      {hover && (
+        <Tooltip visible x={hover.mouseX} y={hover.mouseY}>
+          <div className="tt-title">
+            <span className="tt-swatch" style={{ background: hover.color }} />
+            {hover.series} · {hover.point.year}
+          </div>
+          <div className="tt-row">
+            <span>X ({data.xUnits})</span>
+            <span>{formatVal(hover.point.x)}</span>
+          </div>
+          <div className="tt-row">
+            <span>Y ({data.yUnits})</span>
+            <span>{formatVal(hover.point.y)}</span>
+          </div>
+          <div className="tt-row">
+            <span>z = x {data.combineOp === 'product' ? '×' : '+'} y</span>
+            <span>
+              {formatVal(
+                data.combineOp === 'product'
+                  ? hover.point.x * hover.point.y
+                  : hover.point.x + hover.point.y,
+              )}
+            </span>
+          </div>
+        </Tooltip>
+      )}
     </div>
   );
+}
+
+function formatVal(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1_000) return (v / 1_000).toFixed(2) + 'k';
+  if (abs >= 1) return v.toFixed(2);
+  return v.toPrecision(3);
 }
 
 // d3-contour returns MultiPolygon-style coordinates: outer rings + holes.

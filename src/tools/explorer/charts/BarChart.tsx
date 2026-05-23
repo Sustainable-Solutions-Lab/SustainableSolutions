@@ -18,7 +18,7 @@ export default function BarChart({ data }: Props) {
   );
 
   return (
-    <ChartFrame data={data}>
+    <ChartFrame data={data} enableHover>
       {({ xScale, yScale, innerWidth, innerHeight }) => {
           // Compute pixel-space band width based on the year spacing the
           // linear xScale provides. We don't reuse yearBand directly for

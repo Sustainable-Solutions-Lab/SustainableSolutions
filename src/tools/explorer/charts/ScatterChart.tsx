@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { scaleLinear } from 'd3-scale';
 import { line as d3Line } from 'd3-shape';
 import type { ScatterData, ScatterPoint } from '../data/derive';
+import Tooltip from '../ui/Tooltip';
 
 // Phase plot: each series is a trajectory through (x, y) measure space
 // over the year range. Connecting lines show direction of motion; small
@@ -19,6 +20,13 @@ const MARGIN = { top: 16, right: 72, bottom: 44, left: 72 };
 export default function ScatterChart({ data }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ w: 800, h: 400 });
+  const [hover, setHover] = useState<{
+    series: string;
+    color: string;
+    point: ScatterPoint & { x: number; y: number };
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -115,8 +123,31 @@ export default function ScatterChart({ data }: Props) {
                     key={p.year}
                     cx={xScale(p.x)}
                     cy={yScale(p.y)}
+                    r={5}
+                    fill={s.color}
+                    fillOpacity={0.001}
+                    stroke="none"
+                    onMouseEnter={(e) => {
+                      const frame = ref.current?.getBoundingClientRect();
+                      setHover({
+                        series: s.label,
+                        color: s.color,
+                        point: p,
+                        mouseX: e.clientX - (frame?.left ?? 0),
+                        mouseY: e.clientY - (frame?.top ?? 0),
+                      });
+                    }}
+                    onMouseLeave={() => setHover(null)}
+                  />
+                ))}
+                {validPts.map((p) => (
+                  <circle
+                    key={`dot-${p.year}`}
+                    cx={xScale(p.x)}
+                    cy={yScale(p.y)}
                     r={1.5}
                     fill={s.color}
+                    pointerEvents="none"
                   />
                 ))}
                 {lastPoint && (
@@ -137,9 +168,32 @@ export default function ScatterChart({ data }: Props) {
           })}
         </g>
       </svg>
+      {hover && (
+        <Tooltip visible x={hover.mouseX} y={hover.mouseY}>
+          <div className="tt-title">
+            <span className="tt-swatch" style={{ background: hover.color }} />
+            {hover.series} · {hover.point.year}
+          </div>
+          <div className="tt-row">
+            <span>X ({data.xUnits})</span>
+            <span>{formatVal(hover.point.x)}</span>
+          </div>
+          <div className="tt-row">
+            <span>Y ({data.yUnits})</span>
+            <span>{formatVal(hover.point.y)}</span>
+          </div>
+        </Tooltip>
+      )}
       <style>{styles}</style>
     </div>
   );
+}
+
+function formatVal(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1_000) return (v / 1_000).toFixed(2) + 'k';
+  if (abs >= 1) return v.toFixed(2);
+  return v.toPrecision(3);
 }
 
 function formatTick(v: number): string {

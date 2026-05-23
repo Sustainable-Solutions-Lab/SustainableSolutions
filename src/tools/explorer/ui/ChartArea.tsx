@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { DataBundle, ExplorerConfig, Spec } from '../types';
 import { useSpecStoreHook } from '../store/context';
 import { useLazyLayer } from '../data/lazy-context';
@@ -17,6 +17,7 @@ import ScatterChart from '../charts/ScatterChart';
 import Choropleth from '../charts/Choropleth';
 import ContourChart from '../charts/ContourChart';
 import Legend from '../charts/Legend';
+import ChartToolbar from './ChartToolbar';
 
 type Props = {
   config: ExplorerConfig;
@@ -26,6 +27,7 @@ type Props = {
 export default function ChartArea({ config, data }: Props) {
   const useStore = useSpecStoreHook();
   const spec = useStore((s: { spec: Spec }) => s.spec);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
 
   // Choropleth always needs the country layer; trigger the lazy fetch.
   const countriesLayer = useLazyLayer('flowsCountries');
@@ -35,8 +37,11 @@ export default function ChartArea({ config, data }: Props) {
 
   return (
     <div className="explorer-chart-pane">
-      <ChartHeader spec={spec} config={config} />
-      <div className="explorer-chart-body">
+      <div className="explorer-chart-headerbar">
+        <ChartHeader spec={spec} config={config} />
+        <ChartToolbar spec={spec} data={data} containerRef={bodyRef} />
+      </div>
+      <div className="explorer-chart-body" ref={bodyRef}>
         <ChartSwitch spec={spec} data={data} countriesLoading={countriesLayer.loading} />
       </div>
       <ChartFooter spec={spec} data={data} />
@@ -161,7 +166,14 @@ const styles = `
     gap: 8px;
     overflow: hidden;
   }
-  .explorer-chart-header { flex: 0 0 auto; }
+  .explorer-chart-headerbar {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .explorer-chart-header { flex: 1 1 auto; min-width: 0; }
   .explorer-chart-subtitle {
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
     font-size: 11px;

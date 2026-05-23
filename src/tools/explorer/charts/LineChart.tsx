@@ -8,7 +8,7 @@ type Props = {
 
 export default function LineChart({ data }: Props) {
   return (
-    <ChartFrame data={data}>
+    <ChartFrame data={data} enableHover>
       {({ xScale, yScale }) => {
         const gen = d3Line<Point>()
           .defined((p) => p.value != null)

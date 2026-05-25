@@ -548,7 +548,9 @@ export function deriveContour(data: DataBundle, spec: Spec): ContourData {
 
   const xMeasure = spec.scatterX ?? 'per_gdp';
   const yMeasure = spec.measure;
-  const combineOp = spec.contourOp ?? 'product';
+  // v1 only supports product (x × y). Sum was a stub for the UI; not
+  // useful unless both axes share units, so dropped from the picker.
+  const combineOp: 'product' = 'product';
 
   const [yStart, yEnd] = spec.yearRange;
   const years = meta.years.filter((y) => y >= yStart && y <= yEnd);
@@ -596,14 +598,13 @@ export function deriveContour(data: DataBundle, spec: Spec): ContourData {
   const yLabel = labelForMeasure(yMeasure);
   // Special-case the most useful framing — Mat/GDP × GDP/cap → Mat/cap —
   // so the legend reads naturally rather than as "(kg/$1000) × ($/person)".
-  const isClassicProduct =
-    combineOp === 'product' && xMeasure === 'per_gdp' && yMeasure === 'per_capita';
+  const isClassicProduct = xMeasure === 'per_gdp' && yMeasure === 'per_capita';
   const zLabel = isClassicProduct
     ? 'Material per capita (derived)'
-    : `${xLabel} ${combineOp === 'product' ? '×' : '+'} ${yLabel}`;
+    : `${xLabel} × ${yLabel}`;
   const zUnits = isClassicProduct
     ? '(kg/$1000) × ($/person)'
-    : `${xUnits} ${combineOp === 'product' ? '×' : '+'} ${yUnits}`;
+    : `${xUnits} × ${yUnits}`;
 
   return {
     series,

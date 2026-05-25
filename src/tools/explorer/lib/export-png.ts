@@ -22,6 +22,20 @@ export async function downloadSvgAsPng(
   // inside the chart reference. Without this, the serialized SVG renders
   // with all-black axes / no background.
   const resolved = readCssVars();
+
+  // Also collect the React-rendered <style> blocks that live as siblings
+  // of the SVG (chart-tick / chart-axis-label / chart-y-units rules etc.).
+  // Without these, axis text in the exported PNG renders unstyled or
+  // disappears entirely. Walk up to the chart-frame container and pull
+  // every <style> within it.
+  const chartFrame = svg.closest('.chart-frame') as HTMLElement | null;
+  const siblingStyles: string[] = [];
+  if (chartFrame) {
+    for (const el of chartFrame.querySelectorAll('style')) {
+      if (el.textContent) siblingStyles.push(el.textContent);
+    }
+  }
+
   const styleBlock = document.createElementNS('http://www.w3.org/2000/svg', 'style');
   styleBlock.textContent = `
     :root {
@@ -29,6 +43,7 @@ export async function downloadSvgAsPng(
         .map(([k, v]) => `${k}: ${v};`)
         .join(' ')}
     }
+    ${siblingStyles.join('\n')}
   `;
   clone.insertBefore(styleBlock, clone.firstChild);
 

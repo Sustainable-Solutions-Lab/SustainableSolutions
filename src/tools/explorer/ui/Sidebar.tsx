@@ -53,11 +53,6 @@ export default function Sidebar({ config, meta, countries }: Props) {
         </Section>
       )}
 
-      {spec.chart === 'contour' && (
-        <Section title="Heatmap field">
-          <ContourOpPicker active={spec.contourOp ?? 'product'} />
-        </Section>
-      )}
 
       {(spec.chart === 'treemap' || spec.chart === 'choropleth') && (
         <Section title="Year">
@@ -159,20 +154,17 @@ function ChartTypeToggle({ chartTypes, active }: { chartTypes: ChartType[]; acti
   const useStore = useSpecStoreHook();
   const setChart = useStore((s: { setChart: (c: ChartType) => void }) => s.setChart);
   return (
-    <div className="explorer-chip-group" role="radiogroup">
+    <select
+      className="explorer-preset-select"
+      value={active}
+      onChange={(e) => setChart(e.target.value as ChartType)}
+    >
       {chartTypes.map((c) => (
-        <button
-          key={c}
-          role="radio"
-          aria-checked={c === active}
-          className={`explorer-chip ${c === active ? 'is-active' : ''}`}
-          onClick={() => setChart(c)}
-          type="button"
-        >
+        <option key={c} value={c}>
           {CHART_LABELS[c] ?? c}
-        </button>
+        </option>
       ))}
-    </div>
+    </select>
   );
 }
 
@@ -193,49 +185,17 @@ function MeasurePicker({
   const setter = field === 'scatterX' ? setScatterX : setMeasure;
   void geoLevel;
   return (
-    <div className="explorer-chip-group" role="radiogroup">
+    <select
+      className="explorer-preset-select"
+      value={active}
+      onChange={(e) => setter(e.target.value)}
+    >
       {config.measures.map((m) => (
-        <button
-          key={m.name}
-          role="radio"
-          aria-checked={m.name === active}
-          className={`explorer-chip ${m.name === active ? 'is-active' : ''}`}
-          onClick={() => setter(m.name)}
-          type="button"
-          title={m.units}
-        >
+        <option key={m.name} value={m.name} title={m.units}>
           {m.label}
-        </button>
+        </option>
       ))}
-    </div>
-  );
-}
-
-function ContourOpPicker({ active }: { active: 'product' | 'sum' }) {
-  const useStore = useSpecStoreHook();
-  const setContourOp = useStore(
-    (s: { setContourOp: (op: 'product' | 'sum') => void }) => s.setContourOp,
-  );
-  return (
-    <>
-      <div className="explorer-toggle-row">
-        {(['product', 'sum'] as const).map((op) => (
-          <button
-            key={op}
-            type="button"
-            className={`explorer-toggle ${active === op ? 'is-active' : ''}`}
-            onClick={() => setContourOp(op)}
-          >
-            {op === 'product' ? 'x × y' : 'x + y'}
-          </button>
-        ))}
-      </div>
-      <p className="explorer-hint">
-        {active === 'product'
-          ? 'Heatmap shows the product of the two measures (e.g. Mat/GDP × GDP/cap = Mat/cap).'
-          : 'Heatmap shows the sum — only meaningful if both axes share units.'}
-      </p>
-    </>
+    </select>
   );
 }
 
@@ -387,7 +347,14 @@ function CountryPicker({
         disabled={!countries}
       />
       {lazy.loading && !countries && <p className="explorer-hint">Loading ~7 MB country layer…</p>}
-      {lazy.error && <p className="explorer-hint" style={{ color: '#b00020' }}>Failed to load: {lazy.error}</p>}
+      {lazy.error && (
+        <p className="explorer-hint" style={{ color: '#b00020' }}>
+          Country data failed to load: {lazy.error}.
+          {lazy.error.includes('404') && (
+            <> The lazy layer file is likely not uploaded to R2 yet — run the rclone command from the build script output.</>
+          )}
+        </p>
+      )}
       {countries && (
         <div className="explorer-chip-group">
           {matches.map((c) => {
@@ -514,6 +481,10 @@ function YearRangeSlider({
   const setLo = (v: number) => setYearRange([Math.min(v, hi), hi]);
   const setHi = (v: number) => setYearRange([lo, Math.max(v, lo)]);
 
+  const span = Math.max(1, max - min);
+  const loPct = ((lo - min) / span) * 100;
+  const hiPct = ((hi - min) / span) * 100;
+
   return (
     <div className="explorer-year-range">
       <div className="explorer-year-readout">
@@ -522,6 +493,13 @@ function YearRangeSlider({
         <span>{hi}</span>
       </div>
       <div className="explorer-range-track">
+        {/* baseline rail */}
+        <div className="explorer-range-rail" />
+        {/* selected segment between the two thumbs */}
+        <div
+          className="explorer-range-selection"
+          style={{ left: `${loPct}%`, width: `${Math.max(0, hiPct - loPct)}%` }}
+        />
         <input
           type="range"
           min={min}

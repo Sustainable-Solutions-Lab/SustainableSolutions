@@ -333,6 +333,28 @@ const styles = `
     position: relative;
     height: 24px;
   }
+  /* Baseline rail running the full width of the track */
+  .explorer-range-rail {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    transform: translateY(-50%);
+    background: var(--rule);
+    border-radius: 1px;
+    pointer-events: none;
+  }
+  /* Highlighted segment between the two thumbs */
+  .explorer-range-selection {
+    position: absolute;
+    top: 50%;
+    height: 4px;
+    transform: translateY(-50%);
+    background: var(--ink);
+    border-radius: 2px;
+    pointer-events: none;
+  }
   .explorer-range-track input[type='range'] {
     position: absolute;
     inset: 0;

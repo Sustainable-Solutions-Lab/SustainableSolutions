@@ -243,13 +243,18 @@ const frameStyles = `
   }
   .chart-tick {
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
-    font-size: 10px;
+    font-size: 9px;
     fill: var(--ink-3);
   }
   .chart-y-units {
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
-    font-size: 10px;
+    font-size: 12px;
     letter-spacing: 0.04em;
-    fill: var(--ink-3);
+    fill: var(--ink-2);
+  }
+  .chart-axis-label {
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-size: 12px;
+    fill: var(--ink-2);
   }
 `;

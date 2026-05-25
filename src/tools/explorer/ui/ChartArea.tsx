@@ -129,8 +129,7 @@ function ChartHeader({ spec, config }: { spec: Spec; config: ExplorerConfig }) {
     subtitle = `${spec.singleYear ?? spec.yearRange[1]} snapshot · ${measure?.label ?? spec.measure}`;
   } else if (spec.chart === 'scatter' || spec.chart === 'contour') {
     const xMeasure = config.measures.find((m) => m.name === (spec.scatterX ?? 'per_gdp'));
-    const op = spec.chart === 'contour' ? ` · ${spec.contourOp ?? 'product'} heatmap` : '';
-    subtitle = `${spec.yearRange[0]}–${spec.yearRange[1]} · ${xMeasure?.label ?? 'X'} vs ${measure?.label ?? 'Y'}${op}`;
+    subtitle = `${spec.yearRange[0]}–${spec.yearRange[1]} · ${xMeasure?.label ?? 'X'} vs ${measure?.label ?? 'Y'}`;
   } else {
     subtitle = `${spec.yearRange[0]}–${spec.yearRange[1]} · ${measure?.label ?? spec.measure}`;
   }

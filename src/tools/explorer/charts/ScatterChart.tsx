@@ -209,8 +209,8 @@ function formatTick(v: number): string {
 const styles = `
   .chart-axis-label {
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
-    font-size: 11px;
-    fill: var(--ink-3);
+    font-size: 12px;
+    fill: var(--ink-2);
   }
   .chart-scatter-label {
     font-family: var(--font-sans, Inter, system-ui, sans-serif);

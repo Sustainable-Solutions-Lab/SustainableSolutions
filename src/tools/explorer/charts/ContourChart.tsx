@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { scaleLinear } from 'd3-scale';
-import { interpolateYlOrRd } from 'd3-scale-chromatic';
 import { contours as d3contours } from 'd3-contour';
 import { line as d3Line } from 'd3-shape';
 import type { ContourData, ContourPoint } from '../data/derive';
@@ -17,8 +16,8 @@ type Props = {
 };
 
 const MARGIN = { top: 16, right: 72, bottom: 44, left: 72 };
-const GRID = 80; // resolution of the heatmap grid (80x80)
-const N_BANDS = 9; // number of contour bands
+const GRID = 96; // resolution of the contour grid (96x96)
+const N_LEVELS = 10; // number of iso-lines
 
 export default function ContourChart({ data }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -48,7 +47,7 @@ export default function ContourChart({ data }: Props) {
   const innerW = Math.max(80, size.w - MARGIN.left - MARGIN.right);
   const innerH = Math.max(80, size.h - MARGIN.top - MARGIN.bottom);
 
-  const { xScale, yScale, xTicks, yTicks, bands, zMin, zMax } = useMemo(() => {
+  const { xScale, yScale, xTicks, yTicks, isolines } = useMemo(() => {
     // Bounds from observed points.
     let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
     for (const s of data.series) {
@@ -61,12 +60,10 @@ export default function ContourChart({ data }: Props) {
     }
     if (!Number.isFinite(xMin)) { xMin = 0; xMax = 1; }
     if (!Number.isFinite(yMin)) { yMin = 0; yMax = 1; }
-    // Pad bounds so points don't sit on the chart edge and the iso-lines
-    // extend visibly past the cloud of points.
-    const xPad = (xMax - xMin) * 0.1 || 1;
-    const yPad = (yMax - yMin) * 0.1 || 1;
-    const xDom: [number, number] = [Math.max(0, xMin - xPad), xMax + xPad];
-    const yDom: [number, number] = [Math.max(0, yMin - yPad), yMax + yPad];
+    // Extend the domain all the way to zero so iso-curves visibly approach
+    // both axes — the prior 10% pad cut them off in the lower-left corner.
+    const xDom: [number, number] = [0, xMax * 1.1];
+    const yDom: [number, number] = [0, yMax * 1.1];
 
     const xScale = scaleLinear().domain(xDom).range([0, innerW]).nice();
     const yScale = scaleLinear().domain(yDom).range([innerH, 0]).nice();
@@ -77,26 +74,29 @@ export default function ContourChart({ data }: Props) {
     const values = new Float64Array(GRID * GRID);
     const dx = (xDom1 - xDom0) / (GRID - 1);
     const dy = (yDom1 - yDom0) / (GRID - 1);
-    let zMin = Infinity, zMax = -Infinity;
+    let zMax = -Infinity;
     for (let j = 0; j < GRID; j++) {
       const yv = yDom0 + j * dy;
       for (let i = 0; i < GRID; i++) {
         const xv = xDom0 + i * dx;
-        const zv = data.combineOp === 'product' ? xv * yv : xv + yv;
+        // v1 supports only product (x * y) — sum mode is dropped for now
+        // since it's only useful when both axes share units.
+        const zv = xv * yv;
         values[j * GRID + i] = zv;
-        if (zv < zMin) zMin = zv;
         if (zv > zMax) zMax = zv;
       }
     }
-    if (!Number.isFinite(zMin)) zMin = 0;
-    if (!Number.isFinite(zMax) || zMax === zMin) zMax = zMin + 1;
+    if (!Number.isFinite(zMax) || zMax <= 0) zMax = 1;
 
-    // Evenly-spaced thresholds for the bands.
-    const thresholds = Array.from(
-      { length: N_BANDS },
-      (_, i) => zMin + ((zMax - zMin) * (i + 1)) / (N_BANDS + 1),
-    );
-    const bandsRaw = d3contours().size([GRID, GRID]).thresholds(thresholds)(
+    // Logarithmically-spaced thresholds so the lower-end iso-lines
+    // (closer to the axes) get representation alongside the higher-z
+    // ones in the upper-right.
+    const minZ = zMax / 200;
+    const thresholds = Array.from({ length: N_LEVELS }, (_, i) => {
+      const t = i / (N_LEVELS - 1);
+      return minZ * Math.exp(t * Math.log(zMax / minZ));
+    });
+    const linesRaw = d3contours().size([GRID, GRID]).thresholds(thresholds)(
       Array.from(values),
     );
 
@@ -108,20 +108,15 @@ export default function ContourChart({ data }: Props) {
     };
     const transformPolygon = (poly: number[][][]): number[][][] =>
       poly.map((ring) => ring.map(([gx, gy]) => gridToScreen(gx, gy)));
-    const bands = bandsRaw.map((b) => ({
+    const isolines = linesRaw.map((b) => ({
       value: b.value,
       polygons: b.coordinates.map(transformPolygon),
     }));
 
     const xTicks = xScale.ticks(Math.min(8, Math.floor(innerW / 80)));
     const yTicks = yScale.ticks(5);
-    return { xScale, yScale, xTicks, yTicks, bands, zMin, zMax };
+    return { xScale, yScale, xTicks, yTicks, isolines };
   }, [data, innerW, innerH]);
-
-  const color = scaleLinear<string>()
-    .domain([zMin, zMax])
-    .range(['#ffffe5', '#7f0000'])
-    .interpolate(() => (t: number) => interpolateYlOrRd(t));
 
   const linePath = d3Line<{ x: number; y: number }>()
     .x((p) => xScale(p.x))
@@ -131,33 +126,21 @@ export default function ContourChart({ data }: Props) {
     <div className="chart-frame" ref={ref}>
       <svg width={size.w} height={size.h} className="chart-svg" role="img">
         <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
-          {/* Heatmap bands */}
+          {/* Iso-curves only — no filled heatmap. */}
           <g>
-            {bands.map((band, i) => (
-              <path
-                key={i}
-                d={polygonsToPath(band.polygons)}
-                fill={color(band.value)}
-                fillOpacity={0.55}
-                stroke="none"
-              />
-            ))}
-          </g>
-          {/* Iso-curves */}
-          <g>
-            {bands.map((band, i) => (
+            {isolines.map((iso, i) => (
               <g key={i}>
                 <path
-                  d={polygonsToPath(band.polygons)}
+                  d={polygonsToPath(iso.polygons)}
                   fill="none"
                   stroke="var(--ink-3)"
-                  strokeOpacity={0.5}
-                  strokeWidth={0.5}
+                  strokeOpacity={0.55}
+                  strokeWidth={0.6}
                 />
-                {band.polygons.length > 0 && (
+                {iso.polygons.length > 0 && (
                   <IsoLabel
-                    polygons={band.polygons}
-                    label={formatZ(band.value)}
+                    polygons={iso.polygons}
+                    label={formatZ(iso.value)}
                     innerW={innerW}
                     innerH={innerH}
                   />
@@ -256,7 +239,7 @@ export default function ContourChart({ data }: Props) {
 
           {/* z label corner caption */}
           <text x={innerW - 4} y={-2} textAnchor="end" className="chart-y-units">
-            heatmap: {data.zLabel}
+            contours: {data.zLabel}
           </text>
         </g>
       </svg>

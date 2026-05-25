@@ -64,7 +64,11 @@ export default function Sidebar({ config, meta, countries }: Props) {
         </Section>
       )}
 
-      <Section title="Geography">
+      <Collapsible
+        title="Geography"
+        summary={geographySummary(geoLevel, spec.filters.geo ?? [])}
+        defaultOpen={geoLevel !== 'world'}
+      >
         <GeoLevelToggle active={geoLevel} />
         {geoLevel === 'world' && <p className="explorer-hint">Showing world total.</p>}
         {geoLevel === 'region' && (
@@ -73,16 +77,23 @@ export default function Sidebar({ config, meta, countries }: Props) {
         {geoLevel === 'country' && (
           <CountryPicker countries={countries} selected={spec.filters.geo ?? []} />
         )}
-      </Section>
+      </Collapsible>
 
-      <Section title="Material">
+      <Collapsible
+        title="Material"
+        summary={materialSummary(
+          spec.groupings?.material ?? 'category',
+          spec.filters.material ?? [],
+        )}
+        defaultOpen={false}
+      >
         <MaterialPicker
           materials={meta.materials}
           groups={meta.groups}
           grouping={spec.groupings?.material ?? 'category'}
           selected={spec.filters.material ?? []}
         />
-      </Section>
+      </Collapsible>
 
       <Section title="Year range">
         <YearRangeSlider
@@ -104,6 +115,46 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       {children}
     </section>
   );
+}
+
+// Collapsible version of Section — used for multi-select controls
+// (Geography, Material) so the sidebar stays compact when the user
+// isn't actively editing them. Summary line shows the current state.
+function Collapsible({
+  title,
+  summary,
+  defaultOpen,
+  children,
+}: {
+  title: string;
+  summary: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="explorer-collapsible" open={defaultOpen}>
+      <summary className="explorer-collapsible-summary">
+        <span className="explorer-section-title">{title}</span>
+        <span className="explorer-collapsible-state">{summary}</span>
+      </summary>
+      <div className="explorer-collapsible-body">{children}</div>
+    </details>
+  );
+}
+
+function geographySummary(level: 'world' | 'region' | 'country', selected: string[]): string {
+  if (level === 'world') return 'World';
+  if (level === 'region') {
+    if (selected.length === 0) return 'All 8 regions';
+    return `${selected.length} region${selected.length === 1 ? '' : 's'}`;
+  }
+  if (selected.length === 0) return 'Pick countries…';
+  return `${selected.length} ${selected.length === 1 ? 'country' : 'countries'}`;
+}
+
+function materialSummary(grouping: string, selected: string[]): string {
+  if (selected.length === 0) return grouping === 'group' ? 'All 6 groups' : 'All 22 categories';
+  return `${selected.length} ${grouping === 'group' ? 'group' : 'cat'}${selected.length === 1 ? '' : 's'}`;
 }
 
 // ── Preset selector (dropdown — keeps the sidebar compact) ────────────────

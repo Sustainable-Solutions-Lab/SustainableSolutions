@@ -14,8 +14,9 @@ type Props = {
 };
 
 // Right margin is generous so labels next to the most-recent point have
-// room. left and bottom hold the axis labels with breathing room.
-const MARGIN = { top: 16, right: 72, bottom: 44, left: 72 };
+// room. left and bottom hold the axis labels with breathing room between
+// the tick row and the axis label.
+const MARGIN = { top: 16, right: 72, bottom: 56, left: 72 };
 
 export default function ScatterChart({ data }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -94,12 +95,12 @@ export default function ScatterChart({ data }: Props) {
           <line x1={0} x2={innerW} y1={innerH} y2={innerH} className="chart-axis-line" />
           <line x1={0} x2={0} y1={0} y2={innerH} className="chart-axis-line" />
 
-          {/* axis labels */}
-          <text x={innerW / 2} y={innerH + 28} textAnchor="middle" className="chart-axis-label">
+          {/* axis labels — extra room below the tick row */}
+          <text x={innerW / 2} y={innerH + 42} textAnchor="middle" className="chart-axis-label">
             {data.xLabel} ({data.xUnits})
           </text>
           <text
-            transform={`translate(${-MARGIN.left + 16},${innerH / 2}) rotate(-90)`}
+            transform={`translate(${-MARGIN.left + 18},${innerH / 2}) rotate(-90)`}
             textAnchor="middle"
             className="chart-axis-label"
           >
@@ -157,7 +158,13 @@ export default function ScatterChart({ data }: Props) {
                       x={xScale(lastPoint.x) + 6}
                       y={yScale(lastPoint.y) - 4}
                       className="chart-scatter-label"
-                      style={{ fill: s.color }}
+                      style={{
+                        fill: s.color,
+                        paintOrder: 'stroke',
+                        stroke: 'var(--paper-2)',
+                        strokeWidth: 3,
+                        strokeLinejoin: 'round',
+                      }}
                     >
                       {s.label}
                     </text>

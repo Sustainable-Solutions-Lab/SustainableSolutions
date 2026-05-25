@@ -250,6 +250,45 @@ const styles = `
     color: var(--ink-3);
     margin: 0;
   }
+
+  /* Collapsible (Geography, Material) — same visual rhythm as Section
+     when closed, expands inline to reveal the chip pickers. */
+  .explorer-collapsible {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .explorer-collapsible-summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+    padding: 2px 0;
+  }
+  .explorer-collapsible-summary::-webkit-details-marker { display: none; }
+  .explorer-collapsible-summary::marker { content: ''; }
+  .explorer-collapsible-summary::after {
+    content: '▸';
+    font-size: 10px;
+    color: var(--ink-3);
+    margin-left: 4px;
+  }
+  .explorer-collapsible[open] > .explorer-collapsible-summary::after {
+    content: '▾';
+  }
+  .explorer-collapsible-state {
+    font-size: 11px;
+    color: var(--ink-2);
+    text-align: right;
+    flex: 1;
+  }
+  .explorer-collapsible-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
   .explorer-hint {
     font-size: 11px;
     color: var(--ink-3);

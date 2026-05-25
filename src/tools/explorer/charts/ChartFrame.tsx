@@ -243,7 +243,7 @@ const frameStyles = `
   }
   .chart-tick {
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
-    font-size: 9px;
+    font-size: 8px;
     fill: var(--ink-3);
   }
   .chart-y-units {

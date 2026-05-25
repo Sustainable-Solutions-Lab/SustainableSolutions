@@ -15,7 +15,7 @@ type Props = {
   data: ContourData;
 };
 
-const MARGIN = { top: 16, right: 72, bottom: 44, left: 72 };
+const MARGIN = { top: 16, right: 72, bottom: 56, left: 72 };
 const GRID = 96; // resolution of the contour grid (96x96)
 const N_LEVELS = 10; // number of iso-lines
 
@@ -126,7 +126,8 @@ export default function ContourChart({ data }: Props) {
     <div className="chart-frame" ref={ref}>
       <svg width={size.w} height={size.h} className="chart-svg" role="img">
         <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
-          {/* Iso-curves only — no filled heatmap. */}
+          {/* Iso-curves only — no filled heatmap. Label every other iso
+              so labels don't crowd each other or the observed points. */}
           <g>
             {isolines.map((iso, i) => (
               <g key={i}>
@@ -137,7 +138,7 @@ export default function ContourChart({ data }: Props) {
                   strokeOpacity={0.55}
                   strokeWidth={0.6}
                 />
-                {iso.polygons.length > 0 && (
+                {i % 2 === 1 && iso.polygons.length > 0 && (
                   <IsoLabel
                     polygons={iso.polygons}
                     label={formatZ(iso.value)}
@@ -166,12 +167,12 @@ export default function ContourChart({ data }: Props) {
           {/* axes */}
           <line x1={0} x2={innerW} y1={innerH} y2={innerH} className="chart-axis-line" />
           <line x1={0} x2={0} y1={0} y2={innerH} className="chart-axis-line" />
-          {/* axis labels */}
-          <text x={innerW / 2} y={innerH + 28} textAnchor="middle" className="chart-axis-label">
+          {/* axis labels — extra room below the tick row */}
+          <text x={innerW / 2} y={innerH + 42} textAnchor="middle" className="chart-axis-label">
             {data.xLabel} ({data.xUnits})
           </text>
           <text
-            transform={`translate(${-MARGIN.left + 16},${innerH / 2}) rotate(-90)`}
+            transform={`translate(${-MARGIN.left + 18},${innerH / 2}) rotate(-90)`}
             textAnchor="middle"
             className="chart-axis-label"
           >
@@ -227,7 +228,13 @@ export default function ContourChart({ data }: Props) {
                       x={xScale(last.x) + 6}
                       y={yScale(last.y) - 4}
                       className="chart-scatter-label"
-                      style={{ fill: s.color }}
+                      style={{
+                        fill: s.color,
+                        paintOrder: 'stroke',
+                        stroke: 'var(--paper-2)',
+                        strokeWidth: 3,
+                        strokeLinejoin: 'round',
+                      }}
                     >
                       {s.label}
                     </text>
@@ -237,10 +244,6 @@ export default function ContourChart({ data }: Props) {
             );
           })}
 
-          {/* z label corner caption */}
-          <text x={innerW - 4} y={-2} textAnchor="end" className="chart-y-units">
-            contours: {data.zLabel}
-          </text>
         </g>
       </svg>
       {hover && (
@@ -293,8 +296,11 @@ function polygonsToPath(polygons: number[][][][]): string {
   return path;
 }
 
-// Place a label along the longest segment of an iso-line, biased toward
-// the chart center so labels don't crowd the edges.
+// Place a label along an iso-line, biased toward the chart edges so it
+// doesn't collide with the trajectory dots that tend to cluster in the
+// chart interior. We pick the point on the line that's farthest from
+// the chart center while still inside a generous safe band away from
+// the borders.
 function IsoLabel({
   polygons,
   label,
@@ -306,22 +312,27 @@ function IsoLabel({
   innerW: number;
   innerH: number;
 }) {
-  // Find a point reasonably interior to the chart from the iso-line ring.
   let best: { x: number; y: number; dist: number } | null = null;
   const cx = innerW / 2;
   const cy = innerH / 2;
+  const pad = 18;
   for (const poly of polygons) {
     for (const ring of poly) {
       for (const [x, y] of ring) {
-        if (x < 4 || x > innerW - 4 || y < 4 || y > innerH - 4) continue;
+        if (x < pad || x > innerW - pad || y < pad || y > innerH - pad) continue;
         const d = Math.hypot(x - cx, y - cy);
-        if (!best || d < best.dist) best = { x, y, dist: d };
+        if (!best || d > best.dist) best = { x, y, dist: d };
       }
     }
   }
   if (!best) return null;
   return (
-    <text x={best.x} y={best.y} className="chart-tick" style={{ paintOrder: 'stroke', stroke: 'var(--paper)', strokeWidth: 3 }}>
+    <text
+      x={best.x}
+      y={best.y}
+      className="chart-tick"
+      style={{ paintOrder: 'stroke', stroke: 'var(--paper)', strokeWidth: 3 }}
+    >
       {label}
     </text>
   );

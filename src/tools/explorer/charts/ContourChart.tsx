@@ -272,9 +272,39 @@ export default function ContourChart({ data }: Props) {
           </div>
         </Tooltip>
       )}
+      <style>{styles}</style>
     </div>
   );
 }
+
+const styles = `
+  .chart-gridline {
+    stroke: var(--rule);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+  .chart-axis-line {
+    stroke: var(--ink-3);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+  .chart-tick {
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-size: 8px;
+    fill: var(--ink-3);
+  }
+  .chart-axis-label {
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-size: 12px;
+    fill: var(--ink-2);
+  }
+  .chart-scatter-label {
+    font-family: var(--font-sans, Inter, system-ui, sans-serif);
+    font-size: 10px;
+    font-weight: 600;
+    pointer-events: none;
+  }
+`;
 
 function formatVal(v: number): string {
   const abs = Math.abs(v);

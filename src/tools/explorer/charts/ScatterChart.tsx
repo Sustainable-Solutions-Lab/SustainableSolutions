@@ -214,6 +214,21 @@ function formatTick(v: number): string {
 }
 
 const styles = `
+  .chart-gridline {
+    stroke: var(--rule);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+  .chart-axis-line {
+    stroke: var(--ink-3);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+  .chart-tick {
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-size: 8px;
+    fill: var(--ink-3);
+  }
   .chart-axis-label {
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
     font-size: 12px;

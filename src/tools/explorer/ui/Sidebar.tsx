@@ -282,18 +282,15 @@ function GeoLevelToggle({ active }: { active: 'world' | 'region' | 'country' }) 
     (s: { setGeoLevel: (l: 'world' | 'region' | 'country') => void }) => s.setGeoLevel,
   );
   return (
-    <div className="explorer-toggle-row">
-      {(['world', 'region', 'country'] as const).map((level) => (
-        <button
-          key={level}
-          type="button"
-          className={`explorer-toggle ${active === level ? 'is-active' : ''}`}
-          onClick={() => setGeoLevel(level)}
-        >
-          {level === 'world' ? 'World' : level === 'region' ? 'Regions' : 'Countries'}
-        </button>
-      ))}
-    </div>
+    <select
+      className="explorer-preset-select"
+      value={active}
+      onChange={(e) => setGeoLevel(e.target.value as 'world' | 'region' | 'country')}
+    >
+      <option value="world">World</option>
+      <option value="region">Regions</option>
+      <option value="country">Countries</option>
+    </select>
   );
 }
 

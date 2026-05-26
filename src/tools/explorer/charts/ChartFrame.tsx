@@ -26,7 +26,7 @@ type Props = {
   }) => React.ReactNode;
 };
 
-const DEFAULT_MARGIN = { top: 16, right: 24, bottom: 32, left: 60 };
+const DEFAULT_MARGIN = { top: 16, right: 24, bottom: 48, left: 60 };
 
 export default function ChartFrame({
   data,
@@ -121,6 +121,16 @@ export default function ChartFrame({
           {/* Y units label */}
           <text x={-margin.left + 4} y={-4} className="chart-y-units">
             {data.units}
+          </text>
+
+          {/* X axis title */}
+          <text
+            x={innerWidth / 2}
+            y={innerHeight + 36}
+            textAnchor="middle"
+            className="chart-axis-label"
+          >
+            Year
           </text>
 
           {children({ xScale, yScale, innerWidth, innerHeight })}

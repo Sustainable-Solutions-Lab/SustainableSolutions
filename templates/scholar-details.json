@@ -9182,5 +9182,37 @@
     "doi": null,
     "total_citations": null,
     "citations": []
+  },
+  "3wLP7v6BnpwC": {
+    "id": "3wLP7v6BnpwC",
+    "title": "China’s net-zero budget",
+    "authors": "Zhu Liu, Piyu Ke, Zhu Deng, Philippe Ciais, Robbie Andrew, Ana Bastos, Yan Bai, Josep G Canadell, Dabo Guan, Xinyu Dou, Steven J Davis, Fan Dai, Pierre Friedlingstein, Xiaoting Huang, Yifan Hu, Robert B Jackson, Greet Janssens-Maenhout, Matthew W Jones, Daniel M Kammen, Yun Li, Tao Li, Shunlin Liang, Laibao Liu, Benjamin Poulter, Glen P Peters, Stephen Sitch, Lixing Wang, Wei Wei, Fengming Xi, Xiaofan Gui, Jiang Bian, Yuan Wang, Jinjun Xue, Jinyue Yan, Xu Yue, Ning Zhang, Xian Zhang, Xiaoling Zhang, Yonglong Lu, Hans Joachim Schellnhuber, Xiaoye Zhang, Minhan Dai, Peng Gong, Kebin He, Guangqian Wang",
+    "publication_date": "2026/5/20",
+    "journal": "Nature Reviews Earth & Environment",
+    "volume": "",
+    "issue": "",
+    "pages": "1-15",
+    "publisher": "Nature Publishing Group UK",
+    "abstract": "Efforts to mitigate CO 2 emissions in China are central to achieving global carbon neutrality. In this Perspective, we compile bottom-up and top-down estimates to provide a comprehensive regional carbon budget for China between 1970 and 2024. This framework closes the regional budget by explicitly accounting for lateral fluxes with rivers and trade, while also separately tracking avoided emissions (termed scope 4) to assess progress towards net zero. In 2024, China’s regional CO 2 emissions from fossil fuel combustion and industrial processes were 11.64 ± 1.71 Gt per year, which were partially offset by land carbon sinks (0.86 ± 0.33 Gt per year) and land-use change sinks (0.49 ± 0.05 Gt per year). Marginal-sea sinks accounted for 0.05 ± 0.09 Gt per year but are not considered to offset fossil-fuel emissions. Between 2019 and 2023, scope 4 emissions averaged about 2.87 Gt CO 2 per year but are …",
+    "journal_link": "https://www.nature.com/articles/s43017-026-00791-1",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "6LV2YwJzdtgC": {
+    "id": "6LV2YwJzdtgC",
+    "title": "Forest carbon protocols underestimate climate-driven carbon loss risks",
+    "authors": "Chao Wu, Grayson Badgley, Michael L. Goulden, James T. Randerson, Anna T. Trugman, Jonathan A. Wang, Linqing Yang, Nezha Acil, Susan C. Cook-Patton, Danny Cullenward, Steven J. Davis, Christopher A. Williams, William R. L. Anderegg",
+    "publication_date": "2026/5/20",
+    "journal": "Nature",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Nature",
+    "abstract": "Although the reduction of fossil fuel emissions remains of the utmost importance to mitigate climate change, maintaining and enhancing carbon sinks in forests have been widely promoted as nature-based climate solutions , , – . However, disturbances that could result in losses of forest carbon stocks are poorly accounted for when estimating the potential role of forests in climate mitigation , – . This makes it difficult to appropriately size ‘buffer pools’: a mechanism designed to compensate for unintended carbon losses in carbon crediting projects , . Here we use forest inventory, satellite data, disturbance modelling and machine learning to map reversal (carbon loss) risk in the contiguous United States (CONUS) from natural disturbance. Across CONUS forests, we show that climate change increases the 100-year risk of carbon losses from natural disturbance, particularly in California and the Intermountain West. The …",
+    "journal_link": "https://www.nature.com/articles/s41586-026-10571-y",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
   }
 }

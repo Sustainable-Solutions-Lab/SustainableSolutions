@@ -118,8 +118,12 @@ export default function ChartFrame({
           <line x1={0} x2={innerWidth} y1={innerHeight} y2={innerHeight} className="chart-axis-line" />
           <line x1={0} x2={0} y1={0} y2={innerHeight} className="chart-axis-line" />
 
-          {/* Y units label */}
-          <text x={-margin.left + 4} y={-4} className="chart-y-units">
+          {/* Y axis title — rotated, centered along the y-axis */}
+          <text
+            transform={`translate(${-margin.left + 18},${innerHeight / 2}) rotate(-90)`}
+            textAnchor="middle"
+            className="chart-axis-label"
+          >
             {data.units}
           </text>
 

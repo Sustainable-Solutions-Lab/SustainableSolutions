@@ -128,7 +128,7 @@ function ReadyView({ config, data }: { config: ExplorerConfig; data: DataBundle 
         </div>
       </aside>
       <main className="explorer-chart-area" aria-label="Chart">
-        <ChartArea config={config} data={data} />
+        <ChartArea config={config} data={data} meta={meta} />
       </main>
     </>
   );

@@ -19,12 +19,21 @@ import ContourChart from '../charts/ContourChart';
 import Legend from '../charts/Legend';
 import ChartToolbar from './ChartToolbar';
 
+type Meta = {
+  yearRange: [number, number];
+  years: number[];
+  regions: string[];
+  materials: { id: string; label: string; group: string | null }[];
+  groups: { id: string; label: string; members: string[] }[];
+};
+
 type Props = {
   config: ExplorerConfig;
   data: DataBundle;
+  meta: Meta;
 };
 
-export default function ChartArea({ config, data }: Props) {
+export default function ChartArea({ config, data, meta }: Props) {
   const useStore = useSpecStoreHook();
   const spec = useStore((s: { spec: Spec }) => s.spec);
   const bodyRef = useRef<HTMLDivElement | null>(null);
@@ -38,7 +47,7 @@ export default function ChartArea({ config, data }: Props) {
   return (
     <div className="explorer-chart-pane">
       <div className="explorer-chart-headerbar">
-        <ChartHeader spec={spec} config={config} />
+        <ChartHeader spec={spec} config={config} meta={meta} />
         <ChartToolbar spec={spec} data={data} containerRef={bodyRef} />
       </div>
       <div className="explorer-chart-body" ref={bodyRef}>
@@ -122,8 +131,17 @@ function labelFor(chart: Spec['chart']): string {
   return chart.charAt(0).toUpperCase() + chart.slice(1);
 }
 
-function ChartHeader({ spec, config }: { spec: Spec; config: ExplorerConfig }) {
+function ChartHeader({
+  spec,
+  config,
+  meta,
+}: {
+  spec: Spec;
+  config: ExplorerConfig;
+  meta: Meta;
+}) {
   const measure = config.measures.find((m) => m.name === spec.measure);
+  const title = buildChartTitle(spec, meta);
   let subtitle = '';
   if (spec.chart === 'treemap' || spec.chart === 'choropleth') {
     subtitle = `${spec.singleYear ?? spec.yearRange[1]} snapshot · ${measure?.label ?? spec.measure}`;
@@ -139,9 +157,37 @@ function ChartHeader({ spec, config }: { spec: Spec; config: ExplorerConfig }) {
   }
   return (
     <div className="explorer-chart-header">
+      <h2 className="explorer-chart-title">{title}</h2>
       <p className="explorer-chart-subtitle">{subtitle}</p>
     </div>
   );
+}
+
+function buildChartTitle(spec: Spec, meta: Meta): string {
+  const matPart = materialTitlePart(spec, meta);
+  const geoPart = geographyTitlePart(spec);
+  return geoPart ? `${matPart} in ${geoPart}` : matPart;
+}
+
+function materialTitlePart(spec: Spec, meta: Meta): string {
+  const grouping = spec.groupings?.material ?? 'category';
+  const sel = spec.filters.material ?? [];
+  if (sel.length === 0) return 'All materials';
+  const lookup = grouping === 'group' ? meta.groups : meta.materials;
+  const labels = sel.map((id) => lookup.find((x) => x.id === id)?.label ?? id);
+  if (labels.length === 1) return labels[0];
+  if (labels.length <= 3) return labels.join(', ');
+  return `${labels.length} ${grouping === 'group' ? 'groups' : 'materials'}`;
+}
+
+function geographyTitlePart(spec: Spec): string | null {
+  const level = spec.geoLevel ?? 'world';
+  if (level === 'world') return null;
+  const sel = spec.filters.geo ?? [];
+  if (sel.length === 0) return null;
+  if (sel.length === 1) return sel[0];
+  if (sel.length <= 3) return sel.join(', ');
+  return `${sel.length} ${level === 'country' ? 'countries' : 'regions'}`;
 }
 
 function ChartFooter({ spec, data }: { spec: Spec; data: DataBundle }) {
@@ -177,6 +223,14 @@ const styles = `
     gap: 12px;
   }
   .explorer-chart-header { flex: 1 1 auto; min-width: 0; }
+  .explorer-chart-title {
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--ink-2);
+    margin: 0 0 2px 0;
+  }
   .explorer-chart-subtitle {
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
     font-size: 11px;

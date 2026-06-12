@@ -21,8 +21,11 @@ const COST_KEYS: [string, string, string][] = [
   ['recycling', 'Recycling', '#66C2A5'],
   ['trade', 'Trade', '#5E4FA2'],
   ['coproduct', 'Co-product', '#FEE08B'],
-  ['shortage', 'Shortage', '#9E0142'],
+  ['shortage', 'Unmet penalty', '#9E0142'],
 ];
+// diagonal hatch so the unmet-demand penalty reads as "not a real production cost"
+const hatch = (c: string) =>
+  `repeating-linear-gradient(45deg, ${c}, ${c} 5px, rgba(248,248,232,0.6) 5px, rgba(248,248,232,0.6) 10px)`;
 const WORSE = '#D53E4F';
 
 const KPIS: { k: string; label: string; fmt: (x: number) => string; lowerBetter: boolean; help: string }[] = [
@@ -125,7 +128,7 @@ export default function MagnetExplorer() {
               {COST_KEYS.map(([k, lbl, color]) => {
                 const v = Math.max(0, sc.cost[k] ?? 0);
                 if (v <= 0) return null;
-                return <div key={k} title={`${lbl}: ${musd(v)}`} style={{ width: `${(v / costTotal) * 100}%`, background: color }} />;
+                return <div key={k} title={`${lbl}: ${musd(v)}`} style={{ width: `${(v / costTotal) * 100}%`, background: k === 'shortage' ? hatch(color) : color }} />;
               })}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 18px', marginTop: 14 }}>
@@ -134,7 +137,7 @@ export default function MagnetExplorer() {
                 if (Math.abs(v) < 1) return null;
                 return (
                   <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 2, background: color, display: 'inline-block' }} />
+                    <span style={{ width: 10, height: 10, borderRadius: 2, background: k === 'shortage' ? hatch(color) : color, display: 'inline-block' }} />
                     <span style={{ opacity: 0.7 }}>{lbl}</span>
                     <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{musd(v)}{v < 0 ? ' (credit)' : ''}</span>
                   </div>

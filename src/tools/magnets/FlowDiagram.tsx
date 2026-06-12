@@ -73,7 +73,8 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
         ribbons.push(
           <path key={`${c.iface}-${f.from}-${f.to}`}
             d={`M${x1},${sy} C${mx},${sy} ${mx},${ty} ${x2},${ty} L${x2},${ty + w} C${mx},${ty + w} ${mx},${sy + w} ${x1},${sy + w} Z`}
-            fill={REGION_COLOR[src]} fillOpacity={domestic ? 0.22 : 0.5}>
+            fill={REGION_COLOR[src]} fillOpacity={domestic ? 0.14 : 0.5}
+            stroke={domestic ? 'none' : REGION_COLOR[src]} strokeOpacity={0.25} strokeWidth={0.5}>
             <title>{`${f.from}${domestic ? ' (domestic)' : ` → ${f.to}`}: ${f.value.toFixed(1)} kt`}</title>
           </path>,
         );
@@ -102,6 +103,18 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
               const s = segY[i][r];
               if (s.y1 - s.y0 < 0.6) return null;
               return <rect key={r} x={colX[i]} y={s.y0} width={NODE_W} height={s.y1 - s.y0} fill={REGION_COLOR[r]} stroke="var(--paper)" strokeWidth={1} />;
+            })}
+            {REGIONS.map((r) => {
+              const s = segY[i][r]; const h = s.y1 - s.y0;
+              if (h < 12) return null;
+              const last = i === COLS.length - 1;
+              return (
+                <text key={r + 'pct'} x={last ? colX[i] - 5 : colX[i] + NODE_W + 5} y={(s.y0 + s.y1) / 2}
+                  textAnchor={last ? 'end' : 'start'} dominantBaseline="central"
+                  style={{ font: '600 10px var(--font-mono)', fill: REGION_COLOR[r] }}>
+                  {Math.round((h / innerH) * 100)}%
+                </text>
+              );
             })}
             <text x={colX[i] + NODE_W / 2} y={PADY - 10} textAnchor="middle" style={{ font: '600 11px var(--font-mono)', fill: 'var(--ink)', opacity: 0.7 }}>{c.label}</text>
           </g>

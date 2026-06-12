@@ -1,9 +1,10 @@
 /**
- * Supply-chain flow diagram for the magnet explorer.
- * Columns = regional share of production at each stage (Mining → Separation →
- * Alloy → Magnet → Demand). Ribbons = inter-regional shipments at each interface.
- * Honest about units: columns are normalized to share (production masses differ
- * by stage), ribbons show actual cross-border trade routes.
+ * Supply-chain Sankey for the magnet explorer.
+ * Columns (Concentrate → Separation → Alloy → Magnet → Demand) are normalized to
+ * the same height; each is split by region's share of production at that stage.
+ * Ribbons are proportional flows (incl. same-region / domestic), stacked so each
+ * region's outgoing ribbons fill its bar. Honest caveat: recovery losses and unit
+ * changes between stages mean it conserves per-interface, not strictly end-to-end.
  */
 
 type Flow = { from: string; to: string; value: number };
@@ -12,74 +13,73 @@ type Scenario = {
   flows: Record<string, Flow[]>;
 };
 
-const REGIONS = ['China', 'RoW', 'USA']; // top -> bottom
-const REGION_COLOR: Record<string, string> = {
-  China: '#D53E4F', RoW: '#FDAE61', USA: '#3288BD',
-};
-const STAGES = [
-  { key: 'mining', label: 'Mining' },
-  { key: 'separation', label: 'Separation' },
-  { key: 'alloy', label: 'Alloy' },
-  { key: 'magnet', label: 'Magnet' },
-  { key: 'demand', label: 'Demand' },
+const REGIONS = ['China', 'RoW', 'USA'];
+const REGION_COLOR: Record<string, string> = { China: '#D53E4F', RoW: '#FDAE61', USA: '#3288BD' };
+// column key in production (+ computed demand) and the interface feeding the NEXT column
+const COLS = [
+  { key: 'mining', label: 'Concentrate', iface: 'concentrate' },
+  { key: 'separation', label: 'Separation', iface: 'oxide' },
+  { key: 'alloy', label: 'Alloy', iface: 'alloy' },
+  { key: 'magnet', label: 'Magnet', iface: 'magnet' },
+  { key: 'demand', label: 'Demand', iface: null as string | null },
 ];
-const INTERFACE = ['concentrate', 'oxide', 'alloy', 'magnet']; // between stage i and i+1
 
-const W = 880, H = 380, PADX = 70, PADY = 34, NODE_W = 15, GAP = 5;
+const W = 900, H = 400, PADX = 64, PADY = 30, NODE_W = 14;
 const innerH = H - 2 * PADY;
-const colX = STAGES.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (STAGES.length - 1)));
+const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
+
+function colValues(sc: Scenario, key: string): Record<string, number> {
+  if (key !== 'demand') return Object.fromEntries(REGIONS.map((r) => [r, sc.production[r]?.[key] ?? 0]));
+  const mag = sc.flows.magnet ?? [];
+  return Object.fromEntries(REGIONS.map((r) => {
+    const prod = sc.production[r]?.magnet ?? 0;
+    const imp = mag.filter((f) => f.to === r && f.from !== r).reduce((a, f) => a + f.value, 0);
+    const exp = mag.filter((f) => f.from === r && f.to !== r).reduce((a, f) => a + f.value, 0);
+    return [r, Math.max(0, prod + imp - exp)];
+  }));
+}
 
 export default function FlowDiagram({ sc }: { sc: Scenario }) {
-  // Column values by region.
-  const colVals: Record<string, number>[] = STAGES.map((stage) => {
-    if (stage.key !== 'demand') {
-      return Object.fromEntries(REGIONS.map((r) => [r, sc.production[r]?.[stage.key] ?? 0]));
-    }
-    // Demand = magnet consumption = produced + imports - exports (from magnet flows).
-    const mag = sc.flows.magnet ?? [];
-    return Object.fromEntries(REGIONS.map((r) => {
-      const prod = sc.production[r]?.magnet ?? 0;
-      const imp = mag.filter((f) => f.to === r).reduce((a, f) => a + f.value, 0);
-      const exp = mag.filter((f) => f.from === r).reduce((a, f) => a + f.value, 0);
-      return [r, Math.max(0, prod + imp - exp)];
-    }));
-  });
-
-  // Layout: normalize each column to share; stack China/RoW/USA top->bottom.
-  // segY[col][region] = { y0, y1, mid }.
-  const segY = colVals.map((vals) => {
+  // Column layout: contiguous region segments, normalized to innerH.
+  const segY = COLS.map((c) => {
+    const vals = colValues(sc, c.key);
     const total = REGIONS.reduce((a, r) => a + vals[r], 0) || 1;
-    const usable = innerH - GAP * (REGIONS.length - 1);
     let y = PADY;
-    const out: Record<string, { y0: number; y1: number; mid: number; share: number }> = {};
-    for (const r of REGIONS) {
-      const h = (vals[r] / total) * usable;
-      out[r] = { y0: y, y1: y + h, mid: y + h / 2, share: vals[r] / total };
-      y += h + GAP;
-    }
+    const out: Record<string, { y0: number; y1: number }> = {};
+    for (const r of REGIONS) { const h = (vals[r] / total) * innerH; out[r] = { y0: y, y1: y + h }; y += h; }
     return out;
   });
 
-  // Ribbon thickness scale (max flow across all interfaces -> ~30px).
-  const allFlows = INTERFACE.flatMap((k) => sc.flows[k] ?? []);
-  const maxFlow = Math.max(1, ...allFlows.map((f) => f.value));
-  const thick = (v: number) => Math.max(1.5, (v / maxFlow) * 30);
-
-  const ribbons = INTERFACE.flatMap((iface, i) =>
-    (sc.flows[iface] ?? []).map((f, j) => {
-      const x1 = colX[i] + NODE_W, x2 = colX[i + 1];
-      const y1 = segY[i][f.from]?.mid, y2 = segY[i + 1][f.to]?.mid;
-      if (y1 == null || y2 == null) return null;
-      const mx = (x1 + x2) / 2;
-      return (
-        <path key={`${iface}-${j}`} d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
-          fill="none" stroke={REGION_COLOR[f.from]} strokeWidth={thick(f.value)}
-          strokeOpacity={0.4} strokeLinecap="round">
-          <title>{`${f.from} → ${f.to} (${STAGES[i].label} → ${STAGES[i + 1].label}): ${f.value.toFixed(1)} kt`}</title>
-        </path>
-      );
-    }),
-  );
+  // Ribbons: per interface, proportional + stacked on both ends (domestic first).
+  const ribbons: JSX.Element[] = [];
+  COLS.forEach((c, i) => {
+    if (!c.iface) return;
+    const flows = (sc.flows[c.iface] ?? []).slice();
+    const total = flows.reduce((a, f) => a + f.value, 0);
+    if (total <= 0) return;
+    const scale = innerH / total;
+    const srcCum: Record<string, number> = Object.fromEntries(REGIONS.map((r) => [r, segY[i][r].y0]));
+    const tgtCum: Record<string, number> = Object.fromEntries(REGIONS.map((r) => [r, segY[i + 1][r].y0]));
+    for (const src of REGIONS) {
+      const outs = flows.filter((f) => f.from === src)
+        .sort((a, b) => (a.to === src ? -1 : b.to === src ? 1 : REGIONS.indexOf(a.to) - REGIONS.indexOf(b.to)));
+      for (const f of outs) {
+        const w = f.value * scale;
+        const x1 = colX[i] + NODE_W, x2 = colX[i + 1];
+        const sy = srcCum[src], ty = tgtCum[f.to];
+        srcCum[src] += w; tgtCum[f.to] += w;
+        const mx = (x1 + x2) / 2;
+        const domestic = f.from === f.to;
+        ribbons.push(
+          <path key={`${c.iface}-${f.from}-${f.to}`}
+            d={`M${x1},${sy} C${mx},${sy} ${mx},${ty} ${x2},${ty} L${x2},${ty + w} C${mx},${ty + w} ${mx},${sy + w} ${x1},${sy + w} Z`}
+            fill={REGION_COLOR[src]} fillOpacity={domestic ? 0.22 : 0.5}>
+            <title>{`${f.from}${domestic ? ' (domestic)' : ` → ${f.to}`}: ${f.value.toFixed(1)} kt`}</title>
+          </path>,
+        );
+      }
+    }
+  });
 
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 26 }}>
@@ -94,33 +94,25 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
           ))}
         </div>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }}
-        role="img" aria-label="Supply-chain flow diagram">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Supply-chain Sankey">
         {ribbons}
-        {STAGES.map((stage, i) => (
-          <g key={stage.key}>
+        {COLS.map((c, i) => (
+          <g key={c.key}>
             {REGIONS.map((r) => {
               const s = segY[i][r];
-              if (s.y1 - s.y0 < 0.5) return null;
-              return (
-                <rect key={r} x={colX[i]} y={s.y0} width={NODE_W} height={s.y1 - s.y0}
-                  fill={REGION_COLOR[r]} rx={2}>
-                  <title>{`${r} ${stage.label}: ${(s.share * 100).toFixed(0)}% of stage`}</title>
-                </rect>
-              );
+              if (s.y1 - s.y0 < 0.6) return null;
+              return <rect key={r} x={colX[i]} y={s.y0} width={NODE_W} height={s.y1 - s.y0} fill={REGION_COLOR[r]} stroke="var(--paper)" strokeWidth={1} />;
             })}
-            <text x={colX[i] + NODE_W / 2} y={PADY - 12} textAnchor="middle"
-              style={{ font: '600 11px var(--font-mono)', fill: 'var(--ink)', opacity: 0.7 }}>
-              {stage.label}
-            </text>
+            <text x={colX[i] + NODE_W / 2} y={PADY - 10} textAnchor="middle" style={{ font: '600 11px var(--font-mono)', fill: 'var(--ink)', opacity: 0.7 }}>{c.label}</text>
           </g>
         ))}
       </svg>
       <p style={{ fontSize: 12, opacity: 0.55, marginTop: 10, lineHeight: 1.5 }}>
-        Bars show each region's <strong>share</strong> of production at a stage (the chokepoint:
-        watch one region own the columns). Ribbons show <strong>inter-regional shipments</strong>,
-        coloured by origin. Turn up US domestic content or the China export ban and watch the
-        ribbons re-route and US gain its own columns.
+        Bars: each region's share of production at a stage (watch one region own the columns — the
+        chokepoint). Ribbons: shipments coloured by origin; faded ribbons stay in-region (domestic),
+        solid ones cross borders. Raise US domestic content or the China export ban and watch borders
+        close. Widths are proportional within each interface; recovery losses between stages mean it
+        isn't strictly mass-conserving end to end.
       </p>
     </section>
   );

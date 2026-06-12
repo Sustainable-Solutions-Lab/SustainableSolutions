@@ -1,97 +1,70 @@
 /**
- * Chokepoint panel: capacity utilization (throughput / installed capacity) by
- * stage x region. Hot cells (near 100%) are the binding bottlenecks — where the
- * chain is capacity-constrained. Null = no capacity in that region/stage.
+ * Chokepoint panel — US-demand self-sufficiency by stage.
+ * For each supply-chain stage, the split between US-made and imported as a share
+ * of what the US needs (sums to 100%). The stage with the most "imported" is the
+ * binding chokepoint for US supply security; raise domestic content / recycling
+ * and watch the green grow.
  */
 
-type Scenario = { utilization: Record<string, Record<string, number | null>> };
+type Scenario = { us_supply: Record<string, { domestic: number; imported: number }> };
 
-const REGIONS = ['China', 'RoW', 'USA'];
 const STAGES = [
-  { key: 'mining', label: 'Mining' },
+  { key: 'mining', label: 'Mining (Dy/Tb + Nd/Pr ore)' },
   { key: 'separation', label: 'Separation' },
   { key: 'alloy', label: 'Alloy' },
   { key: 'magnet', label: 'Magnet' },
 ];
-
-// Warm Spectral ramp for utilization 0 -> 1 (cool/pale -> deep red chokepoint).
-const STOPS: [number, [number, number, number]][] = [
-  [0.0, [241, 241, 223]], [0.5, [254, 224, 139]], [0.75, [253, 174, 97]],
-  [0.9, [244, 109, 67]], [1.0, [158, 1, 66]],
-];
-function utilColor(u: number): string {
-  for (let i = 1; i < STOPS.length; i++) {
-    if (u <= STOPS[i][0]) {
-      const [a, ca] = STOPS[i - 1], [b, cb] = STOPS[i];
-      const t = (u - a) / (b - a || 1);
-      const c = ca.map((v, k) => Math.round(v + (cb[k] - v) * t));
-      return `rgb(${c[0]},${c[1]},${c[2]})`;
-    }
-  }
-  return `rgb(${STOPS[STOPS.length - 1][1].join(',')})`;
-}
+const DOMESTIC = 'var(--brand-green)';
+const IMPORT = '#D53E4F';
 
 export default function ChokepointPanel({ sc }: { sc: Scenario }) {
-  // Find the binding chokepoint (highest utilization across stage x region).
-  let top: { stage: string; region: string; u: number } | null = null;
-  for (const r of REGIONS) for (const s of STAGES) {
-    const u = sc.utilization[r]?.[s.key];
-    if (u != null && (!top || u > top.u)) top = { stage: s.label, region: r, u };
+  // Binding chokepoint = stage with the most imported share.
+  let top: { label: string; imp: number } | null = null;
+  for (const s of STAGES) {
+    const imp = sc.us_supply?.[s.key]?.imported ?? 0;
+    if (!top || imp > top.imp) top = { label: s.label, imp };
   }
 
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 26 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Choke points · capacity utilization</h2>
-        {top && (
-          <span style={{ fontSize: 12.5 }}>
-            <span style={{ opacity: 0.6 }}>Most binding: </span>
-            <span style={{ fontWeight: 600 }}>{top.region} {top.stage}</span>
-            <span style={{ fontFamily: 'var(--font-mono)', color: utilColor(top.u), fontWeight: 700 }}> {(top.u * 100).toFixed(0)}%</span>
-          </span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
+        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>US supply security by stage</h2>
+        <div style={{ display: 'flex', gap: 14, fontSize: 12 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: DOMESTIC }} /><span style={{ opacity: 0.75 }}>US-made</span></span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: IMPORT }} /><span style={{ opacity: 0.75 }}>Imported</span></span>
+        </div>
+      </div>
+      <p style={{ fontSize: 12.5, opacity: 0.7, margin: '0 0 16px' }}>
+        Share of US demand met domestically vs by imports, at each stage of the chain.
+        {top && top.imp > 0.5 && (
+          <> Most import-dependent: <strong>{top.label}</strong> ({(top.imp * 100).toFixed(0)}% imported).</>
         )}
-      </div>
+      </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: `92px repeat(${REGIONS.length}, 1fr)`, gap: 4 }}>
-        <div />
-        {REGIONS.map((r) => (
-          <div key={r} style={{ textAlign: 'center', font: '600 11px var(--font-mono)', opacity: 0.6, paddingBottom: 4 }}>{r}</div>
-        ))}
-        {STAGES.map((s) => (
-          <Row key={s.key} label={s.label} stageKey={s.key} sc={sc} />
-        ))}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {STAGES.map((s) => {
+          const d = sc.us_supply?.[s.key]?.domestic ?? 0;
+          const im = sc.us_supply?.[s.key]?.imported ?? 1;
+          return (
+            <div key={s.key} style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 12, alignItems: 'center' }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: 'right', opacity: 0.85 }}>{s.label}</span>
+              <div style={{ display: 'flex', height: 26, borderRadius: 5, overflow: 'hidden', border: '1px solid var(--rule)' }}>
+                <div title={`US-made: ${(d * 100).toFixed(0)}%`} style={{ width: `${d * 100}%`, background: DOMESTIC, display: 'flex', alignItems: 'center', paddingLeft: 7, color: '#fff', font: '600 11px var(--font-mono)' }}>
+                  {d > 0.12 ? `${(d * 100).toFixed(0)}%` : ''}
+                </div>
+                <div title={`Imported: ${(im * 100).toFixed(0)}%`} style={{ width: `${im * 100}%`, background: IMPORT, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 7, color: '#fff', font: '600 11px var(--font-mono)' }}>
+                  {im > 0.12 ? `${(im * 100).toFixed(0)}%` : ''}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
-        <span style={{ fontSize: 11, opacity: 0.55 }}>0%</span>
-        <div style={{ flex: 1, height: 8, borderRadius: 4, background: `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1].map((u) => utilColor(u)).join(',')})` }} />
-        <span style={{ fontSize: 11, opacity: 0.55 }}>100% (binding)</span>
-      </div>
-      <p style={{ fontSize: 12, opacity: 0.55, marginTop: 10, lineHeight: 1.5 }}>
-        Each cell is a region's capacity utilization at a stage. Cells near 100% are
-        the binding choke points; blank cells mean no capacity is built there. The
-        heavy-rare-earth squeeze shows up as hot separation and mining cells.
+      <p style={{ fontSize: 12, opacity: 0.55, marginTop: 14, lineHeight: 1.5 }}>
+        100% = the US making everything it needs at that stage. The reddest bar is the binding
+        chokepoint — typically separation and the heavy-rare-earth (Dy/Tb) ore the US barely has.
+        Recycling and domestic-content policy move bars toward green.
       </p>
     </section>
-  );
-}
-
-function Row({ label, stageKey, sc }: { label: string; stageKey: string; sc: Scenario }) {
-  return (
-    <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10, font: '600 12px var(--font-mono)', opacity: 0.7 }}>{label}</div>
-      {REGIONS.map((r) => {
-        const u = sc.utilization[r]?.[stageKey];
-        if (u == null) {
-          return <div key={r} title={`${r} ${label}: no capacity`} style={{ height: 44, borderRadius: 6, border: '1px dashed var(--rule)', display: 'grid', placeItems: 'center', color: 'var(--ink)', opacity: 0.3, fontFamily: 'var(--font-mono)', fontSize: 13 }}>—</div>;
-        }
-        return (
-          <div key={r} title={`${r} ${label}: ${(u * 100).toFixed(0)}% utilized`}
-            style={{ height: 44, borderRadius: 6, background: utilColor(u), display: 'grid', placeItems: 'center', font: '600 14px var(--font-mono)', color: u > 0.62 ? '#fff' : '#181838' }}>
-            {(u * 100).toFixed(0)}%
-          </div>
-        );
-      })}
-    </>
   );
 }

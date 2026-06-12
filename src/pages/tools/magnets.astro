@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import MagnetExplorer from '../../tools/magnets/MagnetExplorer';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+
+const tool = (tools as Tool[]).find((t) => t.slug === 'magnets') ?? null;
+---
+
+<BaseLayout
+  title={tool?.title ?? 'Rare-earth magnet supply chain explorer'}
+  description={tool?.summary ??
+    'Interactive capacity-expansion model of the rare-earth magnet supply chain.'}
+>
+  <section aria-label="Rare-earth magnet explorer">
+    <MagnetExplorer client:only="react" />
+  </section>
+</BaseLayout>

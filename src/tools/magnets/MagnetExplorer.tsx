@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import data from './scenarios.json';
+import FlowDiagram from './FlowDiagram';
 
 /**
  * Rare-earth magnet supply-chain explorer.
@@ -163,6 +164,8 @@ export default function MagnetExplorer() {
               })}
             </div>
           </section>
+
+          <FlowDiagram sc={sc} />
 
           <p style={{ fontSize: 12, opacity: 0.5, marginTop: 18, lineHeight: 1.5 }}>
             Model: <code style={{ fontFamily: 'var(--font-mono)' }}>rare-magnets-cem</code>. Results precomputed across a scenario grid;

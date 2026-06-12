@@ -85,7 +85,11 @@ export default function MagnetExplorer() {
         className="magnet-grid">
         <aside style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', position: 'sticky', top: 16 }}>
           <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 16px' }}>Scenario</h2>
-          <Slider label="US domestic-content minimum" value={dc} max={DC_MAX} onChange={setDc} fmt={(v) => pct(v * 100)} />
+          <Slider label="US content requirement (IRA-style)" value={dc} max={DC_MAX} onChange={setDc} fmt={(v) => pct(v * 100)} />
+          <p style={{ fontSize: 11, opacity: 0.55, margin: '-12px 0 16px', lineHeight: 1.45 }}>
+            Two prongs, like the IRA EV credit: this share of US magnets must be US-made, and their
+            oxide must come from the US, allies, or recycling (not China).
+          </p>
           <Slider label="Recycling collection rate" value={rec} max={REC_MAX} onChange={setRec} fmt={(v) => pct(v * 100)} />
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             <input type="checkbox" checked={shock} onChange={(e) => setShock(e.target.checked)} style={{ accentColor: 'var(--accent)', width: 16, height: 16 }} />

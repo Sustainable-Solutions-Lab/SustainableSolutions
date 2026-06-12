@@ -1,48 +1,41 @@
 /**
  * Supply-chain Sankey for the magnet explorer.
- * Columns (Concentrate → Separation → Alloy → Magnet → Demand) are normalized to
- * the same height; each is split by region's share of production at that stage.
- * Ribbons are proportional flows (incl. same-region / domestic), stacked so each
- * region's outgoing ribbons fill its bar. Honest caveat: recovery losses and unit
- * changes between stages mean it conserves per-interface, not strictly end-to-end.
+ * Columns (Concentrate → Oxide → Alloy → Magnet → Demand): each region's bar is
+ * its share of the material flowing onward at that stage — INCLUDING recycling-
+ * derived oxide, so every ribbon emanates from a real, same-coloured bar. Ribbons
+ * are coloured by origin and taper to fill both the bar they leave and the bar
+ * they enter (recovery losses + recycling injection mean throughput changes
+ * between stages, so flows are proportional per interface, not conserved end-to-end).
  */
 
 type Flow = { from: string; to: string; value: number };
-type Scenario = {
-  production: Record<string, Record<string, number>>;
-  flows: Record<string, Flow[]>;
-};
+type Scenario = { flows: Record<string, Flow[]> };
 
 const REGIONS = ['China', 'RoW', 'USA'];
 const REGION_COLOR: Record<string, string> = { China: '#D53E4F', RoW: '#FDAE61', USA: '#3288BD' };
-// column key in production (+ computed demand) and the interface feeding the NEXT column
 const COLS = [
-  { key: 'mining', label: 'Concentrate', iface: 'concentrate' },
-  { key: 'separation', label: 'Separation', iface: 'oxide' },
-  { key: 'alloy', label: 'Alloy', iface: 'alloy' },
-  { key: 'magnet', label: 'Magnet', iface: 'magnet' },
-  { key: 'demand', label: 'Demand', iface: null as string | null },
+  { label: 'Concentrate', iface: 'concentrate' as string | null, desc: 'Mixed rare-earth concentrate after mining + beneficiation (and cracking) — all the rare earths still together, before separation into individual oxides.' },
+  { label: 'Oxide', iface: 'oxide', desc: 'Separated individual rare-earth oxides (Nd/Pr, Dy/Tb), including recycling-derived oxide.' },
+  { label: 'Alloy', iface: 'alloy', desc: 'NdFeB alloy (oxide reduced to metal, then strip-cast).' },
+  { label: 'Magnet', iface: 'magnet', desc: 'Finished sintered NdFeB magnets.' },
+  { label: 'Demand', iface: null, desc: 'Magnet consumption by region.' },
 ];
-
 const W = 900, H = 400, PADX = 64, PADY = 30, NODE_W = 14;
 const innerH = H - 2 * PADY;
 const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
 
-function colValues(sc: Scenario, key: string): Record<string, number> {
-  if (key !== 'demand') return Object.fromEntries(REGIONS.map((r) => [r, sc.production[r]?.[key] ?? 0]));
-  const mag = sc.flows.magnet ?? [];
-  return Object.fromEntries(REGIONS.map((r) => {
-    const prod = sc.production[r]?.magnet ?? 0;
-    const imp = mag.filter((f) => f.to === r && f.from !== r).reduce((a, f) => a + f.value, 0);
-    const exp = mag.filter((f) => f.from === r && f.to !== r).reduce((a, f) => a + f.value, 0);
-    return [r, Math.max(0, prod + imp - exp)];
-  }));
-}
+const outSum = (sc: Scenario, iface: string, r: string) =>
+  (sc.flows[iface] ?? []).filter((f) => f.from === r).reduce((a, f) => a + f.value, 0);
+const inSum = (sc: Scenario, iface: string, r: string) =>
+  (sc.flows[iface] ?? []).filter((f) => f.to === r).reduce((a, f) => a + f.value, 0);
 
 export default function FlowDiagram({ sc }: { sc: Scenario }) {
-  // Column layout: contiguous region segments, normalized to innerH.
-  const segY = COLS.map((c) => {
-    const vals = colValues(sc, c.key);
+  // Column values: bars sized by what each region sends ONWARD (outflows), so
+  // bars and ribbons are consistent. Demand = magnet received (inflows).
+  const colVals = COLS.map((c, i) =>
+    Object.fromEntries(REGIONS.map((r) => [r, c.iface ? outSum(sc, c.iface, r) : inSum(sc, 'magnet', r)])));
+
+  const segY = colVals.map((vals) => {
     const total = REGIONS.reduce((a, r) => a + vals[r], 0) || 1;
     let y = PADY;
     const out: Record<string, { y0: number; y1: number }> = {};
@@ -50,32 +43,33 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
     return out;
   });
 
-  // Ribbons: per interface, proportional + stacked on both ends (domestic first).
   const ribbons: JSX.Element[] = [];
   COLS.forEach((c, i) => {
     if (!c.iface) return;
-    const flows = (sc.flows[c.iface] ?? []).slice();
+    const flows = (sc.flows[c.iface] ?? []);
     const total = flows.reduce((a, f) => a + f.value, 0);
     if (total <= 0) return;
-    const scale = innerH / total;
-    const srcCum: Record<string, number> = Object.fromEntries(REGIONS.map((r) => [r, segY[i][r].y0]));
-    const tgtCum: Record<string, number> = Object.fromEntries(REGIONS.map((r) => [r, segY[i + 1][r].y0]));
+    const srcScale = innerH / total;
+    // taper: target side fills each target bar exactly (handles recovery/recycling)
+    const tgtScale = (r: string) => {
+      const inv = inSum(sc, c.iface!, r), barH = segY[i + 1][r].y1 - segY[i + 1][r].y0;
+      return inv > 1e-9 ? barH / inv : 0;
+    };
+    const srcCum = Object.fromEntries(REGIONS.map((r) => [r, segY[i][r].y0]));
+    const tgtCum = Object.fromEntries(REGIONS.map((r) => [r, segY[i + 1][r].y0]));
     for (const src of REGIONS) {
       const outs = flows.filter((f) => f.from === src)
         .sort((a, b) => (a.to === src ? -1 : b.to === src ? 1 : REGIONS.indexOf(a.to) - REGIONS.indexOf(b.to)));
       for (const f of outs) {
-        const w = f.value * scale;
-        const x1 = colX[i] + NODE_W, x2 = colX[i + 1];
+        const sw = f.value * srcScale, tw = f.value * tgtScale(f.to);
+        const x1 = colX[i] + NODE_W, x2 = colX[i + 1], mx = (x1 + x2) / 2;
         const sy = srcCum[src], ty = tgtCum[f.to];
-        srcCum[src] += w; tgtCum[f.to] += w;
-        const mx = (x1 + x2) / 2;
-        const domestic = f.from === f.to;
+        srcCum[src] += sw; tgtCum[f.to] += tw;
         ribbons.push(
           <path key={`${c.iface}-${f.from}-${f.to}`}
-            d={`M${x1},${sy} C${mx},${sy} ${mx},${ty} ${x2},${ty} L${x2},${ty + w} C${mx},${ty + w} ${mx},${sy + w} ${x1},${sy + w} Z`}
-            fill={REGION_COLOR[src]} fillOpacity={domestic ? 0.14 : 0.5}
-            stroke={domestic ? 'none' : REGION_COLOR[src]} strokeOpacity={0.25} strokeWidth={0.5}>
-            <title>{`${f.from}${domestic ? ' (domestic)' : ` → ${f.to}`}: ${f.value.toFixed(1)} kt`}</title>
+            d={`M${x1},${sy} C${mx},${sy} ${mx},${ty} ${x2},${ty} L${x2},${ty + tw} C${mx},${ty + tw} ${mx},${sy + sw} ${x1},${sy + sw} Z`}
+            fill={REGION_COLOR[src]} fillOpacity={0.5}>
+            <title>{`${f.from}${f.from === f.to ? ' (stays in region)' : ` → ${f.to}`}: ${f.value.toFixed(1)} kt`}</title>
           </path>,
         );
       }
@@ -98,34 +92,36 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Supply-chain Sankey">
         {ribbons}
         {COLS.map((c, i) => (
-          <g key={c.key}>
+          <g key={c.label}>
             {REGIONS.map((r) => {
               const s = segY[i][r];
               if (s.y1 - s.y0 < 0.6) return null;
               return <rect key={r} x={colX[i]} y={s.y0} width={NODE_W} height={s.y1 - s.y0} fill={REGION_COLOR[r]} stroke="var(--paper)" strokeWidth={1} />;
             })}
             {REGIONS.map((r) => {
-              const s = segY[i][r]; const h = s.y1 - s.y0;
+              const s = segY[i][r], h = s.y1 - s.y0;
               if (h < 12) return null;
               const last = i === COLS.length - 1;
               return (
-                <text key={r + 'pct'} x={last ? colX[i] - 5 : colX[i] + NODE_W + 5} y={(s.y0 + s.y1) / 2}
+                <text key={r + 'p'} x={last ? colX[i] - 5 : colX[i] + NODE_W + 5} y={(s.y0 + s.y1) / 2}
                   textAnchor={last ? 'end' : 'start'} dominantBaseline="central"
                   style={{ font: '600 10px var(--font-mono)', fill: REGION_COLOR[r] }}>
                   {Math.round((h / innerH) * 100)}%
                 </text>
               );
             })}
-            <text x={colX[i] + NODE_W / 2} y={PADY - 10} textAnchor="middle" style={{ font: '600 11px var(--font-mono)', fill: 'var(--ink)', opacity: 0.7 }}>{c.label}</text>
+            <text x={colX[i] + NODE_W / 2} y={PADY - 10} textAnchor="middle" style={{ font: '600 11px var(--font-mono)', fill: 'var(--ink)', opacity: 0.7, cursor: 'help' }}>
+              {c.label}<title>{c.desc}</title>
+            </text>
           </g>
         ))}
       </svg>
       <p style={{ fontSize: 12, opacity: 0.55, marginTop: 10, lineHeight: 1.5 }}>
-        Bars: each region's share of production at a stage (watch one region own the columns — the
-        chokepoint). Ribbons: shipments coloured by origin; faded ribbons stay in-region (domestic),
-        solid ones cross borders. Raise US domestic content or the China export ban and watch borders
-        close. Widths are proportional within each interface; recovery losses between stages mean it
-        isn't strictly mass-conserving end to end.
+        Bars: each region's share of the material at a stage (with %). Ribbons: shipments coloured by
+        origin — every ribbon leaves a same-coloured bar. The Oxide stage includes recycling-derived
+        oxide, so recycling gives the US and RoW their own bars even without domestic mining. Widths
+        are proportional per interface; recovery losses and recycling mean throughput changes between
+        stages, so it isn't strictly mass-conserving end to end.
       </p>
     </section>
   );

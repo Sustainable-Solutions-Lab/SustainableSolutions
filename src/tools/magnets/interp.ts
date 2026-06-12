@@ -12,7 +12,7 @@ export type Scenario = {
   kpis: Record<string, number>;
   cost: Record<string, number>;
   production: Record<string, Record<string, number>>;
-  us_supply: Record<string, { domestic: number; imported: number }>;
+  us_supply: Record<string, { domestic: number; allied: number; china: number }>;
   utilization: Record<string, Record<string, number | null>>;
   flows: Record<string, Flow[]>;
 };

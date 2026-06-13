@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AXES, BASE, DC_MAX, REC_MAX, interpScenario } from './interp';
+import { AXES, BASE, interpScenario } from './interp';
 import FlowDiagram from './FlowDiagram';
 import ChokepointPanel from './ChokepointPanel';
 
@@ -37,8 +37,9 @@ const KPIS: { k: string; label: string; fmt: (x: number) => string; lowerBetter:
   { k: 'recycled_pct', label: 'Recycled supply', fmt: pct, lowerBetter: false, help: 'Final-year share of oxide supplied by recycling' },
 ];
 
-function Slider({ label, value, max, onChange, fmt }: {
-  label: string; value: number; max: number; onChange: (v: number) => void; fmt: (v: number) => string;
+function Slider({ label, value, max, min = 0, onChange, fmt }: {
+  label: string; value: number; max: number; min?: number;
+  onChange: (v: number) => void; fmt: (v: number) => string;
 }) {
   return (
     <div style={{ marginBottom: 18 }}>
@@ -46,11 +47,11 @@ function Slider({ label, value, max, onChange, fmt }: {
         <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--accent)' }}>{fmt(value)}</span>
       </div>
-      <input type="range" min={0} max={max} step={0.01} value={value}
+      <input type="range" min={min} max={max} step={0.01} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         style={{ width: '100%', accentColor: 'var(--accent)' }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink)', opacity: 0.45, marginTop: 2 }}>
-        <span>{fmt(0)}</span><span>{fmt(max / 2)}</span><span>{fmt(max)}</span>
+        <span>{fmt(min)}</span><span>{fmt((min + max) / 2)}</span><span>{fmt(max)}</span>
       </div>
     </div>
   );
@@ -59,9 +60,12 @@ function Slider({ label, value, max, onChange, fmt }: {
 export default function MagnetExplorer() {
   const [dc, setDc] = useState(0);
   const [rec, setRec] = useState(0);
-  const [shock, setShock] = useState(false);
+  const [dytbCut, setDytbCut] = useState(0); // reduction from today's Dy/Tb intensity
+  const [china, setChina] = useState(0);     // China export-restriction severity
+  const [rcost, setRcost] = useState(AXES.rcostMin); // US recycling cost factor
 
-  const sc = useMemo(() => interpScenario(dc, rec, shock), [dc, rec, shock]);
+  const sc = useMemo(() => interpScenario({ dc, rec, dytb: 1 - dytbCut, china, rcost }),
+    [dc, rec, dytbCut, china, rcost]);
   const costTotal = COST_KEYS.reduce((a, [k]) => a + Math.max(0, sc.cost[k] ?? 0), 0);
 
   return (
@@ -85,17 +89,40 @@ export default function MagnetExplorer() {
         className="magnet-grid">
         <aside style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', position: 'sticky', top: 16 }}>
           <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 16px' }}>Scenario</h2>
-          <Slider label="US content requirement (IRA-style)" value={dc} max={DC_MAX} onChange={setDc} fmt={(v) => pct(v * 100)} />
+
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 10px' }}>Policy</div>
+          <Slider label="US content requirement (IRA-style)" value={dc} max={AXES.dcMax} onChange={setDc} fmt={(v) => pct(v * 100)} />
           <p style={{ fontSize: 11, opacity: 0.55, margin: '-12px 0 16px', lineHeight: 1.45 }}>
             Two prongs, like the IRA EV credit: this share of US magnets must be US-made, and their
             oxide must come from the US, allies, or recycling (not China).
           </p>
-          <Slider label="Recycling collection rate" value={rec} max={REC_MAX} onChange={setRec} fmt={(v) => pct(v * 100)} />
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-            <input type="checkbox" checked={shock} onChange={(e) => setShock(e.target.checked)} style={{ accentColor: 'var(--accent)', width: 16, height: 16 }} />
-            China export ban (oxide / alloy / magnet)
-          </label>
-          <button onClick={() => { setDc(0); setRec(0); setShock(false); }}
+
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '4px 0 10px' }}>Demand side</div>
+          <Slider label="Dy/Tb per magnet" value={dytbCut} max={1 - AXES.dytbMin} onChange={setDytbCut}
+            fmt={(v) => `${((1 - v) * 100).toFixed(0)}% of today`} />
+          <p style={{ fontSize: 11, opacity: 0.55, margin: '-12px 0 16px', lineHeight: 1.45 }}>
+            Heavy rare earth (Dy/Tb) loading per magnet, starting at today's average US level.
+            Grain-boundary diffusion, better motor/thermal design, and high-temp-grade substitution
+            all cut it — easing the scarcest chokepoint.
+          </p>
+
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '4px 0 10px' }}>Geopolitics</div>
+          <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)} />
+          <p style={{ fontSize: 11, opacity: 0.55, margin: '-12px 0 16px', lineHeight: 1.45 }}>
+            Severity of Chinese export controls on oxide, alloy &amp; magnets: 0% = open market,
+            100% = full ban. In between, China may still export to a shrinking share of the rest of
+            the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring.
+          </p>
+
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '4px 0 10px' }}>Cost sensitivity</div>
+          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`} />
+          <p style={{ fontSize: 11, opacity: 0.55, margin: '-12px 0 16px', lineHeight: 1.45 }}>
+            Cost to build US recycling capacity, relative to China. {AXES.rcostMin.toFixed(1)}× is the
+            baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for
+            capacity stage — this stress-tests how much its economics rest on that uncertain US cost.
+          </p>
+
+          <button onClick={() => { setDc(0); setRec(0); setDytbCut(0); setChina(0); setRcost(AXES.rcostMin); }}
             style={{ marginTop: 22, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>
             RESET TO BASELINE
           </button>

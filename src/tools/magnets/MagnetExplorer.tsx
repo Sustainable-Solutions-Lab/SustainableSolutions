@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { AXES, BASE, interpScenario } from './interp';
+import { AXES, BASE, interpScenario, YEARS, DEMAND_KT, US_DEMAND_SHARE } from './interp';
 import FlowDiagram from './FlowDiagram';
 import ChokepointPanel from './ChokepointPanel';
+import PathwayCharts from './PathwayCharts';
 
 /**
  * Rare-earth magnet supply-chain explorer.
@@ -30,8 +31,8 @@ const WORSE = '#D53E4F';
 
 const KPIS: { k: string; label: string; fmt: (x: number) => string; lowerBetter: boolean; help: string }[] = [
   { k: 'us_import_pct', label: 'US magnet imports', fmt: pct, lowerBetter: true, help: 'Final-year share of US magnet demand met by imports' },
-  { k: 'npv_musd', label: 'Total system cost', fmt: musd, lowerBetter: true, help: '2026–2037 discounted (NPV) build-out + operating cost, all regions' },
-  { k: 'us_unmet_kt', label: 'US unmet demand', fmt: (x) => `${x.toFixed(0)} kt`, lowerBetter: true, help: 'Cumulative US magnet shortfall over 2026–2037 (kt of finished magnet) — supply the chain cannot deliver in time, e.g. under a China export ban' },
+  { k: 'npv_musd', label: 'Total system cost', fmt: musd, lowerBetter: true, help: '2026–2035 discounted (NPV) build-out + operating cost, all regions' },
+  { k: 'us_unmet_kt', label: 'US unmet demand', fmt: (x) => `${x.toFixed(0)} kt`, lowerBetter: true, help: 'Cumulative US magnet shortfall over 2026–2035 (kt of finished magnet) — supply the chain cannot deliver in time, e.g. under a China export ban' },
   { k: 'primary_dytb_kt', label: 'Primary Dy/Tb mined', fmt: (x) => `${x.toFixed(1)} kt`, lowerBetter: true, help: 'Final-year heavy rare earth (Dy+Tb oxide) mined from ore — a few kt; the scarce chokepoint element, not comparable to total magnet tonnage' },
   { k: 'hhi_separation', label: 'Separation concentration', fmt: (x) => x.toFixed(2), lowerBetter: true, help: 'HHI of separation supply (1.0 = single-region monopoly), final year' },
   { k: 'recycled_pct', label: 'Recycled supply', fmt: pct, lowerBetter: false, help: 'Final-year share of oxide supplied by recycling' },
@@ -146,8 +147,9 @@ export default function MagnetExplorer() {
             })}
           </div>
           <p style={{ fontSize: 11.5, opacity: 0.5, margin: '-14px 0 24px', fontStyle: 'italic' }}>
-            Final-year (2037) values, except total cost (2026–2037 NPV) and US unmet demand
-            (cumulative). Deltas are vs the no-policy baseline. Hover any tile for its definition.
+            Tiles show 2035 (final-year) values, except total cost (2026–2035 NPV) and US unmet
+            demand (cumulative). Deltas are vs the no-policy baseline; the year-by-year path to
+            these endpoints is in “Pathways to 2035” below. Hover any tile for its definition.
           </p>
 
           <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)' }}>
@@ -176,6 +178,8 @@ export default function MagnetExplorer() {
               })}
             </div>
           </section>
+
+          <PathwayCharts sc={sc} years={YEARS} demand={DEMAND_KT} usShare={US_DEMAND_SHARE} />
 
           <FlowDiagram sc={sc} />
 

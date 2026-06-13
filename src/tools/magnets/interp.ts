@@ -15,7 +15,17 @@ export type Scenario = {
   us_supply: Record<string, { domestic: number; allied: number; china: number }>;
   utilization: Record<string, Record<string, number | null>>;
   flows: Record<string, Flow[]>;
+  path: {
+    us_mix: Record<string, number[]>;   // domestic / allied / china / unmet, per year
+    us_cap: Record<string, number[]>;   // mining / separation / alloy / magnet, per year
+    cost_annual: number[];
+    primary_dytb: number[];
+  };
 };
+
+export const YEARS = (data as any).meta.years as number[];
+export const DEMAND_KT = (data as any).meta.demand_kt as number[];
+export const US_DEMAND_SHARE = (data as any).meta.us_demand_share as number;
 
 type AxisField = 'dc' | 'rec' | 'dytb' | 'china' | 'rcost';
 const SC = (data as any).scenarios as Scenario[];
@@ -82,11 +92,29 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
     const [iface, from, to] = k.split('|');
     (flows[iface] ??= []).push({ from, to, value: v });
   }
+  // annual pathway series: element-wise weighted sum
+  const H = base.path.cost_annual.length;
+  const zeros = () => Array(H).fill(0) as number[];
+  const wPath = () => {
+    const out = { us_mix: {} as Record<string, number[]>, us_cap: {} as Record<string, number[]>,
+                  cost_annual: zeros(), primary_dytb: zeros() };
+    for (const g of ['us_mix', 'us_cap'] as const)
+      for (const k in base.path[g]) out[g][k] = zeros();
+    for (const { s, w } of ps) {
+      for (const g of ['us_mix', 'us_cap'] as const)
+        for (const k in s.path[g]) for (let i = 0; i < H; i++) out[g][k][i] += s.path[g][k][i] * w;
+      for (let i = 0; i < H; i++) {
+        out.cost_annual[i] += s.path.cost_annual[i] * w;
+        out.primary_dytb[i] += s.path.primary_dytb[i] * w;
+      }
+    }
+    return out;
+  };
   return {
     dc: base.dc, rec: base.rec, dytb: base.dytb, china: base.china, rcost: base.rcost,
     kpis: wDict('kpis'), cost: wDict('cost'),
     production: wNested('production') as any, us_supply: wNested('us_supply') as any,
-    utilization: wNested('utilization') as any, flows,
+    utilization: wNested('utilization') as any, flows, path: wPath(),
   };
 }
 

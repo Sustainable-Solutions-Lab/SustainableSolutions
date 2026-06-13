@@ -13,12 +13,20 @@ type Scenario = { flows: Record<string, Flow[]> };
 
 const REGIONS = ['China', 'RoW', 'USA'];
 const REGION_COLOR: Record<string, string> = { China: '#D53E4F', RoW: '#FDAE61', USA: '#3288BD' };
+// Each column is the MATERIAL flowing between stages; `stage` names the process
+// that produces it (shown as a sub-label) so mining etc. are visible even though
+// they sit "between" columns rather than being columns themselves.
 const COLS = [
-  { label: 'Concentrate', iface: 'concentrate' as string | null, desc: 'Mixed rare-earth concentrate after mining + beneficiation (and cracking) — all the rare earths still together, before separation into individual oxides.' },
-  { label: 'Oxide', iface: 'oxide', desc: 'Separated individual rare-earth oxides (Nd/Pr, Dy/Tb), including recycling-derived oxide.' },
-  { label: 'Alloy', iface: 'alloy', desc: 'NdFeB alloy (oxide reduced to metal, then strip-cast).' },
-  { label: 'Magnet', iface: 'magnet', desc: 'Finished sintered NdFeB magnets.' },
-  { label: 'Demand', iface: null, desc: 'Magnet consumption by region.' },
+  { label: 'Concentrate', stage: 'from mining', iface: 'concentrate' as string | null,
+    desc: 'Mixed rare-earth concentrate — the output of MINING. Ore is extracted, beneficiated (crush / grind / flotation or leach), and cracked (roast / acid-bake) into a mixed rare-earth oxide concentrate. All the rare earths are still together here, before separation.' },
+  { label: 'Oxide', stage: 'from separation', iface: 'oxide',
+    desc: 'Separated individual rare-earth oxides — the output of SEPARATION. Solvent extraction (hundreds of mixer-settler stages) splits the mixed concentrate into purified Nd/Pr and Dy/Tb oxides. Includes recycling-derived oxide.' },
+  { label: 'Alloy', stage: 'from alloying', iface: 'alloy',
+    desc: 'NdFeB strip-cast alloy — the output of ALLOYING. Oxides are reduced to metal (molten-salt electrolysis / metallothermic reduction) and strip-cast into alloy flake.' },
+  { label: 'Magnet', stage: 'from sintering', iface: 'magnet',
+    desc: 'Finished sintered NdFeB magnets — the output of MAGNET MAKING. Alloy is hydrogen-decrepitated, jet-milled, aligned and pressed, sintered, machined, coated, and magnetized.' },
+  { label: 'Demand', stage: 'consumption', iface: null,
+    desc: 'Finished-magnet consumption by region.' },
 ];
 const W = 900, H = 400, PADX = 64, PADY = 30, NODE_W = 14;
 const innerH = H - 2 * PADY;
@@ -110,8 +118,11 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
                 </text>
               );
             })}
-            <text x={colX[i] + NODE_W / 2} y={PADY - 10} textAnchor="middle" style={{ font: '600 11px var(--font-mono)', fill: 'var(--ink)', opacity: 0.7, cursor: 'help' }}>
+            <text x={colX[i] + NODE_W / 2} y={PADY - 16} textAnchor="middle" style={{ font: '600 11px var(--font-mono)', fill: 'var(--ink)', opacity: 0.7, cursor: 'help' }}>
               {c.label}<title>{c.desc}</title>
+            </text>
+            <text x={colX[i] + NODE_W / 2} y={PADY - 5} textAnchor="middle" style={{ font: '400 8.5px var(--font-mono)', fill: 'var(--accent)', opacity: 0.65, cursor: 'help' }}>
+              {c.stage}<title>{c.desc}</title>
             </text>
           </g>
         ))}

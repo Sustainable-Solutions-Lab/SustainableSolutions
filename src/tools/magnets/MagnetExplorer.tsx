@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
-import { AXES, BASE, interpScenario, YEARS, DEMAND_KT, US_DEMAND_SHARE } from './interp';
+import { useCallback, useMemo, useState } from 'react';
+import { AXES, BASE, interpScenario, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
 import FlowDiagram from './FlowDiagram';
 import ChokepointPanel from './ChokepointPanel';
 import PathwayCharts from './PathwayCharts';
+import DemandBuilder from './DemandBuilder';
 
 /**
  * Rare-earth magnet supply-chain explorer.
@@ -38,14 +39,25 @@ const KPIS: { k: string; label: string; fmt: (x: number) => string; lowerBetter:
   { k: 'recycled_pct', label: 'Recycled supply', fmt: pct, lowerBetter: false, help: 'Final-year share of oxide supplied by recycling' },
 ];
 
-function Slider({ label, value, max, min = 0, onChange, fmt }: {
+function Slider({ label, value, max, min = 0, onChange, fmt, desc }: {
   label: string; value: number; max: number; min?: number;
-  onChange: (v: number) => void; fmt: (v: number) => string;
+  onChange: (v: number) => void; fmt: (v: number) => string; desc?: string;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div style={{ marginBottom: 18 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
+    <div style={{ marginBottom: 13 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+          {label}
+          {desc && (
+            <button onClick={() => setOpen((o) => !o)} aria-label="What is this?" title="What is this?"
+              style={{ width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--rule-strong)',
+                background: open ? 'var(--accent)' : 'transparent', color: open ? 'var(--paper)' : 'var(--ink-3)',
+                font: '600 9px var(--font-mono)', lineHeight: 1, cursor: 'pointer', padding: 0, opacity: 0.85 }}>
+              i
+            </button>
+          )}
+        </span>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--accent)' }}>{fmt(value)}</span>
       </div>
       <input type="range" min={min} max={max} step={0.01} value={value}
@@ -54,19 +66,28 @@ function Slider({ label, value, max, min = 0, onChange, fmt }: {
       <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink)', opacity: 0.45, marginTop: 2 }}>
         <span>{fmt(min)}</span><span>{fmt((min + max) / 2)}</span><span>{fmt(max)}</span>
       </div>
+      {desc && open && (
+        <p style={{ fontSize: 11, opacity: 0.6, margin: '6px 0 0', lineHeight: 1.45 }}>{desc}</p>
+      )}
     </div>
   );
 }
 
 export default function MagnetExplorer() {
   const [dc, setDc] = useState(0);
-  const [rec, setRec] = useState(0);
-  const [dytbCut, setDytbCut] = useState(0); // reduction from today's Dy/Tb intensity
+  const [rec, setRec] = useState(0);         // recycling collection rate
   const [china, setChina] = useState(0);     // China export-restriction severity
   const [rcost, setRcost] = useState(AXES.rcostMin); // US recycling cost factor
+  // Demand summary from the demand builder: maps any sector composition + levers to
+  // the two demand axes (total-demand scale + Dy/Tb intensity) the grid is solved over.
+  const [demand, setDemand] = useState(
+    () => ({ demand_scale: 1, dytb_intensity: 1, totalSeries: DEMAND_KT_REF }));
+  const onSummary = useCallback(
+    (s: { demand_scale: number; dytb_intensity: number; totalSeries: number[] }) => setDemand(s), []);
 
-  const sc = useMemo(() => interpScenario({ dc, rec, dytb: 1 - dytbCut, china, rcost }),
-    [dc, rec, dytbCut, china, rcost]);
+  const sc = useMemo(() => interpScenario({
+    dc, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale,
+  }), [dc, rec, china, rcost, demand]);
   const costTotal = COST_KEYS.reduce((a, [k]) => a + Math.max(0, sc.cost[k] ?? 0), 0);
 
   return (
@@ -80,11 +101,14 @@ export default function MagnetExplorer() {
         </h1>
         <p style={{ fontSize: 15, lineHeight: 1.55, opacity: 0.8, margin: 0 }}>
           A capacity-expansion model of the NdFeB magnet supply chain
-          (mining → separation → alloy → magnet). Turn the policy, recycling, and
-          geopolitical knobs to see where the choke points are and how cost and US
-          import dependence respond. Illustrative results — not yet peer-reviewed.
+          (mining → separation → alloy → magnet). Compose demand by sector, then turn
+          the policy, recycling, and geopolitical knobs to see where the choke points
+          are and how cost and US import dependence respond. Illustrative results — not
+          yet peer-reviewed.
         </p>
       </header>
+
+      <DemandBuilder onSummary={onSummary} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 320px) 1fr', gap: 28, alignItems: 'start' }}
         className="magnet-grid">
@@ -92,38 +116,22 @@ export default function MagnetExplorer() {
           <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 16px' }}>Scenario</h2>
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 10px' }}>Policy</div>
-          <Slider label="US content requirement (IRA-style)" value={dc} max={AXES.dcMax} onChange={setDc} fmt={(v) => pct(v * 100)} />
-          <p style={{ fontSize: 11, opacity: 0.55, margin: '-12px 0 16px', lineHeight: 1.45 }}>
-            Two prongs, like the IRA EV credit: this share of US magnets must be US-made, and their
-            oxide must come from the US, allies, or recycling (not China).
-          </p>
+          <Slider label="US content requirement (IRA-style)" value={dc} max={AXES.dcMax} onChange={setDc} fmt={(v) => pct(v * 100)}
+            desc="Two prongs, like the IRA EV credit: this share of US magnets must be US-made, and their oxide must come from the US, allies, or recycling (not China)." />
 
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '4px 0 10px' }}>Demand side</div>
-          <Slider label="Dy/Tb per magnet" value={dytbCut} max={1 - AXES.dytbMin} onChange={setDytbCut}
-            fmt={(v) => `${((1 - v) * 100).toFixed(0)}% of today`} />
-          <p style={{ fontSize: 11, opacity: 0.55, margin: '-12px 0 16px', lineHeight: 1.45 }}>
-            Heavy rare earth (Dy/Tb) loading per magnet, starting at today's average US level.
-            Grain-boundary diffusion, better motor/thermal design, and high-temp-grade substitution
-            all cut it — easing the scarcest chokepoint.
-          </p>
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Recycling</div>
+          <Slider label="EoL collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
+            desc="Share of end-of-life magnets collected and reprocessed into oxide. Recovered scrap is concentrated Nd/Pr/Dy/Tb with no co-product tax — but recycling plants must be built and paid for." />
 
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '4px 0 10px' }}>Geopolitics</div>
-          <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)} />
-          <p style={{ fontSize: 11, opacity: 0.55, margin: '-12px 0 16px', lineHeight: 1.45 }}>
-            Severity of Chinese export controls on oxide, alloy &amp; magnets: 0% = open market,
-            100% = full ban. In between, China may still export to a shrinking share of the rest of
-            the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring.
-          </p>
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Geopolitics</div>
+          <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
+            desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring." />
 
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '4px 0 10px' }}>Cost sensitivity</div>
-          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`} />
-          <p style={{ fontSize: 11, opacity: 0.55, margin: '-12px 0 16px', lineHeight: 1.45 }}>
-            Cost to build US recycling capacity, relative to China. {AXES.rcostMin.toFixed(1)}× is the
-            baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for
-            capacity stage — this stress-tests how much its economics rest on that uncertain US cost.
-          </p>
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Cost sensitivity</div>
+          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
+            desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost.`} />
 
-          <button onClick={() => { setDc(0); setRec(0); setDytbCut(0); setChina(0); setRcost(AXES.rcostMin); }}
+          <button onClick={() => { setDc(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); }}
             style={{ marginTop: 22, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>
             RESET TO BASELINE
           </button>
@@ -179,7 +187,7 @@ export default function MagnetExplorer() {
             </div>
           </section>
 
-          <PathwayCharts sc={sc} years={YEARS} demand={DEMAND_KT} usShare={US_DEMAND_SHARE} />
+          <PathwayCharts sc={sc} years={YEARS} demand={demand.totalSeries} usShare={US_DEMAND_SHARE} />
 
           <FlowDiagram sc={sc} />
 
@@ -192,6 +200,20 @@ export default function MagnetExplorer() {
           </p>
         </main>
       </div>
+
+      <footer style={{ marginTop: 44, paddingTop: 20, borderTop: '1px solid var(--rule)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 18 }}>
+        <a href="https://steer-stanford.webflow.io/" target="_blank" rel="noopener noreferrer"
+          title="STEER — Stanford" aria-label="STEER at Stanford (opens in new tab)"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none', color: 'var(--accent)' }}>
+          <img src="/STEER-logo.svg" alt="STEER — Stanford" height={34} style={{ display: 'block' }} />
+          <span aria-hidden="true" style={{ fontSize: 13 }}>↗</span>
+        </a>
+        <p style={{ fontSize: 11, opacity: 0.6, lineHeight: 1.5, maxWidth: 520, margin: 0 }}>
+          Developed within the <a href="https://steer-stanford.webflow.io/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>STEER</a> project
+          at Stanford, with support from the U.S. Department of Energy's Advanced Materials &amp;
+          Manufacturing Technologies Office (AMMTO).
+        </p>
+      </footer>
 
       <style>{`@media (max-width: 720px){ .magnet-grid{ grid-template-columns:1fr !important; } }`}</style>
     </div>

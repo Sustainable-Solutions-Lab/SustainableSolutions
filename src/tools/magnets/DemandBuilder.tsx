@@ -103,14 +103,14 @@ export default function DemandBuilder({ onSummary }: {
 
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginBottom: 26 }}>
-      <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 4px' }}>Demand builder</h2>
-      <p style={{ fontSize: 12, opacity: 0.55, margin: '0 0 14px', lineHeight: 1.5 }}>
-        Compose the <b>US</b> magnet-demand trajectory by sector (IEA scenarios) and shape it with the
-        four levers. The supply explorer below responds via two summary dials at bottom.
-      </p>
+      <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 12px' }}>Demand builder</h2>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 320px) 1fr', gap: 24, alignItems: 'start' }} className="demand-grid">
         <div>
+          <p style={{ fontSize: 12, opacity: 0.55, margin: '0 0 14px', lineHeight: 1.5 }}>
+            Compose the <b>US</b> magnet-demand trajectory by sector (IEA scenarios) and shape it with
+            the four levers. The supply explorer below responds via two summary dials at bottom.
+          </p>
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 8px' }}>Demand scenario by sector</div>
           {LIST_ORDER.map((k) => (
             <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>

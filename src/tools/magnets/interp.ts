@@ -22,6 +22,7 @@ export type Scenario = {
     cost_annual: number[];
     primary_dytb: number[];
   };
+  _di?: Record<string, number>;   // per-stage DI override from a reserve-developing overlay
 };
 
 export const YEARS = (data as any).meta.years as number[];

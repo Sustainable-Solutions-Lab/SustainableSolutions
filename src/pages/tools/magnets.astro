@@ -11,6 +11,7 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'magnets') ?? null;
   title={tool?.title ?? 'Rare-earth magnet supply chain explorer'}
   description={tool?.summary ??
     'Interactive capacity-expansion model of the rare-earth magnet supply chain.'}
+  noindex
 >
   <section aria-label="Rare-earth magnet explorer">
     <MagnetExplorer client:only="react" />

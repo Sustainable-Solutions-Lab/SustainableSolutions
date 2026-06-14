@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { AXES, BASE, interpScenario, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
+import { AXES, BASE, interpScenario, applyStockpile, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
 import FlowDiagram from './FlowDiagram';
 import ChokepointPanel from './ChokepointPanel';
 import PathwayCharts from './PathwayCharts';
@@ -21,6 +21,7 @@ const COST_KEYS: [string, string, string][] = [
   ['alloy', 'Alloy', '#FDAE61'],
   ['magnet', 'Magnet', '#3288BD'],
   ['recycling', 'Recycling', '#66C2A5'],
+  ['stockpile', 'Strategic stockpile', '#5E4FA2'],
   ['trade', 'Shipping', '#5E4FA2'],
   ['coproduct', 'Co-product La/Ce', '#FEE08B'],
   ['shortage', 'Unmet-demand penalty', '#9E0142'],
@@ -31,6 +32,7 @@ const COST_DESC: Record<string, string> = {
   alloy: 'Build + operating cost of US-located oxide→metal→strip-cast alloy.',
   magnet: 'Build + operating cost of US-located sintered-magnet manufacturing.',
   recycling: 'Build + operating cost of US-located end-of-life recycling capacity.',
+  stockpile: 'Cost of the strategic magnet stockpile: size × an all-in acquire + hold rate (~$90/kg). A real, paid cost that buys down the unmet-demand penalty by covering the earliest shortfall.',
   shortage: 'Penalty on US unmet magnet demand: unmet tonnes × a high penalty rate. Not a market cost — it flags US demand the chain can’t deliver in time (e.g. under a ban).',
 };
 // diagonal hatch so the unmet-demand penalty reads as "not a real production cost"
@@ -86,6 +88,7 @@ export default function MagnetExplorer() {
   const [rec, setRec] = useState(0);         // recycling collection rate
   const [china, setChina] = useState(0);     // China export-restriction severity
   const [rcost, setRcost] = useState(AXES.rcostMin); // US recycling cost factor
+  const [stockpile, setStockpile] = useState(0);     // strategic stockpile size (kt)
   // Demand summary from the demand builder: maps any sector composition + levers to
   // the two demand axes (total-demand scale + Dy/Tb intensity) the grid is solved over.
   const [demand, setDemand] = useState(
@@ -93,9 +96,9 @@ export default function MagnetExplorer() {
   const onSummary = useCallback(
     (s: { demand_scale: number; dytb_intensity: number; totalSeries: number[] }) => setDemand(s), []);
 
-  const sc = useMemo(() => interpScenario({
+  const sc = useMemo(() => applyStockpile(interpScenario({
     dc, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale,
-  }), [dc, rec, china, rcost, demand]);
+  }), stockpile), [dc, rec, china, rcost, demand, stockpile]);
   // The cost breakdown is US-specific (the cost the US bears to supply itself) —
   // this analysis is about US supply security. Global trade/co-product don't apply.
   const US_COST_KEYS = COST_KEYS.filter(([k]) => k !== 'trade' && k !== 'coproduct');
@@ -141,7 +144,11 @@ export default function MagnetExplorer() {
           <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
             desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring." />
 
-          <button onClick={() => { setDc(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); }}
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Resilience</div>
+          <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v.toFixed(0)} kt`}
+            desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$90/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
+
+          <button onClick={() => { setDc(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); }}
             style={{ marginTop: 22, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>
             RESET TO BASELINE
           </button>

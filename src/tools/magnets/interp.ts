@@ -11,6 +11,7 @@ export type Scenario = {
   dc: number; rec: number; dytb: number; china: number; rcost: number; dscale: number;
   kpis: Record<string, number>;
   cost: Record<string, number>;
+  us_cost: Record<string, number>;
   production: Record<string, Record<string, number>>;
   us_supply: Record<string, { domestic: number; allied: number; china: number }>;
   utilization: Record<string, Record<string, number | null>>;
@@ -69,7 +70,7 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
   const tot = parts.reduce((a, p) => a + p.w, 0) || 1;
   const ps = parts.map((p) => ({ s: p.s, w: p.w / tot }));
   const base = ps[0].s;
-  const wDict = (field: 'kpis' | 'cost') => {
+  const wDict = (field: 'kpis' | 'cost' | 'us_cost') => {
     const out: Record<string, number> = {};
     for (const { s, w } of ps) for (const k in s[field]) out[k] = (out[k] || 0) + s[field][k] * w;
     return out;
@@ -114,7 +115,7 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
   };
   return {
     dc: base.dc, rec: base.rec, dytb: base.dytb, china: base.china, rcost: base.rcost,
-    dscale: base.dscale, kpis: wDict('kpis'), cost: wDict('cost'),
+    dscale: base.dscale, kpis: wDict('kpis'), cost: wDict('cost'), us_cost: wDict('us_cost'),
     production: wNested('production') as any, us_supply: wNested('us_supply') as any,
     utilization: wNested('utilization') as any, flows, path: wPath(),
   };
@@ -141,4 +142,49 @@ export function interpScenario(
     if (s) parts.push({ s, w });
   }
   return parts.length ? combine(parts) : BASE;
+}
+
+// ── Strategic stockpile overlay ──────────────────────────────────────────────
+// A pre-positioned US inventory of finished magnets (bought on the open market
+// before a shock, e.g. 2025) that is drawn down to cover the EARLIEST unmet
+// demand first, up to its size. This is a post-solve overlay rather than a 7th
+// grid axis: adding stockpile to the precompute would triple it (2700→8100). The
+// approximation is faithful because the unmet years are already shortage-binding
+// — the model has built everything it can, so a finite buffer simply fills the
+// residual gap at a known acquisition+holding cost; it does not change the
+// upstream capacity decisions. The slider sets the buffer size (kt).
+export const STOCKPILE_MAX = (data as any).meta.stockpile_max_kt ?? 80;   // kt slider ceiling
+// All-in $/kg of stockpiled finished NdFeB: acquisition (~$80/kg open-market
+// magnet) + amortized holding/handling over the horizon. $M/kt == $/kg.
+const STOCKPILE_COST_PER_KT = (data as any).meta.stockpile_cost_per_kt ?? 90;
+const DISCOUNT = 0.07;   // matches the model's real discount rate
+
+export function applyStockpile(sc: Scenario, stockpileKt: number): Scenario {
+  if (!stockpileKt || stockpileKt <= 0) return sc;
+  const unmet = [...(sc.path.us_mix.unmet ?? [])];
+  const n = unmet.length;
+  if (!n) return sc;
+  const disc = unmet.map((_, t) => 1 / Math.pow(1 + DISCOUNT, t));
+  const oldW = unmet.reduce((a, u, t) => a + u * disc[t], 0);
+  // draw down earliest-first
+  const draw = unmet.map(() => 0);
+  let rem = stockpileKt;
+  for (let t = 0; t < n; t++) {
+    const x = Math.min(unmet[t], rem);
+    draw[t] = x; unmet[t] -= x; rem -= x;
+  }
+  const drawn = draw.reduce((a, b) => a + b, 0);
+  const newW = unmet.reduce((a, u, t) => a + u * disc[t], 0);
+  // discounted-weighted scaling of the shortage penalty (early unmet weighs most)
+  const shortageScale = oldW > 1e-9 ? newW / oldW : 1;
+  return {
+    ...sc,
+    kpis: { ...sc.kpis, us_unmet_kt: Math.max(0, (sc.kpis.us_unmet_kt ?? 0) - drawn) },
+    us_cost: {
+      ...sc.us_cost,
+      shortage: (sc.us_cost.shortage ?? 0) * shortageScale,
+      stockpile: Math.round(stockpileKt * STOCKPILE_COST_PER_KT),
+    },
+    path: { ...sc.path, us_mix: { ...sc.path.us_mix, unmet, stockpile: draw } },
+  };
 }

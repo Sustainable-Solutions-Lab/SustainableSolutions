@@ -25,6 +25,7 @@ const STAGE = [
   { key: 'magnet', label: 'Magnet', color: '#3288BD' },
 ];
 const UNMET = '#9E0142';
+const STOCK = '#5E4FA2';   // strategic stockpile draw-down
 const hatchId = 'unmet-hatch';
 // red stripes on a transparent background (so it reads the same in light + dark)
 const legendHatch = `repeating-linear-gradient(45deg, ${UNMET}, ${UNMET} 3px, transparent 3px, transparent 6px)`;
@@ -81,12 +82,19 @@ export default function PathwayCharts({ sc, years, usDemandMax }: {
   const yv = (v: number) => PADT + innerH - (v / ymax) * innerH;
   const get = (k: string) => sc.path.us_mix[k] ?? Array(n).fill(0);
 
-  // US demand = the model's US supply mix total (US-made + allies + China + unmet)
-  const usDemand = years.map((_, i) => ['domestic', 'allied', 'china', 'unmet'].reduce((a, k) => a + (get(k)[i] || 0), 0));
+  // US demand = the model's US supply mix total (US-made + allies + China +
+  // stockpile draw-down + unmet). The stockpile band is carved out of unmet, so
+  // the total — and thus the demand line — is unchanged whether or not it's on.
+  const hasStock = (get('stockpile') as number[]).some((v) => v > 0.01);
+  const usDemand = years.map((_, i) => ['domestic', 'allied', 'china', 'stockpile', 'unmet'].reduce((a, k) => a + (get(k)[i] || 0), 0));
   const demandLine = usDemand.map((v, i) => `${i === 0 ? 'M' : 'L'}${xi(i)},${yv(v)}`).join(' ');
 
-  // chart 1: stacked supply (colored) + unmet (hatched) on top
-  const stackItems = [...MIX, { key: 'unmet', label: 'Unmet demand', color: UNMET, hatch: true }];
+  // chart 1: stacked supply (colored) + stockpile draw + unmet (hatched) on top
+  const stackItems = [
+    ...MIX,
+    ...(hasStock ? [{ key: 'stockpile', label: 'From stockpile', color: STOCK }] : []),
+    { key: 'unmet', label: 'Unmet demand', color: UNMET, hatch: true },
+  ];
   const lower = Array(n).fill(0);
   const areas = stackItems.map((s: any) => {
     const vals = get(s.key);
@@ -112,7 +120,10 @@ export default function PathwayCharts({ sc, years, usDemandMax }: {
             {areas}
             <path d={demandLine} fill="none" stroke="var(--ink)" strokeWidth={1.5} strokeDasharray="4 3" />
           </Frame>
-          <Legend items={[...MIX, { label: 'Unmet demand', color: UNMET, hatch: true }, { label: 'US demand', color: 'var(--ink)', dash: true }]} />
+          <Legend items={[...MIX,
+            ...(hasStock ? [{ label: 'From stockpile', color: STOCK }] : []),
+            { label: 'Unmet demand', color: UNMET, hatch: true },
+            { label: 'US demand', color: 'var(--ink)', dash: true }]} />
         </div>
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>US capacity build-out by stage</div>

@@ -16,6 +16,15 @@ export const SECTORS = CFG.sectors as Record<string, any>;
 export const SECTOR_KEYS = Object.keys(SECTORS);
 export const SCENARIO_NAMES = CFG.scenarios as string[];
 export const DEFAULT_SCENARIO = CFG.default_scenario as string;
+// Intuitive labels for the IEA scenarios (explained via tooltips in the UI).
+export const SCENARIO_LABEL: Record<string, string> = {
+  STEPS: 'Current policies', APS: 'Pledges', NZE: 'Net-zero',
+};
+export const SCENARIO_TIP: Record<string, string> = {
+  STEPS: 'IEA Stated Policies Scenario (STEPS) — today’s policies continue.',
+  APS: 'IEA Announced Pledges Scenario (APS) — governments meet their stated climate targets.',
+  NZE: 'IEA Net Zero Emissions by 2050 Scenario (NZE).',
+};
 const GRADE_LADDER = CFG.grade_ladder as Record<string, [number, number]>;
 const GRADE_ORDER = Object.keys(GRADE_LADDER);       // ascending coercivity
 const OXF = CFG.oxide_factor as number;

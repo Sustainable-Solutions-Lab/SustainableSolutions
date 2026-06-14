@@ -30,13 +30,13 @@ const hatch = (c: string) =>
   `repeating-linear-gradient(45deg, ${c}, ${c} 5px, rgba(248,248,232,0.6) 5px, rgba(248,248,232,0.6) 10px)`;
 const WORSE = '#D53E4F';
 
-const KPIS: { k: string; label: string; fmt: (x: number) => string; lowerBetter: boolean; help: string }[] = [
-  { k: 'us_import_pct', label: 'US magnet imports', fmt: pct, lowerBetter: true, help: 'Final-year share of US magnet demand met by imports' },
-  { k: 'npv_musd', label: 'Total system cost', fmt: musd, lowerBetter: true, help: '2026–2035 discounted (NPV) build-out + operating cost, all regions' },
-  { k: 'us_unmet_kt', label: 'US unmet demand', fmt: (x) => `${x.toFixed(0)} kt`, lowerBetter: true, help: 'Cumulative US magnet shortfall over 2026–2035 (kt of finished magnet) — supply the chain cannot deliver in time, e.g. under a China export ban' },
-  { k: 'primary_dytb_kt', label: 'Primary Dy/Tb mined', fmt: (x) => `${x.toFixed(1)} kt`, lowerBetter: true, help: 'Final-year heavy rare earth (Dy+Tb oxide) mined from ore — a few kt; the scarce chokepoint element, not comparable to total magnet tonnage' },
-  { k: 'hhi_separation', label: 'Separation concentration', fmt: (x) => x.toFixed(2), lowerBetter: true, help: 'HHI of separation supply (1.0 = single-region monopoly), final year' },
-  { k: 'recycled_pct', label: 'Recycled supply', fmt: pct, lowerBetter: false, help: 'Final-year share of oxide supplied by recycling' },
+const KPIS: { k: string; label: string; sub: string; fmt: (x: number) => string; lowerBetter: boolean; help: string }[] = [
+  { k: 'us_import_pct', label: 'Share of US magnets imported', sub: '2035', fmt: pct, lowerBetter: true, help: 'Final-year (2035) share of US magnet demand met by imports rather than made in the US.' },
+  { k: 'npv_musd', label: 'Total system cost', sub: '2026–35 NPV', fmt: musd, lowerBetter: true, help: 'Total 2026–2035 system cost: discounted (NPV) build-out + operating cost, summed across all regions.' },
+  { k: 'us_unmet_kt', label: 'US unmet demand', sub: '2026–35 cumulative', fmt: (x) => `${x.toFixed(0)} kt`, lowerBetter: true, help: 'Cumulative 2026–2035 US magnet shortfall (kt of finished magnet) the chain cannot deliver in time — e.g. under a China export ban.' },
+  { k: 'primary_dytb_kt', label: 'Primary Dy/Tb mined', sub: '2035 annual', fmt: (x) => `${x.toFixed(1)} kt`, lowerBetter: true, help: 'Final-year (2035) Dy+Tb oxide mined from ore that year (kt) — a few kt; the scarce chokepoint element, not comparable to total magnet tonnage.' },
+  { k: 'hhi_separation', label: 'Separation concentration', sub: '2035', fmt: (x) => x.toFixed(2), lowerBetter: true, help: 'Herfindahl index of separation supply by region (1.0 = single region), final year (2035).' },
+  { k: 'recycled_pct', label: 'Recycled supply', sub: '2035', fmt: pct, lowerBetter: false, help: 'Final-year (2035) share of oxide supplied by recycling.' },
 ];
 
 function Slider({ label, value, max, min = 0, onChange, fmt, desc }: {
@@ -139,7 +139,7 @@ export default function MagnetExplorer() {
 
         <main>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 26 }}>
-            {KPIS.map(({ k, label, fmt, lowerBetter, help }) => {
+            {KPIS.map(({ k, label, sub, fmt, lowerBetter, help }) => {
               const val = sc.kpis[k]; const base = BASE.kpis[k]; const delta = val - base;
               const better = lowerBetter ? delta < 0 : delta > 0;
               const dColor = Math.abs(delta) < 1e-6 ? 'var(--ink)' : better ? 'var(--brand-green)' : WORSE;
@@ -150,14 +150,15 @@ export default function MagnetExplorer() {
                   <div style={{ font: '500 11px var(--font-mono)', color: dColor, marginTop: 4 }}>
                     {Math.abs(delta) < 1e-6 ? '— baseline' : `${delta > 0 ? '+' : ''}${fmt(delta)} vs baseline`}
                   </div>
+                  <div style={{ font: '400 9.5px var(--font-mono)', opacity: 0.4, marginTop: 3, letterSpacing: '0.03em' }}>{sub}</div>
                 </div>
               );
             })}
           </div>
           <p style={{ fontSize: 11.5, opacity: 0.5, margin: '-14px 0 24px', fontStyle: 'italic' }}>
-            Tiles show 2035 (final-year) values, except total cost (2026–2035 NPV) and US unmet
-            demand (cumulative). Deltas are vs the no-policy baseline; the year-by-year path to
-            these endpoints is in “Pathways to 2035” below. Hover any tile for its definition.
+            Each tile notes its period (2035 = final-year; or cumulative / NPV over 2026–2035).
+            Deltas are vs the no-policy baseline; the year-by-year path is in “Pathways to 2035”
+            below. Hover any tile for its definition.
           </p>
 
           <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)' }}>
@@ -187,7 +188,8 @@ export default function MagnetExplorer() {
             </div>
           </section>
 
-          <PathwayCharts sc={sc} years={YEARS} demand={demand.totalSeries} usShare={US_DEMAND_SHARE} />
+          <PathwayCharts sc={sc} years={YEARS} demand={demand.totalSeries} usShare={US_DEMAND_SHARE}
+            usDemandMax={US_DEMAND_SHARE * Math.max(...DEMAND_KT_REF) * 1.45} />
 
           <FlowDiagram sc={sc} />
 
@@ -205,7 +207,8 @@ export default function MagnetExplorer() {
         <a href="https://steer-stanford.webflow.io/" target="_blank" rel="noopener noreferrer"
           title="STEER — Stanford" aria-label="STEER at Stanford (opens in new tab)"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none', color: 'var(--accent)' }}>
-          <img src="/STEER-logo.svg" alt="STEER — Stanford" height={34} style={{ display: 'block' }} />
+          <img className="steer-light-bg" src="/STEER-logo-for-light-background.png" alt="STEER — Stanford" height={34} style={{ display: 'block' }} />
+          <img className="steer-dark-bg" src="/STEER-logo-for-dark-background.svg" alt="STEER — Stanford" height={34} style={{ display: 'none' }} />
           <span aria-hidden="true" style={{ fontSize: 13 }}>↗</span>
         </a>
         <p style={{ fontSize: 11, opacity: 0.6, lineHeight: 1.5, maxWidth: 520, margin: 0 }}>
@@ -215,7 +218,11 @@ export default function MagnetExplorer() {
         </p>
       </footer>
 
-      <style>{`@media (max-width: 720px){ .magnet-grid{ grid-template-columns:1fr !important; } }`}</style>
+      <style>{`
+        @media (max-width: 720px){ .magnet-grid{ grid-template-columns:1fr !important; } }
+        [data-theme="dark"] .steer-light-bg{ display:none !important; }
+        [data-theme="dark"] .steer-dark-bg{ display:block !important; }
+      `}</style>
     </div>
   );
 }

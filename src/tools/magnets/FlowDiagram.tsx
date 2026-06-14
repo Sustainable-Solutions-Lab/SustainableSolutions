@@ -28,7 +28,7 @@ const COLS = [
   { label: 'Demand', stage: 'consumption', iface: null,
     desc: 'Finished-magnet consumption by region.' },
 ];
-const W = 900, H = 400, PADX = 64, PADY = 30, NODE_W = 14;
+const W = 900, H = 300, PADX = 64, PADY = 28, NODE_W = 14;
 const innerH = H - 2 * PADY;
 const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
 

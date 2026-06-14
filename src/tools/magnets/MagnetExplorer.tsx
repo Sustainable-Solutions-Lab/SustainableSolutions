@@ -32,7 +32,7 @@ const COST_DESC: Record<string, string> = {
   alloy: 'Build + operating cost of US-located oxide→metal→strip-cast alloy.',
   magnet: 'Build + operating cost of US-located sintered-magnet manufacturing.',
   recycling: 'Build + operating cost of US-located end-of-life recycling capacity.',
-  stockpile: 'Cost of the strategic magnet stockpile: size × an all-in acquire + hold rate (~$90/kg). A real, paid cost that buys down the unmet-demand penalty by covering the earliest shortfall.',
+  stockpile: 'Cost of the strategic magnet stockpile: size × an all-in acquire + hold rate (~$110/kg, grounded in Benchmark Feb-2026 prices for Dy/Tb-rich grades). A real, paid cost that buys down the unmet-demand penalty by covering the earliest shortfall.',
   shortage: 'Penalty on US unmet magnet demand: unmet tonnes × a high penalty rate. Not a market cost — it flags US demand the chain can’t deliver in time (e.g. under a ban).',
 };
 // diagonal hatch so the unmet-demand penalty reads as "not a real production cost"
@@ -146,7 +146,7 @@ export default function MagnetExplorer() {
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Resilience</div>
           <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v.toFixed(0)} kt`}
-            desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$90/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
+            desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$110/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
 
           <button onClick={() => { setDc(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); }}
             style={{ marginTop: 22, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>

@@ -154,9 +154,12 @@ export function interpScenario(
 // residual gap at a known acquisition+holding cost; it does not change the
 // upstream capacity decisions. The slider sets the buffer size (kt).
 export const STOCKPILE_MAX = (data as any).meta.stockpile_max_kt ?? 80;   // kt slider ceiling
-// All-in $/kg of stockpiled finished NdFeB: acquisition (~$80/kg open-market
-// magnet) + amortized holding/handling over the horizon. $M/kt == $/kg.
-const STOCKPILE_COST_PER_KT = (data as any).meta.stockpile_cost_per_kt ?? 90;
+// All-in $/kg of stockpiled finished NdFeB: open-market acquisition + amortized
+// holding/handling. Grounded in Benchmark Mineral Intelligence (Feb 2026): PrNd
+// oxide ~$135/kg CIF N. America, Dy ~$1,250/kg, Tb ~$5,000/kg ex-China — a
+// strategic buffer skews to Dy/Tb-rich high-coercivity grades, so ~$110/kg.
+// $M/kt == $/kg.
+const STOCKPILE_COST_PER_KT = (data as any).meta.stockpile_cost_per_kt ?? 110;
 const DISCOUNT = 0.07;   // matches the model's real discount rate
 
 export function applyStockpile(sc: Scenario, stockpileKt: number): Scenario {

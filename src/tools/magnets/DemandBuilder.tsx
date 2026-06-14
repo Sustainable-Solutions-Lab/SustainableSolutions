@@ -30,10 +30,22 @@ const peak = (bd: Record<string, number[]>) =>
 const MAG_MAX = peak(MAXBD.magnet) * 1.05;
 const DYTB_MAX = peak(MAXBD.dytb) * 1.05;
 
+// Per-lever plausibility thresholds in slider-VALUE units (a reduction for thrift /
+// re_free / offshore, raw for downshift) — the single source for both the realism
+// shading and the preset buttons. offshore is a reduction off OFFSHORE_PMSG_DEFAULT.
+const LEV_PLAUSIBLE = { thrift: 0.3, ev_downshift: 0.3, re_free: 0.15, offshore: 0.2 };
+const LEV_STRETCH = { thrift: 0.45, ev_downshift: 0.6, re_free: 0.3, offshore: 0.4 };
+const presetLevers = (t: typeof LEV_PLAUSIBLE): Levers => ({
+  thrift: t.thrift, ev_downshift: t.ev_downshift, re_free: t.re_free,
+  offshore_pmsg: OFFSHORE_PMSG_DEFAULT - t.offshore,
+});
+
 function StackedArea({ series, ymax, ylabel }: {
   series: { key: string; color: string; values: number[] }[]; ymax: number; ylabel: string;
 }) {
   const yv = (v: number) => PADT + innerH - (v / ymax) * innerH;
+  // small axes (e.g. US Dy/Tb oxide, ~1–2 kt) need a decimal or integer ticks collide
+  const tickDec = ymax < 5 ? 1 : 0;
   const lower = Array(YEARS.length).fill(0);
   const paths = series.map((s) => {
     const top = s.values.map((v, i) => lower[i] + Math.max(0, v));
@@ -50,7 +62,7 @@ function StackedArea({ series, ymax, ylabel }: {
         const y = PADT + innerH - f * innerH;
         return <g key={f}>
           <line x1={PADL} y1={y} x2={W - PADR} y2={y} stroke="var(--rule)" strokeWidth={f === 0 ? 1 : 0.5} />
-          <text x={PADL - 5} y={y} textAnchor="end" dominantBaseline="central" style={{ font: '400 8px var(--font-mono)', fill: 'var(--ink)', opacity: 0.5 }}>{Math.round(ymax * f)}</text>
+          <text x={PADL - 5} y={y} textAnchor="end" dominantBaseline="central" style={{ font: '400 8px var(--font-mono)', fill: 'var(--ink)', opacity: 0.5 }}>{(ymax * f).toFixed(tickDec)}</text>
         </g>;
       })}
       {YEARS.map((yr, i) => (i % 3 === 0 || i === YEARS.length - 1) && (
@@ -159,14 +171,23 @@ export default function DemandBuilder({ onSummary }: {
             <span style={{ color: '#F46D43', fontWeight: 600 }}> aggressive</span>. Thresholds are
             best-estimate (see each lever’s ⓘ) and meant to be refined.
           </p>
-          <Lever label="Dy/Tb thrifting (material)" value={lv.thrift} min={0} max={0.6} plausible={0.3} stretch={0.45} onChange={(v) => setLv({ ...lv, thrift: v })} fmt={(v) => `−${pct(v)}`}
+          <Lever label="Dy/Tb thrifting (material)" value={lv.thrift} min={0} max={0.6} plausible={LEV_PLAUSIBLE.thrift} stretch={LEV_STRETCH.thrift} onChange={(v) => setLv({ ...lv, thrift: v })} fmt={(v) => `−${pct(v)}`}
             desc="The % reduction in Dy/Tb (heavy rare earth) used per kg of magnet at a GIVEN coercivity grade — via grain-boundary diffusion, finer grains, or Ce/La substitution. Applied across all sectors. 0% = today's loadings. Realism: GBD alone cuts heavy-REE ~20–50% for a grade, so ≲30% is plausible, ~45% a stretch." />
-          <Lever label="Hot-motor grade downshift" value={lv.ev_downshift} min={0} max={1} plausible={0.3} stretch={0.6} onChange={(v) => setLv({ ...lv, ev_downshift: v })} fmt={pct}
+          <Lever label="Hot-motor grade downshift" value={lv.ev_downshift} min={0} max={1} plausible={LEV_PLAUSIBLE.ev_downshift} stretch={LEV_STRETCH.ev_downshift} onChange={(v) => setLv({ ...lv, ev_downshift: v })} fmt={pct}
             desc="Better motor cooling / magnetic-circuit design lets hot-motor magnets (EVs, robotics, e-bikes) meet the same duty at a LOWER coercivity grade — which carries less Dy/Tb. Shifts those sectors' grade mix down a rung. 0% = today's grade mix. Realism: a partial downshift (~30%) is plausible with thermal design; downshifting most of the fleet is aggressive." />
-          <Lever label="RE-free motor adoption" value={lv.re_free} min={0} max={0.5} plausible={0.15} stretch={0.3} onChange={(v) => setLv({ ...lv, re_free: v })} fmt={pct}
+          <Lever label="RE-free motor adoption" value={lv.re_free} min={0} max={0.5} plausible={LEV_PLAUSIBLE.re_free} stretch={LEV_STRETCH.re_free} onChange={(v) => setLv({ ...lv, re_free: v })} fmt={pct}
             desc="Share of motor demand (EVs, robotics, e-bikes) that switches to rare-earth-FREE designs (externally-excited or induction motors), removing their magnet demand entirely. 0% = all motors use permanent magnets today. Realism: RE-free motors are heavier/less efficient, so ~15% by 2035 is plausible (some OEMs are moving), >30% is aggressive." />
-          <Lever label="Offshore PMSG share reduction" value={OFFSHORE_PMSG_DEFAULT - lv.offshore_pmsg} min={0} max={OFFSHORE_PMSG_DEFAULT} plausible={0.2} stretch={0.4} onChange={(v) => setLv({ ...lv, offshore_pmsg: OFFSHORE_PMSG_DEFAULT - v })} fmt={(v) => `−${pct(v)}`}
+          <Lever label="Offshore PMSG share reduction" value={OFFSHORE_PMSG_DEFAULT - lv.offshore_pmsg} min={0} max={OFFSHORE_PMSG_DEFAULT} plausible={LEV_PLAUSIBLE.offshore} stretch={LEV_STRETCH.offshore} onChange={(v) => setLv({ ...lv, offshore_pmsg: OFFSHORE_PMSG_DEFAULT - v })} fmt={(v) => `−${pct(v)}`}
             desc={`Offshore wind is ~${pct(OFFSHORE_PMSG_DEFAULT)} NdFeB direct-drive PMSG by default. Drag right to reduce that share (a shift toward other generator types), which cuts offshore-wind magnet demand. 0 = today's ~${pct(OFFSHORE_PMSG_DEFAULT)}. Realism: PMSG is favored offshore for low O&M, so a ~20% shift to geared/alternatives is plausible, ~40% a stretch.`} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+            <span style={{ fontSize: 11, opacity: 0.55 }}>Set all:</span>
+            {([['None', DEFAULT_LEVERS], ['Plausible limit', presetLevers(LEV_PLAUSIBLE)], ['Stretch', presetLevers(LEV_STRETCH)]] as [string, Levers][]).map(([lbl, target]) => (
+              <button key={lbl} onClick={() => setLv(target)} title={`Set every demand lever to its ${lbl.toLowerCase()} value`}
+                style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5, cursor: 'pointer', border: '1px solid var(--rule)', background: 'transparent', color: 'var(--ink)' }}>
+                {lbl}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>

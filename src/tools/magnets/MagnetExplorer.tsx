@@ -158,7 +158,7 @@ export default function MagnetExplorer() {
             desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium (see the cost bar)." />
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Resilience</div>
-          <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v.toFixed(0)} kt`}
+          <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
             desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$110/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
 
           <button onClick={() => { setDc(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); }}
@@ -182,7 +182,7 @@ export default function MagnetExplorer() {
               <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Cost to the US of supply security</h2>
               <span style={{ font: '600 15px var(--font-mono)' }}>
                 {musd(usCostReal)} <span style={{ opacity: 0.5, fontWeight: 400 }}>real NPV</span>
-                {usUnmet > 0.5 && <span style={{ color: WORSE, fontWeight: 600 }}> · +{usUnmet.toFixed(0)} kt unmet</span>}
+                {usUnmet > 0.05 && <span style={{ color: WORSE, fontWeight: 600 }}> · +{usUnmet.toFixed(1)} kt unmet</span>}
               </span>
             </div>
             <p style={{ fontSize: 11.5, opacity: 0.5, margin: '0 0 12px', lineHeight: 1.45 }}>

@@ -103,18 +103,18 @@ export default function MagnetExplorer() {
 
   return (
     <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: '28px 20px 0', color: 'var(--ink)' }}>
-      <header style={{ marginBottom: 24, maxWidth: 760 }}>
+      <header style={{ marginBottom: 24 }}>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.08em', color: 'var(--accent)', marginBottom: 8 }}>
           INTERACTIVE MODEL · WORK IN PROGRESS
         </div>
         <h1 style={{ font: '600 30px/1.15 var(--font-serif)', margin: '0 0 10px' }}>
-          Rare-earth magnet supply chain explorer
+          U.S. rare-earth magnet supply chain explorer
         </h1>
         <p style={{ fontSize: 15, lineHeight: 1.55, opacity: 0.8, margin: 0 }}>
           A capacity-expansion model of the NdFeB magnet supply chain
-          (mining → separation → alloy → magnet). Compose demand by sector, then turn
-          the policy, recycling, and geopolitical knobs to see where the choke points
-          are and how cost and US import dependence respond.
+          (mining → separation → alloy → magnet). Compose demand by sector, then adjust
+          policy, recycling, and geopolitical assumptions to identify choke points and see
+          how cost and US import dependence respond.
         </p>
       </header>
 

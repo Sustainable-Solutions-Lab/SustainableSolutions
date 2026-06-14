@@ -31,7 +31,7 @@ const INPUTS_DIR =
 const OUT_DIR = resolve('public/tools/materials');
 // Lazy layer (country-level) is too big for the eager bundle. Goes to R2,
 // fetched on demand by the explorer when a country is selected.
-const LAZY_OUT_DIR = resolve('dist-materials-lazy');
+const LAZY_OUT_DIR = resolve('build/materials-lazy');
 
 // ── 22 UNEP material categories → 6 high-level groups ───────────────────────
 // Mirrors the grouping used in Busch et al.'s figures. The Sankey-style

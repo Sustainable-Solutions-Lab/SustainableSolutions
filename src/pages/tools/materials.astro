@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import Explorer from '../../tools/explorer/Explorer';
+import Explorer from '../../tools/_engine/Explorer';
 import { materialsConfig } from '../../tools/materials/config';
 import tools from '../../data/tools.json';
 import type { Tool } from '../../lib/types';
@@ -12,6 +12,7 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
   title={tool?.title ?? materialsConfig.title}
   description={tool?.summary ?? materialsConfig.description}
   hideFooter={true}
+  noindex
 >
   <section aria-label="Materials explorer">
     <div class="materials-frame">

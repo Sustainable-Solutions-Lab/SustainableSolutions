@@ -9,10 +9,10 @@ type Seg = { domestic: number; allied: number; china: number };
 type Scenario = { us_supply: Record<string, Seg> };
 
 const STAGES = [
-  { key: 'mining', label: 'Mining (Dy/Tb + Nd/Pr ore)' },
+  { key: 'mining', label: 'Mining' },
   { key: 'separation', label: 'Separation (oxide)' },
   { key: 'alloy', label: 'Alloy' },
-  { key: 'magnet', label: 'Magnet' },
+  { key: 'magnet', label: 'Magnet manufacturing' },
 ];
 const PARTS: [keyof Seg | 'imported_magnet', string, string][] = [
   ['domestic', 'US-made', 'var(--brand-green)'],

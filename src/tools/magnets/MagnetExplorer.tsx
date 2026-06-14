@@ -208,12 +208,6 @@ export default function MagnetExplorer() {
           <FlowDiagram sc={sc} />
 
           <ChokepointPanel sc={sc} />
-
-          <p style={{ fontSize: 12, opacity: 0.5, marginTop: 18, lineHeight: 1.5 }}>
-            Model: <code style={{ fontFamily: 'var(--font-mono)' }}>rare-magnets-cem</code>. Results
-            precomputed across a scenario grid and interpolated between solved points. Numbers are
-            illustrative and will change as the model and data improve.
-          </p>
         </main>
       </div>
 
@@ -233,6 +227,10 @@ export default function MagnetExplorer() {
             </svg>
             <span>Model code on GitHub <span style={{ opacity: 0.6, fontFamily: 'var(--font-mono)' }}>rare-magnets-cem ↗</span></span>
           </a>
+          <p style={{ fontSize: 11, opacity: 0.5, lineHeight: 1.5, margin: 0 }}>
+            Results precomputed across a scenario grid and interpolated between solved points. Numbers
+            are illustrative and will change as the model and data improve.
+          </p>
           <p style={{ fontSize: 11, opacity: 0.6, lineHeight: 1.5, margin: 0 }}>
             Developed by <a href="https://steer-stanford.webflow.io/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>STEER</a> at
             Stanford, with support from the U.S. Department of Energy's Advanced Materials &amp;

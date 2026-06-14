@@ -24,12 +24,12 @@
     "title": "A review of trends and drivers of greenhouse gas emissions by sector from 1990 to 2018"
   },
   {
-    "id": "d1gkVwhDpl0C",
-    "title": "Greenhouse gas mitigation by agricultural intensification"
-  },
-  {
     "id": "qSd0DAb9jMoC",
     "title": "Systems integration for global sustainability"
+  },
+  {
+    "id": "d1gkVwhDpl0C",
+    "title": "Greenhouse gas mitigation by agricultural intensification"
   },
   {
     "id": "9CGX2owmTHMC",
@@ -108,12 +108,12 @@
     "title": "Increasing probability of mortality during Indian heat waves"
   },
   {
-    "id": "4tNoA7Af41QC",
-    "title": "Drivers of the US CO2 emissions 1997–2013"
-  },
-  {
     "id": "UebtZRa9Y70C",
     "title": "A synthesis of carbon dioxide emissions from fossil-fuel combustion"
+  },
+  {
+    "id": "4tNoA7Af41QC",
+    "title": "Drivers of the US CO2 emissions 1997–2013"
   },
   {
     "id": "DTjSuSUbmXsC",
@@ -196,12 +196,12 @@
     "title": "Carbon Monitor, a near-real-time daily dataset of global CO2 emission from fossil fuel and cement production"
   },
   {
-    "id": "-LHtoeeytlUC",
-    "title": "Energy systems in scenarios at net-zero CO2 emissions"
-  },
-  {
     "id": "SgM-ki2adj0C",
     "title": "Relevance of methodological choices for accounting of land use change carbon fluxes"
+  },
+  {
+    "id": "-LHtoeeytlUC",
+    "title": "Energy systems in scenarios at net-zero CO2 emissions"
   },
   {
     "id": "KqW5X_olkfQC",
@@ -236,12 +236,12 @@
     "title": "Decarbonizing cement production"
   },
   {
-    "id": "lPDSu1ZU3VAC",
-    "title": "Flexibility and intensity of global water use"
-  },
-  {
     "id": "6ScxedgR18sC",
     "title": "Climate warming increases extreme daily wildfire growth risk in California"
+  },
+  {
+    "id": "lPDSu1ZU3VAC",
+    "title": "Flexibility and intensity of global water use"
   },
   {
     "id": "ITz7TVZQ0sgC",
@@ -332,10 +332,6 @@
     "title": "Global fossil carbon emissions rebound to near pre-COVID-19 levels"
   },
   {
-    "id": "7XUxBq3GufIC",
-    "title": "Global CO2 uptake by cement from 1930 to 2019"
-  },
-  {
     "id": "WTQy_8Ay2UsC",
     "title": "Emissions rebound from the COVID-19 pandemic"
   },
@@ -346,6 +342,10 @@
   {
     "id": "-qpA3cGbmHsC",
     "title": "Net-zero emissions energy systems: What we know and do not know"
+  },
+  {
+    "id": "7XUxBq3GufIC",
+    "title": "Global CO2 uptake by cement from 1930 to 2019"
   },
   {
     "id": "q7LczdTNAjsC",
@@ -400,12 +400,12 @@
     "title": "Rethinking wedges"
   },
   {
-    "id": "k6nH7jlkaTkC",
-    "title": "Human activities now fuel two-thirds of global methane emissions"
-  },
-  {
     "id": "h9G0ZmjYpDoC",
     "title": "Effects of atmospheric transport and trade on air pollution mortality in China"
+  },
+  {
+    "id": "k6nH7jlkaTkC",
+    "title": "Human activities now fuel two-thirds of global methane emissions"
   },
   {
     "id": "xckinRaLORAC",
@@ -448,6 +448,10 @@
     "title": "Snowmelt risk telecouplings for irrigated agriculture"
   },
   {
+    "id": "43B52WW2E64C",
+    "title": "Regional impacts of COVID-19 on carbon dioxide detected worldwide from space"
+  },
+  {
     "id": "WGv8Og3F3KgC",
     "title": "Weakening aerosol direct radiative effects mitigate climate penalty on Chinese air quality"
   },
@@ -456,12 +460,12 @@
     "title": "Climate constraints on the carbon intensity of economic growth"
   },
   {
-    "id": "43B52WW2E64C",
-    "title": "Regional impacts of COVID-19 on carbon dioxide detected worldwide from space"
-  },
-  {
     "id": "UEFpDhwOD2kC",
     "title": "Large global variations in the carbon dioxide removal potential of seaweed farming due to biophysical constraints"
+  },
+  {
+    "id": "0qX8s2k1IRwC",
+    "title": "Planning reliable wind-and solar-based electricity systems"
   },
   {
     "id": "CC3C2HR4nz8C",
@@ -474,10 +478,6 @@
   {
     "id": "DrOLxFoABAwC",
     "title": "Strategies for climate-resilient global wind and solar power systems"
-  },
-  {
-    "id": "0qX8s2k1IRwC",
-    "title": "Planning reliable wind-and solar-based electricity systems"
   },
   {
     "id": "n8FNryW2AHIC",
@@ -572,16 +572,16 @@
     "title": "Reply to Lopez et al.: Consumption-based accounting helps mitigate global air pollution"
   },
   {
-    "id": "pwA0zy_liR0C",
-    "title": "Natural gas supply from Russia derived from daily pipeline flow data and potential solutions for filling a shortage of Russian supply in the European Union (EU)"
+    "id": "LzOrNEA7mwcC",
+    "title": "Reliance on fossil fuels increases during extreme temperature events in the continental United States"
   },
   {
     "id": "vkuYBMKU6wEC",
     "title": "Climate effects of aerosols reduce economic inequality"
   },
   {
-    "id": "LzOrNEA7mwcC",
-    "title": "Reliance on fossil fuels increases during extreme temperature events in the continental United States"
+    "id": "pwA0zy_liR0C",
+    "title": "Natural gas supply from Russia derived from daily pipeline flow data and potential solutions for filling a shortage of Russian supply in the European Union (EU)"
   },
   {
     "id": "HAmI6pRF5skC",
@@ -604,24 +604,28 @@
     "title": "Environmental benefit-detriment thresholds for flow battery energy storage systems: A case study in California"
   },
   {
-    "id": "P-MJmu9ZMwQC",
-    "title": "Quantifying Social Inequalities in Flood Risk"
-  },
-  {
     "id": "3WNXLiBY60kC",
     "title": "Committed Emissions of the U.S. Power Sector, 2000–2018"
   },
   {
-    "id": "l7iSsH4_Im4C",
-    "title": "Mitigating climate change and ozone pollution will improve Chinese food security"
+    "id": "P-MJmu9ZMwQC",
+    "title": "Quantifying Social Inequalities in Flood Risk"
   },
   {
     "id": "CMPXdcK5v8EC",
     "title": "Turning Paris into reality at the University of California"
   },
   {
+    "id": "l7iSsH4_Im4C",
+    "title": "Mitigating climate change and ozone pollution will improve Chinese food security"
+  },
+  {
     "id": "Qh5Z_vBjo80C",
     "title": "Unraveling climate change-induced compound low-solar-low-wind extremes in China"
+  },
+  {
+    "id": "BKYZGPsuSFYC",
+    "title": "International Trade Reshapes the Decoupling of Emissions from Economic Growth"
   },
   {
     "id": "O0MA3yP7Y3UC",
@@ -630,10 +634,6 @@
   {
     "id": "oXKBmVzQOggC",
     "title": "A crack in the natural-gas bridge"
-  },
-  {
-    "id": "BKYZGPsuSFYC",
-    "title": "International Trade Reshapes the Decoupling of Emissions from Economic Growth"
   },
   {
     "id": "bFuYayV9R1gC",
@@ -648,10 +648,6 @@
     "title": "Dislocated interests and climate change"
   },
   {
-    "id": "mu2_AnMl8iYC",
-    "title": "The global hydrogen budget"
-  },
-  {
     "id": "43LB_KcVqeAC",
     "title": "CarbonMonitor-Power near-real-time monitoring of global power generation on hourly to daily scales"
   },
@@ -662,6 +658,10 @@
   {
     "id": "_TjUWtciUekC",
     "title": "Corrigendum to\" Assessment of China's virtual air pollution transport embodied in trade by using a consumption-based emission inventory\" published in Atmos. Chem. Phys., 15 …"
+  },
+  {
+    "id": "mu2_AnMl8iYC",
+    "title": "The global hydrogen budget"
   },
   {
     "id": "DPO9WFcz7UcC",
@@ -680,12 +680,12 @@
     "title": "Uses and limits of national decarbonization scenarios to inform net-zero transitions"
   },
   {
-    "id": "WTSGYGHz1bkC",
-    "title": "Opportunities and constraints of hydrogen energy storage systems"
-  },
-  {
     "id": "n1qY4L4uFdgC",
     "title": "Drivers of natural gas use in U.S. residential buildings"
+  },
+  {
+    "id": "WTSGYGHz1bkC",
+    "title": "Opportunities and constraints of hydrogen energy storage systems"
   },
   {
     "id": "w9ZB08sdvuUC",
@@ -752,12 +752,12 @@
     "title": "Without a back-up plan"
   },
   {
-    "id": "uQdrZ3qaPmcC",
-    "title": "The importance of multiregional accounting for corporate carbon emissions"
-  },
-  {
     "id": "ve7iT2ZEuL4C",
     "title": "Global daily CO2 emissions from 1970 to 2024"
+  },
+  {
+    "id": "uQdrZ3qaPmcC",
+    "title": "The importance of multiregional accounting for corporate carbon emissions"
   },
   {
     "id": "rAN7mHg6NlYC",

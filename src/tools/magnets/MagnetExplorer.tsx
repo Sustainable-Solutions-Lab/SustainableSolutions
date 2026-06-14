@@ -102,7 +102,7 @@ export default function MagnetExplorer() {
   const usCostTotal = US_COST_KEYS.reduce((a, [k]) => a + Math.max(0, sc.us_cost[k] ?? 0), 0);
 
   return (
-    <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: '28px 20px 64px', color: 'var(--ink)' }}>
+    <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: '28px 20px 16px', color: 'var(--ink)' }}>
       <header style={{ marginBottom: 24, maxWidth: 760 }}>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.08em', color: 'var(--accent)', marginBottom: 8 }}>
           INTERACTIVE MODEL · WORK IN PROGRESS

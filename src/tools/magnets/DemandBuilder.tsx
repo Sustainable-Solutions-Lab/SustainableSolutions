@@ -62,11 +62,18 @@ function StackedArea({ series, ymax, ylabel }: {
   );
 }
 
-function Lever({ label, value, min, max, onChange, fmt, desc }: {
+function Lever({ label, value, min, max, onChange, fmt, desc, plausible, stretch }: {
   label: string; value: number; min: number; max: number;
   onChange: (v: number) => void; fmt: (v: number) => string; desc: string;
+  // value below `plausible` is a credible reduction; plausible→stretch is a stretch;
+  // beyond `stretch` is aggressive/optimistic. Drives the shaded realism track.
+  plausible?: number; stretch?: number;
 }) {
   const [open, setOpen] = useState(false);
+  const span = (max - min) || 1;
+  const pPct = plausible != null ? Math.max(0, Math.min(100, ((plausible - min) / span) * 100)) : 100;
+  const sPct = stretch != null ? Math.max(pPct, Math.min(100, ((stretch - min) / span) * 100)) : 100;
+  const inZone = value <= (plausible ?? Infinity) ? 'plausible' : value <= (stretch ?? Infinity) ? 'a stretch' : 'aggressive';
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 11.5, marginBottom: 3 }}>
@@ -79,6 +86,15 @@ function Lever({ label, value, min, max, onChange, fmt, desc }: {
         </span>
         <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{fmt(value)}</span>
       </div>
+      {plausible != null && (
+        // realism track: green (plausible) · amber (stretch) · red (aggressive)
+        <div title={`Realism shading — at ${fmt(value)} this reduction looks ${inZone}. Green = plausible, amber = a stretch, red = aggressive.`}
+          style={{ display: 'flex', height: 4, borderRadius: 2, overflow: 'hidden', marginBottom: 2 }}>
+          <div style={{ width: `${pPct}%`, background: '#66C2A5' }} />
+          <div style={{ width: `${sPct - pPct}%`, background: '#FEE08B' }} />
+          <div style={{ width: `${100 - sPct}%`, background: '#F46D43' }} />
+        </div>
+      )}
       <input type="range" min={min} max={max} step={0.01} value={value}
         onChange={(e) => onChange(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--accent)' }} />
       {open && <p style={{ fontSize: 10.5, opacity: 0.6, margin: '5px 0 0', lineHeight: 1.4 }}>{desc}</p>}
@@ -91,7 +107,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 export default function DemandBuilder({ onSummary }: {
   onSummary: (s: { demand_scale: number; dytb_intensity: number; totalSeries: number[] }) => void;
 }) {
-  const [scenario, setScenario] = useState<PerSectorScenario>(() => allScenario('APS'));
+  const [scenario, setScenario] = useState<PerSectorScenario>(() => allScenario('STEPS'));
   const [lv, setLv] = useState<Levers>(DEFAULT_LEVERS);
 
   const summary = useMemo(() => demandSummary(scenario, lv), [scenario, lv]);
@@ -135,15 +151,22 @@ export default function DemandBuilder({ onSummary }: {
             ))}
           </div>
 
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '16px 0 8px' }}>Demand levers</div>
-          <Lever label="Dy/Tb thrifting (material)" value={lv.thrift} min={0} max={0.6} onChange={(v) => setLv({ ...lv, thrift: v })} fmt={(v) => `−${pct(v)}`}
-            desc="The % reduction in Dy/Tb (heavy rare earth) used per kg of magnet at a GIVEN coercivity grade — via grain-boundary diffusion, finer grains, or Ce/La substitution. Applied across all sectors. 0% = today's loadings." />
-          <Lever label="Hot-motor grade downshift" value={lv.ev_downshift} min={0} max={1} onChange={(v) => setLv({ ...lv, ev_downshift: v })} fmt={pct}
-            desc="Better motor cooling / magnetic-circuit design lets hot-motor magnets (EVs, robotics, e-bikes) meet the same duty at a LOWER coercivity grade — which carries less Dy/Tb. Shifts those sectors' grade mix down a rung. 0% = today's grade mix." />
-          <Lever label="RE-free motor adoption" value={lv.re_free} min={0} max={0.5} onChange={(v) => setLv({ ...lv, re_free: v })} fmt={pct}
-            desc="Share of motor demand (EVs, robotics, e-bikes) that switches to rare-earth-FREE designs (externally-excited or induction motors), removing their magnet demand entirely. 0% = all motors use permanent magnets today." />
-          <Lever label="Offshore PMSG share reduction" value={OFFSHORE_PMSG_DEFAULT - lv.offshore_pmsg} min={0} max={OFFSHORE_PMSG_DEFAULT} onChange={(v) => setLv({ ...lv, offshore_pmsg: OFFSHORE_PMSG_DEFAULT - v })} fmt={(v) => `−${pct(v)}`}
-            desc={`Offshore wind is ~${pct(OFFSHORE_PMSG_DEFAULT)} NdFeB direct-drive PMSG by default. Drag right to reduce that share (a shift toward other generator types), which cuts offshore-wind magnet demand. 0 = today's ~${pct(OFFSHORE_PMSG_DEFAULT)}.`} />
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '16px 0 4px' }}>Demand levers</div>
+          <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
+            The bar under each lever shades how optimistic the reduction is:
+            <span style={{ color: '#66C2A5', fontWeight: 600 }}> plausible</span> ·
+            <span style={{ color: '#D4A017', fontWeight: 600 }}> a stretch</span> ·
+            <span style={{ color: '#F46D43', fontWeight: 600 }}> aggressive</span>. Thresholds are
+            best-estimate (see each lever’s ⓘ) and meant to be refined.
+          </p>
+          <Lever label="Dy/Tb thrifting (material)" value={lv.thrift} min={0} max={0.6} plausible={0.3} stretch={0.45} onChange={(v) => setLv({ ...lv, thrift: v })} fmt={(v) => `−${pct(v)}`}
+            desc="The % reduction in Dy/Tb (heavy rare earth) used per kg of magnet at a GIVEN coercivity grade — via grain-boundary diffusion, finer grains, or Ce/La substitution. Applied across all sectors. 0% = today's loadings. Realism: GBD alone cuts heavy-REE ~20–50% for a grade, so ≲30% is plausible, ~45% a stretch." />
+          <Lever label="Hot-motor grade downshift" value={lv.ev_downshift} min={0} max={1} plausible={0.3} stretch={0.6} onChange={(v) => setLv({ ...lv, ev_downshift: v })} fmt={pct}
+            desc="Better motor cooling / magnetic-circuit design lets hot-motor magnets (EVs, robotics, e-bikes) meet the same duty at a LOWER coercivity grade — which carries less Dy/Tb. Shifts those sectors' grade mix down a rung. 0% = today's grade mix. Realism: a partial downshift (~30%) is plausible with thermal design; downshifting most of the fleet is aggressive." />
+          <Lever label="RE-free motor adoption" value={lv.re_free} min={0} max={0.5} plausible={0.15} stretch={0.3} onChange={(v) => setLv({ ...lv, re_free: v })} fmt={pct}
+            desc="Share of motor demand (EVs, robotics, e-bikes) that switches to rare-earth-FREE designs (externally-excited or induction motors), removing their magnet demand entirely. 0% = all motors use permanent magnets today. Realism: RE-free motors are heavier/less efficient, so ~15% by 2035 is plausible (some OEMs are moving), >30% is aggressive." />
+          <Lever label="Offshore PMSG share reduction" value={OFFSHORE_PMSG_DEFAULT - lv.offshore_pmsg} min={0} max={OFFSHORE_PMSG_DEFAULT} plausible={0.2} stretch={0.4} onChange={(v) => setLv({ ...lv, offshore_pmsg: OFFSHORE_PMSG_DEFAULT - v })} fmt={(v) => `−${pct(v)}`}
+            desc={`Offshore wind is ~${pct(OFFSHORE_PMSG_DEFAULT)} NdFeB direct-drive PMSG by default. Drag right to reduce that share (a shift toward other generator types), which cuts offshore-wind magnet demand. 0 = today's ~${pct(OFFSHORE_PMSG_DEFAULT)}. Realism: PMSG is favored offshore for low O&M, so a ~20% shift to geared/alternatives is plausible, ~40% a stretch.`} />
         </div>
 
         <div>

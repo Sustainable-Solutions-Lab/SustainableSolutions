@@ -85,9 +85,9 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
   });
 
   return (
-    <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 26 }}>
+    <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Supply-chain flows</h2>
+        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Global supply chain</h2>
         <div style={{ display: 'flex', gap: 14 }}>
           {REGIONS.map((r) => (
             <span key={r} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>

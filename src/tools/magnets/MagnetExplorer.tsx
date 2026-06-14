@@ -4,6 +4,7 @@ import FlowDiagram from './FlowDiagram';
 import ChokepointPanel from './ChokepointPanel';
 import PathwayCharts from './PathwayCharts';
 import DemandBuilder from './DemandBuilder';
+import TradeRiskPanel from './TradeRiskPanel';
 
 /**
  * Rare-earth magnet supply-chain explorer.
@@ -14,6 +15,9 @@ import DemandBuilder from './DemandBuilder';
 
 const pct = (x: number) => `${x.toFixed(0)}%`;
 const musd = (x: number) => `$${(x / 1000).toFixed(1)}B`;
+// Fixed x-axis for the absolute cost bar so it visibly grows/shrinks with sliders
+// (real US cost-of-security spans ~$2.5B baseline to ~$10B under heavy reshoring).
+const COST_AXIS_MAX = 12000;  // $M
 
 const COST_KEYS: [string, string, string][] = [
   ['mining', 'Mining', '#F46D43'],
@@ -22,6 +26,7 @@ const COST_KEYS: [string, string, string][] = [
   ['magnet', 'Magnet', '#3288BD'],
   ['recycling', 'Recycling', '#66C2A5'],
   ['stockpile', 'Strategic stockpile', '#5E4FA2'],
+  ['dytb_premium', 'Heavy-REE price premium', '#762A83'],
   ['trade', 'Shipping', '#5E4FA2'],
   ['coproduct', 'Co-product La/Ce', '#FEE08B'],
   ['shortage', 'Unmet-demand penalty', '#9E0142'],
@@ -33,11 +38,9 @@ const COST_DESC: Record<string, string> = {
   magnet: 'Build + operating cost of US-located sintered-magnet manufacturing.',
   recycling: 'Build + operating cost of US-located end-of-life recycling capacity.',
   stockpile: 'Cost of the strategic magnet stockpile: size × an all-in acquire + hold rate (~$110/kg, grounded in Benchmark Feb-2026 prices for Dy/Tb-rich grades). A real, paid cost that buys down the unmet-demand penalty by covering the earliest shortfall.',
+  dytb_premium: 'Price-taker premium the US pays on the Dy/Tb it imports (as oxide, alloy, or embodied in magnets) as China’s export controls inflate the heavy-REE benchmarks Western buyers are bound to. Scales with the China-restriction slider; the US escapes by separating or recycling Dy/Tb domestically — limited in the near term, since the one active US mine (Mountain Pass) is light-REE and domestic heavy-REE prospects (e.g. Round Top, TX) are pre-commercial.',
   shortage: 'Penalty on US unmet magnet demand: unmet tonnes × a high penalty rate. Not a market cost — it flags US demand the chain can’t deliver in time (e.g. under a ban).',
 };
-// diagonal hatch so the unmet-demand penalty reads as "not a real production cost"
-const hatch = (c: string) =>
-  `repeating-linear-gradient(45deg, ${c}, ${c} 5px, rgba(248,248,232,0.6) 5px, rgba(248,248,232,0.6) 10px)`;
 const WORSE = '#D53E4F';
 
 const KPIS: { k: string; label: string; sub: string; fmt: (x: number) => string; lowerBetter: boolean; help: string }[] = [
@@ -102,7 +105,17 @@ export default function MagnetExplorer() {
   // The cost breakdown is US-specific (the cost the US bears to supply itself) —
   // this analysis is about US supply security. Global trade/co-product don't apply.
   const US_COST_KEYS = COST_KEYS.filter(([k]) => k !== 'trade' && k !== 'coproduct');
-  const usCostTotal = US_COST_KEYS.reduce((a, [k]) => a + Math.max(0, sc.us_cost[k] ?? 0), 0);
+  // The bar shows REAL economic cost: the unmet-demand penalty is excluded (it's a
+  // solver flag at $10k/kg, not money) and surfaced physically as unmet demand (kt).
+  const REAL_COST_KEYS = US_COST_KEYS.filter(([k]) => k !== 'shortage');
+  const realCost = (s: typeof sc) => REAL_COST_KEYS.reduce((a, [k]) => a + Math.max(0, s.us_cost[k] ?? 0), 0);
+  const usCostReal = realCost(sc);
+  const usUnmet = sc.kpis.us_unmet_kt ?? 0;
+  // Trade-risk reference: same demand + China threat, but policy/resilience levers
+  // OFF — so the panel can show the risk (and cost) those levers buy down.
+  const triRef = useMemo(() => interpScenario({
+    dc: 0, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale,
+  }), [china, rcost, demand]);
 
   return (
     <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: '28px 20px 0', color: 'var(--ink)' }}>
@@ -142,7 +155,7 @@ export default function MagnetExplorer() {
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Geopolitics</div>
           <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
-            desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring." />
+            desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium (see the cost bar)." />
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Resilience</div>
           <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v.toFixed(0)} kt`}
@@ -155,7 +168,73 @@ export default function MagnetExplorer() {
         </aside>
 
         <main>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 26 }}>
+          {/* 1 — the whole chain first, so users learn the stages + connections */}
+          <FlowDiagram sc={sc} />
+
+          {/* 2 — how that chain meets US magnet demand over time + the US ramp */}
+          <PathwayCharts sc={sc} years={YEARS}
+            usDemandMax={US_DEMAND_SHARE * Math.max(...DEMAND_KT_REF) * 1.45} />
+
+          {/* 3 — what it costs (absolute, growing/shrinking). Real economic cost
+              only; unmet demand is shown physically (red), not as a $ penalty. */}
+          <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 22 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
+              <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Cost to the US of supply security</h2>
+              <span style={{ font: '600 15px var(--font-mono)' }}>
+                {musd(usCostReal)} <span style={{ opacity: 0.5, fontWeight: 400 }}>real NPV</span>
+                {usUnmet > 0.5 && <span style={{ color: WORSE, fontWeight: 600 }}> · +{usUnmet.toFixed(0)} kt unmet</span>}
+              </span>
+            </div>
+            <p style={{ fontSize: 11.5, opacity: 0.5, margin: '0 0 12px', lineHeight: 1.45 }}>
+              Absolute build + operating cost of US-located capacity by stage, plus the heavy-REE
+              price premium and any strategic stockpile (2026–35 NPV). The bar length is the real
+              cost — it grows as you force more security, shrinks as imports do the work. When the
+              chain physically can’t deliver, that surfaces as <span style={{ color: WORSE }}>unmet
+              demand</span> (above), not as a dollar cost.
+            </p>
+            <div style={{ height: 30, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--rule)', background: 'var(--paper-2)' }}>
+              <div style={{ display: 'flex', height: '100%', width: `${Math.min(100, (usCostReal / COST_AXIS_MAX) * 100)}%`, transition: 'width 0.15s' }}>
+                {REAL_COST_KEYS.map(([k, lbl, color]) => {
+                  const v = Math.max(0, sc.us_cost[k] ?? 0);
+                  if (v <= 0) return null;
+                  return <div key={k} title={`${lbl}: ${musd(v)}`} style={{ width: `${(v / usCostReal) * 100}%`, background: color }} />;
+                })}
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink)', opacity: 0.45, marginTop: 2 }}>
+              <span>$0B</span><span>{musd(COST_AXIS_MAX / 2)}</span><span>{musd(COST_AXIS_MAX)}+</span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 20px', marginTop: 14 }}>
+              {REAL_COST_KEYS.map(([k, lbl, color]) => {
+                const v = sc.us_cost[k] ?? 0;
+                const dv = v - (BASE.us_cost[k] ?? 0);
+                const showDelta = Math.abs(dv) >= 100;
+                return (
+                  // fixed column per item (label / value / delta) so values can change
+                  // without the row reflowing or the plots below jumping
+                  <div key={k} title={COST_DESC[k]} style={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 11.5, cursor: 'help', minWidth: 96 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 2, background: color, display: 'inline-block', flexShrink: 0 }} />
+                      <span style={{ opacity: 0.7 }}>{lbl}</span>
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, paddingLeft: 15 }}>{musd(v)}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, paddingLeft: 15, minHeight: 13, color: showDelta ? (dv > 0 ? WORSE : 'var(--brand-green)') : 'transparent' }}>
+                      {showDelta ? `${dv > 0 ? '+' : ''}${musd(dv)} vs base` : '—'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* 4 — where global supply is concentrated (the structural chokepoints) */}
+          <ChokepointPanel sc={sc} />
+
+          {/* 5 — trade-risk index (per stage + integrated) + cost-effectiveness */}
+          <TradeRiskPanel sc={sc} refScenario={triRef} scCost={usCostReal} refCost={realCost(triRef)} />
+
+          {/* 6 — headline KPIs last, as a summary scorecard */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 26 }}>
             {KPIS.map(({ k, label, sub, fmt, lowerBetter, help }) => {
               const val = sc.kpis[k]; const base = BASE.kpis[k]; const delta = val - base;
               const better = lowerBetter ? delta < 0 : delta > 0;
@@ -172,53 +251,6 @@ export default function MagnetExplorer() {
               );
             })}
           </div>
-          <div style={{ marginBottom: 24 }} />
-
-          <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-              <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Cost to the US, by stage</h2>
-              <span style={{ font: '600 15px var(--font-mono)' }}>{musd(usCostTotal)} <span style={{ opacity: 0.5, fontWeight: 400 }}>US NPV</span></span>
-            </div>
-            <p style={{ fontSize: 11.5, opacity: 0.5, margin: '0 0 12px', lineHeight: 1.45 }}>
-              Build + operating cost of US-located capacity at each stage (2026–35 NPV), plus the US
-              shortage penalty. The delta vs the no-policy baseline is the cost of US supply security.
-            </p>
-            <div style={{ display: 'flex', height: 30, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--rule)' }}>
-              {US_COST_KEYS.map(([k, lbl, color]) => {
-                const v = Math.max(0, sc.us_cost[k] ?? 0);
-                if (v <= 0) return null;
-                return <div key={k} title={`${lbl}: ${musd(v)}`} style={{ width: `${(v / usCostTotal) * 100}%`, background: k === 'shortage' ? hatch(color) : color }} />;
-              })}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 20px', marginTop: 14 }}>
-              {US_COST_KEYS.map(([k, lbl, color]) => {
-                const v = sc.us_cost[k] ?? 0;
-                const dv = v - (BASE.us_cost[k] ?? 0);
-                const showDelta = Math.abs(dv) >= 100;
-                return (
-                  // fixed column per item (label / value / delta) so values can change
-                  // without the row reflowing or the plots below jumping
-                  <div key={k} title={COST_DESC[k]} style={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 11.5, cursor: 'help', minWidth: 96 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 2, background: k === 'shortage' ? hatch(color) : color, display: 'inline-block', flexShrink: 0 }} />
-                      <span style={{ opacity: 0.7 }}>{lbl}</span>
-                    </span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, paddingLeft: 15 }}>{musd(v)}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, paddingLeft: 15, minHeight: 13, color: showDelta ? (dv > 0 ? WORSE : 'var(--brand-green)') : 'transparent' }}>
-                      {showDelta ? `${dv > 0 ? '+' : ''}${musd(dv)} vs base` : '—'}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          <PathwayCharts sc={sc} years={YEARS}
-            usDemandMax={US_DEMAND_SHARE * Math.max(...DEMAND_KT_REF) * 1.45} />
-
-          <FlowDiagram sc={sc} />
-
-          <ChokepointPanel sc={sc} />
         </main>
       </div>
 

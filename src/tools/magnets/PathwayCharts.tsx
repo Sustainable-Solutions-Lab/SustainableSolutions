@@ -53,7 +53,7 @@ function Frame({ years, ymax, ylabel, children }: {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
       <defs>
-        <pattern id={hatchId} patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+        <pattern id={hatchId} patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
           <line x1="0" y1="0" x2="0" y2="6" stroke={UNMET} strokeWidth="3" />
         </pattern>
       </defs>
@@ -115,7 +115,7 @@ export default function PathwayCharts({ sc, years, usDemandMax }: {
       <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 10px' }}>Pathways to 2035</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>How US magnet demand is met</div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>How US demand for finished magnets is met</div>
           <Frame years={years} ymax={ymax} ylabel="kt magnet / yr">
             {areas}
             <path d={demandLine} fill="none" stroke="var(--ink)" strokeWidth={1.5} strokeDasharray="4 3" />
@@ -139,10 +139,13 @@ export default function PathwayCharts({ sc, years, usDemandMax }: {
       </div>
       <p style={{ fontSize: 11, opacity: 0.55, marginTop: 8, lineHeight: 1.5 }}>
         Perfect-foresight build-out, 2026–2035 (capacity is lead-time-gated but plans against known
-        future demand). <b>Left:</b> the colored stack is the US supply mix; the hatched band on top is
-        unmet demand, and the dashed line (the stack total) is US magnet demand. <b>Right:</b> US
-        capacity rises mainly at the magnet stage — under the IRA-style content mandate only finished
-        magnets must be US-made, so oxide/alloy can come from allies and upstream US stays near existing.
+        future demand). <b>Left:</b> how US demand for <i>finished magnets</i> is met (not oxide or
+        alloy) — the colored stack is the US supply mix, the hatched band on top is unmet demand, and
+        the dashed line (the stack total) is US magnet demand. <b>Right:</b> US online capacity by
+        stage. Capacity is built in whole modules, so the last one can overshoot demand — capacity
+        above the demand line is lumpy/under-utilized headroom, not exports (the Sankey shows the
+        actual flows). It rises mainly at the magnet stage: under the IRA-style content mandate only
+        finished magnets must be US-made, so oxide/alloy can come from allies.
       </p>
     </section>
   );

@@ -95,9 +95,9 @@ export default function MagnetExplorer() {
   // Demand summary from the demand builder: maps any sector composition + levers to
   // the two demand axes (total-demand scale + Dy/Tb intensity) the grid is solved over.
   const [demand, setDemand] = useState(
-    () => ({ demand_scale: 1, dytb_intensity: 1, totalSeries: DEMAND_KT_REF }));
+    () => ({ demand_scale: 1, dytb_intensity: 1, totalSeries: DEMAND_KT_REF, hiCoercShare: 0.5 }));
   const onSummary = useCallback(
-    (s: { demand_scale: number; dytb_intensity: number; totalSeries: number[] }) => setDemand(s), []);
+    (s: { demand_scale: number; dytb_intensity: number; totalSeries: number[]; hiCoercShare: number }) => setDemand(s), []);
 
   const sc = useMemo(() => applyStockpile(interpScenario({
     dc, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale,
@@ -172,7 +172,7 @@ export default function MagnetExplorer() {
           <FlowDiagram sc={sc} />
 
           {/* 2 — how that chain meets US magnet demand over time + the US ramp */}
-          <PathwayCharts sc={sc} years={YEARS}
+          <PathwayCharts sc={sc} years={YEARS} hiCoercShare={demand.hiCoercShare}
             usDemandMax={US_DEMAND_SHARE * Math.max(...DEMAND_KT_REF) * 1.45} />
 
           {/* 3 — what it costs (absolute, growing/shrinking). Real economic cost

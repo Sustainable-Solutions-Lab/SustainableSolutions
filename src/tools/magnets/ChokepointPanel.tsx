@@ -77,9 +77,14 @@ export default function ChokepointPanel({ sc }: { sc: Scenario }) {
       <p style={{ fontSize: 12, opacity: 0.55, marginTop: 14, lineHeight: 1.5 }}>
         These are the structural bottlenecks the US is exposed to when it imports magnets or
         intermediates. The heavy rare earths (Dy/Tb) are the sharpest of all: China controls ~99% of
-        global dysprosium and terbium oxide (Benchmark Mineral Intelligence, 2025), so even the
-        small mining bar above understates the heavy-REE chokepoint. Reshoring shows up as the green
-        (US) share growing — which only happens here under a strong content mandate.
+        global dysprosium and terbium oxide (Benchmark Mineral Intelligence, 2025), so the mining
+        bar — which tracks the magnet elements Nd/Pr+Dy/Tb — is far more China-concentrated than
+        total rare-earth mining (USGS 2025: China ~69%, US ~13%, Australia ~7%). The model is a
+        cost-minimization that routes mining to the cheapest source (China), so the baseline
+        over-concentrates there relative to real-world mining, where US/Australian mines (Mountain
+        Pass, Mt Weld) produce and export regardless — a known simplification. Reshoring shows up as
+        the green (US) share growing — which here needs a strong content mandate, and upstream is
+        gated by the US having no <i>active</i> heavy-REE production (Round Top, TX is pre-commercial).
       </p>
     </section>
   );

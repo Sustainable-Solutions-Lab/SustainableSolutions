@@ -24,11 +24,12 @@ const STAGE = [
   { key: 'alloy', label: 'Alloy', color: '#FDAE61' },
   { key: 'magnet', label: 'Magnet', color: '#3288BD' },
 ];
-const UNMET = '#9E0142';
+const UNMET = '#9E0142';      // high-coercivity (Dy/Tb) unmet — the critical shortfall
+const UNMET_STD = '#F46D43';  // standard-grade unmet (appears only under a broad shortage)
 const STOCK = '#5E4FA2';   // strategic stockpile draw-down
-const hatchId = 'unmet-hatch';
+const hatchId = 'unmet-hatch', hatchStdId = 'unmet-hatch-std';
 // red stripes on a transparent background (so it reads the same in light + dark)
-const legendHatch = `repeating-linear-gradient(45deg, ${UNMET}, ${UNMET} 3px, transparent 3px, transparent 6px)`;
+const hatchBg = (c: string) => `repeating-linear-gradient(45deg, ${c}, ${c} 3px, transparent 3px, transparent 6px)`;
 
 function Legend({ items }: { items: { label: string; color: string; dash?: boolean; hatch?: boolean }[] }) {
   return (
@@ -38,7 +39,7 @@ function Legend({ items }: { items: { label: string; color: string; dash?: boole
           {it.dash
             ? <span style={{ width: 12, height: 0, borderTop: `2px dashed ${it.color}`, display: 'inline-block' }} />
             : <span style={{ width: 10, height: 10, borderRadius: 2, display: 'inline-block',
-                background: it.hatch ? legendHatch : it.color }} />}
+                background: it.hatch ? hatchBg(it.color) : it.color }} />}
           <span style={{ opacity: 0.7 }}>{it.label}</span>
         </span>
       ))}
@@ -55,6 +56,9 @@ function Frame({ years, ymax, ylabel, children }: {
       <defs>
         <pattern id={hatchId} patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
           <line x1="0" y1="0" x2="0" y2="6" stroke={UNMET} strokeWidth="3" />
+        </pattern>
+        <pattern id={hatchStdId} patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
+          <line x1="0" y1="0" x2="0" y2="6" stroke={UNMET_STD} strokeWidth="3" />
         </pattern>
       </defs>
       {[0, 0.5, 1].map((f) => {
@@ -73,8 +77,8 @@ function Frame({ years, ymax, ylabel, children }: {
   );
 }
 
-export default function PathwayCharts({ sc, years, usDemandMax }: {
-  sc: Scenario; years: number[]; usDemandMax: number;
+export default function PathwayCharts({ sc, years, usDemandMax, hiCoercShare }: {
+  sc: Scenario; years: number[]; usDemandMax: number; hiCoercShare: number;
 }) {
   const n = years.length;
   const xi = (i: number) => PADL + (i / (n - 1)) * innerW;
@@ -85,26 +89,39 @@ export default function PathwayCharts({ sc, years, usDemandMax }: {
   // US demand = the model's US supply mix total (US-made + allies + China +
   // stockpile draw-down + unmet). The stockpile band is carved out of unmet, so
   // the total — and thus the demand line — is unchanged whether or not it's on.
-  const hasStock = (get('stockpile') as number[]).some((v) => v > 0.01);
-  const usDemand = years.map((_, i) => ['domestic', 'allied', 'china', 'stockpile', 'unmet'].reduce((a, k) => a + (get(k)[i] || 0), 0));
+  const stockVals = get('stockpile');
+  const unmetTot = get('unmet');
+  const usDemand = years.map((_, i) => (get('domestic')[i] || 0) + (get('allied')[i] || 0)
+    + (get('china')[i] || 0) + (stockVals[i] || 0) + (unmetTot[i] || 0));
   const demandLine = usDemand.map((v, i) => `${i === 0 ? 'M' : 'L'}${xi(i)},${yv(v)}`).join(' ');
 
-  // chart 1: stacked supply (colored) + stockpile draw + unmet (hatched) on top
+  // A Dy/Tb shortage falls on HIGH-COERCIVITY grades first — low grades need little
+  // Dy/Tb and can still be made — so attribute unmet to high-coercivity up to that
+  // share of demand; the remainder (only under a broad ban) is standard-grade.
+  const unmetHi = unmetTot.map((u: number, i: number) => Math.min(u, hiCoercShare * usDemand[i]));
+  const unmetStd = unmetTot.map((u: number, i: number) => Math.max(0, u - unmetHi[i]));
+  const hasStock = stockVals.some((v: number) => v > 0.01);
+  const hasStd = unmetStd.some((v: number) => v > 0.01);
+
+  // chart 1: stacked supply + stockpile draw + unmet (split by coercivity) on top
   const stackItems = [
-    ...MIX,
-    ...(hasStock ? [{ key: 'stockpile', label: 'From stockpile', color: STOCK }] : []),
-    { key: 'unmet', label: 'Unmet demand', color: UNMET, hatch: true },
+    { label: 'US-made', color: '#3288BD', vals: get('domestic') },
+    { label: 'Allies', color: '#FDAE61', vals: get('allied') },
+    { label: 'China', color: '#D53E4F', vals: get('china') },
+    ...(hasStock ? [{ label: 'From stockpile', color: STOCK, vals: stockVals }] : []),
+    ...(hasStd ? [{ label: 'Unmet — standard grade', color: UNMET_STD, hatchId: hatchStdId, vals: unmetStd }] : []),
+    { label: 'Unmet — high-coercivity', color: UNMET, hatchId, vals: unmetHi },
   ];
   const lower = Array(n).fill(0);
   const areas = stackItems.map((s: any) => {
-    const vals = get(s.key);
-    const top = vals.map((v: number, i: number) => lower[i] + Math.max(0, v));
+    const vals: number[] = s.vals;
+    const top = vals.map((v, i) => lower[i] + Math.max(0, v));
     const d = [
-      ...top.map((t: number, i: number) => `${i === 0 ? 'M' : 'L'}${xi(i)},${yv(t)}`),
-      ...lower.map((_: number, i: number) => `L${xi(n - 1 - i)},${yv(lower[n - 1 - i])}`), 'Z',
+      ...top.map((t, i) => `${i === 0 ? 'M' : 'L'}${xi(i)},${yv(t)}`),
+      ...lower.map((_, i) => `L${xi(n - 1 - i)},${yv(lower[n - 1 - i])}`), 'Z',
     ].join(' ');
     for (let i = 0; i < n; i++) lower[i] = top[i];
-    return <path key={s.key} d={d} fill={s.hatch ? `url(#${hatchId})` : s.color} fillOpacity={s.hatch ? 1 : 0.85} />;
+    return <path key={s.label} d={d} fill={s.hatchId ? `url(#${s.hatchId})` : s.color} fillOpacity={s.hatchId ? 1 : 0.85} />;
   });
 
   // chart 2: US capacity by stage, vs US magnet demand reference
@@ -122,7 +139,8 @@ export default function PathwayCharts({ sc, years, usDemandMax }: {
           </Frame>
           <Legend items={[...MIX,
             ...(hasStock ? [{ label: 'From stockpile', color: STOCK }] : []),
-            { label: 'Unmet demand', color: UNMET, hatch: true },
+            ...(hasStd ? [{ label: 'Unmet — standard', color: UNMET_STD, hatch: true }] : []),
+            { label: 'Unmet — high-coercivity', color: UNMET, hatch: true },
             { label: 'US demand', color: 'var(--ink)', dash: true }]} />
         </div>
         <div>
@@ -141,7 +159,10 @@ export default function PathwayCharts({ sc, years, usDemandMax }: {
         Perfect-foresight build-out, 2026–2035 (capacity is lead-time-gated but plans against known
         future demand). <b>Left:</b> how US demand for <i>finished magnets</i> is met (not oxide or
         alloy) — the colored stack is the US supply mix, the hatched band on top is unmet demand, and
-        the dashed line (the stack total) is US magnet demand. <b>Right:</b> US online capacity by
+        the dashed line (the stack total) is US magnet demand. Unmet is split by coercivity: a Dy/Tb
+        shortage hits the <span style={{ color: UNMET }}>high-coercivity</span> grades (EV traction,
+        wind, defense) first, since low-coercivity magnets can still be made without scarce Dy/Tb.
+        <b> Right:</b> US online capacity by
         stage. Capacity is built in whole modules, so the last one can overshoot demand — capacity
         above the demand line is lumpy/under-utilized headroom, not exports (the Sankey shows the
         actual flows). It rises mainly at the magnet stage: under the IRA-style content mandate only

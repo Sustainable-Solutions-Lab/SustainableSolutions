@@ -117,7 +117,7 @@ function Lever({ label, value, min, max, onChange, fmt, desc, plausible, stretch
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 export default function DemandBuilder({ onSummary }: {
-  onSummary: (s: { demand_scale: number; dytb_intensity: number; totalSeries: number[] }) => void;
+  onSummary: (s: { demand_scale: number; dytb_intensity: number; totalSeries: number[]; hiCoercShare: number }) => void;
 }) {
   const [scenario, setScenario] = useState<PerSectorScenario>(() => allScenario('STEPS'));
   const [lv, setLv] = useState<Levers>(DEFAULT_LEVERS);

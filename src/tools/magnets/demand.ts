@@ -27,6 +27,11 @@ export const SCENARIO_TIP: Record<string, string> = {
 };
 const GRADE_LADDER = CFG.grade_ladder as Record<string, [number, number]>;
 const GRADE_ORDER = Object.keys(GRADE_LADDER);       // ascending coercivity
+// High-coercivity = the Dy/Tb-heavy grades (≥ half the ladder's max Dy/Tb loading):
+// the magnets that genuinely need heavy rare earths (EV traction, wind, defense).
+// A Dy/Tb shortage falls on THESE first — low grades can still be made without it.
+const _MAXDYTB = Math.max(...GRADE_ORDER.map((g) => GRADE_LADDER[g][1]));
+const HI_COERCIVITY = new Set(GRADE_ORDER.filter((g) => GRADE_LADDER[g][1] >= 0.5 * _MAXDYTB));
 const OXF = CFG.oxide_factor as number;
 const PMSG_DEF = CFG.offshore_pmsg_default as number;
 export const OFFSHORE_PMSG_DEFAULT = PMSG_DEF;       // ~0.9; the slider reduces from here
@@ -128,6 +133,18 @@ const REF = totals(allScenario('APS'), DEFAULT_LEVERS);   // the precompute refe
 const _mag = sectorBreakdown(allScenario('APS'), DEFAULT_LEVERS).magnet;
 export const SECTORS_BY_SIZE = [...SECTOR_KEYS].sort((a, b) => _mag[b][0] - _mag[a][0]);
 
+/** Share of total magnet demand that is high-coercivity (Dy/Tb-heavy) grades. */
+function hiCoercivityShare(scenario: PerSectorScenario, lv: Levers): number {
+  const sg = sectorGradeDemand(scenario, lv);
+  let hi = 0, all = 0;
+  for (const sk of SECTOR_KEYS)
+    for (const g in sg[sk]) {
+      const s = sum(sg[sk][g]);
+      all += s; if (HI_COERCIVITY.has(g)) hi += s;
+    }
+  return all > 0 ? hi / all : 0;
+}
+
 /** Map a composition + levers onto the supply grid's two demand-summary axes. */
 export function demandSummary(scenario: PerSectorScenario, lv: Levers) {
   const cur = totals(scenario, lv);
@@ -135,5 +152,6 @@ export function demandSummary(scenario: PerSectorScenario, lv: Levers) {
     demand_scale: sum(cur.total) / sum(REF.total),
     dytb_intensity: (sum(cur.oxDytb) / sum(cur.total)) / (sum(REF.oxDytb) / sum(REF.total)),
     totalSeries: cur.total,
+    hiCoercShare: hiCoercivityShare(scenario, lv),
   };
 }

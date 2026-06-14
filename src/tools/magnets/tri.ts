@@ -54,8 +54,11 @@ const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 export type Mix = { domestic: number; allied: number; china: number };
 
-/** Per-stage TRI ∈ [0,1] from the US sourcing mix (shares of that stage's need). */
-export function stageTRI(mix: Mix | undefined, stage: string): number {
+/** Per-stage TRI ∈ [0,1] from the US sourcing mix (shares of that stage's need).
+ * diOverride replaces the stage's domestic-reserve risk DI — used when a domestic
+ * RESERVE has been developed (e.g. Round Top), so US production is no longer
+ * reserve-poor and its DI should fall from the "no domestic deposits" default. */
+export function stageTRI(mix: Mix | undefined, stage: string, diOverride?: number): number {
   const d = clamp01(mix?.domestic ?? 0);
   const a = clamp01(mix?.allied ?? 0);
   const c = clamp01(mix?.china ?? 0);
@@ -67,17 +70,22 @@ export function stageTRI(mix: Mix | undefined, stage: string): number {
     // allied share spread over N_ALLY diverse suppliers; China is a single source
     hhi = (sa * sa) / N_ALLY + sc * sc;     // → as low as 1/N_ALLY (all-allied) … 1 (all-China)
   }
+  const di = diOverride ?? TRI_DI[stage] ?? 0;
   // imports weighted by concentration; domestic weighted by reserve risk; unmet = max
-  return hhi * imp + (TRI_DI[stage] ?? 0) * d + 1.0 * unmet;
+  return hhi * imp + di * d + 1.0 * unmet;
 }
 
+// per-stage DI override carried on a scenario by a reserve-developing overlay
+const diOf = (sc: Scenario): Record<string, number> | undefined => (sc as any)._di;
+
 export function stageBreakdown(sc: Scenario) {
+  const di = diOf(sc);
   return TRI_STAGES.map((s) => {
     const mix = sc.us_supply?.[s.key];
     const d = clamp01(mix?.domestic ?? 0), a = clamp01(mix?.allied ?? 0), c = clamp01(mix?.china ?? 0);
     return {
       ...s,
-      tri: stageTRI(mix, s.key),
+      tri: stageTRI(mix, s.key, di?.[s.key]),
       reliance: Math.min(1, a + c),
       unmet: Math.max(0, 1 - d - Math.min(1, a + c)),
       domestic: d,
@@ -87,10 +95,11 @@ export function stageBreakdown(sc: Scenario) {
 
 /** Value-weighted integrated TRI ∈ [0,1] across the four stages. */
 export function integratedTRI(sc: Scenario): number {
+  const di = diOf(sc);
   let num = 0, den = 0;
   for (const s of TRI_STAGES) {
     const w = TRI_WEIGHT[s.key] ?? 0;
-    num += w * stageTRI(sc.us_supply?.[s.key], s.key);
+    num += w * stageTRI(sc.us_supply?.[s.key], s.key, di?.[s.key]);
     den += w;
   }
   return den ? num / den : 0;

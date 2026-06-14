@@ -220,9 +220,15 @@ export function reshoreSupply(sc: Scenario, stages: string[], coverage: number):
 // site) separation shift domestic by that share; ~$400M (inflated capex) is counted.
 export const ROUND_TOP_COST = 400;        // $M (≈ 2019 PEA capex, inflated)
 export const ROUND_TOP_COVERAGE = 0.12;   // share of US heavy-REE need it meets
+// Developing Round Top means the US now HAS a domestic heavy-REE reserve, so its
+// domestic mining is no longer reserve-poor — the mining DI falls from the "no US
+// deposits" default (0.9) to a reserve-backed level (Round Top is a 100-yr, large-
+// tonnage resource → good reserve adequacy; ~0.25). Without this the TRI would
+// penalize Round Top's own output as if the US still had no reserves.
+export const ROUND_TOP_MINING_DI = 0.25;
 
 export function applyRoundTop(sc: Scenario, on: boolean): Scenario {
   if (!on) return sc;
   const s = reshoreSupply(sc, ['mining', 'separation'], ROUND_TOP_COVERAGE);
-  return { ...s, us_cost: { ...s.us_cost, round_top: ROUND_TOP_COST } };
+  return { ...s, us_cost: { ...s.us_cost, round_top: ROUND_TOP_COST }, _di: { mining: ROUND_TOP_MINING_DI } };
 }

@@ -113,7 +113,7 @@ export default function PathwayCharts({ sc, years, demand, usShare, usDemandMax 
             <path d={unmetPath} fill={`url(#${hatchId})`} />
             <path d={demandLine} fill="none" stroke="var(--ink)" strokeWidth={1.5} strokeDasharray="4 3" />
           </Frame>
-          <Legend items={[...MIX, { label: 'Unmet (gap to demand)', color: UNMET, hatch: true }, { label: 'US demand', color: 'var(--ink)', dash: true }]} />
+          <Legend items={[...MIX, { label: 'Unmet demand', color: UNMET, hatch: true }, { label: 'US demand', color: 'var(--ink)', dash: true }]} />
         </div>
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>US capacity build-out by stage</div>

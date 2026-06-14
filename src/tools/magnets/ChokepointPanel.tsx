@@ -17,8 +17,8 @@ const STAGES = [
 const PARTS: [keyof Seg | 'imported_magnet', string, string][] = [
   ['domestic', 'US-made', 'var(--brand-green)'],
   ['allied', 'Allies (RoW)', '#FDAE61'],
-  ['china', 'China', '#D53E4F'],
-  ['imported_magnet', 'Via imported magnets', 'var(--rule)'],
+  ['china', 'China (direct)', '#D53E4F'],
+  ['imported_magnet', 'Embodied in imports', 'var(--rule)'],
 ];
 
 export default function ChokepointPanel({ sc }: { sc: Scenario }) {
@@ -31,7 +31,7 @@ export default function ChokepointPanel({ sc }: { sc: Scenario }) {
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 26 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>US supply security by stage</h2>
+        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Where each stage happens, for US magnets</h2>
         <div style={{ display: 'flex', gap: 12, fontSize: 12, flexWrap: 'wrap' }}>
           {PARTS.map(([k, lbl, c]) => (
             <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -42,9 +42,10 @@ export default function ChokepointPanel({ sc }: { sc: Scenario }) {
         </div>
       </div>
       <p style={{ fontSize: 12.5, opacity: 0.7, margin: '0 0 16px' }}>
-        Origin of the material embodied in US demand, at each stage.
+        For the magnets the US consumes, how much of each chain stage is done <em>in the US</em> vs.
+        abroad. Green = the US does it at home; the rest is imported.
         {top && top.china > 0.1 && (
-          <> Biggest China exposure: <strong>{top.label}</strong> ({(top.china * 100).toFixed(0)}% from China).</>
+          <> Biggest direct China exposure: <strong>{top.label}</strong> ({(top.china * 100).toFixed(0)}%).</>
         )}
       </p>
 
@@ -74,10 +75,14 @@ export default function ChokepointPanel({ sc }: { sc: Scenario }) {
         })}
       </div>
       <p style={{ fontSize: 12, opacity: 0.55, marginTop: 14, lineHeight: 1.5 }}>
-        100% = all the material the US needs at that stage. The red slice is China dependence — what
-        the IRA-style policy and recycling shrink. "Via imported magnets" means the US imports the
-        finished magnet and never handles that stage at home. The persistent red at Mining is the
-        heavy-rare-earth ore the US barely has.
+        Each bar = 100% of what US magnet demand needs at that stage. <b>Green</b> = performed in the
+        US. <b>China (direct)</b> / <b>Allies</b> = the US imports that stage's product (oxide, alloy,
+        or magnets) straight from there. <b>Embodied in imports</b> (gray) = the stage is done abroad
+        inside a product the US imports further downstream — e.g. when the US assembles magnets from
+        imported alloy, the upstream mining &amp; separation are gray. The lesson: a magnet-only
+        content mandate makes the magnet bar green but leaves mining/separation gray and pushes China
+        dependence into <em>alloy</em> — the real bottleneck is upstream (separation + Dy/Tb ore),
+        which the US barely has.
       </p>
     </section>
   );

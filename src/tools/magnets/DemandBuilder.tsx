@@ -7,9 +7,14 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  YEARS, SECTOR_KEYS, SECTOR_LABEL, SECTOR_COLOR, SCENARIO_NAMES, SCENARIO_LABEL, SCENARIO_TIP,
-  DEFAULT_LEVERS, allScenario, sectorBreakdown, demandSummary, type Levers, type PerSectorScenario,
+  YEARS, SECTOR_KEYS, SECTORS_BY_SIZE, SECTOR_LABEL, SECTOR_COLOR, SCENARIO_NAMES, SCENARIO_LABEL,
+  SCENARIO_TIP, DEFAULT_LEVERS, allScenario, sectorBreakdown, demandSummary, type Levers, type PerSectorScenario,
 } from './demand';
+
+// largest at the bottom of the stack; selection list + legend read in the same
+// visual order (largest at the bottom of the list too).
+const STACK_ORDER = SECTORS_BY_SIZE;            // [largest, …, smallest]
+const LIST_ORDER = [...SECTORS_BY_SIZE].reverse(); // [smallest, …, largest]
 
 const W = 440, H = 200, PADL = 40, PADR = 10, PADT = 12, PADB = 24;
 const innerW = W - PADL - PADR, innerH = H - PADT - PADB;
@@ -56,16 +61,26 @@ function StackedArea({ series, ymax, ylabel }: {
   );
 }
 
-function Lever({ label, value, min, max, onChange, fmt }: {
-  label: string; value: number; min: number; max: number; onChange: (v: number) => void; fmt: (v: number) => string;
+function Lever({ label, value, min, max, onChange, fmt, desc }: {
+  label: string; value: number; min: number; max: number;
+  onChange: (v: number) => void; fmt: (v: number) => string; desc: string;
 }) {
+  const [open, setOpen] = useState(false);
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 3 }}>
-        <span>{label}</span><span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{fmt(value)}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 11.5, marginBottom: 3 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          {label}
+          <button onClick={() => setOpen((o) => !o)} aria-label="What is this?" title="What is this?"
+            style={{ width: 13, height: 13, borderRadius: '50%', border: '1px solid var(--rule-strong)',
+              background: open ? 'var(--accent)' : 'transparent', color: open ? 'var(--paper)' : 'var(--ink-3)',
+              font: '600 8.5px var(--font-mono)', lineHeight: 1, cursor: 'pointer', padding: 0, opacity: 0.85 }}>i</button>
+        </span>
+        <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{fmt(value)}</span>
       </div>
       <input type="range" min={min} max={max} step={0.01} value={value}
         onChange={(e) => onChange(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--accent)' }} />
+      {open && <p style={{ fontSize: 10.5, opacity: 0.6, margin: '5px 0 0', lineHeight: 1.4 }}>{desc}</p>}
     </div>
   );
 }
@@ -82,8 +97,8 @@ export default function DemandBuilder({ onSummary }: {
   const breakdown = useMemo(() => sectorBreakdown(scenario, lv), [scenario, lv]);
   useEffect(() => { onSummary(summary); }, [summary, onSummary]);
 
-  const magSeries = SECTOR_KEYS.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.magnet[k] }));
-  const dytbSeries = SECTOR_KEYS.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.dytb[k] }));
+  const magSeries = STACK_ORDER.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.magnet[k] }));
+  const dytbSeries = STACK_ORDER.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.dytb[k] }));
 
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginBottom: 26 }}>
@@ -96,7 +111,7 @@ export default function DemandBuilder({ onSummary }: {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 320px) 1fr', gap: 24, alignItems: 'start' }} className="demand-grid">
         <div>
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 8px' }}>Demand scenario by sector</div>
-          {SECTOR_KEYS.map((k) => (
+          {LIST_ORDER.map((k) => (
             <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
                 <span style={{ width: 9, height: 9, borderRadius: 2, background: SECTOR_COLOR[k], display: 'inline-block' }} />
@@ -120,10 +135,14 @@ export default function DemandBuilder({ onSummary }: {
           </div>
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '16px 0 8px' }}>Demand levers</div>
-          <Lever label="Dy/Tb thrifting (material)" value={lv.thrift} min={0} max={0.6} onChange={(v) => setLv({ ...lv, thrift: v })} fmt={(v) => `−${pct(v)}`} />
-          <Lever label="EV grade-downshift (design)" value={lv.ev_downshift} min={0} max={1} onChange={(v) => setLv({ ...lv, ev_downshift: v })} fmt={pct} />
-          <Lever label="RE-free motor adoption" value={lv.re_free} min={0} max={0.5} onChange={(v) => setLv({ ...lv, re_free: v })} fmt={pct} />
-          <Lever label="Offshore PMSG share" value={lv.offshore_pmsg} min={0} max={1} onChange={(v) => setLv({ ...lv, offshore_pmsg: v })} fmt={pct} />
+          <Lever label="Dy/Tb thrifting (material)" value={lv.thrift} min={0} max={0.6} onChange={(v) => setLv({ ...lv, thrift: v })} fmt={(v) => `−${pct(v)}`}
+            desc="The % reduction in Dy/Tb (heavy rare earth) used per kg of magnet at a GIVEN coercivity grade — via grain-boundary diffusion, finer grains, or Ce/La substitution. Applied across all sectors. 0% = today's loadings." />
+          <Lever label="EV grade-downshift (design)" value={lv.ev_downshift} min={0} max={1} onChange={(v) => setLv({ ...lv, ev_downshift: v })} fmt={pct}
+            desc="Better motor cooling / magnetic-circuit design lets hot-motor magnets (EVs, robotics, e-bikes) meet the same duty at a LOWER coercivity grade — which carries less Dy/Tb. Shifts those sectors' grade mix down a rung. 0% = today's grade mix." />
+          <Lever label="RE-free motor adoption" value={lv.re_free} min={0} max={0.5} onChange={(v) => setLv({ ...lv, re_free: v })} fmt={pct}
+            desc="Share of motor demand (EVs, robotics, e-bikes) that switches to rare-earth-FREE designs (externally-excited or induction motors), removing their magnet demand entirely. 0% = all motors use permanent magnets today." />
+          <Lever label="Offshore PMSG share" value={lv.offshore_pmsg} min={0} max={1} onChange={(v) => setLv({ ...lv, offshore_pmsg: v })} fmt={pct}
+            desc="Share of offshore-wind generators using NdFeB permanent-magnet (direct-drive) machines vs. alternatives. High by default (~90%) because offshore is overwhelmingly direct-drive PMSG; reduce it to model a shift to other generator types." />
         </div>
 
         <div>
@@ -132,7 +151,7 @@ export default function DemandBuilder({ onSummary }: {
           <div style={{ fontSize: 12.5, fontWeight: 600, margin: '10px 0 2px' }}>Dy/Tb demand by sector <span style={{ fontWeight: 400, opacity: 0.55 }}>— where the heavy chokepoint comes from</span></div>
           <StackedArea series={dytbSeries} ymax={DYTB_MAX} ylabel="kt Dy/Tb" />
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '4px 12px', marginTop: 8 }}>
-            {SECTOR_KEYS.map((k) => (
+            {LIST_ORDER.map((k) => (
               <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
                 <span style={{ width: 9, height: 9, borderRadius: 2, background: SECTOR_COLOR[k], display: 'inline-block' }} />
                 <span style={{ opacity: 0.7 }}>{SECTOR_LABEL[k] ?? k}</span>
@@ -144,7 +163,7 @@ export default function DemandBuilder({ onSummary }: {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--rule)', fontSize: 12 }}>
         <span style={{ opacity: 0.6 }}>Feeding the supply explorer →</span>
-        <span>Total demand <b style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{summary.demand_scale.toFixed(2)}×</b> pledges-case</span>
+        <span>Total magnet demand <b style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{summary.demand_scale.toFixed(2)}×</b> pledges-case</span>
         <span>Dy/Tb intensity <b style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{summary.dytb_intensity.toFixed(2)}×</b> pledges-case</span>
       </div>
       <style>{`@media (max-width: 720px){ .demand-grid{ grid-template-columns:1fr !important; } }`}</style>

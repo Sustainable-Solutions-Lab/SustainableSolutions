@@ -110,6 +110,11 @@ function totals(scenario: PerSectorScenario, lv: Levers) {
 const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
 const REF = totals(allScenario('APS'), DEFAULT_LEVERS);   // the precompute reference
 
+// Sectors ordered LARGEST first (by total magnet demand) — used to stack the
+// biggest at the bottom of the area charts and to order the selection list.
+const _mag = sectorBreakdown(allScenario('APS'), DEFAULT_LEVERS).magnet;
+export const SECTORS_BY_SIZE = [...SECTOR_KEYS].sort((a, b) => sum(_mag[b]) - sum(_mag[a]));
+
 /** Map a composition + levers onto the supply grid's two demand-summary axes. */
 export function demandSummary(scenario: PerSectorScenario, lv: Levers) {
   const cur = totals(scenario, lv);

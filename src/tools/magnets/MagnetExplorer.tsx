@@ -1,6 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
+import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
 import { integratedTRI } from './tri';
+
+// Exogenous US-self-sufficiency reshoring costs ($M NPV), grounded in the model's
+// per-stage US costs (separation ~$0.5B partial → ~$1.2B for ~90%; alloy ~$0.3B →
+// ~$0.5B) — illustrative and tunable, like all the security-investment figures.
+const US_SEP_RESHORE_COST = 1200;
+const US_ALLOY_RESHORE_COST = 500;
 import FlowDiagram from './FlowDiagram';
 import ChokepointPanel from './ChokepointPanel';
 import PathwayCharts from './PathwayCharts';
@@ -39,7 +45,7 @@ const COST_DESC: Record<string, string> = {
   alloy: 'Build + operating cost of US-located oxide→metal→strip-cast alloy.',
   magnet: 'Build + operating cost of US-located sintered-magnet manufacturing.',
   recycling: 'Build + operating cost of US-located end-of-life recycling capacity.',
-  round_top: 'Assumed develop-and-operate cost (~$2.5B NPV, ≈ USA Rare Earth’s ~$3.1B raise annualized) of bringing the Round Top, TX heavy-REE deposit online to meet ~80% of US Dy/Tb need. Exogenous (not a cost-optimal build) — a strategic move whose security benefit per dollar reveals a shadow price of security.',
+  round_top: 'Assumed cost (~$400M, ≈ Round Top’s 2019 PEA capex incl. on-site separation) of bringing the Round Top, TX heavy-REE deposit online — but it yields only ~0.22 kt/yr Dy+Tb, ≈12% of US Dy/Tb need, so one mine is far from a fix. Exogenous (not a cost-optimal build); a strategic move whose security benefit per dollar reveals a shadow price of security.',
   stockpile: 'Cost of the strategic magnet stockpile: size × an all-in acquire + hold rate (~$110/kg, grounded in Benchmark Feb-2026 prices for Dy/Tb-rich grades). A real, paid cost that buys down the unmet-demand penalty by covering the earliest shortfall.',
   dytb_premium: 'Price-taker premium the US pays on the Dy/Tb it imports (as oxide, alloy, or embodied in magnets) as China’s export controls inflate the heavy-REE benchmarks Western buyers are bound to. Scales with the China-restriction slider; the US escapes by separating or recycling Dy/Tb domestically — limited in the near term, since the one active US mine (Mountain Pass) is light-REE and domestic heavy-REE prospects (e.g. Round Top, TX) are pre-commercial.',
   shortage: 'Penalty on US unmet magnet demand: unmet tonnes × a high penalty rate. Not a market cost — it flags US demand the chain can’t deliver in time (e.g. under a ban).',
@@ -124,16 +130,20 @@ export default function MagnetExplorer() {
     const base = { china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale };
     const ref = interpScenario({ ...base, dc: 0, rec: 0 });
     const refTRI = integratedTRI(ref), refCost = realCost(ref);
-    const opts = [
-      { name: 'US content mandate', sc: interpScenario({ ...base, dc: AXES.dcMax, rec: 0 }) },
-      { name: 'Recycling build-out', sc: interpScenario({ ...base, dc: 0, rec: AXES.recMax }) },
-      { name: 'Strategic stockpile', sc: applyStockpile(ref, STOCKPILE_MAX) },
-      { name: 'Develop Round Top', sc: applyRoundTop(ref, true), strategic: true },
+    const content = interpScenario({ ...base, dc: AXES.dcMax, rec: 0 });
+    const recyc = interpScenario({ ...base, dc: 0, rec: AXES.recMax });
+    const stock = applyStockpile(ref, STOCKPILE_MAX);
+    const row = (name: string, scn: typeof ref, dCost: number, strategic = false) =>
+      ({ name, strategic, dTRI: refTRI - integratedTRI(scn), dCost });
+    return [
+      // policy levers — the model's own cost; reshoring overlays — an exogenous cost
+      row('US content mandate', content, realCost(content) - refCost),
+      row('Recycling build-out', recyc, realCost(recyc) - refCost),
+      row('Strategic stockpile', stock, realCost(stock) - refCost),
+      row('Develop Round Top', applyRoundTop(ref, true), ROUND_TOP_COST, true),
+      row('Build US separation', reshoreSupply(ref, ['separation'], 0.9), US_SEP_RESHORE_COST),
+      row('Build US alloy', reshoreSupply(ref, ['alloy'], 0.9), US_ALLOY_RESHORE_COST),
     ];
-    return opts.map((o) => ({
-      name: o.name, strategic: (o as any).strategic ?? false,
-      dTRI: refTRI - integratedTRI(o.sc), dCost: realCost(o.sc) - refCost,
-    }));
   }, [china, rcost, demand]);
 
   return (
@@ -180,11 +190,11 @@ export default function MagnetExplorer() {
           <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
             desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$110/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginTop: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-            title="Assume the Round Top, TX heavy-REE deposit is developed and supplies ~80% of US Dy/Tb need — exogenous (not a cost-optimal build), with its ~$2.5B cost counted. It shifts US mining + separation toward domestic.">
+            title="Assume the Round Top, TX heavy-REE deposit is developed — exogenous (not a cost-optimal build), with its ~$400M PEA capex counted. It yields ~12% of US Dy/Tb need, shifting US mining + on-site separation domestic by that share.">
             <input type="checkbox" checked={roundTop} onChange={(e) => setRoundTop(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--accent)' }} />
             <span>Assume Round Top developed
               <span style={{ display: 'block', fontWeight: 400, fontSize: 11, opacity: 0.6, lineHeight: 1.4 }}>
-                Exogenous US heavy-REE supply (a strategic, not cost-optimal, move), ~$2.5B counted.
+                Exogenous US heavy-REE supply (~12% of need, ~$400M) — a strategic, not cost-optimal, move.
               </span>
             </span>
           </label>

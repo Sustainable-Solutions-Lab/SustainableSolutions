@@ -192,25 +192,17 @@ export function applyStockpile(sc: Scenario, stockpileKt: number): Scenario {
   };
 }
 
-// ── Round Top (exogenous "developed" overlay) ────────────────────────────────
-// The US government's investment in Round Top (USA Rare Earth) isn't a cost-optimal
-// build — it's a strategic move that reveals a shadow price of security. So instead
-// of optimizing whether to build it (which also makes the MIP intractable), we
-// ASSUME it is developed and used to meet US heavy-REE need, and just count its
-// cost. Round Top yields ~0.22 kt/yr Dy+Tb (PEA) ≈ 80% of US Dy/Tb demand, and its
-// developer is standing up domestic separation too — so US mining and separation
-// shift toward domestic. Its ~$2.5B NPV cost (≈ USA Rare Earth's ~$3.1B raise,
-// annualized) is added. The TRI drop it buys ÷ this cost is a revealed shadow price.
-export const ROUND_TOP_COST = 2500;       // $M NPV (all-in develop + operate)
-const ROUND_TOP_COVERAGE = 0.8;           // share of US heavy-REE need it meets
-
-export function applyRoundTop(sc: Scenario, on: boolean): Scenario {
-  if (!on) return sc;
+// ── Exogenous reshoring overlays ─────────────────────────────────────────────
+// Strategic US capacity investments aren't cost-optimal builds (and optimizing them
+// is intractable), so we ASSUME a stage goes domestic and just count its cost. The
+// TRI drop ÷ cost is the security bought per dollar. reshoreSupply shifts a stage's
+// US sourcing toward domestic; the explorer pairs it with an exogenous cost.
+export function reshoreSupply(sc: Scenario, stages: string[], coverage: number): Scenario {
   const us: Record<string, { domestic: number; allied: number; china: number }> = {};
   for (const stage in sc.us_supply) {
     const m = sc.us_supply[stage];
-    if (stage === 'mining' || stage === 'separation') {
-      const dom = Math.max(m.domestic ?? 0, ROUND_TOP_COVERAGE);
+    if (stages.includes(stage)) {
+      const dom = Math.max(m.domestic ?? 0, coverage);
       const rest = Math.max(0, 1 - dom);
       const imp = (m.allied ?? 0) + (m.china ?? 0) || 1;
       us[stage] = { domestic: dom, allied: rest * (m.allied ?? 0) / imp, china: rest * (m.china ?? 0) / imp };
@@ -218,5 +210,19 @@ export function applyRoundTop(sc: Scenario, on: boolean): Scenario {
       us[stage] = m;
     }
   }
-  return { ...sc, us_supply: us, us_cost: { ...sc.us_cost, round_top: ROUND_TOP_COST } };
+  return { ...sc, us_supply: us };
+}
+
+// Round Top (USA Rare Earth): the US government's investment in it is a strategic,
+// not cost-optimal, move — so it's exogenous, and its $/TRI is a revealed shadow
+// price of security. 2019 PEA: ~$350M capex (incl. on-site separation), ~0.22 kt/yr
+// Dy+Tb ≈ only ~12% of US Dy/Tb need — one mine is far from a fix. Its mining + (on-
+// site) separation shift domestic by that share; ~$400M (inflated capex) is counted.
+export const ROUND_TOP_COST = 400;        // $M (≈ 2019 PEA capex, inflated)
+export const ROUND_TOP_COVERAGE = 0.12;   // share of US heavy-REE need it meets
+
+export function applyRoundTop(sc: Scenario, on: boolean): Scenario {
+  if (!on) return sc;
+  const s = reshoreSupply(sc, ['mining', 'separation'], ROUND_TOP_COVERAGE);
+  return { ...s, us_cost: { ...s.us_cost, round_top: ROUND_TOP_COST } };
 }

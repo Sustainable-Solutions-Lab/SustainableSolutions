@@ -191,3 +191,32 @@ export function applyStockpile(sc: Scenario, stockpileKt: number): Scenario {
     path: { ...sc.path, us_mix: { ...sc.path.us_mix, unmet, stockpile: draw } },
   };
 }
+
+// ── Round Top (exogenous "developed" overlay) ────────────────────────────────
+// The US government's investment in Round Top (USA Rare Earth) isn't a cost-optimal
+// build — it's a strategic move that reveals a shadow price of security. So instead
+// of optimizing whether to build it (which also makes the MIP intractable), we
+// ASSUME it is developed and used to meet US heavy-REE need, and just count its
+// cost. Round Top yields ~0.22 kt/yr Dy+Tb (PEA) ≈ 80% of US Dy/Tb demand, and its
+// developer is standing up domestic separation too — so US mining and separation
+// shift toward domestic. Its ~$2.5B NPV cost (≈ USA Rare Earth's ~$3.1B raise,
+// annualized) is added. The TRI drop it buys ÷ this cost is a revealed shadow price.
+export const ROUND_TOP_COST = 2500;       // $M NPV (all-in develop + operate)
+const ROUND_TOP_COVERAGE = 0.8;           // share of US heavy-REE need it meets
+
+export function applyRoundTop(sc: Scenario, on: boolean): Scenario {
+  if (!on) return sc;
+  const us: Record<string, { domestic: number; allied: number; china: number }> = {};
+  for (const stage in sc.us_supply) {
+    const m = sc.us_supply[stage];
+    if (stage === 'mining' || stage === 'separation') {
+      const dom = Math.max(m.domestic ?? 0, ROUND_TOP_COVERAGE);
+      const rest = Math.max(0, 1 - dom);
+      const imp = (m.allied ?? 0) + (m.china ?? 0) || 1;
+      us[stage] = { domestic: dom, allied: rest * (m.allied ?? 0) / imp, china: rest * (m.china ?? 0) / imp };
+    } else {
+      us[stage] = m;
+    }
+  }
+  return { ...sc, us_supply: us, us_cost: { ...sc.us_cost, round_top: ROUND_TOP_COST } };
+}

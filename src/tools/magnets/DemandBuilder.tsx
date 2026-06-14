@@ -167,6 +167,20 @@ export default function DemandBuilder({ onSummary }: {
         <span>US magnet demand <b style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{summary.demand_scale.toFixed(2)}×</b> pledges-case</span>
         <span>Dy/Tb intensity <b style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{summary.dytb_intensity.toFixed(2)}×</b> pledges-case</span>
       </div>
+      <details style={{ marginTop: 10, fontSize: 10.5, opacity: 0.6 }}>
+        <summary style={{ cursor: 'pointer' }}>Sources &amp; caveats</summary>
+        <div style={{ marginTop: 6, lineHeight: 1.55 }}>
+          Present-day sector levels and US shares are <b>illustrative</b>, informed by — not yet
+          traced line-by-line to — these sources. Activity (EV sales, wind capacity) by scenario:
+          IEA <i>Global EV Outlook</i> and <i>World Energy Outlook / Renewables</i>. Magnet demand by
+          application: IEA <i>Global Critical Minerals Outlook 2024</i>, Adamas Intelligence, and
+          Benchmark Mineral Intelligence. Magnet intensity (~2 kg/EV; ~600 kg/MW offshore direct-drive
+          PMSG): IEA <i>Role of Critical Minerals in Clean Energy Transitions</i> and wind-LCA
+          literature. Reserves, production, and end-use shares: USGS <i>Mineral Commodity Summaries</i>.
+          Coercivity grade mix: Adamas Intelligence and standard NdFeB grade tables. The US share of
+          each sector is a placeholder pending regional data.
+        </div>
+      </details>
       <style>{`@media (max-width: 720px){ .demand-grid{ grid-template-columns:1fr !important; } }`}</style>
     </section>
   );

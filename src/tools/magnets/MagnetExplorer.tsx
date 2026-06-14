@@ -221,9 +221,9 @@ export default function MagnetExplorer() {
         <a href="https://steer-stanford.webflow.io/" target="_blank" rel="noopener noreferrer"
           title="STEER — Stanford" aria-label="STEER at Stanford (opens in new tab)"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none', color: 'var(--accent)' }}>
-          <img className="steer-light-bg" src="/STEER-logo-for-light-background.png" alt="STEER — Stanford" height={7} style={{ display: 'block' }} />
-          <img className="steer-dark-bg" src="/STEER-logo-for-dark-background.svg" alt="STEER — Stanford" height={7} style={{ display: 'none' }} />
-          <span aria-hidden="true" style={{ fontSize: 10 }}>↗</span>
+          <img className="steer-light-bg" src="/STEER-logo-for-light-background.png" alt="STEER — Stanford" height={18} />
+          <img className="steer-dark-bg" src="/STEER-logo-for-dark-background.svg" alt="STEER — Stanford" height={18} />
+          <span aria-hidden="true" style={{ fontSize: 11 }}>↗</span>
         </a>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 540 }}>
           <a href="https://github.com/Sustainable-Solutions-Lab/rare-magnets-cem" target="_blank" rel="noopener noreferrer"
@@ -243,6 +243,9 @@ export default function MagnetExplorer() {
 
       <style>{`
         @media (max-width: 720px){ .magnet-grid{ grid-template-columns:1fr !important; } }
+        .steer-light-bg, .steer-dark-bg{ height:18px !important; width:auto !important; max-width:none !important; }
+        .steer-light-bg{ display:block; }
+        .steer-dark-bg{ display:none; }
         [data-theme="dark"] .steer-light-bg{ display:none !important; }
         [data-theme="dark"] .steer-dark-bg{ display:block !important; }
       `}</style>

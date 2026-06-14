@@ -32,14 +32,15 @@ const PMSG_DEF = CFG.offshore_pmsg_default as number;
 export const OFFSHORE_PMSG_DEFAULT = PMSG_DEF;       // ~0.9; the slider reduces from here
 const FIRST = CFG.first_year as number;
 
-// US share of each global sector's magnet demand — the US's sector mix differs
-// sharply from the world's (few e-bikes, lots of defense/EV). Applied so the demand
-// builder shows US demand by sector. Illustrative; ~weighted-avg ≈ the US's ~15%
-// share of global demand. (Global e-bike/appliance demand is huge in Asia; the US
-// slice is small — which is why "HVAC/e-bikes" only looks large globally.)
+// US share of each global sector's magnet demand. Grounded in: US ~10% of global
+// EV sales (IEA Global EV Outlook 2023) and ~5.5% of wind additions, mostly onshore
+// (GWEC/Enerdata 2023); US is a minor share of e-bikes/appliances and electronics
+// (Asia-dominated) but a large share of defense (DoD stockpiling). Weighted avg
+// ≈ ~12% of global demand. The within-sector split is best-estimate (the precise
+// regional magnet-demand breakdown is proprietary — Adamas / Benchmark).
 const US_SECTOR_SHARE: Record<string, number> = {
-  ev_traction: 0.16, wind_offshore: 0.15, wind_onshore: 0.20, robotics: 0.19,
-  electronics: 0.13, hvac_ebike: 0.06, defense_aero: 0.65,
+  ev_traction: 0.12, wind_offshore: 0.08, wind_onshore: 0.10, robotics: 0.16,
+  electronics: 0.11, hvac_ebike: 0.05, defense_aero: 0.60,
 };
 
 export type Levers = { thrift: number; ev_downshift: number; re_free: number; offshore_pmsg: number };

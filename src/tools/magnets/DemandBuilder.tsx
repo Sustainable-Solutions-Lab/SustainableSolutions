@@ -170,15 +170,15 @@ export default function DemandBuilder({ onSummary }: {
       <details style={{ marginTop: 10, fontSize: 10.5, opacity: 0.6 }}>
         <summary style={{ cursor: 'pointer' }}>Sources &amp; caveats</summary>
         <div style={{ marginTop: 6, lineHeight: 1.55 }}>
-          Present-day sector levels and US shares are <b>illustrative</b>, informed by — not yet
-          traced line-by-line to — these sources. Activity (EV sales, wind capacity) by scenario:
-          IEA <i>Global EV Outlook</i> and <i>World Energy Outlook / Renewables</i>. Magnet demand by
-          application: IEA <i>Global Critical Minerals Outlook 2024</i>, Adamas Intelligence, and
-          Benchmark Mineral Intelligence. Magnet intensity (~2 kg/EV; ~600 kg/MW offshore direct-drive
-          PMSG): IEA <i>Role of Critical Minerals in Clean Energy Transitions</i> and wind-LCA
-          literature. Reserves, production, and end-use shares: USGS <i>Mineral Commodity Summaries</i>.
-          Coercivity grade mix: Adamas Intelligence and standard NdFeB grade tables. The US share of
-          each sector is a placeholder pending regional data.
+          Global NdFeB demand ~240&nbsp;kt (2023), China ~94% of production [SMM]. Magnet intensity:
+          ~1.5&nbsp;kg/EV [Thunder Said Energy] and ~600&nbsp;kg/MW for offshore direct-drive PMSG
+          [Pavel et&nbsp;al. 2017]. Activity (EV sales, wind capacity) by scenario: IEA
+          <i>Global EV Outlook</i> and <i>WEO / Renewables</i>. Magnet demand by application: IEA
+          <i>Global Critical Minerals Outlook 2024</i>, Adamas Intelligence, Benchmark Mineral
+          Intelligence. Reserves / production / end-use: USGS <i>Mineral Commodity Summaries</i>.
+          US shares grounded in ~10% of global EV sales and ~5.5% of wind additions [IEA; GWEC 2023];
+          the catch-all sector split and within-sector US shares are best-estimate, since the precise
+          breakdown is proprietary.
         </div>
       </details>
       <style>{`@media (max-width: 720px){ .demand-grid{ grid-template-columns:1fr !important; } }`}</style>

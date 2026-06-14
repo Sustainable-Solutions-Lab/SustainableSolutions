@@ -29,7 +29,18 @@ const GRADE_LADDER = CFG.grade_ladder as Record<string, [number, number]>;
 const GRADE_ORDER = Object.keys(GRADE_LADDER);       // ascending coercivity
 const OXF = CFG.oxide_factor as number;
 const PMSG_DEF = CFG.offshore_pmsg_default as number;
+export const OFFSHORE_PMSG_DEFAULT = PMSG_DEF;       // ~0.9; the slider reduces from here
 const FIRST = CFG.first_year as number;
+
+// US share of each global sector's magnet demand — the US's sector mix differs
+// sharply from the world's (few e-bikes, lots of defense/EV). Applied so the demand
+// builder shows US demand by sector. Illustrative; ~weighted-avg ≈ the US's ~15%
+// share of global demand. (Global e-bike/appliance demand is huge in Asia; the US
+// slice is small — which is why "HVAC/e-bikes" only looks large globally.)
+const US_SECTOR_SHARE: Record<string, number> = {
+  ev_traction: 0.16, wind_offshore: 0.15, wind_onshore: 0.20, robotics: 0.19,
+  electronics: 0.13, hvac_ebike: 0.06, defense_aero: 0.65,
+};
 
 export type Levers = { thrift: number; ev_downshift: number; re_free: number; offshore_pmsg: number };
 export const DEFAULT_LEVERS: Levers = { thrift: 0, ev_downshift: 0, re_free: 0, offshore_pmsg: PMSG_DEF };
@@ -69,6 +80,7 @@ export function sectorGradeDemand(scenario: PerSectorScenario, lv: Levers) {
     const mix = s.motor ? downshift(s.grade_mix, lv.ev_downshift) : s.grade_mix;
     let scale = s.motor ? 1 - lv.re_free : 1;
     if (s.offshore) scale *= lv.offshore_pmsg / PMSG_DEF;
+    scale *= US_SECTOR_SHARE[sk] ?? 1;   // show the US share of each global sector
     out[sk] = {};
     YEARS.forEach((y, iy) => {
       const kt = base * Math.pow(1 + growth, y - FIRST) * (s.kg_per_unit / 1e6) * scale;
@@ -110,10 +122,10 @@ function totals(scenario: PerSectorScenario, lv: Levers) {
 const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
 const REF = totals(allScenario('APS'), DEFAULT_LEVERS);   // the precompute reference
 
-// Sectors ordered LARGEST first (by total magnet demand) — used to stack the
-// biggest at the bottom of the area charts and to order the selection list.
+// Sectors ordered LARGEST first by STARTING-YEAR (2026) magnet demand — used to
+// stack the biggest at the bottom of the area charts and to order the list.
 const _mag = sectorBreakdown(allScenario('APS'), DEFAULT_LEVERS).magnet;
-export const SECTORS_BY_SIZE = [...SECTOR_KEYS].sort((a, b) => sum(_mag[b]) - sum(_mag[a]));
+export const SECTORS_BY_SIZE = [...SECTOR_KEYS].sort((a, b) => _mag[b][0] - _mag[a][0]);
 
 /** Map a composition + levers onto the supply grid's two demand-summary axes. */
 export function demandSummary(scenario: PerSectorScenario, lv: Levers) {

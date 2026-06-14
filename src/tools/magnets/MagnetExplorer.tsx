@@ -26,14 +26,12 @@ const COST_KEYS: [string, string, string][] = [
   ['shortage', 'Unmet-demand penalty', '#9E0142'],
 ];
 const COST_DESC: Record<string, string> = {
-  mining: 'Build-out + operating cost of mining/beneficiation, all regions (NPV).',
-  separation: 'Build-out + operating cost of solvent-extraction separation, all regions.',
-  alloy: 'Build-out + operating cost of oxide→metal→strip-cast alloy, all regions.',
-  magnet: 'Build-out + operating cost of sintered-magnet manufacturing, all regions.',
-  recycling: 'Build-out + operating cost of end-of-life recycling capacity.',
-  trade: 'Inter-regional shipping cost of concentrate / oxide / alloy / magnets moved between regions.',
-  coproduct: 'Net cost (or credit) of the cheap light REEs (La/Ce) co-produced with every tonne of ore — disposal cost minus what the market absorbs. This is the “balance problem”: chasing Dy/Tb forces surplus La/Ce. Negative = net credit.',
-  shortage: 'Penalty on GLOBAL unmet magnet demand (all regions): unmet tonnes × a high penalty rate. Not a real production cost — it flags demand the chain can’t deliver in time.',
+  mining: 'Build + operating cost of US-located mining / beneficiation capacity (NPV).',
+  separation: 'Build + operating cost of US-located solvent-extraction separation.',
+  alloy: 'Build + operating cost of US-located oxide→metal→strip-cast alloy.',
+  magnet: 'Build + operating cost of US-located sintered-magnet manufacturing.',
+  recycling: 'Build + operating cost of US-located end-of-life recycling capacity.',
+  shortage: 'Penalty on US unmet magnet demand: unmet tonnes × a high penalty rate. Not a market cost — it flags US demand the chain can’t deliver in time (e.g. under a ban).',
 };
 // diagonal hatch so the unmet-demand penalty reads as "not a real production cost"
 const hatch = (c: string) =>
@@ -98,7 +96,10 @@ export default function MagnetExplorer() {
   const sc = useMemo(() => interpScenario({
     dc, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale,
   }), [dc, rec, china, rcost, demand]);
-  const costTotal = COST_KEYS.reduce((a, [k]) => a + Math.max(0, sc.cost[k] ?? 0), 0);
+  // The cost breakdown is US-specific (the cost the US bears to supply itself) —
+  // this analysis is about US supply security. Global trade/co-product don't apply.
+  const US_COST_KEYS = COST_KEYS.filter(([k]) => k !== 'trade' && k !== 'coproduct');
+  const usCostTotal = US_COST_KEYS.reduce((a, [k]) => a + Math.max(0, sc.us_cost[k] ?? 0), 0);
 
   return (
     <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: '28px 20px 64px', color: 'var(--ink)' }}>
@@ -169,33 +170,39 @@ export default function MagnetExplorer() {
           <div style={{ marginBottom: 24 }} />
 
           <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-              <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Cost breakdown</h2>
-              <span style={{ font: '600 15px var(--font-mono)' }}>{musd(sc.kpis.npv_musd)} <span style={{ opacity: 0.5, fontWeight: 400 }}>total NPV</span></span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+              <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Cost to the US, by stage</h2>
+              <span style={{ font: '600 15px var(--font-mono)' }}>{musd(usCostTotal)} <span style={{ opacity: 0.5, fontWeight: 400 }}>US NPV</span></span>
             </div>
+            <p style={{ fontSize: 11.5, opacity: 0.5, margin: '0 0 12px', lineHeight: 1.45 }}>
+              Build + operating cost of US-located capacity at each stage (2026–35 NPV), plus the US
+              shortage penalty. The delta vs the no-policy baseline is the cost of US supply security.
+            </p>
             <div style={{ display: 'flex', height: 30, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--rule)' }}>
-              {COST_KEYS.map(([k, lbl, color]) => {
-                const v = Math.max(0, sc.cost[k] ?? 0);
+              {US_COST_KEYS.map(([k, lbl, color]) => {
+                const v = Math.max(0, sc.us_cost[k] ?? 0);
                 if (v <= 0) return null;
-                return <div key={k} title={`${lbl}: ${musd(v)}`} style={{ width: `${(v / costTotal) * 100}%`, background: k === 'shortage' ? hatch(color) : color }} />;
+                return <div key={k} title={`${lbl}: ${musd(v)}`} style={{ width: `${(v / usCostTotal) * 100}%`, background: k === 'shortage' ? hatch(color) : color }} />;
               })}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 18px', marginTop: 14 }}>
-              {COST_KEYS.map(([k, lbl, color]) => {
-                const v = sc.cost[k] ?? 0;
+              {US_COST_KEYS.map(([k, lbl, color]) => {
+                const v = sc.us_cost[k] ?? 0;
                 if (Math.abs(v) < 1) return null;
+                const dv = v - (BASE.us_cost[k] ?? 0);
                 return (
                   <div key={k} title={COST_DESC[k]} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'help' }}>
                     <span style={{ width: 10, height: 10, borderRadius: 2, background: k === 'shortage' ? hatch(color) : color, display: 'inline-block' }} />
                     <span style={{ opacity: 0.7 }}>{lbl}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{musd(v)}{v < 0 ? ' (credit)' : ''}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{musd(v)}</span>
+                    {Math.abs(dv) >= 100 && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: dv > 0 ? WORSE : 'var(--brand-green)' }}>{dv > 0 ? '+' : ''}{musd(dv)}</span>}
                   </div>
                 );
               })}
             </div>
           </section>
 
-          <PathwayCharts sc={sc} years={YEARS} demand={demand.totalSeries} usShare={US_DEMAND_SHARE}
+          <PathwayCharts sc={sc} years={YEARS} demand={demand.totalSeries} usShare={1}
             usDemandMax={US_DEMAND_SHARE * Math.max(...DEMAND_KT_REF) * 1.45} />
 
           <FlowDiagram sc={sc} />

@@ -28,7 +28,7 @@ const COLS = [
   { label: 'Demand', stage: 'consumption', iface: null,
     desc: 'Finished-magnet consumption by region.' },
 ];
-const W = 900, H = 300, PADX = 64, PADY = 28, NODE_W = 14;
+const W = 900, H = 460, PADX = 64, PADY = 46, NODE_W = 16;
 const innerH = H - 2 * PADY;
 const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
 
@@ -108,32 +108,25 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
             })}
             {REGIONS.map((r) => {
               const s = segY[i][r], h = s.y1 - s.y0;
-              if (h < 12) return null;
+              if (h < 16) return null;
               const last = i === COLS.length - 1;
               return (
-                <text key={r + 'p'} x={last ? colX[i] - 5 : colX[i] + NODE_W + 5} y={(s.y0 + s.y1) / 2}
+                <text key={r + 'p'} x={last ? colX[i] - 6 : colX[i] + NODE_W + 6} y={(s.y0 + s.y1) / 2}
                   textAnchor={last ? 'end' : 'start'} dominantBaseline="central"
-                  style={{ font: '600 10px var(--font-mono)', fill: REGION_COLOR[r] }}>
+                  style={{ font: '600 15px var(--font-mono)', fill: REGION_COLOR[r] }}>
                   {Math.round((h / innerH) * 100)}%
                 </text>
               );
             })}
-            <text x={colX[i] + NODE_W / 2} y={PADY - 16} textAnchor="middle" style={{ font: '600 11px var(--font-mono)', fill: 'var(--ink)', opacity: 0.7, cursor: 'help' }}>
+            <text x={colX[i] + NODE_W / 2} y={PADY - 24} textAnchor="middle" style={{ font: '600 17px var(--font-mono)', fill: 'var(--ink)', opacity: 0.8, cursor: 'help' }}>
               {c.label}<title>{c.desc}</title>
             </text>
-            <text x={colX[i] + NODE_W / 2} y={PADY - 5} textAnchor="middle" style={{ font: '400 8.5px var(--font-mono)', fill: 'var(--accent)', opacity: 0.65, cursor: 'help' }}>
+            <text x={colX[i] + NODE_W / 2} y={PADY - 9} textAnchor="middle" style={{ font: '400 12px var(--font-mono)', fill: 'var(--accent)', opacity: 0.7, cursor: 'help' }}>
               {c.stage}<title>{c.desc}</title>
             </text>
           </g>
         ))}
       </svg>
-      <p style={{ fontSize: 12, opacity: 0.55, marginTop: 10, lineHeight: 1.5 }}>
-        Bars: each region's share of the material at a stage (with %). Ribbons: shipments coloured by
-        origin — every ribbon leaves a same-coloured bar. The Oxide stage includes recycling-derived
-        oxide, so recycling gives the US and RoW their own bars even without domestic mining. Widths
-        are proportional per interface; recovery losses and recycling mean throughput changes between
-        stages, so it isn't strictly mass-conserving end to end.
-      </p>
     </section>
   );
 }

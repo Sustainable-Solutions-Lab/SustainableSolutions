@@ -1,0 +1,475 @@
+/**
+ * components/sidebar/distribution-chart.jsx
+ *
+ * Sorted distribution bar chart for the active variable.
+ *
+ * - Each visual column represents a cell sorted by value (highest left)
+ * - Bars are scaled to the actual data range so they fill the chart height
+ * - Bars colored with the variable's colormap (using full domain for color consistency)
+ * - Filter icon in upper-right of chart area toggles a draggable cutoff line
+ * - Dispatches SET_PERCENTILE { low, high: 100 } when filter line is dragged
+ * - Dispatches { low: 0, high: 100 } when filter is deactivated
+ * - Returns null for categorical variables (no meaningful distribution)
+ */
+
+import { useMemo, useRef, useState, useCallback } from 'react'
+import { SlidersHorizontal } from 'lucide-react'
+import { buildColorScale } from '../../lib/colormap.js'
+import { formatValue } from '../../lib/format.js'
+import { Actions } from '../../contracts/events.js'
+
+const CHART_W = 220
+const CHART_H = 90
+
+// Lucide SlidersHorizontal — 1.5px stroke, 24px grid, matches the design system.
+function SlidersIcon({ size = 16 }) {
+  return <SlidersHorizontal size={size} strokeWidth={1.5} aria-hidden='true' />
+}
+
+export function DistributionChart({ variable: rawVariable, allValues, percentileRange, dispatch, isDark = false }) {
+  const [filterActive, setFilterActive] = useState(false)
+  const svgRef = useRef(null)
+  const isDragging = useRef(false)
+
+  // Apply the same dark-mode colormap swap the map uses (e.g. mortality
+  // MagmaR → Magma so high values = cream and low values = black on dark
+  // backgrounds). Without this, the chart and the map walk the colormap
+  // in opposite directions in dark mode.
+  const variable = useMemo(() => {
+    if (!rawVariable) return rawVariable
+    if (isDark && rawVariable.darkColormap) {
+      return { ...rawVariable, colormap: rawVariable.darkColormap }
+    }
+    return rawVariable
+  }, [rawVariable, isDark])
+
+  const isCategorical = variable?.type === 'categorical'
+
+  // Build a color scale using the actual data range so colors are vivid,
+  // not washed out by a domain that is wider than the real data.
+  // Diverging variables now go through the same colormap path so the
+  // chart matches the map's continuous gradient (the older "binary
+  // anchor by sign" mode was correct for diff layers with explicit
+  // solidColor pins, but PM₂.₅ low/high are now BuRd-diverging at the
+  // WHO threshold with no pinned anchors, and the chart should show
+  // the full gradient there too).
+  const isDiverging = variable?.diverging
+  const hasAnchors  = variable?.solidColor != null || variable?.solidColorNegative != null
+  const useGradient = !isDiverging || !hasAnchors
+  const zeroRef = variable?.domain?.zero ?? 0
+
+  const scale = useMemo(() => {
+    if (!variable || isCategorical) return null
+    // Diverging: rescale to data-derived p99 on each side of `zero`
+    // (asymmetric — matches the map's color expression). Sequential:
+    // p1/p99 of the full data so colors saturate at the actual data
+    // extremes instead of the configured-but-too-wide domain.
+    // `colorPercentile` (per-variable, default 0.99) relaxes the high-end
+    // cap — e.g. mortality at 0.995 keeps the brightest cells from all
+    // clipping to the same saturated color, so we see more variation
+    // across metros.
+    const colorPct = variable.colorPercentile ?? 0.99
+    if (isDiverging) {
+      if (allValues?.length >= 10) {
+        const zero = variable.domain?.zero ?? 0
+        const posDevs = allValues.filter((v) => v > zero).map((v) => v - zero).sort((a, b) => a - b)
+        const negDevs = allValues.filter((v) => v < zero).map((v) => zero - v).sort((a, b) => a - b)
+        const pHi = (arr) => arr.length > 0 ? (arr[Math.floor(colorPct * (arr.length - 1))] ?? arr[arr.length - 1]) : null
+        const autoPos = pHi(posDevs)
+        const autoNeg = pHi(negDevs)
+        const maxPos = variable.colorMax != null ? Math.max(variable.colorMax - zero, 0) : autoPos
+        const maxNeg = variable.colorMin != null ? Math.max(zero - variable.colorMin, 0) : autoNeg
+        if (maxPos != null && maxNeg != null && (maxPos > 0 || maxNeg > 0)) {
+          return buildColorScale({
+            ...variable,
+            domain: { min: zero - maxNeg, max: zero + maxPos, zero },
+          })
+        }
+      }
+      return buildColorScale(variable)
+    }
+    const sorted_ = allValues?.length ? [...allValues].sort((a, b) => a - b) : []
+    if (sorted_.length < 2) return buildColorScale(variable)
+    const p01 = sorted_[Math.floor(sorted_.length * 0.01)] ?? sorted_[0]
+    const pHi = variable.colorMax != null
+      ? variable.colorMax
+      : (sorted_[Math.floor(sorted_.length * colorPct)] ?? sorted_[sorted_.length - 1])
+    return buildColorScale({ ...variable, domain: { min: p01, max: pHi } })
+  }, [variable, allValues, isCategorical, isDiverging])
+
+  // Sort all values descending (highest value = leftmost bar)
+  const sorted = useMemo(
+    () => (allValues?.length ? [...allValues].sort((a, b) => b - a) : []),
+    [allValues]
+  )
+
+  // Cap display range at p1–p99 so extreme outliers don't squish the distribution.
+  // Bars for values outside this range are clipped to the chart edge (still visible
+  // as full-height or zero-height bars) but don't distort the scale.
+  // A project variable may also pin the low-end at `histogramMin` (e.g. 8 µg/m³
+  // for PM₂.₅) to cut the long tail of background-noise low values out of the
+  // visual; values below that threshold are dropped from the histogram entirely.
+  const colorPct = variable?.colorPercentile ?? 0.99
+  const p99idx = Math.floor(sorted.length * (1 - colorPct))
+  const p01idxRaw = Math.floor(sorted.length * 0.99)
+  const histMin = variable?.histogramMin
+  // `histogramMin` clips the low tail of the distribution (e.g. PM₂.₅ < 8
+  // µg/m³). If the visible data doesn't reach that floor (zoomed deep into
+  // a moderate-PM city, for instance), clipping would leave only a sliver
+  // of values near the top — collapsing the axis labels to a single number
+  // and emptying the bars. Fall back to the natural p1 in that case.
+  const p01idx = (() => {
+    if (histMin == null || sorted.length === 0) return p01idxRaw
+    const cutoffIdx = sorted.findIndex((v) => v < histMin)
+    if (cutoffIdx === -1) return p01idxRaw                  // all values >= histMin
+    if (cutoffIdx < sorted.length * 0.05) return p01idxRaw  // <5% above histMin: ignore the floor
+    return Math.max(p99idx + 1, cutoffIdx - 1)
+  })()
+  const dataMaxAuto = sorted.length ? (sorted[p99idx] ?? sorted[0]) : 1
+  const dataMinAuto = sorted.length ? (sorted[p01idx] ?? sorted[sorted.length - 1]) : 0
+  const dataMax = variable?.colorMax != null ? variable.colorMax : dataMaxAuto
+  const dataMin = variable?.colorMin != null ? variable.colorMin : dataMinAuto
+  const dataRange = Math.max(dataMax - dataMin, 1)
+
+  // Domain range for zero-line placement + asymmetric opacity denominators (diverging only)
+  const { zero } = variable?.domain ?? {}
+  // Use per-side p99 of actual values so both extremes reach full opacity symmetrically
+  const posDevs = useMemo(() => {
+    if (!isDiverging || !allValues?.length) return []
+    return allValues.filter(v => v > (zero ?? 0)).map(v => v - (zero ?? 0)).sort((a, b) => a - b)
+  }, [allValues, isDiverging, zero])
+  const negDevs = useMemo(() => {
+    if (!isDiverging || !allValues?.length) return []
+    return allValues.filter(v => v < (zero ?? 0)).map(v => (zero ?? 0) - v).sort((a, b) => a - b)
+  }, [allValues, isDiverging, zero])
+  const maxPosDev = posDevs.length > 0
+    ? Math.max(posDevs[Math.floor(posDevs.length * 0.99)] ?? posDevs[posDevs.length - 1], 0.001)
+    : Math.max(dataMax - (zero ?? 0), 0.001)
+  const maxNegDev = negDevs.length > 0
+    ? Math.max(negDevs[Math.floor(negDevs.length * 0.99)] ?? negDevs[negDevs.length - 1], 0.001)
+    : Math.max((zero ?? 0) - dataMin, 0.001)
+
+  // Build a histogram of counts across `CHART_W` value bins spanning the
+  // clipped data range. Left = highest value, right = lowest (matches the
+  // diverging-chart convention: red on the left, blue on the right). Each
+  // bar carries its bin's count and its center value for coloring.
+  // 220 bins (one per SVG-unit column). Bars render at 1.25 × column
+  // width — a 25 % overlap that comfortably closes sub-pixel seams.
+  const BIN_COUNT = 220
+  const bars = useMemo(() => {
+    if (!sorted.length) return []
+    if (!allValues?.length) return []
+    const N = BIN_COUNT
+    const width = Math.max(dataMax - dataMin, 1e-9) / N
+    const counts = new Array(N).fill(0)
+    for (const v of allValues) {
+      if (v < dataMin || v > dataMax) continue
+      const idx = Math.min(N - 1, Math.max(0, Math.floor((v - dataMin) / width)))
+      counts[idx]++
+    }
+
+    // Fill empty bins by interpolating between the surrounding
+    // non-empty ones. Necessary because some variables (notably
+    // pm25_diff) are baked at lower precision (0.01) than the chart's
+    // bin width (~0.005), which leaves regularly-spaced empty bins
+    // that previously rendered as 2-px-tall slivers — read by the eye
+    // as vertical white lines. Interpolating restores a continuous
+    // histogram shape independent of data quantization.
+    const filled = counts.slice()
+    let i = 0
+    while (i < N) {
+      if (filled[i] !== 0) { i++; continue }
+      let r = i
+      while (r < N && filled[r] === 0) r++
+      // [i, r) are empty. Interpolate between filled[i-1] (or 0 if at
+      // the left edge) and filled[r] (or filled[i-1] if past the
+      // right edge).
+      const leftVal  = i > 0 ? filled[i - 1] : (r < N ? filled[r] : 0)
+      const rightVal = r < N ? filled[r] : leftVal
+      const span = r - i + 1
+      for (let j = i; j < r; j++) {
+        const t = (j - i + 1) / span
+        filled[j] = leftVal * (1 - t) + rightVal * t
+      }
+      i = r
+    }
+
+    return Array.from({ length: N }, (_, k) => {
+      // Screen-left = lowest bin, screen-right = highest. Matches the
+      // standard increasing-x convention.
+      const binStart = dataMin + k * width
+      return {
+        count: filled[k],
+        binCenter: binStart + width / 2,
+      }
+    })
+  }, [allValues, dataMin, dataMax])
+
+  const maxCount = useMemo(() => {
+    let m = 1
+    for (const b of bars) if (b.count > m) m = b.count
+    return m
+  }, [bars])
+
+  // Map a data value to SVG y coordinate (0 = top, CHART_H = bottom)
+  // Uses actual data range so bars fill the full chart height
+  const valueToY = useCallback(
+    (v) => CHART_H * (1 - Math.max(0, Math.min(1, (v - dataMin) / dataRange))),
+    [dataMin, dataRange]
+  )
+
+  // Zero line: only show if it falls within the actual data range
+  const showZeroLine = variable?.diverging && zero !== undefined && zero >= dataMin && zero <= dataMax
+  const zeroY = showZeroLine ? valueToY(zero) : CHART_H
+
+  // Current filter line x position in SVG coords. With high values now
+  // on the right, "Showing top X%" places the cutoff line at the (100-X)
+  // percent point measured from the left edge — equivalently, low/100.
+  const low = percentileRange?.low ?? 0
+  const filterLineX = (low / 100) * CHART_W
+
+  const updateFilterFromMouse = useCallback((clientX) => {
+    const svg = svgRef.current
+    if (!svg) return
+    const rect = svg.getBoundingClientRect()
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    const newLow = Math.round(pct * 100)
+    dispatch({ type: Actions.SET_PERCENTILE, low: newLow, high: 100 })
+  }, [dispatch])
+
+  const handleSvgMouseDown = useCallback((e) => {
+    if (!filterActive) return
+    e.preventDefault()
+    isDragging.current = true
+    updateFilterFromMouse(e.clientX)
+
+    const onMove = (evt) => { if (isDragging.current) updateFilterFromMouse(evt.clientX) }
+    const onUp = () => {
+      isDragging.current = false
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [filterActive, updateFilterFromMouse])
+
+  function handleToggleFilter() {
+    if (filterActive) {
+      dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
+      setFilterActive(false)
+    } else {
+      dispatch({ type: Actions.SET_PERCENTILE, low: 90, high: 100 })
+      setFilterActive(true)
+    }
+  }
+
+  // Axis label values + whether the displayed range clips the true extremes
+  const unit = variable?.unit ?? ''
+  const showHighGT = sorted.length > 1 && sorted[0] > dataMax          // top 1% trimmed
+  const showLowLT  = sorted.length > 1 && sorted[sorted.length - 1] < dataMin  // bottom 1% trimmed
+
+  // Zero crossover x-position for diverging variables. Bins now run
+  // dataMin (left) → dataMax (right), so the zero crossing sits at the
+  // fraction of the range that `zero` lies above dataMin.
+  const zeroCrossoverPct = (isDiverging && zero != null && zero > dataMin && zero < dataMax)
+    ? ((zero - dataMin) / Math.max(dataMax - dataMin, 1e-9)) * 100
+    : null
+
+  if (!variable || isCategorical || !sorted.length) return null
+
+  return (
+    <div className="mb-6">
+      {/* Chart with filter icon overlay */}
+      <div className="relative">
+        {/* Unit label — top right, just left of the filter icon */}
+        {unit && (
+          <span
+            className="absolute font-mono text-[13px] text-ink-3 leading-none z-10 select-none"
+            style={{ top: '5px', right: '32px' }}
+          >
+            {unit}
+          </span>
+        )}
+
+        {/* Filter toggle button — upper right of chart */}
+        <button
+          type="button"
+          onClick={handleToggleFilter}
+          title={filterActive ? 'Clear filter' : 'Filter by percentile'}
+          className={[
+            'absolute z-10 bg-transparent border-0 cursor-pointer p-0 leading-none transition-colors',
+            filterActive ? 'text-ink' : 'text-ink-3',
+            'hover:text-ink',
+          ].join(' ')}
+          style={{ top: '5px', right: '5px' }}
+        >
+          <SlidersIcon size={18} />
+        </button>
+
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+          preserveAspectRatio='none'
+          shapeRendering='geometricPrecision'
+          style={{
+            width: '100%',
+            height: CHART_H,
+            display: 'block',
+            cursor: filterActive ? 'ew-resize' : 'default',
+          }}
+          onMouseDown={handleSvgMouseDown}
+        >
+          {/* Histogram — rendered as a SINGLE polygon (the full stepped
+              outline of the histogram) filled with a linearGradient that
+              samples the colormap along its length. Per-bar rects /
+              polygons antialiased each bar's right edge against the
+              paper background wherever the bar protruded above its
+              shorter right neighbour, producing visible vertical lines.
+              A single polygon has only one continuous top edge — no
+              internal right-edges, no seams. */}
+          {(() => {
+            const barW = CHART_W / BIN_COUNT
+            const heightAt = (bar) => {
+              if (bar.count > 0) {
+                const f = Math.sqrt(bar.count / maxCount)
+                return Math.max(2, f * CHART_H)
+              }
+              return 2
+            }
+
+            // One stepped polygon over all bars.
+            const pts = [`0,${CHART_H}`]
+            for (let i = 0; i < bars.length; i++) {
+              const y = CHART_H - heightAt(bars[i])
+              pts.push(`${i * barW},${y}`)
+              pts.push(`${(i + 1) * barW},${y}`)
+            }
+            pts.push(`${CHART_W},${CHART_H}`)
+
+            // Build a unique gradient id per variable so co-mounted charts
+            // (if any) don't collide.
+            const gradId = `hist-grad-${variable.id ?? 'default'}`
+
+            // Sample the colormap into ~40 linearGradient stops. Bars are
+            // ordered screen-left = lowest bin, so offset 0 % maps to
+            // dataMin and 100 % to dataMax. Diverging variables fade the
+            // stops to fully transparent at `zero` so the chart matches
+            // the map's behaviour where mid-range cells render
+            // transparent (e.g. PM₂.₅ at the 5 µg/m³ WHO threshold).
+            const STOPS = 40
+            const negSpan = Math.max(zeroRef - dataMin, 1e-9)
+            const posSpan = Math.max(dataMax - zeroRef, 1e-9)
+            const alphaPower = variable.alphaPower ?? 1
+            const alphaFloor = variable.alphaFloor ?? 0
+            function divergingAlpha(v) {
+              const tc = v >= zeroRef
+                ? Math.min(1, (v - zeroRef) / posSpan)
+                : Math.min(1, (zeroRef - v) / negSpan)
+              if (tc <= alphaFloor) return 0
+              const tr = (tc - alphaFloor) / (1 - alphaFloor)
+              return Math.min(1, Math.pow(tr, alphaPower))
+            }
+            const stops = []
+            for (let s = 0; s <= STOPS; s++) {
+              const t = s / STOPS
+              const v = dataMin + t * (dataMax - dataMin)
+              let color
+              if (isDiverging && hasAnchors) {
+                color = v >= zeroRef
+                  ? variable.solidColor
+                  : (variable.solidColorNegative ?? variable.solidColor)
+              } else {
+                color = variable.solidColor ?? scale(v)
+              }
+              const opacity = isDiverging ? divergingAlpha(v) : 1
+              stops.push(
+                <stop
+                  key={s}
+                  offset={`${(t * 100).toFixed(2)}%`}
+                  stopColor={color}
+                  stopOpacity={opacity}
+                />,
+              )
+            }
+
+            return (
+              <>
+                <defs>
+                  <linearGradient id={gradId} x1="0" y1="0" x2={CHART_W} y2="0" gradientUnits="userSpaceOnUse">
+                    {stops}
+                  </linearGradient>
+                </defs>
+                <polygon points={pts.join(' ')} fill={`url(#${gradId})`} />
+              </>
+            )
+          })()}
+
+          {/* Vertical zero line for diverging variables — sits at the
+              x-position of the bin whose center is the diverging zero. */}
+          {showZeroLine && zeroCrossoverPct != null && (
+            <line
+              x1={(zeroCrossoverPct / 100) * CHART_W}
+              y1={0}
+              x2={(zeroCrossoverPct / 100) * CHART_W}
+              y2={CHART_H}
+              stroke='rgba(128,128,128,0.55)'
+              strokeWidth={0.8}
+            />
+          )}
+
+          {/* Filter line + drag handle */}
+          {filterActive && (
+            <g>
+              <line
+                x1={filterLineX} y1={0}
+                x2={filterLineX} y2={CHART_H}
+                stroke={isDark ? 'rgba(255,255,255,0.9)' : 'rgba(30,30,30,0.85)'}
+                strokeWidth={1.5}
+              />
+              <circle
+                cx={filterLineX} cy={8}
+                r={5}
+                fill={isDark ? 'rgba(255,255,255,0.92)' : 'rgba(240,240,240,0.95)'}
+                stroke={isDark ? 'rgba(120,120,120,0.7)' : 'rgba(30,30,30,0.6)'}
+                strokeWidth={1}
+              />
+            </g>
+          )}
+        </svg>
+      </div>
+
+      {/* Axis labels — left=min, right=max, zero label at crossover for diverging */}
+      <div className="relative" style={{ height: '14px', marginTop: '3px', marginBottom: '2px' }}>
+        {/* Low-end label (left) */}
+        <span className="absolute left-0 font-mono text-[13px] text-ink-3 leading-none">
+          {showLowLT ? '<' : ''}{formatValue(dataMin, '')}
+        </span>
+
+        {/* Zero crossover label — only when diverging and zero falls
+            well inside the range. The 18/82 thresholds leave room on
+            either side so the centered label doesn't crash into the
+            edge labels. */}
+        {zeroCrossoverPct !== null && zeroCrossoverPct > 18 && zeroCrossoverPct < 82 && (
+          <span
+            className="absolute font-mono text-[13px] text-ink-3 leading-none whitespace-nowrap"
+            style={{ left: `${zeroCrossoverPct}%`, transform: 'translateX(-50%)' }}
+          >
+            {formatValue(zero ?? 0, '')}
+          </span>
+        )}
+
+        {/* High-end label (right) */}
+        <span className="absolute right-0 font-mono text-[13px] text-ink-3 leading-none">
+          {showHighGT ? '>' : ''}{formatValue(dataMax, '')}
+        </span>
+      </div>
+
+      {/* Filter status */}
+      {filterActive && low > 0 && (
+        <p className="font-sans text-[13px] text-ink-3 mt-1 m-0">
+          Showing top {100 - low}%
+        </p>
+      )}
+    </div>
+  )
+}

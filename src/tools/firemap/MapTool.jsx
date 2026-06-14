@@ -1,0 +1,518 @@
+import { useReducer, useState, useEffect, useMemo } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
+import 'maplibre-gl/dist/maplibre-gl.css'
+
+import { Actions, initialState } from './contracts/events.js'
+import { projects } from './projects/index.js'
+import { getActiveVariable } from './lib/get-active-variable.js'
+import { Map } from './components/map/index.jsx'
+import { Sidebar } from './components/sidebar/index.jsx'
+import { MobileLegend } from './components/sidebar/legend.jsx'
+import { LayerTabs } from './components/sidebar/layer-tabs.jsx'
+import { DimensionControl } from './components/sidebar/dimension-control.jsx'
+import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
+import { AreaTool } from './components/area-tool/index.jsx'
+import { StatsPanel } from './components/area-tool/stats-panel.jsx'
+import { MethodsPanel } from './components/methods-panel.jsx'
+import { DevControls, shouldShowDevControls, readStoredTuning } from './components/dev-controls.jsx'
+import { DEFAULT_TUNING } from './lib/use-just-air-layers.js'
+
+// ── Reducer ──────────────────────────────────────────────────────────────────
+
+function reducer(state, action) {
+  switch (action.type) {
+    case Actions.SET_PROJECT:
+      return { ...state, projectId: action.projectId }
+    case Actions.SET_LAYER:
+      return {
+        ...state,
+        activeLayer: action.layerId,
+        ...(action.dimensionResets
+          ? { activeDimensions: { ...state.activeDimensions, ...action.dimensionResets } }
+          : {}),
+      }
+    case Actions.SET_DIMENSION:
+      return {
+        ...state,
+        activeDimensions: {
+          ...state.activeDimensions,
+          [action.dimensionId]: action.value,
+        },
+      }
+    case Actions.SELECT_CELL:
+      return { ...state, selectedCell: action.cell }
+    case Actions.DESELECT_CELL:
+      return { ...state, selectedCell: null }
+    case Actions.SET_DRAWN_CIRCLE:
+      // Setting a circle clears any active ZIP polygon — they're alternative
+      // ways to define the same regional-stats input, only one at a time.
+      return { ...state, drawnCircle: action.circle, drawnPolygon: action.circle ? null : state.drawnPolygon }
+    case Actions.SET_DRAWN_POLYGON:
+      return { ...state, drawnPolygon: action.polygon, drawnCircle: action.polygon ? null : state.drawnCircle }
+    case Actions.SET_AGGREGATE_STATS:
+      return { ...state, aggregateStats: action.stats }
+    case Actions.SET_PERCENTILE:
+      return { ...state, percentileRange: { low: action.low, high: action.high } }
+    case Actions.TOGGLE_AREA_TOOL:
+      // Toggling the tool off clears whatever region was active.
+      return state.areaToolActive
+        ? { ...state, areaToolActive: false, drawnCircle: null, drawnPolygon: null, aggregateStats: null }
+        : { ...state, areaToolActive: true }
+    case Actions.TOGGLE_SCHEME:
+      return {
+        ...state,
+        colorScheme: state.colorScheme === 'dark' ? 'light' : 'dark',
+      }
+    case Actions.TOGGLE_METHODS:
+      return { ...state, methodsOpen: !state.methodsOpen }
+    default:
+      return state
+  }
+}
+
+// Read site-level theme (set by BaseLayout's bootstrap script) so firefuels
+// starts in the same mode as the rest of the site. Falls back to dark on SSR.
+function readSiteScheme() {
+  if (typeof document === 'undefined') return 'dark'
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+}
+
+// ── App ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Build an AppState seed for `projectId` by reading the first layer + each
+ * dimension's defaultValue from the project config. Keeps MapTool generic so
+ * it doesn't have to know about per-project layer/dimension names.
+ */
+function seedStateForProject(projectId) {
+  const project = projects[projectId]
+  if (!project) return initialState
+  const firstLayer = project.layers.find((l) => !l.hidden) ?? project.layers[0]
+  const activeDimensions = {}
+  for (const d of project.dimensions ?? []) {
+    activeDimensions[d.id] = d.defaultValue
+  }
+  return {
+    ...initialState,
+    projectId,
+    activeLayer: firstLayer?.id ?? initialState.activeLayer,
+    activeDimensions,
+  }
+}
+
+export default function MapTool({ projectId = 'fuel-treatment', companion = null, display = null, repoLinks = null }) {
+  const initialScheme = readSiteScheme()
+  const [state, dispatch] = useReducer(
+    reducer,
+    { ...seedStateForProject(projectId), colorScheme: initialScheme },
+  )
+
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
+  const [mobileAboutOpen, setMobileAboutOpen] = useState(false)
+  // City-inequality mobile picker — list of 15 metros, with one
+  // selectable at a time to render the pre-baked equity chart inline.
+  const [cityEquityData, setCityEquityData] = useState(null)
+  const [equityCity, setEquityCity] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    fetch('/tools/just-air/city-equity.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data) setCityEquityData(data) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+  const [mapInstance, setMapInstance] = useState(null)
+  const [filterStats, setFilterStats] = useState({ count: null, mean: null, median: null, totalCount: null, allValues: [] })
+  const [statewideValues, setStatewideValues] = useState([])
+  const [opacityP95, setOpacityP95] = useState(null)
+  const [tuning, setTuning] = useState(() => readStoredTuning() ?? { ...DEFAULT_TUNING })
+  const [showDevControls, setShowDevControls] = useState(false)
+  useEffect(() => { setShowDevControls(shouldShowDevControls()) }, [])
+
+  // Sheet-managed display fields (title, eyebrow, summary) override the
+  // hardcoded project config so editing the Tools sheet flows through to
+  // the in-tool sidebar header without code changes.
+  // Memoized so the spread doesn't produce a fresh object on every render —
+  // downstream effects use `config` as a useEffect dep and would otherwise
+  // re-run forever (which was causing continuous map flashing).
+  const baseConfig = projects[state.projectId] ?? projects['fuel-treatment']
+  const displayTitle = display?.title ?? null
+  const displayEyebrow = display?.eyebrow ?? null
+  const displaySummary = display?.summary ?? null
+  const config = useMemo(() => {
+    if (!displayTitle && !displayEyebrow && !displaySummary) return baseConfig
+    return {
+      ...baseConfig,
+      title: displayTitle || baseConfig.title,
+      eyebrow: displayEyebrow || baseConfig.eyebrow,
+      summary: displaySummary || baseConfig.summary,
+    }
+  }, [baseConfig, displayTitle, displayEyebrow, displaySummary])
+  const isDark = state.colorScheme === 'dark'
+  const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
+
+  // Populate the "statewide" value distribution for the active variable.
+  // Two paths:
+  //   - Fuel-treatment uses the GeoJSON dev fallback (kept for back-compat).
+  //   - Other projects (just-air) querySourceFeatures on the rendered map
+  //     so the distribution chart + percentile filter have real values to
+  //     work with. We listen for sourcedata events because tile features
+  //     arrive asynchronously after the map first becomes ready.
+  useEffect(() => {
+    if (!activeVariable || activeVariable.type === 'categorical') {
+      setStatewideValues([])
+      setOpacityP95(null)
+      return
+    }
+    const varId = activeVariable.id
+    const zero = activeVariable.domain?.zero ?? activeVariable.domain?.min ?? 0
+
+    function applyDist(vals) {
+      setStatewideValues(vals)
+      if (vals.length > 0) {
+        const absDev = vals.map((v) => Math.abs(v - zero)).sort((a, b) => a - b)
+        const idx = Math.floor(0.95 * (absDev.length - 1))
+        setOpacityP95(absDev[idx])
+      }
+    }
+
+    if (state.projectId === 'fuel-treatment') {
+      fetch('/fuel-treatment.geojson')
+        .then((r) => r.json())
+        .then((data) => {
+          const vals = data.features
+            .map((f) => f.properties?.[varId])
+            .filter((v) => v != null && isFinite(v))
+          applyDist(vals)
+        })
+        .catch(() => {})
+      return
+    }
+
+    if (state.projectId === 'just-air') {
+      // Read the precomputed nationwide value sample baked at build time
+      // (scripts/build-just-air-tiles.mjs writes distributions.json).
+      // This replaces the previous querySourceFeatures-on-every-pan
+      // approach: the sidebar chart is now a stable CONUS-wide reference
+      // that doesn't shift as the user zooms or pans. For region-level
+      // detail, use the area / region-focus tool.
+      let cancelled = false
+      fetch('/tools/just-air/distributions.json')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (cancelled || !data) return
+          const vals = Array.isArray(data[varId]) ? data[varId] : []
+          applyDist(vals)
+        })
+        .catch(() => {})
+      return () => { cancelled = true }
+    }
+
+    setStatewideValues([])
+    setOpacityP95(null)
+  }, [activeVariable?.id, state.projectId, mapInstance, baseConfig]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Subscribe to the site-level theme attribute so the nav's dark/light
+  // toggle drives the entire tool. The in-map moon/sun button was removed —
+  // the nav button is the only switch.
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const html = document.documentElement
+    const observer = new MutationObserver(() => {
+      const siteIsDark = html.getAttribute('data-theme') === 'dark'
+      const toolIsDark = state.colorScheme === 'dark'
+      if (siteIsDark !== toolIsDark) dispatch({ type: Actions.TOGGLE_SCHEME })
+    })
+    observer.observe(html, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [state.colorScheme])
+
+  function handleToggleScheme() {
+    const next = state.colorScheme === 'dark' ? 'light' : 'dark'
+    dispatch({ type: Actions.TOGGLE_SCHEME })
+    // Mirror to the site-level theme so the body bg, BaseLayout, and any
+    // future site chrome stay in lockstep with firefuels.
+    if (next === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark')
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+    try { localStorage.setItem('ssl-theme', next) } catch {}
+  }
+
+  // Mobile panel: show whichever dimensions the active layer declares.
+  const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
+  const mobileDimensions = config.dimensions.filter((d) =>
+    activeLayerConfig?.dimensionIds?.includes(d.id),
+  )
+
+  const wordmarkSrc = isDark ? '/SDSS_brand_white.png' : '/SDSS_brand.png'
+
+  return (
+    <div className="flex flex-col w-full h-full overflow-hidden bg-paper">
+      {/* ── Mobile header bar — sits in the normal flow below the site nav.
+          (Was previously fixed top:0 which slid under the site nav and made
+          the title appear cut off.) */}
+      <header
+        className="flex md:hidden shrink-0 items-center px-3 py-3 bg-paper border-b border-rule relative z-30"
+      >
+        <div className="flex flex-col min-w-0 gap-1">
+          <div className="flex items-baseline gap-3 min-w-0">
+            {config.eyebrow && (
+              <span
+                className="font-mono shrink-0"
+                style={{
+                  fontSize: '10px',
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  color: 'var(--ink-3)',
+                }}
+              >
+                {config.eyebrow}
+              </span>
+            )}
+            <span
+              className="font-serif text-ink truncate"
+              style={{ fontSize: '22px', fontWeight: 600, lineHeight: 1.1 }}
+            >
+              {config.title}
+            </span>
+          </div>
+          {config.summary && (
+            <p
+              className="text-ink-2 m-0 truncate"
+              style={{ fontSize: '12px', lineHeight: 1.3 }}
+            >
+              {config.summary}
+            </p>
+          )}
+        </div>
+
+        <div className="flex-1" />
+
+        <button
+          type="button"
+          onClick={() => setMobilePanelOpen((o) => !o)}
+          aria-label={mobilePanelOpen ? 'Hide controls' : 'Show controls'}
+          aria-expanded={mobilePanelOpen}
+          className={[
+            'flex items-center gap-1 cursor-pointer bg-transparent border-0 px-2 py-1',
+            'font-mono text-xs uppercase tracking-wider hover:text-ink',
+            mobilePanelOpen ? 'text-ink' : 'text-ink-3',
+          ].join(' ')}
+        >
+          <span>{mobilePanelOpen ? 'Hide Controls' : 'Show Controls'}</span>
+          {mobilePanelOpen
+            ? <ChevronUp size={14} strokeWidth={1.75} />
+            : <ChevronDown size={14} strokeWidth={1.75} />}
+        </button>
+      </header>
+
+      {/* ── Content row: sidebar | map ──────────────────────────────────── */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Sidebar — desktop only */}
+        <div className="hidden md:flex shrink-0">
+          <Sidebar
+            config={config}
+            state={state}
+            dispatch={dispatch}
+            allValues={statewideValues}
+            companion={companion}
+            repoLinks={repoLinks}
+          />
+        </div>
+
+        {/* Map — fills remaining space */}
+        <div className="flex-1 relative min-w-0">
+          <Map
+            config={config}
+            state={state}
+            dispatch={dispatch}
+            height="100%"
+            onMapReady={(m) => setMapInstance(m)}
+            onFilterStats={setFilterStats}
+            onToggleScheme={handleToggleScheme}
+            isDark={isDark}
+            opacityP95={opacityP95}
+            tuning={tuning}
+          />
+
+          {showDevControls && (
+            <DevControls tuning={tuning} setTuning={setTuning} mapInstance={mapInstance} />
+          )}
+
+          {/* Mobile color bar — sits above Safari's URL bar (~ 90 px tall on
+              iPhones) and above the in-map attribution strip (~14 px). Bg
+              uses the design-system paper color with transparency so it
+              blends with the surrounding map background. */}
+          <div
+            className="block md:hidden absolute z-10"
+            style={{
+              bottom: 55,
+              right: 10,
+              width: 160,
+              background: isDark ? 'rgba(12, 12, 28, 0.92)' : 'rgba(248, 248, 232, 0.92)',
+              borderRadius: 4,
+              padding: '6px 8px',
+            }}
+          >
+            <MobileLegend variable={activeVariable} allValues={statewideValues} isDark={isDark} />
+          </div>
+
+          {/* Regional data stats panel — desktop only */}
+          <div className="hidden md:block">
+            <StatsPanel
+              drawnCircle={state.drawnCircle}
+              drawnPolygon={state.drawnPolygon}
+              aggregateStats={state.aggregateStats}
+              areaToolActive={state.areaToolActive}
+              activeVariable={activeVariable}
+              isDark={isDark}
+              dispatch={dispatch}
+            />
+          </div>
+
+          {/* Area tool — desktop only */}
+          <div className="hidden md:block">
+            <AreaTool
+              map={mapInstance}
+              config={config}
+              state={state}
+              dispatch={dispatch}
+            />
+          </div>
+
+          {/* Methods overlay — covers the map area when "Read Methods" is clicked. */}
+          {state.methodsOpen && (
+            <MethodsPanel
+              config={config}
+              isDark={isDark}
+              onClose={() => dispatch({ type: Actions.TOGGLE_METHODS })}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* ── Mobile controls panel ─────────────────────────────────────── */}
+      <div
+        className="block md:hidden fixed left-0 right-0 z-[21] bg-paper border-b border-rule overflow-y-auto px-4 pt-3 pb-4"
+        style={{
+          top: 180,
+          maxHeight: 'calc(100dvh - 180px)',
+          transform: mobilePanelOpen ? 'translateY(0)' : 'translateY(-110%)',
+          transition: 'transform 0.18s ease',
+        }}
+      >
+        <div className="mb-3">
+          <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+            Map
+          </p>
+          <LayerTabs config={config} state={state} dispatch={dispatch} />
+        </div>
+
+        {mobileDimensions.map((dim) => {
+          const filteredDim = {
+            ...dim,
+            options: dim.options?.filter(
+              (opt) => !opt.visibleForLayers || opt.visibleForLayers.includes(state.activeLayer),
+            ),
+          }
+          return (
+            <DimensionControl
+              key={dim.id}
+              dimension={filteredDim}
+              value={state.activeDimensions[dim.id] ?? dim.defaultValue}
+              dispatch={dispatch}
+            />
+          )
+        })}
+
+        {/* City inequality picker — only meaningful for PM / mortality
+            under one of the CDR scenarios (the equity bins are computed
+            against those metrics specifically). Replaces the older
+            Top-10%/Top-1% filter buttons on the mobile panel; the
+            desktop sidebar still has the percentile-filter slider
+            on its distribution chart. */}
+        {(() => {
+          const layerId = activeVariable?.layer
+          const scenario = activeVariable?.dimensionValues?.scenario
+          const valueKey =
+            layerId === 'pm25' && scenario === 'low'  ? 'pm25_low'  :
+            layerId === 'pm25' && scenario === 'high' ? 'pm25_high' :
+            layerId === 'mortality' && scenario === 'low'  ? 'mort_low'  :
+            layerId === 'mortality' && scenario === 'high' ? 'mort_high' :
+            null
+          if (!valueKey || !cityEquityData) return null
+          const cities = Object.keys(cityEquityData).sort()
+          const stats = equityCity ? cityEquityData[equityCity]?.[valueKey] : null
+          return (
+            <div className="mt-4 pt-3 border-t border-rule">
+              <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-2 m-0">
+                City inequality
+              </p>
+              <p className="font-sans text-[12px] text-ink-2 mb-2 m-0">
+                Pick a metro to see {layerId === 'pm25' ? 'PM₂.₅' : 'mortality'} binned
+                by income tertile and race within that city.
+              </p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2">
+                {cities.map((c) => {
+                  const isActive = c === equityCity
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setEquityCity(isActive ? null : c)}
+                      className={[
+                        'cursor-pointer bg-transparent border-0 px-0',
+                        'font-sans text-[12px]',
+                        isActive ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+                      ].join(' ')}
+                      style={{ paddingTop: '2px', paddingBottom: '2px' }}
+                    >
+                      {c}
+                    </button>
+                  )
+                })}
+              </div>
+              {stats ? (
+                <CityEquityChart stats={stats} isDark={isDark} variable={activeVariable} />
+              ) : (
+                <p className="font-sans text-[11px] text-ink-3 m-0">
+                  {equityCity
+                    ? 'Not enough pixels in this city for this metric.'
+                    : 'Tap a city above.'}
+                </p>
+              )}
+            </div>
+          )
+        })()}
+
+        <button
+          type="button"
+          onClick={() => {
+            dispatch({ type: Actions.TOGGLE_METHODS })
+            setMobilePanelOpen(false)
+          }}
+          className="block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-6 font-sans text-[12px] uppercase tracking-[0.12em] text-ink-3 hover:text-ink"
+        >
+          Read Methods
+        </button>
+      </div>
+
+      {/* Scrim — grays out map while mobile panel is open */}
+      <div
+        className="block md:hidden fixed left-0 right-0 bottom-0"
+        style={{
+          top: 180,
+          background: 'rgba(0,0,0,0.52)',
+          zIndex: 20,
+          opacity: mobilePanelOpen ? 1 : 0,
+          pointerEvents: mobilePanelOpen ? 'auto' : 'none',
+          transition: 'opacity 0.22s ease',
+        }}
+        onClick={() => setMobilePanelOpen(false)}
+      />
+
+    </div>
+  )
+}

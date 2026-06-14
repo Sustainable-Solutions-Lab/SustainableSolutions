@@ -7,8 +7,14 @@ import { totalCitations } from '../../lib/citations';
 import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+// Tools that exist (and have a working page at /tools/<slug>) but are NOT yet
+// listed on this index — shareable by direct URL only, and noindex on their page.
+// Remove a slug here to "publish" that tool to the index.
+const UNLISTED = new Set(['magnets', 'materials']);
+
 const sorted = (tools as Tool[])
   .slice()
+  .filter((t) => !UNLISTED.has(t.slug))
   .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
 
 const pubsByDoi = new Map<string, Publication>();

@@ -13,7 +13,7 @@
 // where <City> in 15 metros, <scenario> in {highCDR, lowCDR} for cities,
 // and {HighCDR, LowCDR, REF} for CONUS.
 //
-// Output (in dist-tiles/just-air/):
+// Output (in build/tiles/just-air/):
 //   just-air.pmtiles               single tileset, source-layer "just-air"
 //   just-air-cities.json           city bbox + label manifest (committed)
 //
@@ -50,7 +50,7 @@ import bbox from '@turf/bbox';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
 const SRC = '/Users/stevedavis/Library/CloudStorage/Dropbox/Papers/In Press/Just CDR (w Cande)/Outputs for map app';
-const OUT_DIR = resolve(REPO_ROOT, 'dist-tiles/just-air');
+const OUT_DIR = resolve(REPO_ROOT, 'build/tiles/just-air');
 const MANIFEST_OUT = resolve(REPO_ROOT, 'public/tools/just-air/just-air-cities.json');
 const DISTRIBUTIONS_OUT = resolve(REPO_ROOT, 'public/tools/just-air/distributions.json');
 const CITY_EQUITY_OUT  = resolve(REPO_ROOT, 'public/tools/just-air/city-equity.json');

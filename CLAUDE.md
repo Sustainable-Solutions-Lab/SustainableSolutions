@@ -493,3 +493,15 @@ Build in this order so each layer can be verified before the next:
 When ready to start coding, first task:
 
 > Initialize a new Astro project with Tailwind in this directory. Create `tailwind.config.js` with placeholder design tokens (the actual values will be filled in from the Design System section of CLAUDE.md). Set up a clean file structure matching the proposed layout in CLAUDE.md. Create empty placeholder pages for every route listed in the Information Architecture section. Initialize git and make a first commit. Don't add real content yet — we'll do that in subsequent steps.
+
+## Repository layout (post-reorg, 2026-06)
+
+`src/tools/` holds three kinds of thing — see `src/tools/README.md`:
+- `_engine/` — the reusable config-driven data-explorer engine.
+- `materials/` (+ future `calue/`) — thin **configs** that drive `_engine`.
+- `magnets/`, `firemap/` — **bespoke** standalone tools (don't use the engine).
+
+Generated tool data (Astro build, map tiles, materials lazy layers) goes to the
+gitignored `dist/` (Astro) and `build/` (everything else) folders, never committed.
+Build-time data scripts and the `*.command` helpers live in `scripts/`; working
+data (sheet CSVs, scholar exports) in `templates/`; planning notes in `docs/planning/`.

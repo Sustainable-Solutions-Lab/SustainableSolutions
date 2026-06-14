@@ -2,7 +2,7 @@
 //
 // Fetches the OpenDataDE California ZIP-code GeoJSON (per-state Census ZCTA
 // boundaries, already CA-clipped including multi-state portions) and splits
-// it into one GeoJSON file per ZIP under dist-zips/.
+// it into one GeoJSON file per ZIP under build/zips/.
 //
 // Each emitted file has the shape:
 //   { "type": "Feature", "properties": { "zip": "94305" }, "geometry": ... }
@@ -10,8 +10,8 @@
 // Run:
 //   node scripts/build-ca-zip-polygons.js
 //
-// Then upload dist-zips/* to R2 under the zips/ prefix:
-//   wrangler r2 object put <bucket>/zips/<zip>.geojson --file dist-zips/<zip>.geojson
+// Then upload build/zips/* to R2 under the zips/ prefix:
+//   wrangler r2 object put <bucket>/zips/<zip>.geojson --file build/zips/<zip>.geojson
 // (or use the Cloudflare R2 dashboard).
 //
 // The Firefuels tool fetches https://<r2>/zips/<zip>.geojson at runtime.
@@ -23,7 +23,7 @@ import { resolve } from 'node:path'
 const SOURCE_URL =
   'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ca_california_zip_codes_geo.min.json'
 const CACHE = resolve('templates/ca-zip-codes-geo.min.json')
-const OUT_DIR = resolve('dist-zips')
+const OUT_DIR = resolve('build/zips')
 
 async function fetchOrCache() {
   if (existsSync(CACHE)) {
@@ -75,9 +75,9 @@ async function main() {
   console.log(`[build-ca-zips] wrote ${written} per-ZIP files to ${OUT_DIR}`)
   console.log(`  skipped (no zip / no geometry): ${skipped}`)
   console.log('')
-  console.log('  Next: upload dist-zips/* to R2 under the zips/ prefix.')
+  console.log('  Next: upload build/zips/* to R2 under the zips/ prefix.')
   console.log('  Example with wrangler:')
-  console.log('    cd dist-zips && for f in *.geojson; do')
+  console.log('    cd build/zips && for f in *.geojson; do')
   console.log('      wrangler r2 object put <BUCKET>/zips/$f --file $f --content-type application/geo+json')
   console.log('    done')
 }

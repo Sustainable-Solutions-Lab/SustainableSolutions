@@ -5,7 +5,7 @@
 // charts come online in milestones 4+. For now this declares just enough
 // for the Explorer skeleton to mount and load data.
 
-import type { ExplorerConfig } from '../explorer/types';
+import type { ExplorerConfig } from '../_engine/types';
 
 const eagerLayers = {
   meta: '/tools/materials/meta.json',

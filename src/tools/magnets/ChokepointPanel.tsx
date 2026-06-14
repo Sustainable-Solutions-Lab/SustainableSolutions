@@ -1,88 +1,85 @@
 /**
- * Chokepoint panel — where the material embodied in US demand comes from, by
- * stage: US-made, from allies (RoW), or from China (+ a remainder embodied in
- * imported finished magnets the US never processes). Sums to 100% of US demand.
- * IRA's two prongs target the China slice: domestic/allied minerals + US magnets.
+ * Bottleneck panel — where each supply-chain stage actually happens WORLDWIDE.
+ * The previous "embodied in imports" framing masked the chokepoints (mining looked
+ * fine because imported magnets just "appear"); this shows the global production
+ * concentration by region, so China's dominance at each stage — the real
+ * vulnerability the US depends on — is visible, and the US's own sliver shows how
+ * little it makes domestically. Uses sc.production (final-year, by region × stage).
  */
-
-type Seg = { domestic: number; allied: number; china: number };
-type Scenario = { us_supply: Record<string, Seg> };
+type Scenario = { production: Record<string, Record<string, number>> };
 
 const STAGES = [
-  { key: 'mining', label: 'Mining' },
+  { key: 'mining', label: 'Mining (concentrate)' },
   { key: 'separation', label: 'Separation (oxide)' },
   { key: 'alloy', label: 'Alloy' },
   { key: 'magnet', label: 'Magnet manufacturing' },
 ];
-const PARTS: [keyof Seg | 'imported_magnet', string, string][] = [
-  ['domestic', 'US-made', 'var(--brand-green)'],
-  ['allied', 'Allies (RoW)', '#FDAE61'],
-  ['china', 'China (direct)', '#D53E4F'],
-  ['imported_magnet', 'Embodied in imports', 'var(--rule)'],
+// US first (green) so its small domestic sliver is visible at the left edge.
+const REGIONS: [string, string, string][] = [
+  ['USA', 'US-made', 'var(--brand-green)'],
+  ['RoW', 'Allies (RoW)', '#FDAE61'],
+  ['China', 'China', '#D53E4F'],
 ];
 
 export default function ChokepointPanel({ sc }: { sc: Scenario }) {
-  let top: { label: string; china: number } | null = null;
-  for (const s of STAGES) {
-    const c = sc.us_supply?.[s.key]?.china ?? 0;
-    if (!top || c > top.china) top = { label: s.label, china: c };
+  const stageShares = STAGES.map((s) => {
+    const by = sc.production ?? {};
+    const vals = REGIONS.map(([r]) => Math.max(0, by[r]?.[s.key] ?? 0));
+    const total = vals.reduce((a, b) => a + b, 0) || 1;
+    return { ...s, shares: REGIONS.map(([r, lbl, c], i) => ({ r, lbl, c, v: vals[i] / total })) };
+  });
+  // stage the US is most exposed on = highest China share
+  let worst: { label: string; china: number } | null = null;
+  for (const st of stageShares) {
+    const china = st.shares.find((x) => x.r === 'China')?.v ?? 0;
+    if (!worst || china > worst.china) worst = { label: st.label, china };
   }
 
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 26 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Where each stage happens, for US magnets</h2>
+        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Where global supply is concentrated</h2>
         <div style={{ display: 'flex', gap: 12, fontSize: 12, flexWrap: 'wrap' }}>
-          {PARTS.map(([k, lbl, c]) => (
-            <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: c, border: k === 'imported_magnet' ? '1px solid var(--rule-strong)' : 'none' }} />
+          {REGIONS.map(([r, lbl, c]) => (
+            <span key={r} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: c }} />
               <span style={{ opacity: 0.75 }}>{lbl}</span>
             </span>
           ))}
         </div>
       </div>
       <p style={{ fontSize: 12.5, opacity: 0.7, margin: '0 0 16px' }}>
-        For the magnets the US consumes, how much of each chain stage is done <em>in the US</em> vs.
-        abroad. Green = the US does it at home; the rest is imported.
-        {top && top.china > 0.1 && (
-          <> Biggest direct China exposure: <strong>{top.label}</strong> ({(top.china * 100).toFixed(0)}%).</>
+        Share of <em>world</em> production at each stage, by region. The more a stage is one color
+        (China red), the bigger the chokepoint; the green sliver is how much the US makes itself.
+        {worst && worst.china > 0.4 && (
+          <> Sharpest chokepoint: <strong>{worst.label}</strong> ({(worst.china * 100).toFixed(0)}% China).</>
         )}
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {STAGES.map((s) => {
-          const seg = sc.us_supply?.[s.key] ?? { domestic: 0, allied: 0, china: 0 };
-          const rem = Math.max(0, 1 - seg.domestic - seg.allied - seg.china);
-          const vals: Record<string, number> = { ...seg, imported_magnet: rem };
-          return (
-            <div key={s.key} style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 12, alignItems: 'center' }}>
-              <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: 'right', opacity: 0.85 }}>{s.label}</span>
-              <div style={{ display: 'flex', height: 26, borderRadius: 5, overflow: 'hidden', border: '1px solid var(--rule)' }}>
-                {PARTS.map(([k, lbl, c]) => {
-                  const v = vals[k as string] ?? 0;
-                  if (v < 0.005) return null;
-                  const dark = k === 'imported_magnet';
-                  return (
-                    <div key={k} title={`${lbl}: ${(v * 100).toFixed(0)}%`}
-                      style={{ width: `${v * 100}%`, background: c, display: 'flex', alignItems: 'center', justifyContent: 'center', color: dark ? 'var(--ink)' : '#fff', opacity: dark ? 0.5 : 1, font: '600 10px var(--font-mono)' }}>
-                      {v > 0.13 ? `${(v * 100).toFixed(0)}%` : ''}
-                    </div>
-                  );
-                })}
-              </div>
+        {stageShares.map((st) => (
+          <div key={st.key} style={{ display: 'grid', gridTemplateColumns: '170px 1fr', gap: 12, alignItems: 'center' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: 'right', opacity: 0.85 }}>{st.label}</span>
+            <div style={{ display: 'flex', height: 26, borderRadius: 5, overflow: 'hidden', border: '1px solid var(--rule)' }}>
+              {st.shares.map(({ r, lbl, c, v }) => {
+                if (v < 0.005) return null;
+                return (
+                  <div key={r} title={`${lbl}: ${(v * 100).toFixed(0)}%`}
+                    style={{ width: `${v * 100}%`, background: c, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', font: '600 10px var(--font-mono)' }}>
+                    {v > 0.12 ? `${(v * 100).toFixed(0)}%` : ''}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
       <p style={{ fontSize: 12, opacity: 0.55, marginTop: 14, lineHeight: 1.5 }}>
-        Each bar = 100% of what US magnet demand needs at that stage. <b>Green</b> = performed in the
-        US. <b>China (direct)</b> / <b>Allies</b> = the US imports that stage's product (oxide, alloy,
-        or magnets) straight from there. <b>Embodied in imports</b> (gray) = the stage is done abroad
-        inside a product the US imports further downstream — e.g. when the US assembles magnets from
-        imported alloy, the upstream mining &amp; separation are gray. The lesson: a magnet-only
-        content mandate makes the magnet bar green but leaves mining/separation gray and pushes China
-        dependence into <em>alloy</em> — the real bottleneck is upstream (separation + Dy/Tb ore),
-        which the US barely has.
+        These are the structural bottlenecks the US is exposed to when it imports magnets or
+        intermediates. The heavy rare earths (Dy/Tb) are the sharpest of all: China controls ~99% of
+        global dysprosium and terbium oxide (Benchmark Mineral Intelligence, 2025), so even the
+        small mining bar above understates the heavy-REE chokepoint. Reshoring shows up as the green
+        (US) share growing — which only happens here under a strong content mandate.
       </p>
     </section>
   );

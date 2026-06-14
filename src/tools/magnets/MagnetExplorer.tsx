@@ -132,16 +132,14 @@ export default function MagnetExplorer() {
             desc="Two prongs, like the IRA EV credit: this share of US magnets must be US-made, and their oxide must come from the US, allies, or recycling (not China)." />
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Recycling</div>
-          <Slider label="EoL collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
+          <Slider label="End-of-life collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
             desc="Share of end-of-life magnets collected and reprocessed into oxide. Recovered scrap is concentrated Nd/Pr/Dy/Tb with no co-product tax — but recycling plants must be built and paid for." />
+          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
+            desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Geopolitics</div>
           <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
             desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring." />
-
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Cost sensitivity</div>
-          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
-            desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost.`} />
 
           <button onClick={() => { setDc(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); }}
             style={{ marginTop: 22, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>
@@ -185,24 +183,30 @@ export default function MagnetExplorer() {
                 return <div key={k} title={`${lbl}: ${musd(v)}`} style={{ width: `${(v / usCostTotal) * 100}%`, background: k === 'shortage' ? hatch(color) : color }} />;
               })}
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 18px', marginTop: 14 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 20px', marginTop: 14 }}>
               {US_COST_KEYS.map(([k, lbl, color]) => {
                 const v = sc.us_cost[k] ?? 0;
-                if (Math.abs(v) < 1) return null;
                 const dv = v - (BASE.us_cost[k] ?? 0);
+                const showDelta = Math.abs(dv) >= 100;
                 return (
-                  <div key={k} title={COST_DESC[k]} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'help' }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 2, background: k === 'shortage' ? hatch(color) : color, display: 'inline-block' }} />
-                    <span style={{ opacity: 0.7 }}>{lbl}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{musd(v)}</span>
-                    {Math.abs(dv) >= 100 && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: dv > 0 ? WORSE : 'var(--brand-green)' }}>{dv > 0 ? '+' : ''}{musd(dv)}</span>}
+                  // fixed column per item (label / value / delta) so values can change
+                  // without the row reflowing or the plots below jumping
+                  <div key={k} title={COST_DESC[k]} style={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 11.5, cursor: 'help', minWidth: 96 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 2, background: k === 'shortage' ? hatch(color) : color, display: 'inline-block', flexShrink: 0 }} />
+                      <span style={{ opacity: 0.7 }}>{lbl}</span>
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, paddingLeft: 15 }}>{musd(v)}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, paddingLeft: 15, minHeight: 13, color: showDelta ? (dv > 0 ? WORSE : 'var(--brand-green)') : 'transparent' }}>
+                      {showDelta ? `${dv > 0 ? '+' : ''}${musd(dv)} vs base` : '—'}
+                    </span>
                   </div>
                 );
               })}
             </div>
           </section>
 
-          <PathwayCharts sc={sc} years={YEARS} demand={demand.totalSeries} usShare={1}
+          <PathwayCharts sc={sc} years={YEARS}
             usDemandMax={US_DEMAND_SHARE * Math.max(...DEMAND_KT_REF) * 1.45} />
 
           <FlowDiagram sc={sc} />

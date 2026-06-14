@@ -17,7 +17,7 @@ import {
 const STACK_ORDER = SECTORS_BY_SIZE;            // [largest, …, smallest]
 const LIST_ORDER = [...SECTORS_BY_SIZE].reverse(); // [smallest, …, largest]
 
-const W = 440, H = 200, PADL = 40, PADR = 10, PADT = 12, PADB = 24;
+const W = 440, H = 180, PADL = 40, PADR = 10, PADT = 12, PADB = 24;
 const innerW = W - PADL - PADR, innerH = H - PADT - PADB;
 const xi = (i: number) => PADL + (i / (YEARS.length - 1)) * innerW;
 

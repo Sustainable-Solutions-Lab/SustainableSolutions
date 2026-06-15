@@ -24,6 +24,13 @@ function useIsMobile(): boolean {
 const US_SEP_RESHORE_COST = 1200;
 const US_ALLOY_RESHORE_COST = 500;
 const US_MAGNET_RESHORE_COST = 900;
+
+// Friendshoring builds nothing in the US, so it has no US capital cost — but it shifts
+// US imports from cheap Chinese material to pricier allied material, a premium US
+// CONSUMERS pay. We price it as the ex-China cost premium on the China-displaced share
+// of US magnet demand (NPV 2026–35), so friendshoring's expense is gauged, not ignored.
+const ALLIED_MAGNET_PREMIUM = 0.25;   // ex-China NdFeB ~25% pricier (no Chinese subsidy/scale); tunable
+const MAGNET_PRICE = 75;              // $/kg finished sintered NdFeB == $M/kt; representative, tunable
 import FlowDiagram from './FlowDiagram';
 import PathwayCharts from './PathwayCharts';
 import DemandBuilder from './DemandBuilder';
@@ -223,8 +230,23 @@ export default function MagnetExplorer() {
     const friendshore = interpScenario({ ...base, make: 0, source: AXES.sourceMax, rec: 0 });
     const recyc = interpScenario({ ...base, make: 0, source: 0, rec: AXES.recMax });
     const stock = applyStockpile(ref, STOCKPILE_MAX);
-    const row = (name: string, scn: typeof ref, dCost: number, strategic = false) =>
-      ({ name, strategic, demand: false, dTRI: refTRI - triR(scn), dCost });
+    const row = (name: string, scn: typeof ref, dCost: number, strategic = false, consumer = false) =>
+      ({ name, strategic, consumer, demand: false, dTRI: refTRI - triR(scn), dCost });
+    // Friendshoring consumer-price premium: the ex-China premium × the China-displaced
+    // share of US demand × discounted US magnet demand (2026–35). It moves China-sourced
+    // embodied RE to allies (averaged across stages), which costs consumers more.
+    const reconChina = (s: typeof ref) => {
+      const u = reconcileUsSupply(s, activeProjects);
+      const st = ['mining', 'separation', 'alloy', 'magnet'];
+      return st.reduce((a, k) => a + (u[k]?.china ?? 0), 0) / st.length;
+    };
+    const fsDChina = Math.max(0, reconChina(ref) - reconChina(friendshore));
+    const fsMix = friendshore.path.us_mix;
+    const fsN = (fsMix.domestic ?? []).length || 1;
+    let fsDemNPV = 0;
+    for (let t = 0; t < fsN; t++)
+      fsDemNPV += ((fsMix.domestic?.[t] || 0) + (fsMix.allied?.[t] || 0) + (fsMix.china?.[t] || 0) + (fsMix.unmet?.[t] || 0)) / (1.05 ** t);
+    const friendshoreCost = ALLIED_MAGNET_PREMIUM * MAGNET_PRICE * fsDemNPV * fsDChina;
     // Demand-side levers have no modeled supply cost; we show the TRI reduction the
     // CURRENT demand settings already achieve vs no improvement (the lever back at its
     // reference 1.0) — the value of what you've chosen, not the distance to an
@@ -239,7 +261,7 @@ export default function MagnetExplorer() {
     return [
       // policy levers — the model's own cost; reshoring overlays — an exogenous cost
       row('US-make mandate', makeMandate, realCost(makeMandate) - refCost),
-      row('Friendshore sourcing', friendshore, realCost(friendshore) - refCost),
+      row('Friendshore sourcing', friendshore, friendshoreCost, false, true),
       row('Recycling build-out', recyc, realCost(recyc) - refCost),
       row('Strategic stockpile', stock, realCost(stock) - refCost),
       row('Develop Round Top', applyRoundTop(ref, true), ROUND_TOP_COST, true),

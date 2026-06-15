@@ -8,7 +8,7 @@
  * between stages, so flows are proportional per interface, not conserved end-to-end).
  */
 
-import { useState } from 'react';
+import { useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { facilityBreakdown, type Stage } from './projects';
 
 type Flow = { from: string; to: string; value: number };
@@ -52,20 +52,29 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
 }) {
   const [cls, setCls] = useState<'total' | 'heavy' | 'light'>('total');
   const fl = flows[cls];
+  const wrapRef = useRef<HTMLDivElement>(null);
+  type Hover = { x: number; y: number; flip: boolean; head: string; rows: { name: string; country: string; pct: number }[]; note: string };
+  const [hover, setHover] = useState<Hover | null>(null);
 
-  // Hover text for a stage×region node: the real projects that make it up, each with
-  // its share of the stage total (so they sum to the bar's % — e.g. "Lynas Seadrift — 30%").
-  const nodeTitle = (i: number, r: string, h: number) => {
+  // The real projects behind a stage×region node, each with its share of the stage
+  // total (so they sum to the bar's % — e.g. "Lynas Seadrift — 30%"). Drives the hover card.
+  const nodeInfo = (i: number, r: string, h: number): Omit<Hover, 'x' | 'y' | 'flip'> => {
     const barPct = Math.round((h / innerH) * 100);
     const stage = IFACE_TO_STAGE[COLS[i].iface ?? ''];
-    if (!stage) return `${r} — ${barPct}% of finished-magnet demand`;
-    const head = `${r} · ${COLS[i].label} from ${stage} — ${barPct}% of this stage`;
+    if (!stage) return { head: `${r} — ${barPct}% of finished-magnet demand`, rows: [], note: '' };
+    const head = `${r} · ${COLS[i].label} — ${barPct}% of this stage`;
     const facs = facilityBreakdown(stage, r as 'USA' | 'China' | 'RoW', active, scale, cls === 'total' ? undefined : cls);
     if (facs.length === 0)
-      return `${head}\n  ${r === 'China' ? 'residual balance (China is the model’s backstop)' : 'no listed ex-China facilities'}`;
+      return { head, rows: [], note: r === 'China' ? 'Residual balance — China is the model’s backstop (no listed facilities).' : 'No listed ex-China facilities at this stage.' };
     const tot = facs.reduce((a, f) => a + f.cap, 0) || 1;
-    const lines = facs.map((f) => `  ${f.name} (${f.country}) — ${Math.round((f.cap / tot) * barPct)}%`);
-    return `${head}\n${lines.join('\n')}`;
+    const rows = facs.map((f) => ({ name: f.name, country: f.country, pct: Math.round((f.cap / tot) * barPct) }));
+    return { head, rows, note: '' };
+  };
+  const onNodeMove = (e: ReactMouseEvent, i: number, r: string, h: number) => {
+    const box = wrapRef.current?.getBoundingClientRect();
+    if (!box) return;
+    const x = e.clientX - box.left, y = e.clientY - box.top;
+    setHover({ x, y, flip: x > box.width * 0.62, ...nodeInfo(i, r, h) });
   };
   // Column values: bars sized by what each region sends ONWARD (outflows), so
   // bars and ribbons are consistent. Demand = magnet received (inflows).
@@ -137,16 +146,17 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
           </div>
         </div>
       </div>
+      <div ref={wrapRef} style={{ position: 'relative' }} onMouseLeave={() => setHover(null)}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Supply-chain Sankey">
         {ribbons}
         {COLS.map((c, i) => (
           <g key={c.label}>
             {REGIONS.map((r) => {
-              const s = segY[i][r];
-              if (s.y1 - s.y0 < 0.6) return null;
-              return <rect key={r} x={colX[i]} y={s.y0} width={NODE_W} height={s.y1 - s.y0} fill={REGION_COLOR[r]} stroke="var(--paper)" strokeWidth={1} style={{ cursor: 'help' }}>
-                <title>{nodeTitle(i, r, s.y1 - s.y0)}</title>
-              </rect>;
+              const s = segY[i][r], hh = s.y1 - s.y0;
+              if (hh < 0.6) return null;
+              return <rect key={r} x={colX[i]} y={s.y0} width={NODE_W} height={hh} fill={REGION_COLOR[r]} stroke="var(--paper)" strokeWidth={1}
+                style={{ cursor: 'help' }}
+                onMouseMove={(e) => onNodeMove(e, i, r, hh)} onMouseLeave={() => setHover(null)} />;
             })}
             {REGIONS.map((r) => {
               const s = segY[i][r], h = s.y1 - s.y0;
@@ -169,6 +179,25 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
           </g>
         ))}
       </svg>
+      {hover && (
+        <div style={{
+          position: 'absolute', top: hover.y + 14,
+          ...(hover.flip ? { right: (wrapRef.current?.clientWidth ?? 0) - hover.x + 14 } : { left: hover.x + 14 }),
+          pointerEvents: 'none', zIndex: 20, maxWidth: 250,
+          background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 8,
+          boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.10)', padding: '8px 10px',
+        }}>
+          <div style={{ font: '600 11.5px var(--font-mono)', marginBottom: hover.rows.length || hover.note ? 5 : 0 }}>{hover.head}</div>
+          {hover.rows.map((row) => (
+            <div key={row.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11.5, marginBottom: 2 }}>
+              <span>{row.name} <span style={{ opacity: 0.5 }}>· {row.country}</span></span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, flexShrink: 0 }}>{row.pct}%</span>
+            </div>
+          ))}
+          {hover.note && <div style={{ fontSize: 11, opacity: 0.6, lineHeight: 1.4 }}>{hover.note}</div>}
+        </div>
+      )}
+      </div>
       <p style={{ fontSize: 11, opacity: 0.55, marginTop: 8, lineHeight: 1.5 }}>
         The <b>real-world-projected</b> chain, ~2035. Each bar is a region’s share of that stage
         (concentrate → oxide → alloy → magnet → demand), set by the <b>real projects selected below</b>

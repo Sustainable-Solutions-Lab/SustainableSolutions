@@ -158,7 +158,7 @@ export function reconcileUsMix(sc: Scenario, active: Set<string>, scale: Record<
 }
 
 // Nd/Pr (light) vs Dy/Tb (heavy) oxide per kt magnet — for class-specific US demand.
-const CLASS_INTENSITY: Record<'light' | 'heavy', number> = { light: 0.326, heavy: 0.034 };
+export const CLASS_INTENSITY: Record<'light' | 'heavy', number> = { light: 0.326, heavy: 0.034 };
 function rampedCapacityRe(stage: Stage, active: Set<string>, cls: 'light' | 'heavy', scale: Record<string, number>): Reg {
   const c = regionalCapacityRe(stage, active, cls, scale) as Reg;
   const r = (stage === 'mining' ? 0.85 : 0.6);

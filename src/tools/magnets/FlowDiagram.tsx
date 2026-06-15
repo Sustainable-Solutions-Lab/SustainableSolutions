@@ -8,8 +8,11 @@
  * between stages, so flows are proportional per interface, not conserved end-to-end).
  */
 
+import { useState } from 'react';
+
 type Flow = { from: string; to: string; value: number };
-type Scenario = { flows: Record<string, Flow[]> };
+type FlowMap = Record<string, Flow[]>;
+type FlowsByClass = { total: FlowMap; heavy: FlowMap; light: FlowMap };
 
 const REGIONS = ['China', 'RoW', 'USA'];
 // US = green, allies = amber, China = red — so the chain reads as a US-security
@@ -34,16 +37,18 @@ const W = 900, H = 460, PADX = 64, PADY = 46, NODE_W = 16;
 const innerH = H - 2 * PADY;
 const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
 
-const outSum = (sc: Scenario, iface: string, r: string) =>
-  (sc.flows[iface] ?? []).filter((f) => f.from === r).reduce((a, f) => a + f.value, 0);
-const inSum = (sc: Scenario, iface: string, r: string) =>
-  (sc.flows[iface] ?? []).filter((f) => f.to === r).reduce((a, f) => a + f.value, 0);
+const outSum = (fl: FlowMap, iface: string, r: string) =>
+  (fl[iface] ?? []).filter((f) => f.from === r).reduce((a, f) => a + f.value, 0);
+const inSum = (fl: FlowMap, iface: string, r: string) =>
+  (fl[iface] ?? []).filter((f) => f.to === r).reduce((a, f) => a + f.value, 0);
 
-export default function FlowDiagram({ sc }: { sc: Scenario }) {
+export default function FlowDiagram({ flows }: { flows: FlowsByClass }) {
+  const [cls, setCls] = useState<'total' | 'heavy' | 'light'>('total');
+  const fl = flows[cls];
   // Column values: bars sized by what each region sends ONWARD (outflows), so
   // bars and ribbons are consistent. Demand = magnet received (inflows).
-  const colVals = COLS.map((c, i) =>
-    Object.fromEntries(REGIONS.map((r) => [r, c.iface ? outSum(sc, c.iface, r) : inSum(sc, 'magnet', r)])));
+  const colVals = COLS.map((c) =>
+    Object.fromEntries(REGIONS.map((r) => [r, c.iface ? outSum(fl, c.iface, r) : inSum(fl, 'magnet', r)])));
 
   const segY = colVals.map((vals) => {
     const total = REGIONS.reduce((a, r) => a + vals[r], 0) || 1;
@@ -56,19 +61,19 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
   const ribbons: JSX.Element[] = [];
   COLS.forEach((c, i) => {
     if (!c.iface) return;
-    const flows = (sc.flows[c.iface] ?? []);
-    const total = flows.reduce((a, f) => a + f.value, 0);
+    const ifaceFlows = (fl[c.iface] ?? []);
+    const total = ifaceFlows.reduce((a, f) => a + f.value, 0);
     if (total <= 0) return;
     const srcScale = innerH / total;
     // taper: target side fills each target bar exactly (handles recovery/recycling)
     const tgtScale = (r: string) => {
-      const inv = inSum(sc, c.iface!, r), barH = segY[i + 1][r].y1 - segY[i + 1][r].y0;
+      const inv = inSum(fl, c.iface!, r), barH = segY[i + 1][r].y1 - segY[i + 1][r].y0;
       return inv > 1e-9 ? barH / inv : 0;
     };
     const srcCum = Object.fromEntries(REGIONS.map((r) => [r, segY[i][r].y0]));
     const tgtCum = Object.fromEntries(REGIONS.map((r) => [r, segY[i + 1][r].y0]));
     for (const src of REGIONS) {
-      const outs = flows.filter((f) => f.from === src)
+      const outs = ifaceFlows.filter((f) => f.from === src)
         .sort((a, b) => (a.to === src ? -1 : b.to === src ? 1 : REGIONS.indexOf(a.to) - REGIONS.indexOf(b.to)));
       for (const f of outs) {
         const sw = f.value * srcScale, tw = f.value * tgtScale(f.to);
@@ -90,13 +95,24 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Global supply chain</h2>
-        <div style={{ display: 'flex', gap: 14 }}>
-          {REGIONS.map((r) => (
-            <span key={r} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: REGION_COLOR[r] }} />
-              <span style={{ opacity: 0.75 }}>{r}</span>
-            </span>
-          ))}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(['total', 'heavy', 'light'] as const).map((c) => (
+              <button key={c} onClick={() => setCls(c)} title={c === 'heavy' ? 'Dy/Tb (heavy) flow' : c === 'light' ? 'Nd/Pr (light) flow' : 'all material'}
+                style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5, cursor: 'pointer',
+                  border: `1px solid ${cls === c ? 'var(--accent)' : 'var(--rule-strong)'}`, background: cls === c ? 'var(--paper-2)' : 'transparent', color: 'var(--ink)' }}>
+                {c === 'total' ? 'Total' : c === 'heavy' ? 'Dy/Tb' : 'Nd/Pr'}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {REGIONS.map((r) => (
+              <span key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: REGION_COLOR[r] }} />
+                <span style={{ opacity: 0.75 }}>{r}</span>
+              </span>
+            ))}
+          </div>
         </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Supply-chain Sankey">

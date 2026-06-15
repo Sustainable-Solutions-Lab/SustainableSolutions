@@ -62,9 +62,12 @@ function scaleTo(r: Reg, total: number): Reg {
 }
 
 /** Route a stage's production to the next stage's production (= its consumption of
- * this stage's output): own-region first, then the residual proportionally. Supply
- * and demand are pre-scaled to the same total, so every unit is placed. */
-function route(supply: Reg, demand: Reg): Flow[] {
+ * this stage's output): own-region first, then the residual proportionally. When
+ * `restrict` (a China export restriction), the market BIFURCATES — China only trades
+ * with China and ex-China only with ex-China — so e.g. US oxide is not shipped to
+ * China for alloying under a ban (any ex-China surplus with no ex-China buyer is
+ * simply idle, i.e. not routed onward). */
+function route(supply: Reg, demand: Reg, restrict = false): Flow[] {
   const sup = { ...supply }, dem = { ...demand };
   const flows: Flow[] = [];
   for (const r of REGIONS) {            // own-region (no shipment) first
@@ -72,15 +75,14 @@ function route(supply: Reg, demand: Reg): Flow[] {
     if (f > 0.01) flows.push({ from: r, to: r, value: f });
     sup[r] -= f; dem[r] -= f;
   }
-  const totDem = sumReg(dem);
-  if (totDem > 1e-9) {                   // residual: ship surplus to deficit, proportional
-    for (const s of REGIONS) {
-      if (sup[s] <= 1e-9) continue;
-      for (const d of REGIONS) {
-        if (dem[d] <= 1e-9) continue;
-        const f = (sup[s] * dem[d]) / totDem;
-        if (f > 0.01) flows.push({ from: s, to: d, value: f });
-      }
+  for (const s of REGIONS) {            // residual: each source to its allowed deficits
+    if (sup[s] <= 1e-9) continue;
+    const dests = REGIONS.filter((d) => dem[d] > 1e-9 && (!restrict || (s === 'China') === (d === 'China')));
+    const totD = dests.reduce((a, d) => a + dem[d], 0);
+    if (totD <= 1e-9) continue;          // surplus with no allowed buyer → idle
+    for (const d of dests) {
+      const f = sup[s] * (dem[d] / totD);
+      if (f > 0.01) flows.push({ from: s, to: d, value: f });
     }
   }
   return flows;
@@ -203,27 +205,36 @@ export function reconcileUsSupplyRe(sc: Scenario, active: Set<string>, scale: Re
  * locked-in projects pin ex-China supply (ex-China mining appears), while the
  * unlocked balance still responds to every slider (China restriction, friendshoring,
  * demand…) through the model. */
-export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<string, number> = {}): Record<string, Flow[]> {
+export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<string, number> = {}, cls?: 'heavy' | 'light'): Record<string, Flow[]> {
+  // Class view scales throughput to that RE class's mass fraction and re-floors the
+  // element-specific upstream (mining/separation) with class-specific projects.
+  const frac = cls === 'heavy' ? 0.094 : cls === 'light' ? 0.906 : 1;
+  const restrict = (sc.china ?? 0) > 0.3;     // bifurcate the market under a restriction
   const prod: Record<string, Reg> = {};
   for (const [iface, stage] of IFACE_STAGE) {
     const model = modelOrigin(sc, iface);     // model's regional production (responds to sliders)
-    const T = sumReg(model);
-    const cap = rampedCapacity(stage, active, scale);   // ex-China project floors (ramped)
-    const usP = Math.max(cap.USA, model.USA);
-    const rowP = Math.max(cap.RoW, model.RoW);
+    const T = sumReg(model) * frac;
+    let usP: number, rowP: number;
+    if (cls && (stage === 'mining' || stage === 'separation')) {
+      const cap = rampedCapacityRe(stage as Stage, active, cls, scale);  // class-specific ex-China floor
+      usP = cap.USA; rowP = cap.RoW;          // model heavy ex-China ≈ 0, so projects only
+    } else {
+      const cap = rampedCapacity(stage, active, scale);
+      usP = Math.max(cap.USA, model.USA) * frac;
+      rowP = Math.max(cap.RoW, model.RoW) * frac;
+    }
     const exc = usP + rowP;
-    prod[iface] = exc >= T                     // ex-China floors meet/exceed demand → no China
+    prod[iface] = exc >= T
       ? { USA: (usP * T) / (exc || 1), RoW: (rowP * T) / (exc || 1), China: 0 }
-      : { USA: usP, RoW: rowP, China: T - exc };  // China = responsive residual
+      : { USA: usP, RoW: rowP, China: T - exc };
   }
 
-  // Demand endpoint: magnet consumption by region (from the model).
   const consumer = modelDest(sc, 'magnet');
-
+  const consF = { USA: consumer.USA * frac, China: consumer.China * frac, RoW: consumer.RoW * frac };
   const flows: Record<string, Flow[]> = {};
-  flows.concentrate = route(prod.concentrate, scaleTo(prod.oxide, sumReg(prod.concentrate)));
-  flows.oxide = route(prod.oxide, scaleTo(prod.alloy, sumReg(prod.oxide)));
-  flows.alloy = route(prod.alloy, scaleTo(prod.magnet, sumReg(prod.alloy)));
-  flows.magnet = route(prod.magnet, scaleTo(consumer, sumReg(prod.magnet)));
+  flows.concentrate = route(prod.concentrate, scaleTo(prod.oxide, sumReg(prod.concentrate)), restrict);
+  flows.oxide = route(prod.oxide, scaleTo(prod.alloy, sumReg(prod.oxide)), restrict);
+  flows.alloy = route(prod.alloy, scaleTo(prod.magnet, sumReg(prod.alloy)), restrict);
+  flows.magnet = route(prod.magnet, scaleTo(consF, sumReg(prod.magnet)), restrict);
   return flows;
 }

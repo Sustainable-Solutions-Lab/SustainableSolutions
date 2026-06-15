@@ -174,7 +174,11 @@ export default function MagnetExplorer() {
   const [infoCost, setInfoCost] = useState(false);   // ⓘ toggle for the cost-bar method note
   const [rcostOpen, setRcostOpen] = useState(false); // ＋/－ for the recycling-cost stress-test
   // Real-world-anchored Sankey: selected projects locked in by region, China residual.
-  const rwFlows = useMemo(() => realWorldFlows(sc, activeProjects), [sc, activeProjects]);
+  const rwFlows = useMemo(() => ({
+    total: realWorldFlows(sc, activeProjects),
+    heavy: realWorldFlows(sc, activeProjects, {}, 'heavy'),
+    light: realWorldFlows(sc, activeProjects, {}, 'light'),
+  }), [sc, activeProjects]);
   // Reconcile the US-centric views (trade-risk index + pathway) with the selected
   // projects: US-project capacity is a floor on US self-sufficiency; the model fills
   // the residual. So toggling projects moves the TRI and the demand-met chart, the
@@ -333,7 +337,7 @@ export default function MagnetExplorer() {
         <main>
           {/* 1 — the whole chain first, so users learn the stages + connections.
               Flows are real-world-anchored (selected projects locked in, China residual). */}
-          <FlowDiagram sc={{ ...sc, flows: rwFlows }} />
+          <FlowDiagram flows={rwFlows} />
 
           {/* 2 — how that chain meets US magnet demand over time + the US ramp
               (desktop only — trimmed on mobile for a leaner essentials view) */}
@@ -446,8 +450,8 @@ export default function MagnetExplorer() {
         <a href="https://steer-stanford.webflow.io/" target="_blank" rel="noopener noreferrer"
           title="STEER — Stanford" aria-label="STEER at Stanford (opens in new tab)"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none', color: 'var(--accent)' }}>
-          <img className="steer-light-bg" src="/STEER-logo-for-light-background.png" alt="STEER — Stanford" height={18} />
-          <img className="steer-dark-bg" src="/STEER-logo-for-dark-background.svg" alt="STEER — Stanford" height={18} />
+          <img className="steer-light-bg" src="/logos/steer/STEER-forweb-light.png" alt="STEER — Stanford" height={18} />
+          <img className="steer-dark-bg" src="/logos/steer/SVG/STEER-forweb-dark.png" alt="STEER — Stanford" height={18} />
           <span aria-hidden="true" style={{ fontSize: 11 }}>↗</span>
         </a>
         <p style={{ fontSize: 11, opacity: 0.6, lineHeight: 1.5, margin: 0 }}>

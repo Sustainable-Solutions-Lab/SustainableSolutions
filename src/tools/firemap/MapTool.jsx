@@ -246,7 +246,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     activeLayerConfig?.dimensionIds?.includes(d.id),
   )
 
-  const wordmarkSrc = isDark ? '/SDSS_brand_white.png' : '/SDSS_brand.png'
+  const wordmarkSrc = isDark ? '/logos/sdss/SDSS_brand_white.png' : '/logos/sdss/SDSS_brand.png'
 
   return (
     <div className="flex flex-col w-full h-full overflow-hidden bg-paper">

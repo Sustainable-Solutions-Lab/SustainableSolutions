@@ -451,7 +451,7 @@ export default function MagnetExplorer() {
           title="STEER — Stanford" aria-label="STEER at Stanford (opens in new tab)"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none', color: 'var(--accent)' }}>
           <img className="steer-light-bg" src="/logos/steer/STEER-forweb-light.png" alt="STEER — Stanford" height={18} />
-          <img className="steer-dark-bg" src="/logos/steer/SVG/STEER-forweb-dark.png" alt="STEER — Stanford" height={18} />
+          <img className="steer-dark-bg" src="/logos/steer/STEER-forweb-dark.png" alt="STEER — Stanford" height={18} />
           <span aria-hidden="true" style={{ fontSize: 11 }}>↗</span>
         </a>
         <p style={{ fontSize: 11, opacity: 0.6, lineHeight: 1.5, margin: 0 }}>

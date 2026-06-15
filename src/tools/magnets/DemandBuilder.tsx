@@ -98,17 +98,17 @@ function Lever({ label, value, min, max, onChange, fmt, desc, plausible, stretch
         </span>
         <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{fmt(value)}</span>
       </div>
-      {plausible != null && (
-        // realism track: green (plausible) · amber (stretch) · red (aggressive)
-        <div title={`Realism shading — at ${fmt(value)} this reduction looks ${inZone}. Green = plausible, amber = a stretch, red = aggressive.`}
-          style={{ display: 'flex', height: 4, borderRadius: 2, overflow: 'hidden', marginBottom: 2 }}>
-          <div style={{ width: `${pPct}%`, background: '#66C2A5' }} />
-          <div style={{ width: `${sPct - pPct}%`, background: '#FEE08B' }} />
-          <div style={{ width: `${100 - sPct}%`, background: '#F46D43' }} />
-        </div>
-      )}
+      {/* Plausibility (green plausible · amber stretch · red aggressive) is painted
+          directly onto the slider rail via --mag-track — no separate bar. */}
       <input type="range" min={min} max={max} step={0.01} value={value}
-        onChange={(e) => onChange(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--accent)' }} />
+        title={plausible != null ? `Realism shading — at ${fmt(value)} this reduction looks ${inZone}. Green = plausible, amber = a stretch, red = aggressive.` : undefined}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={{
+          width: '100%',
+          ...(plausible != null
+            ? { ['--mag-track' as any]: `linear-gradient(90deg, #66C2A5 0 ${pPct}%, #FEE08B ${pPct}% ${sPct}%, #F46D43 ${sPct}% 100%)` }
+            : {}),
+        }} />
       {open && <p style={{ fontSize: 10.5, opacity: 0.6, margin: '5px 0 0', lineHeight: 1.4 }}>{desc}</p>}
     </div>
   );

@@ -24,6 +24,7 @@ const US_ALLOY_RESHORE_COST = 500;
 import FlowDiagram from './FlowDiagram';
 import PathwayCharts from './PathwayCharts';
 import DemandBuilder from './DemandBuilder';
+import { allScenario, demandSummary, DEFAULT_LEVERS, type PerSectorScenario, type Levers } from './demand';
 import TradeRiskPanel from './TradeRiskPanel';
 import ProjectsAside from './ProjectsAside';
 import { alliedHHIByStage, activeSet, DEFAULT_FUTURE, FUTURE_PROJECTS } from './projects';
@@ -134,10 +135,12 @@ export default function MagnetExplorer() {
   }), []);
   // Demand summary from the demand builder: maps any sector composition + levers to
   // the two demand axes (total-demand scale + Dy/Tb intensity) the grid is solved over.
-  const [demand, setDemand] = useState(
-    () => ({ demand_scale: 1, dytb_intensity: 1, totalSeries: DEMAND_KT_REF, hiCoercShare: 0.5 }));
-  const onSummary = useCallback(
-    (s: { demand_scale: number; dytb_intensity: number; totalSeries: number[]; hiCoercShare: number }) => setDemand(s), []);
+  // Demand state lives here (lifted from DemandBuilder) so the demand controls can
+  // share the mobile bottom sheet with the supply controls while the chart stays on
+  // the page. The summary feeds the supply grid's two demand axes.
+  const [scenario, setScenario] = useState<PerSectorScenario>(() => allScenario('STEPS'));
+  const [lv, setLv] = useState<Levers>(DEFAULT_LEVERS);
+  const demand = useMemo(() => demandSummary(scenario, lv), [scenario, lv]);
 
   const sc = useMemo(() => applyStockpile(interpScenario({
     make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale,
@@ -225,7 +228,9 @@ export default function MagnetExplorer() {
         </p>
       </header>
 
-      <DemandBuilder onSummary={onSummary} />
+      {/* Desktop: full demand builder. Mobile: just the total chart here (it stays
+          on the page for live feedback); the demand controls live in the sheet. */}
+      <DemandBuilder mode={isMobile ? 'chart' : 'full'} scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
 
       <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 12px' }}>Supply explorer</h2>
 
@@ -239,6 +244,14 @@ export default function MagnetExplorer() {
               <span style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6 }}>Scenario</span>
               <button onClick={() => setSheetOpen(false)} style={{ font: '600 12px var(--font-mono)', color: 'var(--accent)', background: 'transparent', border: '1px solid var(--rule-strong)', borderRadius: 6, padding: '6px 14px', cursor: 'pointer' }}>Done</button>
             </div>
+          )}
+          {/* On mobile the demand controls share the sheet with the supply controls. */}
+          {isMobile && (
+            <>
+              <div style={{ font: '600 11px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '14px 0 8px', borderBottom: '1px solid var(--rule)', paddingBottom: 6 }}>Demand</div>
+              <DemandBuilder mode="controls" scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
+              <div style={{ font: '600 11px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '20px 0 8px', borderBottom: '1px solid var(--rule)', paddingBottom: 6 }}>Supply</div>
+            </>
           )}
           <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 16px', display: isMobile ? 'none' : 'block' }}>Scenario</h2>
 

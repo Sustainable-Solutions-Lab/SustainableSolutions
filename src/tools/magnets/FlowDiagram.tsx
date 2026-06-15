@@ -130,13 +130,16 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
         ))}
       </svg>
       <p style={{ fontSize: 11, opacity: 0.55, marginTop: 8, lineHeight: 1.5 }}>
-        Projected <b>2035</b> snapshot. Each bar is a region’s share of the material flowing onward
-        at that stage (concentrate → oxide → alloy → magnet → demand), including recycling-derived
-        oxide; ribbons are coloured by origin. Read the palette as a US-security signal:
+        The <b>real-world-projected</b> chain, ~2035. Each bar is a region’s share of that stage
+        (concentrate → oxide → alloy → magnet → demand), set by the <b>real projects selected below</b>
+        — the world’s actual + announced build-out — with <b>China the residual</b>; total throughput
+        scales with demand. Toggle projects (Round Top, Mt Weld, Lynas, …) to change it. The model,
+        left to itself, mines almost all-China (Chinese ore isn’t export-restricted and is cheapest),
+        which is why ex-China mining has to be anchored to real projects. Read the palette as a
+        US-security signal:
         <span style={{ color: '#66C2A5', fontWeight: 600 }}> US-made</span> (secure) ·
         <span style={{ color: '#FDAE61', fontWeight: 600 }}> allies</span> (medium) ·
-        <span style={{ color: '#D53E4F', fontWeight: 600 }}> China</span> (exposed) — so a chain
-        dominated by green is resilient, one dominated by red is exposed.
+        <span style={{ color: '#D53E4F', fontWeight: 600 }}> China</span> (exposed).
       </p>
     </section>
   );

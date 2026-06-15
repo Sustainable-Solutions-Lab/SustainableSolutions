@@ -38,6 +38,23 @@ const COLS = [
 const IFACE_TO_STAGE: Record<string, Stage> = {
   concentrate: 'mining', oxide: 'separation', alloy: 'alloy', magnet: 'magnet',
 };
+// kt formatter: integers for big numbers, one decimal for small (heavy oxide ~1 kt).
+const kt = (v: number) => (v >= 10 ? Math.round(v).toString() : v.toFixed(1));
+// Drop the stage word from a facility name — it's redundant with the column we're
+// hovering (e.g. "Mountain Pass separation" → "Mountain Pass", "MP Fort Worth
+// (metal/alloy)" → "MP Fort Worth"). Word-bounded so "e-VAC Magnetics" is untouched.
+const STAGE_RE: Partial<Record<Stage, RegExp>> = {
+  mining: /\b(?:mine|mining)\b/ig,
+  separation: /\bseparation\b/ig,
+  alloy: /\b(?:metal\/alloy|metal|alloy)\b/ig,
+  magnet: /\bmagnets?\b/ig,
+};
+const cleanName = (name: string, stage: Stage) => {
+  const re = STAGE_RE[stage];
+  return (re ? name.replace(re, '') : name)
+    .replace(/[,;]\s*\)/g, ')').replace(/\(\s*[,;]?\s*\)/g, '')   // tidy "(Estonia, )" / empty "()"
+    .replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').replace(/\s{2,}/g, ' ').trim();
+};
 const W = 900, H = 460, PADX = 64, PADY = 46, NODE_W = 16;
 const innerH = H - 2 * PADY;
 const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
@@ -53,22 +70,24 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
   const [cls, setCls] = useState<'total' | 'heavy' | 'light'>('total');
   const fl = flows[cls];
   const wrapRef = useRef<HTMLDivElement>(null);
-  type Hover = { x: number; y: number; flip: boolean; head: string; rows: { name: string; country: string; pct: number }[]; note: string };
+  type Hover = { x: number; y: number; flip: boolean; head: string; sub: string; rows: { name: string; country: string; pct: number; mass: number }[]; note: string };
   const [hover, setHover] = useState<Hover | null>(null);
 
   // The real projects behind a stage×region node, each with its share of the stage
-  // total (so they sum to the bar's % — e.g. "Lynas Seadrift — 30%"). Drives the hover card.
+  // (so they sum to the bar's %) AND the mass it contributes. Drives the hover card.
   const nodeInfo = (i: number, r: string, h: number): Omit<Hover, 'x' | 'y' | 'flip'> => {
     const barPct = Math.round((h / innerH) * 100);
+    const regionMass = colVals[i][r] ?? 0;   // this region's kt at this stage
     const stage = IFACE_TO_STAGE[COLS[i].iface ?? ''];
-    if (!stage) return { head: `${r} — ${barPct}% of finished-magnet demand`, rows: [], note: '' };
-    const head = `${r} · ${COLS[i].label} — ${barPct}% of this stage`;
+    if (!stage) return { head: `${r} — ${barPct}% of US magnet demand`, sub: `${kt(regionMass)} kt`, rows: [], note: '' };
+    const head = `${r} · ${COLS[i].label} — ${barPct}%`;
+    const sub = `${kt(regionMass)} kt`;
     const facs = facilityBreakdown(stage, r as 'USA' | 'China' | 'RoW', active, scale, cls === 'total' ? undefined : cls);
     if (facs.length === 0)
-      return { head, rows: [], note: r === 'China' ? 'Residual balance — China is the model’s backstop (no listed facilities).' : 'No listed ex-China facilities at this stage.' };
+      return { head, sub, rows: [], note: r === 'China' ? 'Residual balance — China is the model’s backstop (no listed facilities).' : 'No listed ex-China facilities at this stage.' };
     const tot = facs.reduce((a, f) => a + f.cap, 0) || 1;
-    const rows = facs.map((f) => ({ name: f.name, country: f.country, pct: Math.round((f.cap / tot) * barPct) }));
-    return { head, rows, note: '' };
+    const rows = facs.map((f) => ({ name: cleanName(f.name, stage), country: f.country, pct: Math.round((f.cap / tot) * barPct), mass: (f.cap / tot) * regionMass }));
+    return { head, sub, rows, note: '' };
   };
   const onNodeMove = (e: ReactMouseEvent, i: number, r: string, h: number) => {
     const box = wrapRef.current?.getBoundingClientRect();
@@ -187,11 +206,13 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
           background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 8,
           boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.10)', padding: '8px 10px',
         }}>
-          <div style={{ font: '600 11.5px var(--font-mono)', marginBottom: hover.rows.length || hover.note ? 5 : 0 }}>{hover.head}</div>
+          <div style={{ font: '600 11.5px var(--font-mono)', marginBottom: hover.rows.length || hover.note ? 5 : 0 }}>
+            {hover.head} <span style={{ fontWeight: 400, opacity: 0.55 }}>· {hover.sub}</span>
+          </div>
           {hover.rows.map((row) => (
             <div key={row.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11.5, marginBottom: 2 }}>
               <span>{row.name} <span style={{ opacity: 0.5 }}>· {row.country}</span></span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, flexShrink: 0 }}>{row.pct}%</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, flexShrink: 0 }}>{row.pct}% <span style={{ fontWeight: 400, opacity: 0.6 }}>· {kt(row.mass)} kt</span></span>
             </div>
           ))}
           {hover.note && <div style={{ fontSize: 11, opacity: 0.6, lineHeight: 1.4 }}>{hover.note}</div>}

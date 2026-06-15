@@ -30,8 +30,9 @@ const UNMET = '#9E0142';      // high-coercivity (Dy/Tb) unmet — the critical 
 const UNMET_STD = '#F46D43';  // standard-grade unmet (appears only under a broad shortage)
 const STOCK = '#5E4FA2';   // strategic stockpile draw-down
 const hatchId = 'unmet-hatch', hatchStdId = 'unmet-hatch-std';
-// red stripes on a transparent background (so it reads the same in light + dark)
-const hatchBg = (c: string) => `repeating-linear-gradient(45deg, ${c}, ${c} 3px, transparent 3px, transparent 6px)`;
+// fine red stripes over an OPAQUE tinted base (mix the colour into the paper) so the
+// supply bands underneath don't bleed through; theme-aware via var(--paper).
+const hatchBg = (c: string) => `repeating-linear-gradient(45deg, ${c} 0 1.5px, transparent 1.5px 5px), color-mix(in srgb, ${c} 18%, var(--paper))`;
 
 function Legend({ items }: { items: { label: string; color: string; dash?: boolean; hatch?: boolean }[] }) {
   return (
@@ -56,11 +57,13 @@ function Frame({ years, ymax, ylabel, children }: {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
       <defs>
-        <pattern id={hatchId} patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
-          <line x1="0" y1="0" x2="0" y2="6" stroke={UNMET} strokeWidth="3" />
+        <pattern id={hatchId} patternUnits="userSpaceOnUse" width="5" height="5" patternTransform="rotate(-45)">
+          <rect width="5" height="5" style={{ fill: `color-mix(in srgb, ${UNMET} 20%, var(--paper))` }} />
+          <line x1="0" y1="0" x2="0" y2="5" stroke={UNMET} strokeWidth="1.5" />
         </pattern>
-        <pattern id={hatchStdId} patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
-          <line x1="0" y1="0" x2="0" y2="6" stroke={UNMET_STD} strokeWidth="3" />
+        <pattern id={hatchStdId} patternUnits="userSpaceOnUse" width="5" height="5" patternTransform="rotate(-45)">
+          <rect width="5" height="5" style={{ fill: `color-mix(in srgb, ${UNMET_STD} 20%, var(--paper))` }} />
+          <line x1="0" y1="0" x2="0" y2="5" stroke={UNMET_STD} strokeWidth="1.5" />
         </pattern>
       </defs>
       {[0, 0.5, 1].map((f) => {

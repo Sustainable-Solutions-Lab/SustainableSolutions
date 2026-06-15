@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import type { Scenario } from './interp';
-import { integratedRE, classTRI, stageBreakdownClass, riskColor, RISK_CHIP } from './tri';
+import { integratedRE, classTRI, stageBreakdownClass, riskColor, riskChip } from './tri';
 
 const musd = (x: number) => `$${(x / 1000).toFixed(1)}B`;
 
@@ -61,7 +61,7 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
           Trade risk index <InfoBtn on={infoTRI} set={setInfoTRI} />
         </span>
         <span style={{ font: '600 14px var(--font-mono)' }}>
-          <span style={{ ...RISK_CHIP, color: riskColor(tri) }}>{tri.toFixed(2)}</span> <span style={{ opacity: 0.5, fontWeight: 400, color: 'var(--ink)' }}>integrated · lower = secure</span>
+          <span style={riskChip(riskColor(tri))}>{tri.toFixed(2)}</span> <span style={{ opacity: 0.5, fontWeight: 400, color: 'var(--ink)' }}>integrated · lower = secure</span>
         </span>
       </div>
       {infoTRI && (
@@ -86,7 +86,7 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
             <button key={cls} onClick={() => setReClass(cls)}
               style={{ font: '600 11px var(--font-mono)', padding: '4px 9px', borderRadius: 6, cursor: 'pointer',
                 border: `1px solid ${on ? 'var(--accent)' : 'var(--rule-strong)'}`, background: on ? 'var(--paper-2)' : 'transparent', color: 'var(--ink)' }}>
-              {cls === 'heavy' ? 'Dy/Tb (heavy)' : 'Nd/Pr (light)'} <b style={{ ...RISK_CHIP, padding: '1px 5px', color: riskColor(v) }}>{v.toFixed(2)}</b>
+              {cls === 'heavy' ? 'Dy/Tb (heavy)' : 'Nd/Pr (light)'} <b style={riskChip(riskColor(v))}>{v.toFixed(2)}</b>
             </button>
           );
         })}

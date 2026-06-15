@@ -162,7 +162,15 @@ export function riskColor(tri: number): string {
   return '#D53E4F';
 }
 
-// A fixed dark chip to sit behind risk-coloured values — the light end of the palette
-// (yellow/green) is illegible as text on the cream paper, so the values get a dark pill.
+// A dark chip to sit behind risk-coloured values: the light end of the palette
+// (yellow/green) is illegible as text on the cream paper, so it gets a dark pill — but
+// the chip FADES OUT for dark, already-legible colours (red at TRI 1.0 needs none). The
+// pill opacity scales with the text colour's luminance; below a floor it's plain text.
 // Fixed navy (not a theme token, which would invert) → dark in both light + dark modes.
-export const RISK_CHIP = { padding: '1px 7px', borderRadius: 6, background: 'rgba(24,24,56,0.9)' };
+export function riskChip(color: string): { color: string; padding?: string; borderRadius?: number; background?: string } {
+  const n = parseInt(color.replace('#', ''), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;     // perceived lightness 0..1
+  const a = Math.max(0, Math.min(1, (lum - 0.5) / 0.38)) * 0.9;
+  return a < 0.08 ? { color } : { color, padding: '1px 7px', borderRadius: 6, background: `rgba(24,24,56,${a.toFixed(2)})` };
+}

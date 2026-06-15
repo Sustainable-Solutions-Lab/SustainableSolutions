@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
-import { integratedTRI, integratedRE, stageBreakdownClass, riskColor, RISK_CHIP } from './tri';
+import { integratedTRI, integratedRE, stageBreakdownClass, riskColor, riskChip } from './tri';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
 // sheet rather than a sticky sidebar that would overlay the plots.
@@ -136,7 +136,7 @@ function ScoreCard({ label, value, sub, valueColor, small, chip }: {
     <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px', background: 'var(--paper)' }}>
       <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
       <div style={{ font: `600 ${small ? 15 : 24}px var(--font-mono)`, lineHeight: 1.2 }}>
-        <span style={chip ? { ...RISK_CHIP, color: valueColor, display: 'inline-block' } : { color: valueColor }}>{value}</span>
+        <span style={chip ? { ...riskChip(valueColor), display: 'inline-block' } : { color: valueColor }}>{value}</span>
       </div>
       <div style={{ font: '400 9.5px var(--font-mono)', opacity: 0.5, marginTop: 5, letterSpacing: '0.03em' }}>{sub}</div>
     </div>
@@ -462,7 +462,7 @@ export default function MagnetExplorer() {
           {!sheetOpen && (
             <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 16px', background: 'var(--paper)', borderTop: '1px solid var(--rule-strong)', boxShadow: '0 -4px 16px rgba(0,0,0,0.12)' }}>
               <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>
-                <span style={{ fontSize: 12.5 }}><b style={{ ...RISK_CHIP, color: riskColor(tri), fontFamily: 'var(--font-mono)' }}>TRI {tri.toFixed(2)}</b> <span style={{ opacity: 0.5 }}>trade-risk</span></span>
+                <span style={{ fontSize: 12.5 }}><b style={{ ...riskChip(riskColor(tri)), fontFamily: 'var(--font-mono)' }}>TRI {tri.toFixed(2)}</b> <span style={{ opacity: 0.5 }}>trade-risk</span></span>
                 <span style={{ opacity: 0.6, fontSize: 11 }}>{pct(sc.kpis.us_import_pct)} of US magnets imported</span>
               </span>
               <button onClick={() => setSheetOpen(true)}

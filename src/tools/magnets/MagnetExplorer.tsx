@@ -153,6 +153,9 @@ export default function MagnetExplorer() {
   const [scenario, setScenario] = useState<PerSectorScenario>(() => allScenario('STEPS'));
   const [lv, setLv] = useState<Levers>(DEFAULT_LEVERS);
   const demand = useMemo(() => demandSummary(scenario, lv), [scenario, lv]);
+  // The same scenario with NO demand levers — the reference for "what the levers buy"
+  // (so the value reflects the chosen scenario, e.g. NZE, not an absolute 1.0).
+  const demandNoLever = useMemo(() => demandSummary(scenario, DEFAULT_LEVERS), [scenario]);
 
   const sc = useMemo(() => applyStockpile(interpScenario({
     make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale,
@@ -213,8 +216,10 @@ export default function MagnetExplorer() {
     // reference 1.0) — the value of what you've chosen, not the distance to an
     // arbitrary axis max. They map to the two demand axes: Dy/Tb intensity (thrift +
     // grade-downshift) and total demand (RE-free / efficiency).
-    const noThrift = interpScenario({ ...base, dytb: 1.0, make: 0, source: 0, rec: 0 });
-    const noDemandCut = interpScenario({ ...base, dscale: 1.0, make: 0, source: 0, rec: 0 });
+    // "Without lever" = this scenario at its NO-LEVER demand (not absolute 1.0), so the
+    // value holds up under NZE etc. (where the no-lever baseline is already high).
+    const noThrift = interpScenario({ ...base, dytb: demandNoLever.dytb_intensity, make: 0, source: 0, rec: 0 });
+    const noDemandCut = interpScenario({ ...base, dscale: demandNoLever.demand_scale, make: 0, source: 0, rec: 0 });
     const dRow = (name: string, withoutScn: typeof ref) =>
       ({ name, strategic: false, demand: true, dTRI: triR(withoutScn) - refTRI, dCost: 0 });
     return [
@@ -230,7 +235,7 @@ export default function MagnetExplorer() {
       dRow('Lower total demand', noDemandCut),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [china, rcost, demand, alliedHHIMap, activeProjects]);
+  }, [china, rcost, demand, demandNoLever, alliedHHIMap, activeProjects]);
 
   // Story scorecard inputs: the single most concerning bottleneck (highest-TRI stage
   // across BOTH RE classes) and the most cost-effective lever (lowest $/0.1-TRI).
@@ -312,6 +317,11 @@ export default function MagnetExplorer() {
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Resilience</div>
           <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
             desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$110/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
+          {stockpile > 0 && (
+            <p style={{ fontSize: 10.5, opacity: 0.55, margin: '-2px 0 6px', lineHeight: 1.4 }}>
+              Embodies ≈ <b>{Math.round(stockpile * 0.326)} kt Nd/Pr</b> + <b>{(stockpile * 0.034).toFixed(1)} kt Dy/Tb</b> oxide — the heavy slice is the strategically scarce one.
+            </p>
+          )}
           <ProjectsAside future={futureSel} onToggle={toggleFuture} onSetGroup={setProjectGroup} />
 
           <button onClick={() => { setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setFutureSel(new Set(DEFAULT_FUTURE)); }}

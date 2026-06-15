@@ -157,6 +157,36 @@ export function reconcileUsMix(sc: Scenario, active: Set<string>, scale: Record<
   return out;
 }
 
+/** Reconcile the per-year, per-class OXIDE pathway (how US Nd/Pr or Dy/Tb oxide need is
+ * met) with the selected projects: US-made oxide gets a floor of the US class-specific
+ * SEPARATION capacity (separation is the stage that makes separated oxide — e.g. Lynas
+ * Seadrift for heavy), displacing imports (China first, then allies, then unmet) so the
+ * stack total (= US oxide requirement) is unchanged. This is what makes toggling US
+ * separation projects move the Dy/Tb / Nd/Pr "how demand is met" view. */
+export function reconcileUsMixRe(sc: Scenario, active: Set<string>, scale: Record<string, number> = {}) {
+  const base = sc.path.us_mix_re;
+  if (!base) return undefined;
+  const out: { light: Record<string, number[]>; heavy: Record<string, number[]> } = { light: {}, heavy: {} };
+  for (const cls of ['light', 'heavy'] as const) {
+    const m = base[cls];
+    const n = (m.domestic ?? []).length;
+    const usSepCap = rampedCapacityRe('separation', active, cls, scale).USA;   // kt separated oxide / yr
+    const o: Record<string, number[]> = { domestic: [], allied: [], china: [], unmet: [] };
+    for (let t = 0; t < n; t++) {
+      const dom0 = m.domestic?.[t] || 0, al = m.allied?.[t] || 0, cn = m.china?.[t] || 0, un = m.unmet?.[t] || 0;
+      const total = dom0 + al + cn + un;                       // US oxide requirement this year
+      const dom = Math.min(total, Math.max(dom0, usSepCap));   // floor US-made by US separation capacity
+      let red = dom - dom0;                                    // extra US-made displaces imports
+      const take = (v: number) => { const r = Math.min(v, Math.max(0, red)); red -= r; return v - r; };
+      const cn2 = take(cn), al2 = take(al), un2 = take(un);    // China first, then allies, then unmet
+      o.domestic.push(+dom.toFixed(3)); o.china.push(+cn2.toFixed(3));
+      o.allied.push(+al2.toFixed(3)); o.unmet.push(+un2.toFixed(3));
+    }
+    out[cls] = o;
+  }
+  return out;
+}
+
 // Nd/Pr (light) vs Dy/Tb (heavy) oxide per kt magnet — for class-specific US demand.
 export const CLASS_INTENSITY: Record<'light' | 'heavy', number> = { light: 0.326, heavy: 0.034 };
 function rampedCapacityRe(stage: Stage, active: Set<string>, cls: 'light' | 'heavy', scale: Record<string, number>): Reg {

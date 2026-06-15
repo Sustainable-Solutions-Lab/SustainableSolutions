@@ -38,7 +38,7 @@ import { allScenario, demandSummary, DEFAULT_LEVERS, type PerSectorScenario, typ
 import TradeRiskPanel from './TradeRiskPanel';
 import ProjectsAside from './ProjectsAside';
 import { alliedHHIByStage, activeSet, DEFAULT_FUTURE, FUTURE_PROJECTS, PROJECTS, tier, type Tier } from './projects';
-import { realWorldFlows, reconcileUsSupply, reconcileUsMix, reconcileUsSupplyRe } from './realworld';
+import { realWorldFlows, reconcileUsSupply, reconcileUsMix, reconcileUsMixRe, reconcileUsSupplyRe } from './realworld';
 
 /**
  * Rare-earth magnet supply-chain explorer.
@@ -210,7 +210,7 @@ export default function MagnetExplorer() {
     ...sc,
     us_supply: reconcileUsSupply(sc, activeProjects),
     us_supply_re: reconcileUsSupplyRe(sc, activeProjects),
-    path: { ...sc.path, us_mix: reconcileUsMix(sc, activeProjects) },
+    path: { ...sc.path, us_mix: reconcileUsMix(sc, activeProjects), us_mix_re: reconcileUsMixRe(sc, activeProjects) ?? sc.path.us_mix_re },
     _di: hasUSHeavyMine ? { ...sc._di, mining: ROUND_TOP_MINING_DI } : sc._di,
   }), [sc, activeProjects, hasUSHeavyMine]);
   const tri = integratedRE(scR, alliedHHIMap);   // live readout (light+heavy weighted)

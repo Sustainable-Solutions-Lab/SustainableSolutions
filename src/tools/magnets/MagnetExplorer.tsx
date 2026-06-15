@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
+import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
 import { integratedTRI, riskColor } from './tri';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
@@ -27,7 +27,7 @@ import DemandBuilder from './DemandBuilder';
 import { allScenario, demandSummary, DEFAULT_LEVERS, type PerSectorScenario, type Levers } from './demand';
 import TradeRiskPanel from './TradeRiskPanel';
 import ProjectsAside from './ProjectsAside';
-import { alliedHHIByStage, activeSet, DEFAULT_FUTURE, FUTURE_PROJECTS } from './projects';
+import { alliedHHIByStage, activeSet, DEFAULT_FUTURE, FUTURE_PROJECTS, PROJECTS, tier, type Tier } from './projects';
 import { realWorldFlows, reconcileUsSupply, reconcileUsMix } from './realworld';
 
 /**
@@ -128,9 +128,9 @@ export default function MagnetExplorer() {
   const toggleFuture = useCallback((id: string) => setFutureSel((s) => {
     const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
   }), []);
-  const setProjectGroup = useCallback((status: 'construction' | 'planned', on: boolean) => setFutureSel((s) => {
+  const setProjectGroup = useCallback((t: Tier, on: boolean) => setFutureSel((s) => {
     const n = new Set(s);
-    FUTURE_PROJECTS.filter((p) => p.status === status).forEach((p) => (on ? n.add(p.id) : n.delete(p.id)));
+    FUTURE_PROJECTS.filter((p) => tier(p) === t).forEach((p) => (on ? n.add(p.id) : n.delete(p.id)));
     return n;
   }), []);
   // Demand summary from the demand builder: maps any sector composition + levers to
@@ -157,17 +157,25 @@ export default function MagnetExplorer() {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [infoCost, setInfoCost] = useState(false);   // ⓘ toggle for the cost-bar method note
+  const [rcostOpen, setRcostOpen] = useState(false); // ＋/－ for the recycling-cost stress-test
   // Real-world-anchored Sankey: selected projects locked in by region, China residual.
   const rwFlows = useMemo(() => realWorldFlows(sc, activeProjects), [sc, activeProjects]);
   // Reconcile the US-centric views (trade-risk index + pathway) with the selected
   // projects: US-project capacity is a floor on US self-sufficiency; the model fills
   // the residual. So toggling projects moves the TRI and the demand-met chart, the
   // same way it now moves the Sankey.
+  // A US heavy-REE mine (e.g. Round Top) means the US now HAS a domestic heavy reserve,
+  // so the mining stage's domestic-reserve risk falls — even though Mountain Pass (light)
+  // already covers the mining VOLUME. (Interim until the light/heavy TRI split.)
+  const hasUSHeavyMine = useMemo(
+    () => PROJECTS.some((p) => activeProjects.has(p.id) && p.bloc === 'us' && p.stage === 'mining' && p.heavy),
+    [activeProjects]);
   const scR = useMemo(() => ({
     ...sc,
     us_supply: reconcileUsSupply(sc, activeProjects),
     path: { ...sc.path, us_mix: reconcileUsMix(sc, activeProjects) },
-  }), [sc, activeProjects]);
+    _di: hasUSHeavyMine ? { ...sc._di, mining: ROUND_TOP_MINING_DI } : sc._di,
+  }), [sc, activeProjects, hasUSHeavyMine]);
   const tri = integratedTRI(scR, alliedHHIMap);   // live readout for the mobile chip
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
@@ -264,8 +272,13 @@ export default function MagnetExplorer() {
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Recycling</div>
           <Slider label="End-of-life collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
             desc="Share of end-of-life magnets collected and reprocessed into oxide. Recovered scrap is concentrated Nd/Pr/Dy/Tb with no co-product tax — but recycling plants must be built and paid for." />
-          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
-            desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
+          <details onToggle={(e) => setRcostOpen((e.target as HTMLDetailsElement).open)}>
+            <summary style={{ fontSize: 11, opacity: 0.55, cursor: 'pointer', listStyle: 'none', margin: '2px 0 6px' }}>
+              {rcostOpen ? '－' : '＋'} US recycling cost {rcost !== AXES.rcostMin && <span style={{ color: 'var(--accent)' }}>· {rcost.toFixed(1)}× China</span>}
+            </summary>
+            <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
+              desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
+          </details>
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Geopolitics</div>
           <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}

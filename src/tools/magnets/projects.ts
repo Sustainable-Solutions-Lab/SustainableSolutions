@@ -143,11 +143,19 @@ export function regionalCapacity(stage: Stage, active: Set<string>, scale: Recor
 export const DEFAULT_ACTIVE = new Set(PROJECTS.filter(isRealistic).map((p) => p.id));
 export const ALL_IDS = new Set(PROJECTS.map((p) => p.id));
 
-// Operating plants are ALWAYS included (they won't stop operating), so they're not
-// in the toggle menu. Only the uncertain future supply (under construction / planned)
-// is selectable; under-construction defaults on, planned defaults off.
-export const OPERATING_IDS = new Set(PROJECTS.filter((p) => p.status === 'operating').map((p) => p.id));
-export const FUTURE_PROJECTS = PROJECTS.filter((p) => p.status === 'construction' || p.status === 'planned');
-export const DEFAULT_FUTURE = new Set(PROJECTS.filter((p) => p.status === 'construction').map((p) => p.id));
+// Mature incumbents are ALWAYS included (they won't stop operating). But several
+// "operating" plants are really new + still ramping (2023–26 starts), so they're
+// toggleable in 'new supplies' alongside construction/planned, to show the effect of
+// those investments. Tiers: mature (always on) · ramping · construction · planned.
+export const RAMPING_IDS = new Set([
+  'mp_sep', 'mp_alloy', 'mp_mag', 'noveon', 'noveon_rec', 'neo_estonia', 'neo_estonia_alloy', 'solvay', 'serra_verde',
+]);
+export type Tier = 'mature' | 'ramping' | 'construction' | 'planned';
+export const tier = (p: Project): Tier =>
+  RAMPING_IDS.has(p.id) ? 'ramping' : p.status === 'operating' ? 'mature' : (p.status as Tier);
+export const OPERATING_IDS = new Set(PROJECTS.filter((p) => tier(p) === 'mature').map((p) => p.id));
+export const FUTURE_PROJECTS = PROJECTS.filter((p) => tier(p) !== 'mature');
+export const DEFAULT_FUTURE = new Set(
+  PROJECTS.filter((p) => tier(p) === 'ramping' || tier(p) === 'construction').map((p) => p.id));
 /** The full active set the model overlay sees: operating (always) + chosen future. */
 export const activeSet = (future: Set<string>): Set<string> => new Set([...OPERATING_IDS, ...future]);

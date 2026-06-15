@@ -6,7 +6,7 @@
  * active set drives the real-world-anchored Sankey + the trade-risk index.
  */
 import { useState } from 'react';
-import { FUTURE_PROJECTS, type Project, type Stage } from './projects';
+import { FUTURE_PROJECTS, tier, type Project, type Stage, type Tier } from './projects';
 
 const STAGE_SHORT: Record<Stage, string> = {
   mining: 'mine', separation: 'sep', alloy: 'alloy', magnet: 'magnet', recycling: 'recyc',
@@ -46,28 +46,34 @@ function GroupButton({ label, count, total, allOn, onClick }: {
 export default function ProjectsAside({ future, onToggle, onSetGroup }: {
   future: Set<string>;
   onToggle: (id: string) => void;
-  onSetGroup: (status: 'construction' | 'planned', on: boolean) => void;
+  onSetGroup: (t: Tier, on: boolean) => void;
 }) {
   const [custOpen, setCustOpen] = useState(false);
-  const construction = FUTURE_PROJECTS.filter((p) => p.status === 'construction');
-  const planned = FUTURE_PROJECTS.filter((p) => p.status === 'planned');
+  const ramping = FUTURE_PROJECTS.filter((p) => tier(p) === 'ramping');
+  const construction = FUTURE_PROJECTS.filter((p) => tier(p) === 'construction');
+  const planned = FUTURE_PROJECTS.filter((p) => tier(p) === 'planned');
   const nOn = (list: Project[]) => list.filter((p) => future.has(p.id)).length;
   const subhead = (t: string) => (
     <div style={{ font: '600 9.5px var(--font-mono)', letterSpacing: '0.05em', textTransform: 'uppercase', opacity: 0.55, margin: '8px 0 4px' }}>{t}</div>
   );
-  const cOn = nOn(construction), pOn = nOn(planned);
+  const grp = (t: Tier, list: Project[]) => { const on = nOn(list); return { on, list, allOn: on === list.length, t }; };
+  const groups: [string, ReturnType<typeof grp>][] = [
+    ['Ramping', grp('ramping', ramping)], ['Construction', grp('construction', construction)], ['Planned', grp('planned', planned)],
+  ];
   return (
     <div>
       <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>New supplies</div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        <GroupButton label="Under construction" count={cOn} total={construction.length} allOn={cOn === construction.length}
-          onClick={() => onSetGroup('construction', cOn !== construction.length)} />
-        <GroupButton label="Planned" count={pOn} total={planned.length} allOn={pOn === planned.length}
-          onClick={() => onSetGroup('planned', pOn !== planned.length)} />
+      <div style={{ display: 'flex', gap: 5 }}>
+        {groups.map(([label, g]) => (
+          <GroupButton key={label} label={label} count={g.on} total={g.list.length} allOn={g.allOn}
+            onClick={() => onSetGroup(g.t, !g.allOn)} />
+        ))}
       </div>
       <details style={{ marginTop: 8 }} onToggle={(e) => setCustOpen((e.target as HTMLDetailsElement).open)}>
         <summary style={{ fontSize: 11, opacity: 0.6, cursor: 'pointer', listStyle: 'none' }}>{custOpen ? '－' : '＋'} Customize project expansion</summary>
         <div style={{ marginTop: 4 }}>
+          {subhead('Recently online (ramping)')}
+          {ramping.map((p) => <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />)}
           {subhead('Under construction')}
           {construction.map((p) => <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />)}
           {subhead('Planned')}
@@ -75,7 +81,7 @@ export default function ProjectsAside({ future, onToggle, onSetGroup }: {
         </div>
       </details>
       <p style={{ fontSize: 10, opacity: 0.5, margin: '6px 0 0', lineHeight: 1.4 }}>
-        Operating plants are always included; toggling future supply moves the Sankey + trade-risk.
+        Mature plants are always included; toggling new supply moves the Sankey + trade-risk.
       </p>
     </div>
   );

@@ -25,8 +25,8 @@ import FlowDiagram from './FlowDiagram';
 import PathwayCharts from './PathwayCharts';
 import DemandBuilder from './DemandBuilder';
 import TradeRiskPanel from './TradeRiskPanel';
-import ProjectsPanel from './ProjectsPanel';
-import { alliedHHIByStage, ALL_IDS, DEFAULT_ACTIVE, isRealistic, PROJECTS } from './projects';
+import ProjectsAside from './ProjectsAside';
+import { alliedHHIByStage, activeSet, DEFAULT_FUTURE } from './projects';
 import { realWorldFlows } from './realworld';
 
 /**
@@ -120,19 +120,13 @@ export default function MagnetExplorer() {
   const [stockpile, setStockpile] = useState(0);     // strategic stockpile size (kt)
   // Real-world projects overlay (default = operating + under-construction). The
   // active allied set drives the country-level allied HHI in the trade-risk index.
-  const [activeProjects, setActiveProjects] = useState<Set<string>>(() => new Set(DEFAULT_ACTIVE));
-  const [projectScale, setProjectScale] = useState<Record<string, number>>({});
-  const alliedHHIMap = useMemo(
-    () => alliedHHIByStage(activeProjects, projectScale), [activeProjects, projectScale]);
-  const toggleProject = useCallback((id: string) => setActiveProjects((s) => {
+  // Only the uncertain future supply is toggled; operating plants are always in.
+  const [futureSel, setFutureSel] = useState<Set<string>>(() => new Set(DEFAULT_FUTURE));
+  const activeProjects = useMemo(() => activeSet(futureSel), [futureSel]);
+  const alliedHHIMap = useMemo(() => alliedHHIByStage(activeProjects), [activeProjects]);
+  const toggleFuture = useCallback((id: string) => setFutureSel((s) => {
     const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
   }), []);
-  const scaleProject = useCallback((id: string, v: number) =>
-    setProjectScale((s) => ({ ...s, [id]: v })), []);
-  const presetProjects = useCallback((which: 'all' | 'none' | 'realistic') => setActiveProjects(
-    which === 'all' ? new Set(ALL_IDS)
-    : which === 'none' ? new Set()
-    : new Set(PROJECTS.filter(isRealistic).map((p) => p.id))), []);
   // Demand summary from the demand builder: maps any sector composition + levers to
   // the two demand axes (total-demand scale + Dy/Tb intensity) the grid is solved over.
   const [demand, setDemand] = useState(
@@ -157,8 +151,7 @@ export default function MagnetExplorer() {
   const [infoCost, setInfoCost] = useState(false);   // ⓘ toggle for the cost-bar method note
   const tri = integratedTRI(sc, alliedHHIMap);   // live readout for the mobile chip
   // Real-world-anchored Sankey: selected projects locked in by region, China residual.
-  const rwFlows = useMemo(() => realWorldFlows(sc, activeProjects, projectScale),
-    [sc, activeProjects, projectScale]);
+  const rwFlows = useMemo(() => realWorldFlows(sc, activeProjects), [sc, activeProjects]);
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
   // lever buys in integrated trade-risk reduction per real dollar (TRI per $).
@@ -240,12 +233,9 @@ export default function MagnetExplorer() {
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Resilience</div>
           <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
             desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$110/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
-          <p style={{ fontSize: 10.5, opacity: 0.5, margin: '8px 0 0', lineHeight: 1.4 }}>
-            Strategic projects like <b>Round Top</b> are selectable in the real-world projects panel
-            below; their cost-effectiveness sets the shadow price of security in the trade-risk panel.
-          </p>
+          <ProjectsAside future={futureSel} onToggle={toggleFuture} />
 
-          <button onClick={() => { setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setActiveProjects(new Set(DEFAULT_ACTIVE)); setProjectScale({}); }}
+          <button onClick={() => { setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setFutureSel(new Set(DEFAULT_FUTURE)); }}
             style={{ marginTop: 14, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>
             RESET TO BASELINE
           </button>
@@ -317,11 +307,6 @@ export default function MagnetExplorer() {
               <TradeRiskPanel sc={sc} levers={securityLevers} alliedHHI={alliedHHIMap} />
             </div>
           </section>
-
-          {/* 5b — the real-world project build-out driving the allied country HHI
-              (desktop only — long list, trimmed on mobile) */}
-          {!isMobile && <ProjectsPanel active={activeProjects} scale={projectScale}
-            onToggle={toggleProject} onScale={scaleProject} onPreset={presetProjects} />}
 
           {/* 6 — headline KPIs last, as a summary scorecard */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 26 }}>

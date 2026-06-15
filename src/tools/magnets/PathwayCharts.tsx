@@ -14,7 +14,7 @@ const W = 420, H = 150, PADL = 38, PADR = 10, PADT = 10, PADB = 22;
 const innerW = W - PADL - PADR, innerH = H - PADT - PADB;
 
 const MIX = [
-  { key: 'domestic', label: 'US-made', color: '#3288BD' },
+  { key: 'domestic', label: 'US-made', color: '#66C2A5' },
   { key: 'allied', label: 'Allies', color: '#FDAE61' },
   { key: 'china', label: 'China', color: '#D53E4F' },
 ];
@@ -105,7 +105,7 @@ export default function PathwayCharts({ sc, years, usDemandMax, hiCoercShare }: 
 
   // chart 1: stacked supply + stockpile draw + unmet (split by coercivity) on top
   const stackItems = [
-    { label: 'US-made', color: '#3288BD', vals: get('domestic') },
+    { label: 'US-made', color: '#66C2A5', vals: get('domestic') },
     { label: 'Allies', color: '#FDAE61', vals: get('allied') },
     { label: 'China', color: '#D53E4F', vals: get('china') },
     ...(hasStock ? [{ label: 'From stockpile', color: STOCK, vals: stockVals }] : []),

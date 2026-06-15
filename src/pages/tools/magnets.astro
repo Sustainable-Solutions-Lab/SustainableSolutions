@@ -27,7 +27,7 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'magnets') ?? null;
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 26px;            /* tall hit area — easier to grab, esp. on touch */
+    height: 18px;            /* compact but still grabbable */
     background: transparent;
     cursor: pointer;
     margin: 0;
@@ -43,14 +43,14 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'magnets') ?? null;
   }
   .magnet-tool input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none; appearance: none;
-    width: 20px; height: 20px; margin-top: -7px;
+    width: 17px; height: 17px; margin-top: -5.5px;
     border-radius: 50%;
     background: var(--cardinal);
     border: 2px solid var(--paper);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   }
   .magnet-tool input[type="range"]::-moz-range-thumb {
-    width: 20px; height: 20px;
+    width: 17px; height: 17px;
     border-radius: 50%;
     background: var(--cardinal);
     border: 2px solid var(--paper);

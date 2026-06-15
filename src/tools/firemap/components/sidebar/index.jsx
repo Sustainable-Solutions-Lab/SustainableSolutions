@@ -222,7 +222,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           screen regardless of scroll position. */}
       <a href="/" className="bare block shrink-0 px-3 py-4 border-t border-rule" style={{ lineHeight: 0 }}>
         <img
-          src={state.colorScheme === 'dark' ? '/logo-sdss-light.png' : '/logo-sdss-dark.png'}
+          src={state.colorScheme === 'dark' ? '/logos/sdss/logo-sdss-light.png' : '/logos/sdss/logo-sdss-dark.png'}
           alt="Sustainable Solutions Lab"
           style={{ width: '100%', maxWidth: 220, height: 'auto', objectFit: 'contain' }}
         />

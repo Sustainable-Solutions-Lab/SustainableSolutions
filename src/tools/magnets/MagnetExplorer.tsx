@@ -206,7 +206,7 @@ export default function MagnetExplorer() {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 320px) 1fr', gap: 28, alignItems: 'start' }}
         className="magnet-grid">
         <aside style={isMobile
-          ? { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60, maxHeight: '85vh', overflowY: 'auto', background: 'var(--paper)', borderRadius: '16px 16px 0 0', borderTop: '1px solid var(--rule-strong)', padding: '0 18px 40px', transform: sheetOpen ? 'translateY(0)' : 'translateY(110%)', transition: 'transform 0.28s ease', boxShadow: '0 -8px 30px rgba(0,0,0,0.28)' }
+          ? { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60, height: '52vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: 'var(--paper)', borderRadius: '16px 16px 0 0', borderTop: '2px solid var(--accent)', padding: '0 18px 24px', transform: sheetOpen ? 'translateY(0)' : 'translateY(110%)', transition: 'transform 0.28s ease', boxShadow: '0 -8px 30px rgba(0,0,0,0.22)' }
           : { border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', position: 'sticky', top: 72 }}>
           {isMobile && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1, background: 'var(--paper)', padding: '12px 0 10px', borderBottom: '1px solid var(--rule)' }}>
@@ -340,10 +340,8 @@ export default function MagnetExplorer() {
           slide-up sheet (so the controls never overlay the plots). */}
       {isMobile && (
         <>
-          {sheetOpen && (
-            <div onClick={() => setSheetOpen(false)}
-              style={{ position: 'fixed', inset: 0, zIndex: 55, background: 'rgba(0,0,0,0.35)' }} />
-          )}
+          {/* No dark backdrop: the half-height sheet leaves the upper screen showing a
+              live chart that reacts as you drag, which is the point on mobile. */}
           {!sheetOpen && (
             <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 16px', background: 'var(--paper)', borderTop: '1px solid var(--rule-strong)', boxShadow: '0 -4px 16px rgba(0,0,0,0.12)' }}>
               <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>

@@ -71,27 +71,33 @@ function route(supply: Reg, demand: Reg): Flow[] {
   return flows;
 }
 
-/** Synthesize the real-world-anchored flows for every interface. */
+/** Synthesize the real-world-anchored flows for every interface. Each stage's
+ * ex-China production is a FLOOR = the selected projects, raised to the model's own
+ * value wherever the model reshores beyond them; CHINA is the residual. So the
+ * locked-in projects pin ex-China supply (ex-China mining appears), while the
+ * unlocked balance still responds to every slider (China restriction, friendshoring,
+ * demand…) through the model. */
 export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<string, number> = {}): Record<string, Flow[]> {
-  // Per-interface throughput from the model (keeps bar magnitudes demand-driven).
-  const T: Record<string, number> = {};
-  for (const [iface] of IFACE_STAGE) T[iface] = sumReg(modelOrigin(sc, iface));
-
-  // Per-interface production by region = selected-project capacity shares × throughput;
-  // fall back to the model's own origin split if no projects are active at a stage.
   const prod: Record<string, Reg> = {};
   for (const [iface, stage] of IFACE_STAGE) {
-    const cap = regionalCapacity(stage, active, scale) as Reg;
-    prod[iface] = sumReg(cap) > 1e-9 ? scaleTo(cap, T[iface]) : modelOrigin(sc, iface);
+    const model = modelOrigin(sc, iface);     // model's regional production (responds to sliders)
+    const T = sumReg(model);
+    const cap = regionalCapacity(stage, active, scale) as Reg;   // ex-China project floors
+    const usP = Math.max(cap.USA, model.USA);
+    const rowP = Math.max(cap.RoW, model.RoW);
+    const exc = usP + rowP;
+    prod[iface] = exc >= T                     // ex-China floors meet/exceed demand → no China
+      ? { USA: (usP * T) / (exc || 1), RoW: (rowP * T) / (exc || 1), China: 0 }
+      : { USA: usP, RoW: rowP, China: T - exc };  // China = responsive residual
   }
 
   // Demand endpoint: magnet consumption by region (from the model).
   const consumer = modelDest(sc, 'magnet');
 
   const flows: Record<string, Flow[]> = {};
-  flows.concentrate = route(prod.concentrate, scaleTo(prod.oxide, T.concentrate));
-  flows.oxide = route(prod.oxide, scaleTo(prod.alloy, T.oxide));
-  flows.alloy = route(prod.alloy, scaleTo(prod.magnet, T.alloy));
-  flows.magnet = route(prod.magnet, scaleTo(consumer, T.magnet));
+  flows.concentrate = route(prod.concentrate, scaleTo(prod.oxide, sumReg(prod.concentrate)));
+  flows.oxide = route(prod.oxide, scaleTo(prod.alloy, sumReg(prod.oxide)));
+  flows.alloy = route(prod.alloy, scaleTo(prod.magnet, sumReg(prod.alloy)));
+  flows.magnet = route(prod.magnet, scaleTo(consumer, sumReg(prod.magnet)));
   return flows;
 }

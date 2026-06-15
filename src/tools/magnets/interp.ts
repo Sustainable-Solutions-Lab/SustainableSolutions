@@ -22,6 +22,10 @@ export type Scenario = {
   path: {
     us_mix: Record<string, number[]>;   // domestic / allied / china / unmet, per year
     us_cap: Record<string, number[]>;   // mining / separation / alloy / magnet, per year
+    // how US oxide need is met per RE class (Nd/Pr light, Dy/Tb heavy): each maps
+    // domestic / allied / china / unmet → per-year kt-oxide series. Optional: only
+    // present once the grid is regenerated with the per-class pathway emit.
+    us_mix_re?: { light: Record<string, number[]>; heavy: Record<string, number[]> };
     cost_annual: number[];
     primary_dytb: number[];
   };
@@ -110,14 +114,28 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
                   cost_annual: zeros(), primary_dytb: zeros() };
     for (const g of ['us_mix', 'us_cap'] as const)
       for (const k in base.path[g]) out[g][k] = zeros();
+    // optional per-class oxide pathway (light/heavy → source → year)
+    const baseRe = base.path.us_mix_re;
+    const outRe = baseRe ? { light: {} as Record<string, number[]>, heavy: {} as Record<string, number[]> } : undefined;
+    if (baseRe && outRe)
+      for (const cls of ['light', 'heavy'] as const)
+        for (const k in baseRe[cls]) outRe[cls][k] = zeros();
     for (const { s, w } of ps) {
       for (const g of ['us_mix', 'us_cap'] as const)
         for (const k in s.path[g]) for (let i = 0; i < H; i++) out[g][k][i] += s.path[g][k][i] * w;
+      const sre = s.path.us_mix_re;
+      if (outRe && sre)
+        for (const cls of ['light', 'heavy'] as const)
+          for (const k in sre[cls]) {
+            outRe[cls][k] = outRe[cls][k] || zeros();
+            for (let i = 0; i < H; i++) outRe[cls][k][i] += sre[cls][k][i] * w;
+          }
       for (let i = 0; i < H; i++) {
         out.cost_annual[i] += s.path.cost_annual[i] * w;
         out.primary_dytb[i] += s.path.primary_dytb[i] * w;
       }
     }
+    if (outRe) (out as Scenario['path']).us_mix_re = outRe;
     return out;
   };
   // weighted-average the two-level us_supply_re (class → stage → shares)

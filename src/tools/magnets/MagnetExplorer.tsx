@@ -8,7 +8,6 @@ import { integratedTRI } from './tri';
 const US_SEP_RESHORE_COST = 1200;
 const US_ALLOY_RESHORE_COST = 500;
 import FlowDiagram from './FlowDiagram';
-import ChokepointPanel from './ChokepointPanel';
 import PathwayCharts from './PathwayCharts';
 import DemandBuilder from './DemandBuilder';
 import TradeRiskPanel from './TradeRiskPanel';
@@ -104,7 +103,6 @@ export default function MagnetExplorer() {
   const [china, setChina] = useState(0);     // China export-restriction severity
   const [rcost, setRcost] = useState(AXES.rcostMin); // US recycling cost factor
   const [stockpile, setStockpile] = useState(0);     // strategic stockpile size (kt)
-  const [roundTop, setRoundTop] = useState(false);   // assume Round Top developed (exogenous)
   // Real-world projects overlay (default = operating + under-construction). The
   // active allied set drives the country-level allied HHI in the trade-risk index.
   const [activeProjects, setActiveProjects] = useState<Set<string>>(() => new Set(DEFAULT_ACTIVE));
@@ -127,9 +125,9 @@ export default function MagnetExplorer() {
   const onSummary = useCallback(
     (s: { demand_scale: number; dytb_intensity: number; totalSeries: number[]; hiCoercShare: number }) => setDemand(s), []);
 
-  const sc = useMemo(() => applyRoundTop(applyStockpile(interpScenario({
+  const sc = useMemo(() => applyStockpile(interpScenario({
     make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale,
-  }), stockpile), roundTop), [make, source, rec, china, rcost, demand, stockpile, roundTop]);
+  }), stockpile), [make, source, rec, china, rcost, demand, stockpile]);
   // The cost breakdown is US-specific (the cost the US bears to supply itself) —
   // this analysis is about US supply security. Global trade/co-product don't apply.
   const US_COST_KEYS = COST_KEYS.filter(([k]) => k !== 'trade' && k !== 'coproduct');
@@ -212,17 +210,12 @@ export default function MagnetExplorer() {
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Resilience</div>
           <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
             desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$110/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
-          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginTop: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-            title="Assume the Round Top, TX heavy-REE deposit is developed — exogenous (not a cost-optimal build), with its ~$400M PEA capex counted. It yields ~12% of US Dy/Tb need, shifting US mining + on-site separation domestic by that share.">
-            <input type="checkbox" checked={roundTop} onChange={(e) => setRoundTop(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--accent)' }} />
-            <span>Assume Round Top developed
-              <span style={{ display: 'block', fontWeight: 400, fontSize: 11, opacity: 0.6, lineHeight: 1.4 }}>
-                Exogenous US heavy-REE supply (~12% of need, ~$400M) — a strategic, not cost-optimal, move.
-              </span>
-            </span>
-          </label>
+          <p style={{ fontSize: 10.5, opacity: 0.5, margin: '8px 0 0', lineHeight: 1.4 }}>
+            Strategic projects like <b>Round Top</b> are selectable in the real-world projects panel
+            below; their cost-effectiveness sets the shadow price of security in the trade-risk panel.
+          </p>
 
-          <button onClick={() => { setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setRoundTop(false); setActiveProjects(new Set(DEFAULT_ACTIVE)); setProjectScale({}); }}
+          <button onClick={() => { setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setActiveProjects(new Set(DEFAULT_ACTIVE)); setProjectScale({}); }}
             style={{ marginTop: 22, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>
             RESET TO BASELINE
           </button>
@@ -287,9 +280,6 @@ export default function MagnetExplorer() {
               })}
             </div>
           </section>
-
-          {/* 4 — where global supply is concentrated (the structural chokepoints) */}
-          <ChokepointPanel sc={sc} />
 
           {/* 5 — trade-risk index (per stage + integrated) + cost-effectiveness */}
           <TradeRiskPanel sc={sc} levers={securityLevers} alliedHHI={alliedHHIMap} />

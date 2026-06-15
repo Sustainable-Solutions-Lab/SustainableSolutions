@@ -139,29 +139,41 @@ export default function DemandBuilder({ onSummary }: {
             Compose the <b>US</b> magnet-demand trajectory by sector (IEA scenarios) and shape it with
             the four levers.
           </p>
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 8px' }}>Demand scenario by sector</div>
-          {LIST_ORDER.map((k) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                <span style={{ width: 9, height: 9, borderRadius: 2, background: SECTOR_COLOR[k], display: 'inline-block' }} />
-                {SECTOR_LABEL[k] ?? k}
-              </span>
-              <select value={scenario[k]} onChange={(e) => setScenario({ ...scenario, [k]: e.target.value })}
-                title={SCENARIO_TIP[scenario[k]]}
-                style={{ font: '500 11px var(--font-mono)', padding: '2px 4px', borderRadius: 5, border: '1px solid var(--rule)', background: 'var(--paper)', color: 'var(--ink)', cursor: 'pointer' }}>
-                {SCENARIO_NAMES.map((sc) => <option key={sc} value={sc}>{SCENARIO_LABEL[sc] ?? sc}</option>)}
-              </select>
-            </div>
-          ))}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-            <span style={{ fontSize: 11, opacity: 0.55 }}>Set all:</span>
-            {SCENARIO_NAMES.map((sc) => (
-              <button key={sc} onClick={() => setScenario(allScenario(sc))} title={SCENARIO_TIP[sc]}
-                style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5, cursor: 'pointer', border: '1px solid var(--rule)', background: 'transparent', color: 'var(--ink)' }}>
-                {SCENARIO_LABEL[sc] ?? sc}
-              </button>
-            ))}
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 8px' }}>Demand scenario</div>
+          {/* Three IEA scenarios up front (the common case); per-sector tinkering tucked
+              behind an expander so it doesn't cost vertical space by default. */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {SCENARIO_NAMES.map((sc) => {
+              const active = SECTOR_KEYS.every((k) => scenario[k] === sc);
+              return (
+                <button key={sc} onClick={() => setScenario(allScenario(sc))} title={SCENARIO_TIP[sc]}
+                  style={{ flex: 1, font: '600 11px var(--font-mono)', padding: '7px 4px', borderRadius: 6, cursor: 'pointer', lineHeight: 1.2,
+                    border: `1px solid ${active ? 'var(--accent)' : 'var(--rule-strong)'}`, background: active ? 'var(--accent)' : 'transparent', color: active ? 'var(--paper)' : 'var(--ink)' }}>
+                  {SCENARIO_LABEL[sc] ?? sc}
+                </button>
+              );
+            })}
           </div>
+          <details style={{ marginTop: 8 }}>
+            <summary style={{ fontSize: 11, opacity: 0.6, cursor: 'pointer', listStyle: 'none' }}>
+              {SECTOR_KEYS.every((k) => scenario[k] === scenario[SECTOR_KEYS[0]]) ? '＋ Customize by sector' : '＋ Customize by sector · custom mix set'}
+            </summary>
+            <div style={{ marginTop: 8 }}>
+              {LIST_ORDER.map((k) => (
+                <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: 2, background: SECTOR_COLOR[k], display: 'inline-block' }} />
+                    {SECTOR_LABEL[k] ?? k}
+                  </span>
+                  <select value={scenario[k]} onChange={(e) => setScenario({ ...scenario, [k]: e.target.value })}
+                    title={SCENARIO_TIP[scenario[k]]}
+                    style={{ font: '500 11px var(--font-mono)', padding: '2px 4px', borderRadius: 5, border: '1px solid var(--rule)', background: 'var(--paper)', color: 'var(--ink)', cursor: 'pointer' }}>
+                    {SCENARIO_NAMES.map((sc) => <option key={sc} value={sc}>{SCENARIO_LABEL[sc] ?? sc}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </details>
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '16px 0 4px' }}>Demand levers</div>
           <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>

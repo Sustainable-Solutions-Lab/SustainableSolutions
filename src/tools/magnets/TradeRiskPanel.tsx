@@ -110,7 +110,7 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
         {demandRows.length > 0 && (
           <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--rule)' }}>
             <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 7, lineHeight: 1.4 }}>
-              Demand-side levers — TRI bought at no modeled supply cost{shadow != null ? ', valued here at the shadow price (what you’d otherwise pay to buy the same security)' : ''}:
+              Demand-side levers — TRI reduced at no modeled supply cost{shadow != null ? ', valued here at the shadow price (what you’d otherwise pay to buy the same security)' : ''}:
             </div>
             {demandRows.map((r) => (
               <div key={r.name} style={{ display: 'grid', gridTemplateColumns: '128px 1fr 96px', gap: 10, alignItems: 'center', fontSize: 12, marginBottom: 5 }}>

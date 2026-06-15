@@ -26,7 +26,7 @@ import PathwayCharts from './PathwayCharts';
 import DemandBuilder from './DemandBuilder';
 import TradeRiskPanel from './TradeRiskPanel';
 import ProjectsAside from './ProjectsAside';
-import { alliedHHIByStage, activeSet, DEFAULT_FUTURE } from './projects';
+import { alliedHHIByStage, activeSet, DEFAULT_FUTURE, FUTURE_PROJECTS } from './projects';
 import { realWorldFlows, reconcileUsSupply, reconcileUsMix } from './realworld';
 
 /**
@@ -83,8 +83,8 @@ function Slider({ label, value, max, min = 0, onChange, fmt, desc }: {
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
+    <div style={{ marginBottom: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 1 }}>
         <span style={{ fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
           {label}
           {desc && (
@@ -101,7 +101,7 @@ function Slider({ label, value, max, min = 0, onChange, fmt, desc }: {
       <input type="range" min={min} max={max} step={0.01} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         style={{ width: '100%', accentColor: 'var(--accent)' }} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink)', opacity: 0.45, marginTop: 2 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--ink)', opacity: 0.45, marginTop: -1 }}>
         <span>{fmt(min)}</span><span>{fmt((min + max) / 2)}</span><span>{fmt(max)}</span>
       </div>
       {desc && open && (
@@ -126,6 +126,11 @@ export default function MagnetExplorer() {
   const alliedHHIMap = useMemo(() => alliedHHIByStage(activeProjects), [activeProjects]);
   const toggleFuture = useCallback((id: string) => setFutureSel((s) => {
     const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
+  }), []);
+  const setProjectGroup = useCallback((status: 'construction' | 'planned', on: boolean) => setFutureSel((s) => {
+    const n = new Set(s);
+    FUTURE_PROJECTS.filter((p) => p.status === status).forEach((p) => (on ? n.add(p.id) : n.delete(p.id)));
+    return n;
   }), []);
   // Demand summary from the demand builder: maps any sector composition + levers to
   // the two demand axes (total-demand scale + Dy/Tb intensity) the grid is solved over.
@@ -255,7 +260,7 @@ export default function MagnetExplorer() {
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Resilience</div>
           <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
             desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$110/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
-          <ProjectsAside future={futureSel} onToggle={toggleFuture} />
+          <ProjectsAside future={futureSel} onToggle={toggleFuture} onSetGroup={setProjectGroup} />
 
           <button onClick={() => { setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setFutureSel(new Set(DEFAULT_FUTURE)); }}
             style={{ marginTop: 14, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>

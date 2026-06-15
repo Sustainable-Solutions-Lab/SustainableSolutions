@@ -25,6 +25,21 @@ const IFACE_STAGE: [string, Stage][] = [
 const zero = (): Reg => ({ China: 0, RoW: 0, USA: 0 });
 const sumReg = (r: Reg) => r.China + r.RoW + r.USA;
 
+// Horizon-average utilization of project NAMEPLATE capacity over 2026–2035. Mines run
+// near capacity once open (~0.85); ex-China processing is nearly all new + ramping
+// (MP/Energy-Fuels separation, MP/e-VAC/Neo magnets all 2023–26 starts), so a plant
+// going ~20%→100% over the horizon averages ~0.6. Tunable; lowering these makes the
+// real-world supply (and the trade-risk index) less optimistic.
+const RAMP: Record<string, number> = {
+  mining: 0.85, separation: 0.6, alloy: 0.6, magnet: 0.6, recycling: 0.6,
+};
+/** Project capacity by region, scaled to its horizon-average utilization. */
+function rampedCapacity(stage: Stage, active: Set<string>, scale: Record<string, number>): Reg {
+  const c = regionalCapacity(stage, active, scale) as Reg;
+  const r = RAMP[stage] ?? 0.6;
+  return { USA: c.USA * r, China: c.China * r, RoW: c.RoW * r };
+}
+
 /** Each region's outgoing total at an interface, from the model flows. */
 function modelOrigin(sc: Scenario, iface: string): Reg {
   const out = zero();
@@ -102,7 +117,7 @@ export function reconcileUsSupply(sc: Scenario, active: Set<string>, scale: Reco
   for (const stage of ['mining', 'separation', 'alloy', 'magnet']) {
     const m = sc.us_supply?.[stage] ?? { domestic: 0, allied: 0, china: 0 };
     const req = usMag * (STAGE_REQ_FACTOR[stage] ?? 1);
-    const usCap = (regionalCapacity(stage as Stage, active, scale) as Reg).USA;
+    const usCap = rampedCapacity(stage as Stage, active, scale).USA;
     const floor = req > 1e-9 ? Math.min(1, usCap / req) : 0;
     const dom = Math.max(m.domestic ?? 0, floor);
     const rest = Math.max(0, 1 - dom);
@@ -121,7 +136,7 @@ export function reconcileUsSupply(sc: Scenario, active: Set<string>, scale: Reco
  * imports (China first, then allies, then unmet) so the stack total is unchanged. */
 export function reconcileUsMix(sc: Scenario, active: Set<string>, scale: Record<string, number> = {}): Record<string, number[]> {
   const mix = sc.path.us_mix;
-  const usMagCap = (regionalCapacity('magnet', active, scale) as Reg).USA;
+  const usMagCap = rampedCapacity('magnet', active, scale).USA;
   const keys = ['domestic', 'allied', 'china', 'unmet', 'stockpile'];
   const n = (mix.domestic ?? []).length;
   const out: Record<string, number[]> = {};
@@ -151,7 +166,7 @@ export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<
   for (const [iface, stage] of IFACE_STAGE) {
     const model = modelOrigin(sc, iface);     // model's regional production (responds to sliders)
     const T = sumReg(model);
-    const cap = regionalCapacity(stage, active, scale) as Reg;   // ex-China project floors
+    const cap = rampedCapacity(stage, active, scale);   // ex-China project floors (ramped)
     const usP = Math.max(cap.USA, model.USA);
     const rowP = Math.max(cap.RoW, model.RoW);
     const exc = usP + rowP;

@@ -184,14 +184,15 @@ export default function MagnetExplorer() {
     const stock = applyStockpile(ref, STOCKPILE_MAX);
     const row = (name: string, scn: typeof ref, dCost: number, strategic = false) =>
       ({ name, strategic, demand: false, dTRI: refTRI - triR(scn), dCost });
-    // Demand-side levers reduce the TRI by needing less imported material; they have
-    // no modeled supply cost, so we show their TRI reduction (valued at the shadow
-    // price) as context, separate from the priced supply levers. They map to the two
-    // demand axes: Dy/Tb intensity (thrift + grade-downshift) and total demand (RE-free).
-    const thrift = interpScenario({ ...base, dytb: AXES.dytbMin, make: 0, source: 0, rec: 0 });
-    const demandCut = interpScenario({ ...base, dscale: AXES.dscaleMin, make: 0, source: 0, rec: 0 });
-    const dRow = (name: string, scn: typeof ref) =>
-      ({ name, strategic: false, demand: true, dTRI: refTRI - triR(scn), dCost: 0 });
+    // Demand-side levers have no modeled supply cost; we show the TRI reduction the
+    // CURRENT demand settings already achieve vs no improvement (the lever back at its
+    // reference 1.0) — the value of what you've chosen, not the distance to an
+    // arbitrary axis max. They map to the two demand axes: Dy/Tb intensity (thrift +
+    // grade-downshift) and total demand (RE-free / efficiency).
+    const noThrift = interpScenario({ ...base, dytb: 1.0, make: 0, source: 0, rec: 0 });
+    const noDemandCut = interpScenario({ ...base, dscale: 1.0, make: 0, source: 0, rec: 0 });
+    const dRow = (name: string, withoutScn: typeof ref) =>
+      ({ name, strategic: false, demand: true, dTRI: triR(withoutScn) - refTRI, dCost: 0 });
     return [
       // policy levers — the model's own cost; reshoring overlays — an exogenous cost
       row('US-make mandate', makeMandate, realCost(makeMandate) - refCost),
@@ -201,8 +202,8 @@ export default function MagnetExplorer() {
       row('Develop Round Top', applyRoundTop(ref, true), ROUND_TOP_COST, true),
       row('Build US separation', reshoreSupply(ref, ['separation'], 0.9), US_SEP_RESHORE_COST),
       row('Build US alloy', reshoreSupply(ref, ['alloy'], 0.9), US_ALLOY_RESHORE_COST),
-      dRow('Dy/Tb thrifting', thrift),
-      dRow('Lower total demand', demandCut),
+      dRow('Dy/Tb thrifting', noThrift),
+      dRow('Lower total demand', noDemandCut),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [china, rcost, demand, alliedHHIMap, activeProjects]);

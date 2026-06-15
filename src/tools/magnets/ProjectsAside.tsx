@@ -48,6 +48,7 @@ export default function ProjectsAside({ future, onToggle, onSetGroup }: {
   onToggle: (id: string) => void;
   onSetGroup: (status: 'construction' | 'planned', on: boolean) => void;
 }) {
+  const [custOpen, setCustOpen] = useState(false);
   const construction = FUTURE_PROJECTS.filter((p) => p.status === 'construction');
   const planned = FUTURE_PROJECTS.filter((p) => p.status === 'planned');
   const nOn = (list: Project[]) => list.filter((p) => future.has(p.id)).length;
@@ -64,8 +65,8 @@ export default function ProjectsAside({ future, onToggle, onSetGroup }: {
         <GroupButton label="Planned" count={pOn} total={planned.length} allOn={pOn === planned.length}
           onClick={() => onSetGroup('planned', pOn !== planned.length)} />
       </div>
-      <details style={{ marginTop: 8 }}>
-        <summary style={{ fontSize: 11, opacity: 0.6, cursor: 'pointer', listStyle: 'none' }}>＋ Customize project expansion</summary>
+      <details style={{ marginTop: 8 }} onToggle={(e) => setCustOpen((e.target as HTMLDetailsElement).open)}>
+        <summary style={{ fontSize: 11, opacity: 0.6, cursor: 'pointer', listStyle: 'none' }}>{custOpen ? '－' : '＋'} Customize project expansion</summary>
         <div style={{ marginTop: 4 }}>
           {subhead('Under construction')}
           {construction.map((p) => <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />)}

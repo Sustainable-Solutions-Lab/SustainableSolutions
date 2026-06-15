@@ -121,6 +121,7 @@ export default function DemandBuilder({ onSummary }: {
 }) {
   const [scenario, setScenario] = useState<PerSectorScenario>(() => allScenario('STEPS'));
   const [lv, setLv] = useState<Levers>(DEFAULT_LEVERS);
+  const [custOpen, setCustOpen] = useState(false);   // '＋/－' state for the sector expander
 
   const summary = useMemo(() => demandSummary(scenario, lv), [scenario, lv]);
   const breakdown = useMemo(() => sectorBreakdown(scenario, lv), [scenario, lv]);
@@ -154,9 +155,9 @@ export default function DemandBuilder({ onSummary }: {
               );
             })}
           </div>
-          <details style={{ marginTop: 8 }}>
+          <details style={{ marginTop: 8 }} onToggle={(e) => setCustOpen((e.target as HTMLDetailsElement).open)}>
             <summary style={{ fontSize: 11, opacity: 0.6, cursor: 'pointer', listStyle: 'none' }}>
-              {SECTOR_KEYS.every((k) => scenario[k] === scenario[SECTOR_KEYS[0]]) ? '＋ Customize by sector' : '＋ Customize by sector · custom mix set'}
+              {custOpen ? '－' : '＋'} Customize by sector{SECTOR_KEYS.every((k) => scenario[k] === scenario[SECTOR_KEYS[0]]) ? '' : ' · custom mix set'}
             </summary>
             <div style={{ marginTop: 8 }}>
               {LIST_ORDER.map((k) => (

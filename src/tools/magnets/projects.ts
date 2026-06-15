@@ -79,6 +79,7 @@ export const PROJECTS: Project[] = [
   // ALLOY / METAL (kt strip-cast alloy / yr)
   { id: 'mp_alloy', name: 'MP Fort Worth (metal/alloy)', stage: 'alloy', country: 'United States', bloc: 'us', capacityKt: 10, status: 'operating', note: 'MP Materials metal + strip-cast, TX.' },
   { id: 'japan_alloy', name: 'Japan alloy (Shin-Etsu/TDK)', stage: 'alloy', country: 'Japan', bloc: 'allied', capacityKt: 30, status: 'operating', note: 'Established allied metal/alloy capacity.' },
+  { id: 'neo_estonia_alloy', name: 'Neo Narva (Estonia, alloy)', stage: 'alloy', country: 'Estonia', bloc: 'allied', capacityKt: 2, status: 'operating', note: 'Neo Performance Materials — integrated oxide→metal→alloy feeding its Narva magnet line (EU Just Transition Fund; opened 2025).' },
   { id: 'eu_alloy', name: 'EU metal/alloy', stage: 'alloy', country: 'Germany', bloc: 'allied', capacityKt: 8, status: 'planned', note: 'Nascent EU alloy under the CRMA.' },
 
   // MAGNET (kt sintered NdFeB / yr)
@@ -87,6 +88,7 @@ export const PROJECTS: Project[] = [
   { id: 'noveon', name: 'Noveon', stage: 'magnet', country: 'United States', bloc: 'us', capacityKt: 4, status: 'operating', note: 'Noveon Magnetics, TX — sintered + recycled feedstock.' },
   { id: 'japan_mag', name: 'Japan magnets (Shin-Etsu/TDK/Hitachi)', stage: 'magnet', country: 'Japan', bloc: 'allied', capacityKt: 60, status: 'operating', note: 'The dominant ex-China magnet capacity.' },
   { id: 'vac_eu', name: 'VAC (Germany)', stage: 'magnet', country: 'Germany', bloc: 'allied', capacityKt: 8, status: 'operating', note: 'Vacuumschmelze — EU sintered magnets.' },
+  { id: 'neo_estonia', name: 'Neo Narva (Estonia)', stage: 'magnet', country: 'Estonia', bloc: 'allied', capacityKt: 2, status: 'operating', note: 'Neo Performance Materials — Europe’s first large-scale sintered NdFeB plant (Narva); 2 kt/yr, expandable to 5+ kt, ramping 2026. ~15% of EU magnet demand.' },
 
   // RECYCLING (kt recovered oxide-equivalent / yr)
   { id: 'noveon_rec', name: 'Noveon (recycling)', stage: 'recycling', country: 'United States', bloc: 'us', capacityKt: 3, status: 'operating', note: 'Closed-loop sintered-magnet recycling, TX.' },

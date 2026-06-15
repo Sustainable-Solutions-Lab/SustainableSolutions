@@ -18,9 +18,12 @@ function useIsMobile(): boolean {
 
 // Exogenous US-self-sufficiency reshoring costs ($M NPV), grounded in the model's
 // per-stage US costs (separation ~$0.5B partial → ~$1.2B for ~90%; alloy ~$0.3B →
-// ~$0.5B) — illustrative and tunable, like all the security-investment figures.
+// ~$0.5B; magnet ~$0.9B — the highest-tonnage final step, labor- + precision-
+// intensive sintering/machining/coating) — illustrative and tunable, like all the
+// security-investment figures.
 const US_SEP_RESHORE_COST = 1200;
 const US_ALLOY_RESHORE_COST = 500;
+const US_MAGNET_RESHORE_COST = 900;
 import FlowDiagram from './FlowDiagram';
 import PathwayCharts from './PathwayCharts';
 import DemandBuilder from './DemandBuilder';
@@ -242,6 +245,7 @@ export default function MagnetExplorer() {
       row('Develop Round Top', applyRoundTop(ref, true), ROUND_TOP_COST, true),
       row('Build US separation', reshoreSupply(ref, ['separation'], 0.9), US_SEP_RESHORE_COST),
       row('Build US alloy', reshoreSupply(ref, ['alloy'], 0.9), US_ALLOY_RESHORE_COST),
+      row('Build US magnet', reshoreSupply(ref, ['magnet'], 0.9), US_MAGNET_RESHORE_COST),
       dRow('Dy/Tb thrifting', noThrift),
       dRow('Lower total demand', noDemandCut),
     ];

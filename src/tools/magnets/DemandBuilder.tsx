@@ -17,7 +17,7 @@ import {
 const STACK_ORDER = SECTORS_BY_SIZE;            // [largest, …, smallest]
 const LIST_ORDER = [...SECTORS_BY_SIZE].reverse(); // [smallest, …, largest]
 
-const W = 440, H = 180, PADL = 40, PADR = 10, PADT = 12, PADB = 24;
+const W = 440, H = 232, PADL = 40, PADR = 10, PADT = 12, PADB = 24;
 const innerW = W - PADL - PADR, innerH = H - PADT - PADB;
 const xi = (i: number) => PADL + (i / (YEARS.length - 1)) * innerW;
 
@@ -88,7 +88,7 @@ function Lever({ label, value, min, max, onChange, fmt, desc, plausible, stretch
   const sPct = stretch != null ? Math.max(pPct, Math.min(100, ((stretch - min) / span) * 100)) : 100;
   const inZone = value <= (plausible ?? Infinity) ? 'plausible' : value <= (stretch ?? Infinity) ? 'a stretch' : 'aggressive';
   return (
-    <div style={{ marginBottom: 10 }}>
+    <div style={{ marginBottom: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 11.5, marginBottom: 3 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           {label}
@@ -209,15 +209,15 @@ export default function DemandBuilder({ scenario, setScenario, lv, setLv, mode =
   const chartSeries = chartClass === 'heavy' ? dytbSeries : chartClass === 'light' ? ndprSeries : magSeries;
   const chartMax = chartClass === 'heavy' ? DYTB_MAX : chartClass === 'light' ? NDPR_MAX : MAG_MAX;
   const chartYlabel = chartClass === 'heavy' ? 'kt Dy/Tb' : chartClass === 'light' ? 'kt Nd/Pr' : 'kt magnet / yr';
-  const chartTitle = chartClass === 'heavy' ? 'US Dy/Tb (heavy) demand' : chartClass === 'light' ? 'US Nd/Pr (light) demand' : 'US magnet consumption';
+  const chartTitle = chartClass === 'heavy' ? 'US Dy/Tb demand' : chartClass === 'light' ? 'US Nd/Pr demand' : 'US magnet consumption';
   const totalChart = (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 600 }}>{chartTitle} by sector</span>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 600, flex: '1 1 auto', minWidth: 0 }}>{chartTitle} by sector</span>
+        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
           {(['total', 'heavy', 'light'] as const).map((c) => (
             <button key={c} onClick={() => setChartClass(c)} title={c === 'heavy' ? 'Dy/Tb (heavy) oxide' : c === 'light' ? 'Nd/Pr (light) oxide' : 'finished magnets'}
-              style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5, cursor: 'pointer',
+              style={{ font: '600 10px var(--font-mono)', padding: '3px 7px', borderRadius: 5, cursor: 'pointer', whiteSpace: 'nowrap',
                 border: `1px solid ${chartClass === c ? 'var(--accent)' : 'var(--rule-strong)'}`, background: chartClass === c ? 'var(--paper-2)' : 'transparent', color: 'var(--ink)' }}>
               {c === 'total' ? 'Total' : c === 'heavy' ? 'Dy/Tb' : 'Nd/Pr'}
             </button>

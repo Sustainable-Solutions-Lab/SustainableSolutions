@@ -98,7 +98,8 @@ function Slider({ label, value, max, min = 0, onChange, fmt, desc }: {
 }
 
 export default function MagnetExplorer() {
-  const [dc, setDc] = useState(0);
+  const [make, setMake] = useState(0);       // component prong: US-made magnets
+  const [source, setSource] = useState(0);   // mineral prong: non-China sourcing
   const [rec, setRec] = useState(0);         // recycling collection rate
   const [china, setChina] = useState(0);     // China export-restriction severity
   const [rcost, setRcost] = useState(AXES.rcostMin); // US recycling cost factor
@@ -127,8 +128,8 @@ export default function MagnetExplorer() {
     (s: { demand_scale: number; dytb_intensity: number; totalSeries: number[]; hiCoercShare: number }) => setDemand(s), []);
 
   const sc = useMemo(() => applyRoundTop(applyStockpile(interpScenario({
-    dc, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale,
-  }), stockpile), roundTop), [dc, rec, china, rcost, demand, stockpile, roundTop]);
+    make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale,
+  }), stockpile), roundTop), [make, source, rec, china, rcost, demand, stockpile, roundTop]);
   // The cost breakdown is US-specific (the cost the US bears to supply itself) —
   // this analysis is about US supply security. Global trade/co-product don't apply.
   const US_COST_KEYS = COST_KEYS.filter(([k]) => k !== 'trade' && k !== 'coproduct');
@@ -145,22 +146,25 @@ export default function MagnetExplorer() {
   // government's revealed shadow price of security.
   const securityLevers = useMemo(() => {
     const base = { china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale };
-    const ref = interpScenario({ ...base, dc: 0, rec: 0 });
+    const ref = interpScenario({ ...base, make: 0, source: 0, rec: 0 });
     const refTRI = integratedTRI(ref, alliedHHIMap), refCost = realCost(ref);
-    const content = interpScenario({ ...base, dc: AXES.dcMax, rec: 0 });
-    const recyc = interpScenario({ ...base, dc: 0, rec: AXES.recMax });
+    const makeMandate = interpScenario({ ...base, make: AXES.makeMax, source: 0, rec: 0 });
+    const friendshore = interpScenario({ ...base, make: 0, source: AXES.sourceMax, rec: 0 });
+    const recyc = interpScenario({ ...base, make: 0, source: 0, rec: AXES.recMax });
     const stock = applyStockpile(ref, STOCKPILE_MAX);
     const row = (name: string, scn: typeof ref, dCost: number, strategic = false) =>
       ({ name, strategic, dTRI: refTRI - integratedTRI(scn, alliedHHIMap), dCost });
     return [
       // policy levers — the model's own cost; reshoring overlays — an exogenous cost
-      row('US content mandate', content, realCost(content) - refCost),
+      row('US-make mandate', makeMandate, realCost(makeMandate) - refCost),
+      row('Friendshore sourcing', friendshore, realCost(friendshore) - refCost),
       row('Recycling build-out', recyc, realCost(recyc) - refCost),
       row('Strategic stockpile', stock, realCost(stock) - refCost),
       row('Develop Round Top', applyRoundTop(ref, true), ROUND_TOP_COST, true),
       row('Build US separation', reshoreSupply(ref, ['separation'], 0.9), US_SEP_RESHORE_COST),
       row('Build US alloy', reshoreSupply(ref, ['alloy'], 0.9), US_ALLOY_RESHORE_COST),
     ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [china, rcost, demand, alliedHHIMap]);
 
   return (
@@ -189,9 +193,11 @@ export default function MagnetExplorer() {
         <aside style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', position: 'sticky', top: 72 }}>
           <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 16px' }}>Scenario</h2>
 
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 10px' }}>Policy</div>
-          <Slider label="US content requirement (IRA-style)" value={dc} max={AXES.dcMax} onChange={setDc} fmt={(v) => pct(v * 100)}
-            desc="Two prongs, like the IRA EV credit: this share of US magnets must be US-made, and their oxide must come from the US, allies, or recycling (not China)." />
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 10px' }}>Policy — IRA two prongs</div>
+          <Slider label="US-made magnets (reshore)" value={make} max={AXES.makeMax} onChange={setMake} fmt={(v) => pct(v * 100)}
+            desc="Component prong, like the IRA EV credit: the share of US magnets that must be manufactured in the US — reshoring the final step. On its own it can still be met with imported (incl. Chinese) alloy or oxide; pair it with non-China sourcing to close that loophole." />
+          <Slider label="Non-China sourcing (friendshore)" value={source} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
+            desc="Mineral prong: the minimum share of US rare-earth need — counting oxide, alloy, AND the REE embodied in imported finished magnets — that must come from the US, allies, or recycling rather than China. This is the friendshoring lever: it shifts sourcing from China toward allies across the chain." />
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '10px 0 10px' }}>Recycling</div>
           <Slider label="End-of-life collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
@@ -216,7 +222,7 @@ export default function MagnetExplorer() {
             </span>
           </label>
 
-          <button onClick={() => { setDc(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setRoundTop(false); setActiveProjects(new Set(DEFAULT_ACTIVE)); setProjectScale({}); }}
+          <button onClick={() => { setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setRoundTop(false); setActiveProjects(new Set(DEFAULT_ACTIVE)); setProjectScale({}); }}
             style={{ marginTop: 22, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>
             RESET TO BASELINE
           </button>

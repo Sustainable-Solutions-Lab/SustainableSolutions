@@ -8,7 +8,7 @@ import data from './scenarios.json';
 
 export type Flow = { from: string; to: string; value: number };
 export type Scenario = {
-  dc: number; rec: number; dytb: number; china: number; rcost: number; dscale: number;
+  make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number;
   kpis: Record<string, number>;
   cost: Record<string, number>;
   us_cost: Record<string, number>;
@@ -29,16 +29,17 @@ export const YEARS = (data as any).meta.years as number[];
 export const DEMAND_KT_REF = (data as any).meta.demand_kt_ref as number[];
 export const US_DEMAND_SHARE = (data as any).meta.us_demand_share as number;
 
-type AxisField = 'dc' | 'rec' | 'dytb' | 'china' | 'rcost' | 'dscale';
+type AxisField = 'make' | 'source' | 'rec' | 'dytb' | 'china' | 'rcost' | 'dscale';
 const SC = (data as any).scenarios as Scenario[];
 const AX = (data as any).meta.axes as Record<string, number[]>;
 // scenario field -> grid-axis name
 const FIELD_AXIS: [AxisField, string][] = [
-  ['dc', 'domestic_content'], ['rec', 'recycling'], ['dytb', 'dytb'],
+  ['make', 'us_make'], ['source', 'non_china_source'], ['rec', 'recycling'], ['dytb', 'dytb'],
   ['china', 'china'], ['rcost', 'us_recyc_cost'], ['dscale', 'demand_scale'],
 ];
 export const AXES = {
-  dcMax: Math.max(...AX.domestic_content),
+  makeMax: Math.max(...AX.us_make),
+  sourceMax: Math.max(...AX.non_china_source),
   recMax: Math.max(...AX.recycling),
   chinaMax: Math.max(...AX.china),
   dytbMin: Math.min(...AX.dytb),     // most-thrifted Dy/Tb (e.g. 0.4 = 40% of today)
@@ -46,8 +47,9 @@ export const AXES = {
   rcostMax: Math.max(...AX.us_recyc_cost),
 };
 
-const key = (s: { dc: number; rec: number; dytb: number; china: number; rcost: number; dscale: number }) =>
-  `${s.dc}|${s.rec}|${s.dytb}|${s.china}|${s.rcost}|${s.dscale}`;
+type Point = { make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number };
+const key = (s: Point) =>
+  `${s.make}|${s.source}|${s.rec}|${s.dytb}|${s.china}|${s.rcost}|${s.dscale}`;
 const LOOKUP = new Map(SC.map((s) => [key(s), s]));
 const snap = (arr: number[], x: number) =>
   arr.reduce((p, c) => (Math.abs(c - x) < Math.abs(p - x) ? c : p), arr[0]);
@@ -64,7 +66,7 @@ function bracket(arr: number[], x: number): [number, number, number] {
 // Baseline for deltas: no policy, APS reference demand (dytb intensity 1.0, demand
 // scale 1.0) — both exact grid points.
 export const BASE = LOOKUP.get(key({
-  dc: 0, rec: 0, dytb: 1.0, china: 0, rcost: Math.min(...AX.us_recyc_cost), dscale: 1.0,
+  make: 0, source: 0, rec: 0, dytb: 1.0, china: 0, rcost: Math.min(...AX.us_recyc_cost), dscale: 1.0,
 }))!;
 
 function combine(parts: { s: Scenario; w: number }[]): Scenario {
@@ -115,16 +117,15 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
     return out;
   };
   return {
-    dc: base.dc, rec: base.rec, dytb: base.dytb, china: base.china, rcost: base.rcost,
+    make: base.make, source: base.source, rec: base.rec, dytb: base.dytb, china: base.china,
+    rcost: base.rcost,
     dscale: base.dscale, kpis: wDict('kpis'), cost: wDict('cost'), us_cost: wDict('us_cost'),
     production: wNested('production') as any, us_supply: wNested('us_supply') as any,
     utilization: wNested('utilization') as any, flows, path: wPath(),
   };
 }
 
-export function interpScenario(
-  pt: { dc: number; rec: number; dytb: number; china: number; rcost: number; dscale: number },
-): Scenario {
+export function interpScenario(pt: Point): Scenario {
   const brk = FIELD_AXIS.map(([f, ax]) => bracket(AX[ax], pt[f]));
   const n = FIELD_AXIS.length;
   const parts: { s: Scenario; w: number }[] = [];

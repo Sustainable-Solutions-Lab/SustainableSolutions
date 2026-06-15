@@ -96,22 +96,26 @@ export function sectorGradeDemand(scenario: PerSectorScenario, lv: Levers) {
   return out;
 }
 
-/** per-sector magnet kt and Dy/Tb-oxide kt over the years (for the builder charts) */
+const gradeNdprOxide = (grade: string) => GRADE_LADDER[grade][0] * OXF;
+
+/** per-sector magnet kt, Dy/Tb-oxide kt and Nd/Pr-oxide kt over the years */
 export function sectorBreakdown(scenario: PerSectorScenario, lv: Levers) {
   const sg = sectorGradeDemand(scenario, lv);
-  const magnet: Record<string, number[]> = {}, dytb: Record<string, number[]> = {};
+  const magnet: Record<string, number[]> = {}, dytb: Record<string, number[]> = {}, ndpr: Record<string, number[]> = {};
   for (const sk of SECTOR_KEYS) {
     magnet[sk] = Array(YEARS.length).fill(0);
     dytb[sk] = Array(YEARS.length).fill(0);
+    ndpr[sk] = Array(YEARS.length).fill(0);
     for (const g in sg[sk]) {
-      const gi = gradeDytbOxide(g, lv.thrift);
+      const gi = gradeDytbOxide(g, lv.thrift), ni = gradeNdprOxide(g);
       for (let i = 0; i < YEARS.length; i++) {
         magnet[sk][i] += sg[sk][g][i];
         dytb[sk][i] += sg[sk][g][i] * gi;
+        ndpr[sk][i] += sg[sk][g][i] * ni;
       }
     }
   }
-  return { magnet, dytb };
+  return { magnet, dytb, ndpr };
 }
 
 function totals(scenario: PerSectorScenario, lv: Levers) {

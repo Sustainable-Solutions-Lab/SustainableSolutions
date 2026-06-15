@@ -29,6 +29,7 @@ const peak = (bd: Record<string, number[]>) =>
   Math.max(1e-6, ...YEARS.map((_, i) => SECTOR_KEYS.reduce((a, k) => a + bd[k][i], 0)));
 const MAG_MAX = peak(MAXBD.magnet) * 1.05;
 const DYTB_MAX = peak(MAXBD.dytb) * 1.05;
+const NDPR_MAX = peak(MAXBD.ndpr) * 1.05;
 
 // Per-lever plausibility thresholds in slider-VALUE units (a reduction for thrift /
 // re_free / offshore, raw for downshift) — the single source for both the realism
@@ -124,10 +125,12 @@ export default function DemandBuilder({ scenario, setScenario, lv, setLv, mode =
   mode?: 'full' | 'controls' | 'chart';
 }) {
   const [custOpen, setCustOpen] = useState(false);   // '＋/－' state for the sector expander
+  const [chartClass, setChartClass] = useState<'total' | 'heavy' | 'light'>('total');
   const summary = useMemo(() => demandSummary(scenario, lv), [scenario, lv]);
   const breakdown = useMemo(() => sectorBreakdown(scenario, lv), [scenario, lv]);
   const magSeries = STACK_ORDER.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.magnet[k] }));
   const dytbSeries = STACK_ORDER.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.dytb[k] }));
+  const ndprSeries = STACK_ORDER.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.ndpr[k] }));
 
   const legend = (
     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '4px 12px', marginTop: 8 }}>
@@ -203,10 +206,25 @@ export default function DemandBuilder({ scenario, setScenario, lv, setLv, mode =
     </>
   );
 
+  const chartSeries = chartClass === 'heavy' ? dytbSeries : chartClass === 'light' ? ndprSeries : magSeries;
+  const chartMax = chartClass === 'heavy' ? DYTB_MAX : chartClass === 'light' ? NDPR_MAX : MAG_MAX;
+  const chartYlabel = chartClass === 'heavy' ? 'kt Dy/Tb' : chartClass === 'light' ? 'kt Nd/Pr' : 'kt magnet / yr';
+  const chartTitle = chartClass === 'heavy' ? 'US Dy/Tb (heavy) demand' : chartClass === 'light' ? 'US Nd/Pr (light) demand' : 'US magnet consumption';
   const totalChart = (
     <>
-      <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 2 }}>US magnet consumption by sector</div>
-      <StackedArea series={magSeries} ymax={MAG_MAX} ylabel="kt / yr" />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 600 }}>{chartTitle} by sector</span>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {(['total', 'heavy', 'light'] as const).map((c) => (
+            <button key={c} onClick={() => setChartClass(c)} title={c === 'heavy' ? 'Dy/Tb (heavy) oxide' : c === 'light' ? 'Nd/Pr (light) oxide' : 'finished magnets'}
+              style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5, cursor: 'pointer',
+                border: `1px solid ${chartClass === c ? 'var(--accent)' : 'var(--rule-strong)'}`, background: chartClass === c ? 'var(--paper-2)' : 'transparent', color: 'var(--ink)' }}>
+              {c === 'total' ? 'Total' : c === 'heavy' ? 'Dy/Tb' : 'Nd/Pr'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <StackedArea series={chartSeries} ymax={chartMax} ylabel={chartYlabel} />
       {legend}
     </>
   );
@@ -238,8 +256,6 @@ export default function DemandBuilder({ scenario, setScenario, lv, setLv, mode =
 
         <div className="demand-charts">
           {totalChart}
-          <div style={{ fontSize: 12.5, fontWeight: 600, margin: '10px 0 2px' }}>US Dy/Tb demand by sector <span style={{ fontWeight: 400, opacity: 0.55 }}>— where the heavy chokepoint comes from</span></div>
-          <StackedArea series={dytbSeries} ymax={DYTB_MAX} ylabel="kt Dy/Tb" />
         </div>
       </div>
 

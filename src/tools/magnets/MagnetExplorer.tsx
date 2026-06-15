@@ -27,6 +27,7 @@ import DemandBuilder from './DemandBuilder';
 import TradeRiskPanel from './TradeRiskPanel';
 import ProjectsPanel from './ProjectsPanel';
 import { alliedHHIByStage, ALL_IDS, DEFAULT_ACTIVE, isRealistic, PROJECTS } from './projects';
+import { realWorldFlows } from './realworld';
 
 /**
  * Rare-earth magnet supply-chain explorer.
@@ -154,6 +155,9 @@ export default function MagnetExplorer() {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
   const tri = integratedTRI(sc, alliedHHIMap);   // live readout for the mobile chip
+  // Real-world-anchored Sankey: selected projects locked in by region, China residual.
+  const rwFlows = useMemo(() => realWorldFlows(sc, activeProjects, projectScale),
+    [sc, activeProjects, projectScale]);
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
   // lever buys in integrated trade-risk reduction per real dollar (TRI per $).
@@ -247,8 +251,9 @@ export default function MagnetExplorer() {
         </aside>
 
         <main>
-          {/* 1 — the whole chain first, so users learn the stages + connections */}
-          <FlowDiagram sc={sc} />
+          {/* 1 — the whole chain first, so users learn the stages + connections.
+              Flows are real-world-anchored (selected projects locked in, China residual). */}
+          <FlowDiagram sc={{ ...sc, flows: rwFlows }} />
 
           {/* 2 — how that chain meets US magnet demand over time + the US ramp
               (desktop only — trimmed on mobile for a leaner essentials view) */}

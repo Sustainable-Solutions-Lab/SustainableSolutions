@@ -161,3 +161,8 @@ export function riskColor(tri: number): string {
   if (t < 0.75) return '#FDAE61';
   return '#D53E4F';
 }
+
+// A fixed dark chip to sit behind risk-coloured values — the light end of the palette
+// (yellow/green) is illegible as text on the cream paper, so the values get a dark pill.
+// Fixed navy (not a theme token, which would invert) → dark in both light + dark modes.
+export const RISK_CHIP = { padding: '1px 7px', borderRadius: 6, background: 'rgba(24,24,56,0.9)' };

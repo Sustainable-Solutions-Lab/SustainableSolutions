@@ -163,12 +163,13 @@ export function riskColor(tri: number): string {
 }
 
 // A dark chip behind risk-coloured values — only the amber middle of the palette
-// (yellow #FEE08B, orange #FDAE61) is hard to read as text on the cream paper, so just
-// those get a dark pill; the already-legible green and red are left as plain text.
-// Fixed navy (not a theme token, which would invert) → dark in both light + dark modes.
+// (yellow #FEE08B, orange #FDAE61) is hard to read as text on the CREAM paper, so just
+// those get a dark pill; green and red read fine and stay plain. The pill colour is the
+// --risk-chip-bg token, which is dark navy in light mode and TRANSPARENT in dark mode
+// (where amber already pops on the navy canvas), so the chip only appears where needed.
 const CHIP_COLORS = new Set(['#FEE08B', '#FDAE61']);
 export function riskChip(color: string): { color: string; padding?: string; borderRadius?: number; background?: string } {
   return CHIP_COLORS.has(color.toUpperCase())
-    ? { color, padding: '1px 7px', borderRadius: 6, background: 'rgba(24,24,56,0.9)' }
+    ? { color, padding: '1px 7px', borderRadius: 6, background: 'var(--risk-chip-bg)' }
     : { color };
 }

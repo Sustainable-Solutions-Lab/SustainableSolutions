@@ -38,6 +38,7 @@
   --rule:        rgba(24, 24, 56, 0.14);
   --rule-strong: rgba(24, 24, 56, 0.28);
   --highlight:   rgba(120, 200, 216, 0.35); /* teal highlight */
+  --risk-chip-bg: rgba(24, 24, 56, 0.9);    /* dark pill behind amber risk text (light mode only) */
 
   /* Brand palette — sampled directly from the lab mark (globe + planet dots). */
   --brand-navy:   #181838;       /* primary ink */
@@ -186,6 +187,7 @@
   --rule:        rgba(248, 248, 232, 0.14);
   --rule-strong: rgba(248, 248, 232, 0.28);
   --highlight:   rgba(120, 200, 216, 0.22);
+  --risk-chip-bg: transparent;   /* amber risk text reads fine on the dark canvas — no pill */
 
   --accent-brand: #E04545;      /* lifted cardinal for dark-mode contrast */
   --accent-bg:    rgba(224, 69, 69, 0.10);

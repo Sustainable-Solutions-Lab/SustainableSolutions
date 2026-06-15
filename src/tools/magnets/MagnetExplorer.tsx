@@ -12,6 +12,8 @@ import ChokepointPanel from './ChokepointPanel';
 import PathwayCharts from './PathwayCharts';
 import DemandBuilder from './DemandBuilder';
 import TradeRiskPanel from './TradeRiskPanel';
+import ProjectsPanel from './ProjectsPanel';
+import { alliedHHIByStage, ALL_IDS, DEFAULT_ACTIVE, isRealistic, PROJECTS } from './projects';
 
 /**
  * Rare-earth magnet supply-chain explorer.
@@ -102,6 +104,21 @@ export default function MagnetExplorer() {
   const [rcost, setRcost] = useState(AXES.rcostMin); // US recycling cost factor
   const [stockpile, setStockpile] = useState(0);     // strategic stockpile size (kt)
   const [roundTop, setRoundTop] = useState(false);   // assume Round Top developed (exogenous)
+  // Real-world projects overlay (default = operating + under-construction). The
+  // active allied set drives the country-level allied HHI in the trade-risk index.
+  const [activeProjects, setActiveProjects] = useState<Set<string>>(() => new Set(DEFAULT_ACTIVE));
+  const [projectScale, setProjectScale] = useState<Record<string, number>>({});
+  const alliedHHIMap = useMemo(
+    () => alliedHHIByStage(activeProjects, projectScale), [activeProjects, projectScale]);
+  const toggleProject = useCallback((id: string) => setActiveProjects((s) => {
+    const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
+  }), []);
+  const scaleProject = useCallback((id: string, v: number) =>
+    setProjectScale((s) => ({ ...s, [id]: v })), []);
+  const presetProjects = useCallback((which: 'all' | 'none' | 'realistic') => setActiveProjects(
+    which === 'all' ? new Set(ALL_IDS)
+    : which === 'none' ? new Set()
+    : new Set(PROJECTS.filter(isRealistic).map((p) => p.id))), []);
   // Demand summary from the demand builder: maps any sector composition + levers to
   // the two demand axes (total-demand scale + Dy/Tb intensity) the grid is solved over.
   const [demand, setDemand] = useState(
@@ -129,12 +146,12 @@ export default function MagnetExplorer() {
   const securityLevers = useMemo(() => {
     const base = { china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale };
     const ref = interpScenario({ ...base, dc: 0, rec: 0 });
-    const refTRI = integratedTRI(ref), refCost = realCost(ref);
+    const refTRI = integratedTRI(ref, alliedHHIMap), refCost = realCost(ref);
     const content = interpScenario({ ...base, dc: AXES.dcMax, rec: 0 });
     const recyc = interpScenario({ ...base, dc: 0, rec: AXES.recMax });
     const stock = applyStockpile(ref, STOCKPILE_MAX);
     const row = (name: string, scn: typeof ref, dCost: number, strategic = false) =>
-      ({ name, strategic, dTRI: refTRI - integratedTRI(scn), dCost });
+      ({ name, strategic, dTRI: refTRI - integratedTRI(scn, alliedHHIMap), dCost });
     return [
       // policy levers — the model's own cost; reshoring overlays — an exogenous cost
       row('US content mandate', content, realCost(content) - refCost),
@@ -144,7 +161,7 @@ export default function MagnetExplorer() {
       row('Build US separation', reshoreSupply(ref, ['separation'], 0.9), US_SEP_RESHORE_COST),
       row('Build US alloy', reshoreSupply(ref, ['alloy'], 0.9), US_ALLOY_RESHORE_COST),
     ];
-  }, [china, rcost, demand]);
+  }, [china, rcost, demand, alliedHHIMap]);
 
   return (
     <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: '28px 20px 0', color: 'var(--ink)' }}>
@@ -199,7 +216,7 @@ export default function MagnetExplorer() {
             </span>
           </label>
 
-          <button onClick={() => { setDc(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setRoundTop(false); }}
+          <button onClick={() => { setDc(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setRoundTop(false); setActiveProjects(new Set(DEFAULT_ACTIVE)); setProjectScale({}); }}
             style={{ marginTop: 22, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>
             RESET TO BASELINE
           </button>
@@ -269,7 +286,11 @@ export default function MagnetExplorer() {
           <ChokepointPanel sc={sc} />
 
           {/* 5 — trade-risk index (per stage + integrated) + cost-effectiveness */}
-          <TradeRiskPanel sc={sc} levers={securityLevers} />
+          <TradeRiskPanel sc={sc} levers={securityLevers} alliedHHI={alliedHHIMap} />
+
+          {/* 5b — the real-world project build-out driving the allied country HHI */}
+          <ProjectsPanel active={activeProjects} scale={projectScale}
+            onToggle={toggleProject} onScale={scaleProject} onPreset={presetProjects} />
 
           {/* 6 — headline KPIs last, as a summary scorecard */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 26 }}>

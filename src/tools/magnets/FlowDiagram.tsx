@@ -12,7 +12,9 @@ type Flow = { from: string; to: string; value: number };
 type Scenario = { flows: Record<string, Flow[]> };
 
 const REGIONS = ['China', 'RoW', 'USA'];
-const REGION_COLOR: Record<string, string> = { China: '#D53E4F', RoW: '#FDAE61', USA: '#3288BD' };
+// US = green, allies = amber, China = red — so the chain reads as a US-security
+// signal (secure → medium → exposed), the same palette as the trade-risk index.
+const REGION_COLOR: Record<string, string> = { China: '#D53E4F', RoW: '#FDAE61', USA: '#66C2A5' };
 // Each column is the MATERIAL flowing between stages; `stage` names the process
 // that produces it (shown as a sub-label) so mining etc. are visible even though
 // they sit "between" columns rather than being columns themselves.
@@ -127,6 +129,15 @@ export default function FlowDiagram({ sc }: { sc: Scenario }) {
           </g>
         ))}
       </svg>
+      <p style={{ fontSize: 11, opacity: 0.55, marginTop: 8, lineHeight: 1.5 }}>
+        Projected <b>2035</b> snapshot. Each bar is a region’s share of the material flowing onward
+        at that stage (concentrate → oxide → alloy → magnet → demand), including recycling-derived
+        oxide; ribbons are coloured by origin. Read the palette as a US-security signal:
+        <span style={{ color: '#66C2A5', fontWeight: 600 }}> US-made</span> (secure) ·
+        <span style={{ color: '#FDAE61', fontWeight: 600 }}> allies</span> (medium) ·
+        <span style={{ color: '#D53E4F', fontWeight: 600 }}> China</span> (exposed) — so a chain
+        dominated by green is resilient, one dominated by red is exposed.
+      </p>
     </section>
   );
 }

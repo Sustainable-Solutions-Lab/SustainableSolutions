@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
-import { integratedTRI, stageBreakdown, riskColor } from './tri';
+import { integratedTRI, integratedRE, stageBreakdownClass, riskColor } from './tri';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
 // sheet rather than a sticky sidebar that would overlay the plots.
@@ -28,7 +28,7 @@ import { allScenario, demandSummary, DEFAULT_LEVERS, type PerSectorScenario, typ
 import TradeRiskPanel from './TradeRiskPanel';
 import ProjectsAside from './ProjectsAside';
 import { alliedHHIByStage, activeSet, DEFAULT_FUTURE, FUTURE_PROJECTS, PROJECTS, tier, type Tier } from './projects';
-import { realWorldFlows, reconcileUsSupply, reconcileUsMix } from './realworld';
+import { realWorldFlows, reconcileUsSupply, reconcileUsMix, reconcileUsSupplyRe } from './realworld';
 
 /**
  * Rare-earth magnet supply-chain explorer.
@@ -185,10 +185,11 @@ export default function MagnetExplorer() {
   const scR = useMemo(() => ({
     ...sc,
     us_supply: reconcileUsSupply(sc, activeProjects),
+    us_supply_re: reconcileUsSupplyRe(sc, activeProjects),
     path: { ...sc.path, us_mix: reconcileUsMix(sc, activeProjects) },
     _di: hasUSHeavyMine ? { ...sc._di, mining: ROUND_TOP_MINING_DI } : sc._di,
   }), [sc, activeProjects, hasUSHeavyMine]);
-  const tri = integratedTRI(scR, alliedHHIMap);   // live readout for the mobile chip
+  const tri = integratedRE(scR, alliedHHIMap);   // live readout (light+heavy weighted)
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
   // lever buys in integrated trade-risk reduction per real dollar (TRI per $).
@@ -231,10 +232,13 @@ export default function MagnetExplorer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [china, rcost, demand, alliedHHIMap, activeProjects]);
 
-  // Story scorecard inputs: the tightest chokepoint (highest-TRI stage) and the most
-  // cost-effective lever (lowest $ per 0.1-TRI) — the two things the tool exists to surface.
-  const stagesTRI = stageBreakdown(scR, alliedHHIMap);
-  const chokepoint = stagesTRI.reduce((a, b) => (b.tri > a.tri ? b : a), stagesTRI[0]);
+  // Story scorecard inputs: the single most concerning bottleneck (highest-TRI stage
+  // across BOTH RE classes) and the most cost-effective lever (lowest $/0.1-TRI).
+  const cpStages = [
+    ...stageBreakdownClass(scR, 'heavy', alliedHHIMap).map((s) => ({ ...s, elem: 'Dy/Tb' })),
+    ...stageBreakdownClass(scR, 'light', alliedHHIMap).map((s) => ({ ...s, elem: 'Nd/Pr' })),
+  ];
+  const chokepoint = cpStages.reduce((a, b) => (b.tri > a.tri ? b : a), cpStages[0]);
   const bestLever = securityLevers
     .filter((l) => !l.demand && l.dTRI > 0.005 && l.dCost > 0)
     .map((l) => ({ ...l, perTRI: l.dCost / (l.dTRI / 0.1) }))
@@ -387,7 +391,7 @@ export default function MagnetExplorer() {
               lever to buy it down, plus import dependence + unmet. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 26 }}>
             <ScoreCard label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)} sub="0 secure → 1 exposed" />
-            <ScoreCard label="Tightest chokepoint" value={chokepoint.label} valueColor={riskColor(chokepoint.tri)} small sub={`stage TRI ${chokepoint.tri.toFixed(2)}`} />
+            <ScoreCard label="Tightest chokepoint" value={`${chokepoint.elem} ${chokepoint.label.split(' ')[0].toLowerCase()}`} valueColor={riskColor(chokepoint.tri)} small sub={`stage TRI ${chokepoint.tri.toFixed(2)}`} />
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : 'raise the China restriction'} />
             <ScoreCard label="US magnets imported" value={pct(sc.kpis.us_import_pct)} valueColor="var(--ink)" sub="2035" />

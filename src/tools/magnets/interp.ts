@@ -14,6 +14,9 @@ export type Scenario = {
   us_cost: Record<string, number>;
   production: Record<string, Record<string, number>>;
   us_supply: Record<string, { domestic: number; allied: number; china: number }>;
+  // US self-sufficiency split by RE class: light (Nd/Pr) vs heavy (Dy/Tb chokepoint).
+  us_supply_re?: { light: Record<string, { domestic: number; allied: number; china: number }>;
+                   heavy: Record<string, { domestic: number; allied: number; china: number }> };
   utilization: Record<string, Record<string, number | null>>;
   flows: Record<string, Flow[]>;
   path: {
@@ -117,11 +120,25 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
     }
     return out;
   };
+  // weighted-average the two-level us_supply_re (class → stage → shares)
+  const wSupplyRe = () => {
+    const out: any = { light: {}, heavy: {} };
+    for (const cls of ['light', 'heavy'] as const)
+      for (const { s, w } of ps) {
+        const re = (s as any).us_supply_re?.[cls]; if (!re) continue;
+        for (const stage in re) {
+          out[cls][stage] = out[cls][stage] || { domestic: 0, allied: 0, china: 0 };
+          for (const k of ['domestic', 'allied', 'china'] as const) out[cls][stage][k] += (re[stage][k] || 0) * w;
+        }
+      }
+    return out;
+  };
   return {
     make: base.make, source: base.source, rec: base.rec, dytb: base.dytb, china: base.china,
     rcost: base.rcost,
     dscale: base.dscale, kpis: wDict('kpis'), cost: wDict('cost'), us_cost: wDict('us_cost'),
     production: wNested('production') as any, us_supply: wNested('us_supply') as any,
+    us_supply_re: wSupplyRe(),
     utilization: wNested('utilization') as any, flows, path: wPath(),
   };
 }

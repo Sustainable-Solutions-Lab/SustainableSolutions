@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import type { Scenario } from './interp';
-import { integratedTRI, stageBreakdown, riskColor } from './tri';
+import { integratedRE, classTRI, stageBreakdownClass, riskColor } from './tri';
 
 const musd = (x: number) => `$${(x / 1000).toFixed(1)}B`;
 
@@ -26,8 +26,10 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
 }) {
   const [infoTRI, setInfoTRI] = useState(false);
   const [infoCost, setInfoCost] = useState(false);
-  const stages = stageBreakdown(sc, alliedHHI);
-  const tri = integratedTRI(sc, alliedHHI);
+  const [reClass, setReClass] = useState<'heavy' | 'light'>('heavy');   // Dy/Tb chokepoint by default
+  const stages = stageBreakdownClass(sc, reClass, alliedHHI);
+  const tri = integratedRE(sc, alliedHHI);
+  const triH = classTRI(sc, 'heavy', alliedHHI), triL = classTRI(sc, 'light', alliedHHI);
   const rows = levers
     .filter((l) => !l.demand)
     .map((l) => ({ ...l, perTRI: l.dTRI > 0.005 && l.dCost > 0 ? l.dCost / (l.dTRI / 0.1) : null }))
@@ -70,6 +72,26 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
           negligible at low restriction, a primary domestic feedstock under a severe China shock.
         </p>
       )}
+
+      {/* Dy/Tb (heavy) is the real chokepoint; Nd/Pr (light) is far more diversified
+          (US/ally reserves). Toggle which class the per-stage bars show. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, opacity: 0.6 }}>By RE class:</span>
+        {(['heavy', 'light'] as const).map((cls) => {
+          const v = cls === 'heavy' ? triH : triL;
+          const on = reClass === cls;
+          return (
+            <button key={cls} onClick={() => setReClass(cls)}
+              style={{ font: '600 11px var(--font-mono)', padding: '4px 9px', borderRadius: 6, cursor: 'pointer',
+                border: `1px solid ${on ? 'var(--accent)' : 'var(--rule-strong)'}`, background: on ? 'var(--paper-2)' : 'transparent', color: 'var(--ink)' }}>
+              {cls === 'heavy' ? 'Dy/Tb (heavy)' : 'Nd/Pr (light)'} <b style={{ color: riskColor(v) }}>{v.toFixed(2)}</b>
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 10.5, opacity: 0.5, margin: '0 0 6px' }}>
+        Per stage — {reClass === 'heavy' ? 'Dy/Tb (heavy)' : 'Nd/Pr (light)'}:
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
         {stages.map((st) => (

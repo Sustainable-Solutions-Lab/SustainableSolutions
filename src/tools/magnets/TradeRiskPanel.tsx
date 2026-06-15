@@ -33,23 +33,21 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
   const rows = levers
     .filter((l) => !l.demand)
     .map((l) => ({ ...l, perTRI: l.dTRI > 0.005 && l.dCost > 0 ? l.dCost / (l.dTRI / 0.1) : null }))
-    .filter((r) => r.perTRI != null)
+    .filter((r) => r.perTRI != null && r.perTRI! <= 10000)   // drop deals worse than $10B / 0.1 TRI
     .sort((a, b) => (a.perTRI! - b.perTRI!));
   const shadow = rows.find((r) => r.strategic)?.perTRI ?? null;
   // demand-side levers: no supply cost, shown with their TRI reduction valued at the shadow price
   const demandRows = levers.filter((l) => l.demand && l.dTRI > 0.005).sort((a, b) => b.dTRI - a.dTRI);
-  const barRef = shadow ?? Math.max(1, ...rows.map((r) => r.perTRI ?? 0));   // shadow = colour reference
-  const maxPer = Math.max(barRef, ...rows.map((r) => r.perTRI ?? 0));         // longest bar = priciest
-  // Bar LENGTH ∝ cost per 0.1-TRI (the priciest lever fills the bar); COLOUR runs
-  // green (cheap vs the shadow price) → yellow → orange → red (spendy). So a bad deal
-  // is a long red bar, a good deal a short green one.
-  const barLen = (per: number) => Math.min(100, (per / maxPer) * 100);
+  // FIXED scale: a $5B/0.1-TRI lever fills the bar; colour by absolute $ (green cheap →
+  // red spendy), so bars are comparable across scenarios. Deals worse than $10B are hidden
+  // (so e.g. a very pricey stockpile may not appear).
+  const BAR_FULL = 5000;   // $M per 0.1 TRI that fills the bar
+  const barLen = (per: number) => Math.min(100, (per / BAR_FULL) * 100);
   const dealColor = (per: number) => {
-    const ratio = per / barRef;
-    if (ratio <= 0.6) return '#66C2A5';   // green — a good deal
-    if (ratio <= 1.0) return '#FEE08B';   // yellow — mid
-    if (ratio <= 1.8) return '#FDAE61';   // orange — mid-high
-    return '#D53E4F';                      // red — spendy
+    if (per <= 2000) return '#66C2A5';   // < $2B — green, a good deal
+    if (per <= 4000) return '#FEE08B';   // < $4B — yellow
+    if (per <= 7000) return '#FDAE61';   // < $7B — orange
+    return '#D53E4F';                     // ≥ $7B — red, spendy
   };
 
   return (
@@ -113,8 +111,8 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
         {infoCost && (
           <p style={{ fontSize: 11, opacity: 0.55, margin: '0 0 10px', lineHeight: 1.45 }}>
             From no policy at this China-restriction level: real $ per 0.1 of integrated trade-risk
-            reduced — a <b>longer bar = pricier</b> per 0.1 TRI, and colour runs <b>green</b> (cheap) ·
-            yellow · orange · <b>red</b> (spendy). <b>Developing Round Top</b> (★) is an exogenous strategic move
+            reduced, on a <b>fixed scale</b> ($5B/0.1 fills the bar; <b>green</b> cheap · yellow ·
+            orange · <b>red</b> spendy; deals worse than $10B/0.1 are hidden). <b>Developing Round Top</b> (★) is an exogenous strategic move
             whose $/TRI is a revealed read on the US government’s <i>shadow price of security</i>;
             bars are scaled to it. Levers that don’t move the index here are omitted.
           </p>

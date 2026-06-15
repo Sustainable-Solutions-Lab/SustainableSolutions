@@ -163,14 +163,18 @@ function rampedCapacityRe(stage: Stage, active: Set<string>, cls: 'light' | 'hea
   return { USA: c.USA * r, China: c.China * r, RoW: c.RoW * r };
 }
 
-/** Reconcile the light/heavy us_supply with class-appropriate project floors: heavy-REE
- * US projects (Round Top, Lynas Seadrift) floor the heavy class, light projects (MP,
- * Energy Fuels) the light class; the magnet stage uses all US magnet capacity. Keeps the
- * split consistent with the project selection. */
+/** Reconcile the light/heavy us_supply with class-appropriate project floors. MINING
+ * and SEPARATION are element-specific (a light-ore mine / light SX plant doesn't make
+ * heavy oxide), so heavy-REE US projects (Round Top, Lynas Seadrift) floor the heavy
+ * class and light projects (MP, Energy Fuels) the light class. ALLOY and MAGNET are
+ * element-AGNOSTIC — a strip-cast alloy / sintered magnet contains both Nd/Pr and Dy/Tb,
+ * so a US alloy/magnet plant covers both classes (this is what stops a spurious
+ * heavy-alloy chokepoint). They use the aggregate, project-floored reconciliation. */
 export function reconcileUsSupplyRe(sc: Scenario, active: Set<string>, scale: Record<string, number> = {}) {
   const base = sc.us_supply_re;
   if (!base) return undefined;
   const usMag = usMagnetDemand(sc);
+  const aggR = reconcileUsSupply(sc, active, scale);   // for the element-agnostic alloy + magnet stages
   const recon = (m: any, req: number, usCap: number) => {
     const floor = req > 1e-9 ? Math.min(1, usCap / req) : 0;
     const dom = Math.max(m?.domestic ?? 0, floor);
@@ -182,13 +186,12 @@ export function reconcileUsSupplyRe(sc: Scenario, active: Set<string>, scale: Re
   for (const cls of ['light', 'heavy'] as const) {
     const intensity = CLASS_INTENSITY[cls];
     for (const stage of ['mining', 'separation', 'alloy', 'magnet']) {
-      const m = base[cls]?.[stage];
-      if (stage === 'magnet') {
-        out[cls][stage] = recon(m, usMag, (regionalCapacity('magnet', active, scale) as Reg).USA * 0.6);
-      } else {
-        const fac = stage === 'mining' ? intensity / AVG_RECOVERY : intensity;
-        out[cls][stage] = recon(m, usMag * fac, rampedCapacityRe(stage as Stage, active, cls, scale).USA);
+      if (stage === 'alloy' || stage === 'magnet') {   // element-agnostic — one plant makes both
+        out[cls][stage] = aggR[stage];
+        continue;
       }
+      const fac = stage === 'mining' ? intensity / AVG_RECOVERY : intensity;
+      out[cls][stage] = recon(base[cls]?.[stage], usMag * fac, rampedCapacityRe(stage as Stage, active, cls, scale).USA);
     }
   }
   return out;

@@ -27,7 +27,7 @@ import DemandBuilder from './DemandBuilder';
 import TradeRiskPanel from './TradeRiskPanel';
 import ProjectsAside from './ProjectsAside';
 import { alliedHHIByStage, activeSet, DEFAULT_FUTURE } from './projects';
-import { realWorldFlows } from './realworld';
+import { realWorldFlows, reconcileUsSupply, reconcileUsMix } from './realworld';
 
 /**
  * Rare-earth magnet supply-chain explorer.
@@ -149,9 +149,18 @@ export default function MagnetExplorer() {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [infoCost, setInfoCost] = useState(false);   // ⓘ toggle for the cost-bar method note
-  const tri = integratedTRI(sc, alliedHHIMap);   // live readout for the mobile chip
   // Real-world-anchored Sankey: selected projects locked in by region, China residual.
   const rwFlows = useMemo(() => realWorldFlows(sc, activeProjects), [sc, activeProjects]);
+  // Reconcile the US-centric views (trade-risk index + pathway) with the selected
+  // projects: US-project capacity is a floor on US self-sufficiency; the model fills
+  // the residual. So toggling projects moves the TRI and the demand-met chart, the
+  // same way it now moves the Sankey.
+  const scR = useMemo(() => ({
+    ...sc,
+    us_supply: reconcileUsSupply(sc, activeProjects),
+    path: { ...sc.path, us_mix: reconcileUsMix(sc, activeProjects) },
+  }), [sc, activeProjects]);
+  const tri = integratedTRI(scR, alliedHHIMap);   // live readout for the mobile chip
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
   // lever buys in integrated trade-risk reduction per real dollar (TRI per $).
@@ -159,14 +168,25 @@ export default function MagnetExplorer() {
   // government's revealed shadow price of security.
   const securityLevers = useMemo(() => {
     const base = { china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale };
+    // TRI with the project floors applied (so lever ROI is consistent with the panel).
+    const triR = (scn: Parameters<typeof reconcileUsSupply>[0]) =>
+      integratedTRI({ ...scn, us_supply: reconcileUsSupply(scn, activeProjects) }, alliedHHIMap);
     const ref = interpScenario({ ...base, make: 0, source: 0, rec: 0 });
-    const refTRI = integratedTRI(ref, alliedHHIMap), refCost = realCost(ref);
+    const refTRI = triR(ref), refCost = realCost(ref);
     const makeMandate = interpScenario({ ...base, make: AXES.makeMax, source: 0, rec: 0 });
     const friendshore = interpScenario({ ...base, make: 0, source: AXES.sourceMax, rec: 0 });
     const recyc = interpScenario({ ...base, make: 0, source: 0, rec: AXES.recMax });
     const stock = applyStockpile(ref, STOCKPILE_MAX);
     const row = (name: string, scn: typeof ref, dCost: number, strategic = false) =>
-      ({ name, strategic, dTRI: refTRI - integratedTRI(scn, alliedHHIMap), dCost });
+      ({ name, strategic, demand: false, dTRI: refTRI - triR(scn), dCost });
+    // Demand-side levers reduce the TRI by needing less imported material; they have
+    // no modeled supply cost, so we show their TRI reduction (valued at the shadow
+    // price) as context, separate from the priced supply levers. They map to the two
+    // demand axes: Dy/Tb intensity (thrift + grade-downshift) and total demand (RE-free).
+    const thrift = interpScenario({ ...base, dytb: AXES.dytbMin, make: 0, source: 0, rec: 0 });
+    const demandCut = interpScenario({ ...base, dscale: AXES.dscaleMin, make: 0, source: 0, rec: 0 });
+    const dRow = (name: string, scn: typeof ref) =>
+      ({ name, strategic: false, demand: true, dTRI: refTRI - triR(scn), dCost: 0 });
     return [
       // policy levers — the model's own cost; reshoring overlays — an exogenous cost
       row('US-make mandate', makeMandate, realCost(makeMandate) - refCost),
@@ -176,9 +196,11 @@ export default function MagnetExplorer() {
       row('Develop Round Top', applyRoundTop(ref, true), ROUND_TOP_COST, true),
       row('Build US separation', reshoreSupply(ref, ['separation'], 0.9), US_SEP_RESHORE_COST),
       row('Build US alloy', reshoreSupply(ref, ['alloy'], 0.9), US_ALLOY_RESHORE_COST),
+      dRow('Dy/Tb thrifting', thrift),
+      dRow('Lower total demand', demandCut),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [china, rcost, demand, alliedHHIMap]);
+  }, [china, rcost, demand, alliedHHIMap, activeProjects]);
 
   return (
     <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: isMobile ? '20px 16px 92px' : '28px 20px 0', color: 'var(--ink)' }}>
@@ -248,7 +270,7 @@ export default function MagnetExplorer() {
 
           {/* 2 — how that chain meets US magnet demand over time + the US ramp
               (desktop only — trimmed on mobile for a leaner essentials view) */}
-          {!isMobile && <PathwayCharts sc={sc} years={YEARS} hiCoercShare={demand.hiCoercShare}
+          {!isMobile && <PathwayCharts sc={scR} years={YEARS} hiCoercShare={demand.hiCoercShare}
             usDemandMax={US_DEMAND_SHARE * Math.max(...DEMAND_KT_REF) * 1.45} />}
 
           {/* 3 — combined "Cost and security" section: cost bar (real NPV) + the
@@ -256,7 +278,7 @@ export default function MagnetExplorer() {
           <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 22 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
               <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0, display: 'flex', alignItems: 'center' }}>
-                Cost and security of US magnet supply
+                Cost of US magnet supply
                 <button onClick={() => setInfoCost((o) => !o)} aria-label="Details" title="Details"
                   style={{ width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--rule-strong)', background: infoCost ? 'var(--accent)' : 'transparent', color: infoCost ? 'var(--paper)' : 'var(--ink-3)', font: '600 9px var(--font-mono)', lineHeight: 1, cursor: 'pointer', padding: 0, marginLeft: 6 }}>i</button>
               </h2>
@@ -304,7 +326,7 @@ export default function MagnetExplorer() {
             </div>
             {/* trade-risk index + cost-of-security, folded into the same section */}
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
-              <TradeRiskPanel sc={sc} levers={securityLevers} alliedHHI={alliedHHIMap} />
+              <TradeRiskPanel sc={scR} levers={securityLevers} alliedHHI={alliedHHIMap} />
             </div>
           </section>
 

@@ -190,7 +190,7 @@ export default function DemandBuilder({ onSummary }: {
           </div>
         </div>
 
-        <div>
+        <div className="demand-charts">
           <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 2 }}>US magnet consumption by sector</div>
           <StackedArea series={magSeries} ymax={MAG_MAX} ylabel="kt / yr" />
           <div style={{ fontSize: 12.5, fontWeight: 600, margin: '10px 0 2px' }}>US Dy/Tb demand by sector <span style={{ fontWeight: 400, opacity: 0.55 }}>— where the heavy chokepoint comes from</span></div>
@@ -225,7 +225,7 @@ export default function DemandBuilder({ onSummary }: {
           breakdown is proprietary.
         </div>
       </details>
-      <style>{`@media (max-width: 720px){ .demand-grid{ grid-template-columns:1fr !important; } }`}</style>
+      <style>{`@media (max-width: 720px){ .demand-grid{ grid-template-columns:1fr !important; } .demand-charts{ display:none !important; } }`}</style>
     </section>
   );
 }

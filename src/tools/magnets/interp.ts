@@ -43,6 +43,7 @@ export const AXES = {
   recMax: Math.max(...AX.recycling),
   chinaMax: Math.max(...AX.china),
   dytbMin: Math.min(...AX.dytb),     // most-thrifted Dy/Tb (e.g. 0.4 = 40% of today)
+  dscaleMin: Math.min(...AX.demand_scale),  // lowest total-demand scale (most RE-free / efficient)
   rcostMin: Math.min(...AX.us_recyc_cost),  // baseline US recycling cost factor
   rcostMax: Math.max(...AX.us_recyc_cost),
 };

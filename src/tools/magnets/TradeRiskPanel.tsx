@@ -21,7 +21,7 @@ function InfoBtn({ on, set }: { on: boolean; set: (f: (o: boolean) => boolean) =
 
 export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
   sc: Scenario;
-  levers: { name: string; strategic: boolean; dTRI: number; dCost: number }[];
+  levers: { name: string; strategic: boolean; demand?: boolean; dTRI: number; dCost: number }[];
   alliedHHI?: Record<string, number>;
 }) {
   const [infoTRI, setInfoTRI] = useState(false);
@@ -29,17 +29,21 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
   const stages = stageBreakdown(sc, alliedHHI);
   const tri = integratedTRI(sc, alliedHHI);
   const rows = levers
+    .filter((l) => !l.demand)
     .map((l) => ({ ...l, perTRI: l.dTRI > 0.005 && l.dCost > 0 ? l.dCost / (l.dTRI / 0.1) : null }))
     .filter((r) => r.perTRI != null)
     .sort((a, b) => (a.perTRI! - b.perTRI!));
   const shadow = rows.find((r) => r.strategic)?.perTRI ?? null;
+  // demand-side levers: no supply cost, shown with their TRI reduction valued at the shadow price
+  const demandRows = levers.filter((l) => l.demand && l.dTRI > 0.005).sort((a, b) => b.dTRI - a.dTRI);
+  const maxDtri = Math.max(0.001, ...demandRows.map((r) => r.dTRI));
   const barRef = shadow ?? Math.max(1, ...rows.map((r) => r.perTRI ?? 0));
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-        <span style={{ font: '600 12px var(--font-mono)', letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.7, display: 'flex', alignItems: 'center' }}>
-          Trade-risk index <InfoBtn on={infoTRI} set={setInfoTRI} />
+        <span style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, display: 'flex', alignItems: 'center' }}>
+          Trade risk index <InfoBtn on={infoTRI} set={setInfoTRI} />
         </span>
         <span style={{ font: '600 14px var(--font-mono)', color: riskColor(tri) }}>
           {tri.toFixed(2)} <span style={{ opacity: 0.5, fontWeight: 400, color: 'var(--ink)' }}>integrated · lower = secure</span>
@@ -70,7 +74,7 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
       </div>
 
       <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--rule)' }}>
-        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center' }}>
+        <div style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, marginBottom: 8, display: 'flex', alignItems: 'center' }}>
           Cost of security — what each lever buys <InfoBtn on={infoCost} set={setInfoCost} />
         </div>
         {infoCost && (
@@ -103,6 +107,24 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
             </div>
           ))}
         </div>
+        {demandRows.length > 0 && (
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--rule)' }}>
+            <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 7, lineHeight: 1.4 }}>
+              Demand-side levers — TRI bought at no modeled supply cost{shadow != null ? ', valued here at the shadow price (what you’d otherwise pay to buy the same security)' : ''}:
+            </div>
+            {demandRows.map((r) => (
+              <div key={r.name} style={{ display: 'grid', gridTemplateColumns: '128px 1fr 96px', gap: 10, alignItems: 'center', fontSize: 12, marginBottom: 5 }}>
+                <span style={{ fontWeight: 600, opacity: 0.85 }}>{r.name}</span>
+                <div style={{ height: 16, borderRadius: 4, background: 'var(--paper-2)', border: '1px solid var(--rule)', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(100, (r.dTRI / maxDtri) * 100)}%`, height: '100%', background: '#5E4FA2' }} />
+                </div>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textAlign: 'right' }} title={`−${r.dTRI.toFixed(2)} integrated TRI`}>
+                  −{r.dTRI.toFixed(2)}{shadow != null ? ` · ${musd(shadow * r.dTRI / 0.1)}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

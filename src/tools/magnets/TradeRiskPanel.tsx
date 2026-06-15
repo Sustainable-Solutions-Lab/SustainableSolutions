@@ -132,7 +132,7 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
             <div key={r.name} style={{ display: 'grid', gridTemplateColumns: '128px 1fr 96px', gap: 10, alignItems: 'center', fontSize: 12 }}>
               <span style={{ fontWeight: 600, opacity: 0.85 }}>
                 {r.name}{r.strategic && <span title="revealed shadow price of security" style={{ color: 'var(--accent)' }}> ★</span>}
-                {r.consumer && <span title="a consumer price premium on pricier allied imports — not US build capital" style={{ fontWeight: 400, fontSize: 9.5, opacity: 0.55, marginLeft: 4, fontFamily: 'var(--font-mono)' }}>cons. $</span>}
+                {r.consumer && <span title="a consumer price premium on pricier allied imports — not US build capital" style={{ display: 'block', fontWeight: 400, fontSize: 9.5, opacity: 0.55, fontFamily: 'var(--font-mono)' }}>consumer premium</span>}
               </span>
               <div style={{ height: 16, borderRadius: 4, background: 'var(--paper-2)', border: '1px solid var(--rule)', overflow: 'hidden' }}>
                 {r.perTRI != null && <div style={{ width: `${barLen(r.perTRI)}%`, height: '100%', background: dealColor(r.perTRI), transition: 'width 0.15s' }} />}

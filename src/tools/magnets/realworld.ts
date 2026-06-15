@@ -62,12 +62,13 @@ function scaleTo(r: Reg, total: number): Reg {
 }
 
 /** Route a stage's production to the next stage's production (= its consumption of
- * this stage's output): own-region first, then the residual proportionally. When
- * `restrict` (a China export restriction), the market BIFURCATES — China only trades
- * with China and ex-China only with ex-China — so e.g. US oxide is not shipped to
- * China for alloying under a ban (any ex-China surplus with no ex-China buyer is
- * simply idle, i.e. not routed onward). */
-function route(supply: Reg, demand: Reg, restrict = false): Flow[] {
+ * this stage's output): own-region first, then the residual proportionally. `restrict`
+ * is the China export-restriction SEVERITY (0 = open market, 1 = full ban). It throttles
+ * cross-bloc (China ↔ ex-China) trade by (1 − severity): the market bifurcates GRADUALLY
+ * as the slider rises, rather than flipping at a single threshold. At 1 it's fully split
+ * (China trades only with China) — so US oxide isn't shipped to China for alloying under
+ * a ban (any ex-China surplus with no ex-China buyer is simply idle, not routed onward). */
+function route(supply: Reg, demand: Reg, restrict = 0): Flow[] {
   const sup = { ...supply }, dem = { ...demand };
   const flows: Flow[] = [];
   for (const r of REGIONS) {            // own-region (no shipment) first
@@ -75,13 +76,15 @@ function route(supply: Reg, demand: Reg, restrict = false): Flow[] {
     if (f > 0.01) flows.push({ from: r, to: r, value: f });
     sup[r] -= f; dem[r] -= f;
   }
-  for (const s of REGIONS) {            // residual: each source to its allowed deficits
+  for (const s of REGIONS) {            // residual: each source to its deficits
     if (sup[s] <= 1e-9) continue;
-    const dests = REGIONS.filter((d) => dem[d] > 1e-9 && (!restrict || (s === 'China') === (d === 'China')));
-    const totD = dests.reduce((a, d) => a + dem[d], 0);
-    if (totD <= 1e-9) continue;          // surplus with no allowed buyer → idle
+    // cross-bloc destinations keep only (1 − severity) of their pull; same-bloc full.
+    const wt = (d: Region) => dem[d] * (((s === 'China') === (d === 'China')) ? 1 : 1 - restrict);
+    const dests = REGIONS.filter((d) => dem[d] > 1e-9 && wt(d) > 1e-9);
+    const totW = dests.reduce((a, d) => a + wt(d), 0);
+    if (totW <= 1e-9) continue;          // no allowed buyer → surplus idle
     for (const d of dests) {
-      const f = sup[s] * (dem[d] / totD);
+      const f = sup[s] * (wt(d) / totW);
       if (f > 0.01) flows.push({ from: s, to: d, value: f });
     }
   }
@@ -239,7 +242,7 @@ export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<
   // Class view scales throughput to that RE class's mass fraction and re-floors the
   // element-specific upstream (mining/separation) with class-specific projects.
   const frac = cls === 'heavy' ? 0.094 : cls === 'light' ? 0.906 : 1;
-  const restrict = (sc.china ?? 0) > 0.3;     // bifurcate the market under a restriction
+  const restrict = sc.china ?? 0;     // export-restriction severity → graded market bifurcation
   const prod: Record<string, Reg> = {};
   for (const [iface, stage] of IFACE_STAGE) {
     const model = modelOrigin(sc, iface);     // model's regional production (responds to sliders)

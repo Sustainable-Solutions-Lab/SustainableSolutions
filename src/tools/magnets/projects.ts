@@ -153,6 +153,25 @@ export function regionalCapacityRe(stage: Stage, active: Set<string>, cls: 'ligh
   return out;
 }
 
+/** The active projects making up a (stage, model-region) node, with each one's
+ * nameplate (scaled) capacity — for the Sankey facility hover. For mining/separation a
+ * class (heavy/light) filter applies (a light mine doesn't make heavy oxide); alloy +
+ * magnet are element-agnostic, so no class filter. China is the model's residual and
+ * has no listed facilities → returns []. */
+export function facilityBreakdown(
+  stage: Stage, region: 'USA' | 'China' | 'RoW', active: Set<string>,
+  scale: Record<string, number> = {}, cls?: 'heavy' | 'light',
+): { name: string; cap: number; country: string }[] {
+  const applyClass = cls && (stage === 'mining' || stage === 'separation');
+  const out: { name: string; cap: number; country: string }[] = [];
+  for (const p of PROJECTS) {
+    if (p.stage !== stage || !active.has(p.id) || REGION_OF_BLOC[p.bloc] !== region) continue;
+    if (applyClass && (cls === 'heavy') !== !!p.heavy) continue;
+    out.push({ name: p.name, cap: p.capacityKt * (scale[p.id] ?? 1), country: p.country });
+  }
+  return out.sort((a, b) => b.cap - a.cap);
+}
+
 /** Default selection = the realistic (operating + under-construction) projects. */
 export const DEFAULT_ACTIVE = new Set(PROJECTS.filter(isRealistic).map((p) => p.id));
 export const ALL_IDS = new Set(PROJECTS.map((p) => p.id));

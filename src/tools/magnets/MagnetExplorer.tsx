@@ -154,6 +154,7 @@ export default function MagnetExplorer() {
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [infoCost, setInfoCost] = useState(false);   // ⓘ toggle for the cost-bar method note
   const tri = integratedTRI(sc, alliedHHIMap);   // live readout for the mobile chip
   // Real-world-anchored Sankey: selected projects locked in by region, China residual.
   const rwFlows = useMemo(() => realWorldFlows(sc, activeProjects, projectScale),
@@ -260,23 +261,28 @@ export default function MagnetExplorer() {
           {!isMobile && <PathwayCharts sc={sc} years={YEARS} hiCoercShare={demand.hiCoercShare}
             usDemandMax={US_DEMAND_SHARE * Math.max(...DEMAND_KT_REF) * 1.45} />}
 
-          {/* 3 — what it costs (absolute, growing/shrinking). Real economic cost
-              only; unmet demand is shown physically (red), not as a $ penalty. */}
-          {!isMobile && <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 22 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
-              <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Cost to the US of supply security</h2>
-              <span style={{ font: '600 15px var(--font-mono)' }}>
+          {/* 3 — combined "Cost and security" section: cost bar (real NPV) + the
+              trade-risk index + cost-of-security ROI, in one block; notes behind ⓘ. */}
+          <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 22 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+              <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0, display: 'flex', alignItems: 'center' }}>
+                Cost and security of US magnet supply
+                <button onClick={() => setInfoCost((o) => !o)} aria-label="Details" title="Details"
+                  style={{ width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--rule-strong)', background: infoCost ? 'var(--accent)' : 'transparent', color: infoCost ? 'var(--paper)' : 'var(--ink-3)', font: '600 9px var(--font-mono)', lineHeight: 1, cursor: 'pointer', padding: 0, marginLeft: 6 }}>i</button>
+              </h2>
+              <span style={{ font: '600 14px var(--font-mono)' }}>
                 {musd(usCostReal)} <span style={{ opacity: 0.5, fontWeight: 400 }}>real NPV</span>
                 {usUnmet > 0.05 && <span style={{ color: WORSE, fontWeight: 600 }}> · +{usUnmet.toFixed(1)} kt unmet</span>}
               </span>
             </div>
-            <p style={{ fontSize: 11.5, opacity: 0.5, margin: '0 0 12px', lineHeight: 1.45 }}>
-              Absolute build + operating cost of US-located capacity by stage, plus the heavy-REE
-              price premium and any strategic stockpile (2026–35 NPV). The bar length is the real
-              cost — it grows as you force more security, shrinks as imports do the work. When the
-              chain physically can’t deliver, that surfaces as <span style={{ color: WORSE }}>unmet
-              demand</span> (above), not as a dollar cost.
-            </p>
+            {infoCost && (
+              <p style={{ fontSize: 11.5, opacity: 0.5, margin: '0 0 12px', lineHeight: 1.45 }}>
+                Absolute build + operating cost of US-located capacity by stage, plus the heavy-REE price
+                premium and any stockpile (2026–35 NPV); the bar grows as you force more security and
+                shrinks as imports do the work. When the chain can’t deliver, that surfaces as
+                <span style={{ color: WORSE }}> unmet demand</span>, not a dollar cost.
+              </p>
+            )}
             <div style={{ height: 30, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--rule)', background: 'var(--paper-2)' }}>
               <div style={{ display: 'flex', height: '100%', width: `${Math.min(100, (usCostReal / COST_AXIS_MAX) * 100)}%`, transition: 'width 0.15s' }}>
                 {REAL_COST_KEYS.map(([k, lbl, color]) => {
@@ -289,31 +295,28 @@ export default function MagnetExplorer() {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink)', opacity: 0.45, marginTop: 2 }}>
               <span>$0B</span><span>{musd(COST_AXIS_MAX / 2)}</span><span>{musd(COST_AXIS_MAX)}+</span>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 20px', marginTop: 14 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', marginTop: 10 }}>
               {REAL_COST_KEYS.map(([k, lbl, color]) => {
                 const v = sc.us_cost[k] ?? 0;
+                if (v <= 0 && (BASE.us_cost[k] ?? 0) <= 0) return null;   // hide irrelevant components
                 const dv = v - (BASE.us_cost[k] ?? 0);
                 const showDelta = Math.abs(dv) >= 100;
                 return (
-                  // fixed column per item (label / value / delta) so values can change
-                  // without the row reflowing or the plots below jumping
-                  <div key={k} title={COST_DESC[k]} style={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 11.5, cursor: 'help', minWidth: 96 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 2, background: color, display: 'inline-block', flexShrink: 0 }} />
-                      <span style={{ opacity: 0.7 }}>{lbl}</span>
-                    </span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, paddingLeft: 15 }}>{musd(v)}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, paddingLeft: 15, minHeight: 13, color: showDelta ? (dv > 0 ? WORSE : 'var(--brand-green)') : 'transparent' }}>
-                      {showDelta ? `${dv > 0 ? '+' : ''}${musd(dv)} vs base` : '—'}
-                    </span>
-                  </div>
+                  // compact one-line legend item to squeeze vertical space
+                  <span key={k} title={COST_DESC[k]} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'help' }}>
+                    <span style={{ width: 9, height: 9, borderRadius: 2, background: color, flexShrink: 0 }} />
+                    <span style={{ opacity: 0.7 }}>{lbl}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{musd(v)}</span>
+                    {showDelta && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: dv > 0 ? WORSE : 'var(--brand-green)' }}>{dv > 0 ? '+' : ''}{musd(dv)}</span>}
+                  </span>
                 );
               })}
             </div>
-          </section>}
-
-          {/* 5 — trade-risk index (per stage + integrated) + cost-effectiveness */}
-          <TradeRiskPanel sc={sc} levers={securityLevers} alliedHHI={alliedHHIMap} />
+            {/* trade-risk index + cost-of-security, folded into the same section */}
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
+              <TradeRiskPanel sc={sc} levers={securityLevers} alliedHHI={alliedHHIMap} />
+            </div>
+          </section>
 
           {/* 5b — the real-world project build-out driving the allied country HHI
               (desktop only — long list, trimmed on mobile) */}

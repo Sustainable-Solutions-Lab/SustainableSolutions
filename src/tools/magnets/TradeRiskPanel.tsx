@@ -38,6 +38,16 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
   const demandRows = levers.filter((l) => l.demand && l.dTRI > 0.005).sort((a, b) => b.dTRI - a.dTRI);
   const maxDtri = Math.max(0.001, ...demandRows.map((r) => r.dTRI));
   const barRef = shadow ?? Math.max(1, ...rows.map((r) => r.perTRI ?? 0));
+  // The bar encodes deal quality vs the shadow price: cheaper than it → longer + green,
+  // around it → yellow/orange, well above it → short + red.
+  const dealLen = (per: number) => Math.min(100, (barRef / per) * 50);   // at shadow → 50%, half → 100%
+  const dealColor = (per: number) => {
+    const ratio = per / barRef;
+    if (ratio <= 0.6) return '#66C2A5';   // green — a good deal
+    if (ratio <= 1.0) return '#FEE08B';   // yellow — mid
+    if (ratio <= 1.8) return '#FDAE61';   // orange — mid-high
+    return '#D53E4F';                      // red — spendy
+  };
 
   return (
     <div>
@@ -80,9 +90,10 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
         {infoCost && (
           <p style={{ fontSize: 11, opacity: 0.55, margin: '0 0 10px', lineHeight: 1.45 }}>
             From no policy at this China-restriction level: real $ per 0.1 of integrated trade-risk
-            bought down (shorter bar = cheaper). <b>Developing Round Top</b> (★) is an exogenous
-            strategic move whose $/TRI is a revealed read on the US government’s <i>shadow price of
-            security</i>; bars are scaled to it. Levers that don’t move the index here are omitted.
+            bought down — a <b>longer, greener bar = a better deal</b> (green cheap · yellow mid ·
+            orange dear · red spendy). <b>Developing Round Top</b> (★) is an exogenous strategic move
+            whose $/TRI is a revealed read on the US government’s <i>shadow price of security</i>;
+            bars are scaled to it. Levers that don’t move the index here are omitted.
           </p>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -98,7 +109,7 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
                 {r.name}{r.strategic && <span title="revealed shadow price of security" style={{ color: 'var(--accent)' }}> ★</span>}
               </span>
               <div style={{ height: 16, borderRadius: 4, background: 'var(--paper-2)', border: '1px solid var(--rule)', overflow: 'hidden' }}>
-                {r.perTRI != null && <div style={{ width: `${Math.min(100, (r.perTRI / barRef) * 100)}%`, height: '100%', background: r.strategic ? 'var(--accent)' : '#66C2A5', transition: 'width 0.15s' }} />}
+                {r.perTRI != null && <div style={{ width: `${dealLen(r.perTRI)}%`, height: '100%', background: dealColor(r.perTRI), transition: 'width 0.15s' }} />}
               </div>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textAlign: 'right' }}
                 title={r.perTRI != null ? `−${r.dTRI.toFixed(2)} TRI for +${musd(r.dCost)}` : 'no risk reduction here'}>

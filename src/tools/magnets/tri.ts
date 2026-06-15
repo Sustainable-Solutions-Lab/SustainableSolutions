@@ -44,11 +44,14 @@ export const TRI_WEIGHT: Record<string, number> = {
 };
 // The model resolves only 3 regions (US / China / RoW), so "allies" is one bucket —
 // but allied REE supply is actually spread across several countries (Australia,
-// Japan, Malaysia, EU…). We credit that diversity by treating the allied share as
-// N_ALLY ≈ equally-sized suppliers in the import HHI, so friendshoring to a diverse
-// bloc scores lower than single-source dependence. China stays ~1 (it IS one source).
-// Tunable; a fuller fix would disaggregate RoW into country-level trade in the model.
+// Japan, Malaysia, EU…), UNEVENLY (allied alloy + magnet are heavily Japan-
+// concentrated). The allied share's contribution to the import HHI is therefore
+// weighted by a real per-stage allied-country Herfindahl, computed from actual +
+// announced project capacities (see projects.ts). N_ALLY is only the fallback when
+// no country breakdown is supplied (≈ 4 equally-sized allied suppliers). China
+// stays ~1 (it IS one source).
 const N_ALLY = 4;
+const DEFAULT_ALLIED_HHI = 1 / N_ALLY;
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
@@ -58,7 +61,7 @@ export type Mix = { domestic: number; allied: number; china: number };
  * diOverride replaces the stage's domestic-reserve risk DI — used when a domestic
  * RESERVE has been developed (e.g. Round Top), so US production is no longer
  * reserve-poor and its DI should fall from the "no domestic deposits" default. */
-export function stageTRI(mix: Mix | undefined, stage: string, diOverride?: number): number {
+export function stageTRI(mix: Mix | undefined, stage: string, diOverride?: number, alliedHHI?: number): number {
   const d = clamp01(mix?.domestic ?? 0);
   const a = clamp01(mix?.allied ?? 0);
   const c = clamp01(mix?.china ?? 0);
@@ -67,8 +70,10 @@ export function stageTRI(mix: Mix | undefined, stage: string, diOverride?: numbe
   let hhi = 0;
   if (imp > 1e-6) {
     const sa = a / (a + c), sc = c / (a + c);
-    // allied share spread over N_ALLY diverse suppliers; China is a single source
-    hhi = (sa * sa) / N_ALLY + sc * sc;     // → as low as 1/N_ALLY (all-allied) … 1 (all-China)
+    // allied share weighted by the real allied-country concentration (Herfindahl);
+    // China is a single source. → allied_HHI (all-allied) … 1 (all-China).
+    const aH = alliedHHI ?? DEFAULT_ALLIED_HHI;
+    hhi = sa * sa * aH + sc * sc;
   }
   const di = diOverride ?? TRI_DI[stage] ?? 0;
   // imports weighted by concentration; domestic weighted by reserve risk; unmet = max
@@ -78,14 +83,14 @@ export function stageTRI(mix: Mix | undefined, stage: string, diOverride?: numbe
 // per-stage DI override carried on a scenario by a reserve-developing overlay
 const diOf = (sc: Scenario): Record<string, number> | undefined => (sc as any)._di;
 
-export function stageBreakdown(sc: Scenario) {
+export function stageBreakdown(sc: Scenario, alliedHHI?: Record<string, number>) {
   const di = diOf(sc);
   return TRI_STAGES.map((s) => {
     const mix = sc.us_supply?.[s.key];
     const d = clamp01(mix?.domestic ?? 0), a = clamp01(mix?.allied ?? 0), c = clamp01(mix?.china ?? 0);
     return {
       ...s,
-      tri: stageTRI(mix, s.key, di?.[s.key]),
+      tri: stageTRI(mix, s.key, di?.[s.key], alliedHHI?.[s.key]),
       reliance: Math.min(1, a + c),
       unmet: Math.max(0, 1 - d - Math.min(1, a + c)),
       domestic: d,
@@ -94,12 +99,12 @@ export function stageBreakdown(sc: Scenario) {
 }
 
 /** Value-weighted integrated TRI ∈ [0,1] across the four stages. */
-export function integratedTRI(sc: Scenario): number {
+export function integratedTRI(sc: Scenario, alliedHHI?: Record<string, number>): number {
   const di = diOf(sc);
   let num = 0, den = 0;
   for (const s of TRI_STAGES) {
     const w = TRI_WEIGHT[s.key] ?? 0;
-    num += w * stageTRI(sc.us_supply?.[s.key], s.key, di?.[s.key]);
+    num += w * stageTRI(sc.us_supply?.[s.key], s.key, di?.[s.key], alliedHHI?.[s.key]);
     den += w;
   }
   return den ? num / den : 0;

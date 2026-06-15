@@ -11,12 +11,13 @@ import { integratedTRI, stageBreakdown, riskColor } from './tri';
 
 const musd = (x: number) => `$${(x / 1000).toFixed(1)}B`;
 
-export default function TradeRiskPanel({ sc, levers }: {
+export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
   sc: Scenario;
   levers: { name: string; strategic: boolean; dTRI: number; dCost: number }[];
+  alliedHHI?: Record<string, number>;
 }) {
-  const stages = stageBreakdown(sc);
-  const tri = integratedTRI(sc);
+  const stages = stageBreakdown(sc, alliedHHI);
+  const tri = integratedTRI(sc, alliedHHI);
   // cost-effectiveness of each lever: real $ per 0.1 of integrated TRI bought down
   const rows = levers
     .map((l) => ({ ...l, perTRI: l.dTRI > 0.005 && l.dCost > 0 ? l.dCost / (l.dTRI / 0.1) : null }))
@@ -27,17 +28,23 @@ export default function TradeRiskPanel({ sc, levers }: {
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 26 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Trade-risk index</h2>
+        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>US trade-risk index</h2>
         <span style={{ font: '600 15px var(--font-mono)', color: riskColor(tri) }}>
           {tri.toFixed(2)} <span style={{ opacity: 0.5, fontWeight: 400, color: 'var(--ink)' }}>integrated · lower = more secure</span>
         </span>
       </div>
       <p style={{ fontSize: 11.5, opacity: 0.5, margin: '0 0 14px', lineHeight: 1.45 }}>
         Per stage: import-source concentration (HHI) × import reliance, plus a domestic-reserve risk
-        for the US-made share and a full weight on any unmet demand — after Cheng et al. (2025). The
+        for the US-made share and a full weight on any unmet demand — after Cheng et al. (2025) —
+        <b> demand-weighted across the 2026–2035 horizon</b> (period self-sufficiency, not a single-
+        year snapshot, so early-period relief from a stockpile or the recycling ramp counts). The
         integrated index is a value-weighted average. Note how a content mandate cuts risk at the
         <i> magnet</i> stage but pushes it upstream to oxide and ore, where the US has no active
         heavy-REE production today (domestic prospects like Round Top, TX are pre-commercial).
+        <b> Recycling’s benefit is threat-conditional:</b> at low restriction US-recovered oxide
+        flows to the cheaper global pool (little domestic gain), but under a severe China shock it
+        becomes a primary domestic feedstock — a resilience option that pays off mainly in the bad
+        states it insures against.
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>

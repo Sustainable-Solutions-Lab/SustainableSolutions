@@ -181,9 +181,34 @@ export function applyStockpile(sc: Scenario, stockpileKt: number): Scenario {
   const newW = unmet.reduce((a, u, t) => a + u * disc[t], 0);
   // discounted-weighted scaling of the shortage penalty (early unmet weighs most)
   const shortageScale = oldW > 1e-9 ? newW / oldW : 1;
+
+  // Credit the buffer in the (horizon-averaged) US trade-risk index: a US-held
+  // finished-magnet inventory removes import dependence for the fraction of period
+  // demand it covers, across the whole chain (a finished magnet embodies its ore /
+  // oxide / alloy). coverage = magnets drawn ÷ total period US magnet demand; we
+  // move that share of each stage's UNMET into the secure US-held ("domestic")
+  // bucket — capped per stage, so it only helps where there was a shortfall. This
+  // is why the stockpile now lowers the TRI (it buys down early-period unmet, which
+  // the period-average — unlike the old final-year snapshot — actually sees).
+  const mix = sc.path.us_mix;
+  let totDemand = 0;
+  for (let t = 0; t < n; t++)
+    totDemand += (mix.domestic?.[t] ?? 0) + (mix.allied?.[t] ?? 0)
+      + (mix.china?.[t] ?? 0) + (unmet[t] + draw[t]);   // unmet[t]+draw[t] = original unmet
+  const coverage = totDemand > 1e-9 ? drawn / totDemand : 0;
+  const usSupply: Record<string, { domestic: number; allied: number; china: number }> = {};
+  for (const stage in sc.us_supply) {
+    const m = sc.us_supply[stage];
+    const d = m.domestic ?? 0, a = m.allied ?? 0, c = m.china ?? 0;
+    const stageUnmet = Math.max(0, 1 - d - a - c);
+    const credit = Math.min(coverage, stageUnmet);
+    usSupply[stage] = { domestic: d + credit, allied: a, china: c };
+  }
+
   return {
     ...sc,
     kpis: { ...sc.kpis, us_unmet_kt: Math.max(0, (sc.kpis.us_unmet_kt ?? 0) - drawn) },
+    us_supply: usSupply,
     us_cost: {
       ...sc.us_cost,
       shortage: (sc.us_cost.shortage ?? 0) * shortageScale,

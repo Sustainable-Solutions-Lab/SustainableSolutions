@@ -9,6 +9,7 @@
  */
 
 import { useState } from 'react';
+import { facilityBreakdown, type Stage } from './projects';
 
 type Flow = { from: string; to: string; value: number };
 type FlowMap = Record<string, Flow[]>;
@@ -33,6 +34,10 @@ const COLS = [
   { label: 'Demand', stage: 'consumption', iface: null,
     desc: 'Finished-magnet consumption by region.' },
 ];
+// Sankey material interface → the producing project stage (for the facility hover).
+const IFACE_TO_STAGE: Record<string, Stage> = {
+  concentrate: 'mining', oxide: 'separation', alloy: 'alloy', magnet: 'magnet',
+};
 const W = 900, H = 460, PADX = 64, PADY = 46, NODE_W = 16;
 const innerH = H - 2 * PADY;
 const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
@@ -42,9 +47,26 @@ const outSum = (fl: FlowMap, iface: string, r: string) =>
 const inSum = (fl: FlowMap, iface: string, r: string) =>
   (fl[iface] ?? []).filter((f) => f.to === r).reduce((a, f) => a + f.value, 0);
 
-export default function FlowDiagram({ flows }: { flows: FlowsByClass }) {
+export default function FlowDiagram({ flows, active, scale = {} }: {
+  flows: FlowsByClass; active: Set<string>; scale?: Record<string, number>;
+}) {
   const [cls, setCls] = useState<'total' | 'heavy' | 'light'>('total');
   const fl = flows[cls];
+
+  // Hover text for a stage×region node: the real projects that make it up, each with
+  // its share of the stage total (so they sum to the bar's % — e.g. "Lynas Seadrift — 30%").
+  const nodeTitle = (i: number, r: string, h: number) => {
+    const barPct = Math.round((h / innerH) * 100);
+    const stage = IFACE_TO_STAGE[COLS[i].iface ?? ''];
+    if (!stage) return `${r} — ${barPct}% of finished-magnet demand`;
+    const head = `${r} · ${COLS[i].label} from ${stage} — ${barPct}% of this stage`;
+    const facs = facilityBreakdown(stage, r as 'USA' | 'China' | 'RoW', active, scale, cls === 'total' ? undefined : cls);
+    if (facs.length === 0)
+      return `${head}\n  ${r === 'China' ? 'residual balance (China is the model’s backstop)' : 'no listed ex-China facilities'}`;
+    const tot = facs.reduce((a, f) => a + f.cap, 0) || 1;
+    const lines = facs.map((f) => `  ${f.name} (${f.country}) — ${Math.round((f.cap / tot) * barPct)}%`);
+    return `${head}\n${lines.join('\n')}`;
+  };
   // Column values: bars sized by what each region sends ONWARD (outflows), so
   // bars and ribbons are consistent. Demand = magnet received (inflows).
   const colVals = COLS.map((c) =>
@@ -122,7 +144,9 @@ export default function FlowDiagram({ flows }: { flows: FlowsByClass }) {
             {REGIONS.map((r) => {
               const s = segY[i][r];
               if (s.y1 - s.y0 < 0.6) return null;
-              return <rect key={r} x={colX[i]} y={s.y0} width={NODE_W} height={s.y1 - s.y0} fill={REGION_COLOR[r]} stroke="var(--paper)" strokeWidth={1} />;
+              return <rect key={r} x={colX[i]} y={s.y0} width={NODE_W} height={s.y1 - s.y0} fill={REGION_COLOR[r]} stroke="var(--paper)" strokeWidth={1} style={{ cursor: 'help' }}>
+                <title>{nodeTitle(i, r, s.y1 - s.y0)}</title>
+              </rect>;
             })}
             {REGIONS.map((r) => {
               const s = segY[i][r], h = s.y1 - s.y0;

@@ -36,8 +36,12 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
     .filter((r) => r.perTRI != null && r.perTRI! <= 10000)   // drop deals worse than $10B / 0.1 TRI
     .sort((a, b) => (a.perTRI! - b.perTRI!));
   const shadow = rows.find((r) => r.strategic)?.perTRI ?? null;
-  // demand-side levers: no supply cost, shown with their TRI reduction valued at the shadow price
-  const demandRows = levers.filter((l) => l.demand && l.dTRI > 0.005).sort((a, b) => b.dTRI - a.dTRI);
+  // No-US-cost levers: risk reduction the model doesn't charge US CAPITAL for — demand-side
+  // levers AND policy sourcing shifts (friendshoring moves the import mix China→allies, which
+  // carries no US-located build cost, so the $/TRI ranking above can't price it). Shown with
+  // their TRI reduction valued at the shadow price.
+  const noCostRows = levers.filter((l) => l.dTRI > 0.005 && (l.demand || l.dCost <= 0))
+    .sort((a, b) => b.dTRI - a.dTRI);
   // FIXED scale: a $5B/0.1-TRI lever fills the bar; colour by absolute $ (green cheap →
   // red spendy), so bars are comparable across scenarios. Deals worse than $10B are hidden
   // (so e.g. a very pricey stockpile may not appear).
@@ -139,12 +143,13 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
             </div>
           ))}
         </div>
-        {demandRows.length > 0 && (
+        {noCostRows.length > 0 && (
           <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--rule)' }}>
             <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 7, lineHeight: 1.4 }}>
-              Demand-side levers — TRI your current demand settings already reduce (no modeled supply cost){shadow != null ? ', valued at the shadow price (what you’d otherwise pay to buy the same security)' : ''}:
+              No US-capital levers — risk reduction the model doesn’t charge US build cost for (demand-side
+              levers + allied sourcing shifts like friendshoring){shadow != null ? ', valued at the shadow price (what you’d otherwise pay to buy the same security)' : ''}:
             </div>
-            {demandRows.map((r) => (
+            {noCostRows.map((r) => (
               <div key={r.name} style={{ display: 'grid', gridTemplateColumns: '128px 1fr 96px', gap: 10, alignItems: 'center', fontSize: 12, marginBottom: 5 }}>
                 <span style={{ fontWeight: 600, opacity: 0.85 }}>{r.name}</span>
                 <div style={{ height: 16, borderRadius: 4, background: 'var(--paper-2)', border: '1px solid var(--rule)', overflow: 'hidden' }}>

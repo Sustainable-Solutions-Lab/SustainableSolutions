@@ -348,7 +348,7 @@ export default function MagnetExplorer() {
         <main>
           {/* 1 — the whole chain first, so users learn the stages + connections.
               Flows are real-world-anchored (selected projects locked in, China residual). */}
-          <FlowDiagram flows={rwFlows} />
+          <FlowDiagram flows={rwFlows} active={activeProjects} />
 
           {/* 2 — how that chain meets US magnet demand over time + the US ramp
               (desktop only — trimmed on mobile for a leaner essentials view) */}

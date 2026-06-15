@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
-import { integratedTRI, riskColor } from './tri';
+import { integratedTRI, stageBreakdown, riskColor } from './tri';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
 // sheet rather than a sticky sidebar that would overlay the plots.
@@ -112,6 +112,18 @@ function Slider({ label, value, max, min = 0, onChange, fmt, desc }: {
   );
 }
 
+function ScoreCard({ label, value, sub, valueColor, small }: {
+  label: string; value: string; sub: string; valueColor: string; small?: boolean;
+}) {
+  return (
+    <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px', background: 'var(--paper)' }}>
+      <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
+      <div style={{ font: `600 ${small ? 15 : 24}px var(--font-mono)`, color: valueColor, lineHeight: 1.2 }}>{value}</div>
+      <div style={{ font: '400 9.5px var(--font-mono)', opacity: 0.5, marginTop: 5, letterSpacing: '0.03em' }}>{sub}</div>
+    </div>
+  );
+}
+
 export default function MagnetExplorer() {
   const [make, setMake] = useState(0);       // component prong: US-made magnets
   const [source, setSource] = useState(0);   // mineral prong: non-China sourcing
@@ -218,6 +230,15 @@ export default function MagnetExplorer() {
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [china, rcost, demand, alliedHHIMap, activeProjects]);
+
+  // Story scorecard inputs: the tightest chokepoint (highest-TRI stage) and the most
+  // cost-effective lever (lowest $ per 0.1-TRI) — the two things the tool exists to surface.
+  const stagesTRI = stageBreakdown(scR, alliedHHIMap);
+  const chokepoint = stagesTRI.reduce((a, b) => (b.tri > a.tri ? b : a), stagesTRI[0]);
+  const bestLever = securityLevers
+    .filter((l) => !l.demand && l.dTRI > 0.005 && l.dCost > 0)
+    .map((l) => ({ ...l, perTRI: l.dCost / (l.dTRI / 0.1) }))
+    .sort((a, b) => a.perTRI - b.perTRI)[0];
 
   return (
     <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: isMobile ? '20px 16px 92px' : '28px 20px 0', color: 'var(--ink)' }}>
@@ -362,23 +383,15 @@ export default function MagnetExplorer() {
             </div>
           </section>
 
-          {/* 6 — headline KPIs last, as a summary scorecard */}
+          {/* 6 — story scorecard: headline risk, the tightest chokepoint, the best
+              lever to buy it down, plus import dependence + unmet. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 26 }}>
-            {KPIS.map(({ k, label, sub, fmt, lowerBetter, help }) => {
-              const val = sc.kpis[k]; const base = BASE.kpis[k]; const delta = val - base;
-              const better = lowerBetter ? delta < 0 : delta > 0;
-              const dColor = Math.abs(delta) < 1e-6 ? 'var(--ink)' : better ? 'var(--brand-green)' : WORSE;
-              return (
-                <div key={k} title={help} style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px', background: 'var(--paper)' }}>
-                  <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
-                  <div style={{ font: '600 24px var(--font-mono)' }}>{fmt(val)}</div>
-                  <div style={{ font: '500 11px var(--font-mono)', color: dColor, marginTop: 4 }}>
-                    {Math.abs(delta) < 1e-6 ? '— baseline' : `${delta > 0 ? '+' : ''}${fmt(delta)} vs baseline`}
-                  </div>
-                  <div style={{ font: '400 9.5px var(--font-mono)', opacity: 0.4, marginTop: 3, letterSpacing: '0.03em' }}>{sub}</div>
-                </div>
-              );
-            })}
+            <ScoreCard label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)} sub="0 secure → 1 exposed" />
+            <ScoreCard label="Tightest chokepoint" value={chokepoint.label} valueColor={riskColor(chokepoint.tri)} small sub={`stage TRI ${chokepoint.tri.toFixed(2)}`} />
+            <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : 'none yet'} valueColor="var(--ink)" small
+              sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : 'raise the China restriction'} />
+            <ScoreCard label="US magnets imported" value={pct(sc.kpis.us_import_pct)} valueColor="var(--ink)" sub="2035" />
+            <ScoreCard label="US unmet demand" value={`${usUnmet.toFixed(0)} kt`} valueColor={usUnmet > 0.05 ? WORSE : 'var(--ink)'} sub="2026–35 cumulative" />
           </div>
         </main>
       </div>

@@ -19,9 +19,13 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
   const stages = stageBreakdown(sc, alliedHHI);
   const tri = integratedTRI(sc, alliedHHI);
   // cost-effectiveness of each lever: real $ per 0.1 of integrated TRI bought down
+  // Only show levers that actually buy a measurable security gain at a real cost —
+  // a lever that doesn't move the trade-risk index here is omitted rather than shown
+  // as a dash (e.g. a US-make mandate when demand is already largely met onshore).
   const rows = levers
     .map((l) => ({ ...l, perTRI: l.dTRI > 0.005 && l.dCost > 0 ? l.dCost / (l.dTRI / 0.1) : null }))
-    .sort((a, b) => (a.perTRI ?? Infinity) - (b.perTRI ?? Infinity));
+    .filter((r) => r.perTRI != null)
+    .sort((a, b) => (a.perTRI! - b.perTRI!));
   const maxPer = Math.max(1, ...rows.map((r) => r.perTRI ?? 0));
   const shadow = rows.find((r) => r.strategic)?.perTRI ?? null;
 
@@ -66,9 +70,17 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
           From no policy at this China-restriction level: real $ per 0.1 of integrated trade-risk
           bought down (shorter bar = cheaper security). <b>Developing Round Top</b> (★) is an
           exogenous strategic move — its $/TRI is a revealed read on the US government’s
-          <i> shadow price of security</i>; levers cheaper than it beat what the US is already buying.
+          <i> shadow price of security</i>. Costs of comparable security gains by other levers are
+          shown below; levers that don’t move the index here are omitted.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {rows.length === 0 && (
+            <p style={{ fontSize: 11.5, opacity: 0.5, margin: 0, lineHeight: 1.45 }}>
+              At this threat level no lever yet buys a measurable trade-risk reduction — the US chain
+              already meets demand without one. Raise the China-restriction slider to see security
+              become worth paying for.
+            </p>
+          )}
           {rows.map((r) => (
             <div key={r.name} style={{ display: 'grid', gridTemplateColumns: '128px 1fr 96px', gap: 10, alignItems: 'center', fontSize: 12 }}>
               <span style={{ fontWeight: 600, opacity: 0.85 }}>
@@ -87,7 +99,7 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
         {shadow != null && (
           <p style={{ fontSize: 10.5, opacity: 0.45, margin: '8px 0 0', lineHeight: 1.4 }}>
             ★ Round Top ≈ {musd(shadow)} per 0.1 TRI — a revealed-preference estimate of the US
-            government’s current shadow price of security. Levers below that line are cheaper deals.
+            government’s current shadow price of security.
           </p>
         )}
       </div>

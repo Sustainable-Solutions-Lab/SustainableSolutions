@@ -124,49 +124,25 @@ export default function PathwayCharts({ sc, years, usDemandMax, hiCoercShare }: 
     return <path key={s.label} d={d} fill={s.hatchId ? `url(#${s.hatchId})` : s.color} fillOpacity={s.hatchId ? 1 : 0.85} />;
   });
 
-  // chart 2: US capacity by stage, vs US magnet demand reference
-  const cap = STAGE.map((s) => ({ ...s, values: sc.path.us_cap[s.key] ?? [] }));
-
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 16, background: 'var(--paper)', marginTop: 22 }}>
-      <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 10px' }}>Pathways to 2035</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>How US demand for finished magnets is met</div>
-          <Frame years={years} ymax={ymax} ylabel="kt magnet / yr">
-            {areas}
-            <path d={demandLine} fill="none" stroke="var(--ink)" strokeWidth={1.5} strokeDasharray="4 3" />
-          </Frame>
-          <Legend items={[...MIX,
-            ...(hasStock ? [{ label: 'From stockpile', color: STOCK }] : []),
-            ...(hasStd ? [{ label: 'Unmet — standard', color: UNMET_STD, hatch: true }] : []),
-            { label: 'Unmet — high-coercivity', color: UNMET, hatch: true },
-            { label: 'US demand', color: 'var(--ink)', dash: true }]} />
-        </div>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>US capacity build-out by stage</div>
-          <Frame years={years} ymax={ymax} ylabel="kt / yr">
-            {cap.map((s) => (
-              <path key={s.key} fill="none" stroke={s.color} strokeWidth={2}
-                d={s.values.map((v, i) => `${i === 0 ? 'M' : 'L'}${xi(i)},${yv(v)}`).join(' ')} />
-            ))}
-            <path d={demandLine} fill="none" stroke="var(--ink)" strokeWidth={1.5} strokeDasharray="4 3" />
-          </Frame>
-          <Legend items={[...STAGE, { label: 'US demand', color: 'var(--ink)', dash: true }]} />
-        </div>
-      </div>
+      <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 10px' }}>How US demand for magnets is met, 2026–2035</h2>
+      <Frame years={years} ymax={ymax} ylabel="kt magnet / yr">
+        {areas}
+        <path d={demandLine} fill="none" stroke="var(--ink)" strokeWidth={1.5} strokeDasharray="4 3" />
+      </Frame>
+      <Legend items={[...MIX,
+        ...(hasStock ? [{ label: 'From stockpile', color: STOCK }] : []),
+        ...(hasStd ? [{ label: 'Unmet — standard', color: UNMET_STD, hatch: true }] : []),
+        { label: 'Unmet — high-coercivity', color: UNMET, hatch: true },
+        { label: 'US demand', color: 'var(--ink)', dash: true }]} />
       <p style={{ fontSize: 11, opacity: 0.55, marginTop: 8, lineHeight: 1.5 }}>
-        Perfect-foresight build-out, 2026–2035 (capacity is lead-time-gated but plans against known
-        future demand). <b>Left:</b> how US demand for <i>finished magnets</i> is met (not oxide or
-        alloy) — the colored stack is the US supply mix, the hatched band on top is unmet demand, and
-        the dashed line (the stack total) is US magnet demand. Unmet is split by coercivity: a Dy/Tb
-        shortage hits the <span style={{ color: UNMET }}>high-coercivity</span> grades (EV traction,
-        wind, defense) first, since low-coercivity magnets can still be made without scarce Dy/Tb.
-        <b> Right:</b> US online capacity by
-        stage. Capacity is built in whole modules, so the last one can overshoot demand — capacity
-        above the demand line is lumpy/under-utilized headroom, not exports (the Sankey shows the
-        actual flows). It rises mainly at the magnet stage: under the IRA-style content mandate only
-        finished magnets must be US-made, so oxide/alloy can come from allies.
+        Each year, how US demand for <i>finished magnets</i> (the dashed line = the stack total) is met
+        — by <span style={{ color: '#66C2A5' }}>US-made</span>, <span style={{ color: '#FDAE61' }}>allied</span>,
+        and <span style={{ color: '#D53E4F' }}>Chinese</span> supply — with any shortfall hatched on top.
+        Unmet is split by coercivity: a Dy/Tb shortage hits the <span style={{ color: UNMET }}>high-
+        coercivity</span> grades (EV traction, wind, defense) first. Perfect-foresight, lead-time-gated
+        build-out.
       </p>
     </section>
   );

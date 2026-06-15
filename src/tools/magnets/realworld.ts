@@ -11,7 +11,7 @@
  * is replaced. Toggling projects on/off (Round Top, Mt Weld, Lynas, …) moves the bars.
  */
 import type { Flow, Scenario } from './interp';
-import { regionalCapacity, type Stage } from './projects';
+import { regionalCapacity, regionalCapacityRe, type Stage } from './projects';
 
 const REGIONS = ['China', 'RoW', 'USA'] as const;
 type Region = (typeof REGIONS)[number];
@@ -150,6 +150,45 @@ export function reconcileUsMix(sc: Scenario, active: Set<string>, scale: Record<
     for (const k of ['china', 'allied', 'unmet']) {
       if (toReduce <= 1e-9) break;
       const r = Math.min(out[k][t], toReduce); out[k][t] -= r; toReduce -= r;
+    }
+  }
+  return out;
+}
+
+// Nd/Pr (light) vs Dy/Tb (heavy) oxide per kt magnet — for class-specific US demand.
+const CLASS_INTENSITY: Record<'light' | 'heavy', number> = { light: 0.326, heavy: 0.034 };
+function rampedCapacityRe(stage: Stage, active: Set<string>, cls: 'light' | 'heavy', scale: Record<string, number>): Reg {
+  const c = regionalCapacityRe(stage, active, cls, scale) as Reg;
+  const r = (stage === 'mining' ? 0.85 : 0.6);
+  return { USA: c.USA * r, China: c.China * r, RoW: c.RoW * r };
+}
+
+/** Reconcile the light/heavy us_supply with class-appropriate project floors: heavy-REE
+ * US projects (Round Top, Lynas Seadrift) floor the heavy class, light projects (MP,
+ * Energy Fuels) the light class; the magnet stage uses all US magnet capacity. Keeps the
+ * split consistent with the project selection. */
+export function reconcileUsSupplyRe(sc: Scenario, active: Set<string>, scale: Record<string, number> = {}) {
+  const base = sc.us_supply_re;
+  if (!base) return undefined;
+  const usMag = usMagnetDemand(sc);
+  const recon = (m: any, req: number, usCap: number) => {
+    const floor = req > 1e-9 ? Math.min(1, usCap / req) : 0;
+    const dom = Math.max(m?.domestic ?? 0, floor);
+    const rest = Math.max(0, 1 - dom);
+    const imp = (m?.allied ?? 0) + (m?.china ?? 0);
+    return { domestic: dom, allied: imp > 1e-9 ? (rest * (m?.allied ?? 0)) / imp : 0, china: imp > 1e-9 ? (rest * (m?.china ?? 0)) / imp : 0 };
+  };
+  const out: any = { light: {}, heavy: {} };
+  for (const cls of ['light', 'heavy'] as const) {
+    const intensity = CLASS_INTENSITY[cls];
+    for (const stage of ['mining', 'separation', 'alloy', 'magnet']) {
+      const m = base[cls]?.[stage];
+      if (stage === 'magnet') {
+        out[cls][stage] = recon(m, usMag, (regionalCapacity('magnet', active, scale) as Reg).USA * 0.6);
+      } else {
+        const fac = stage === 'mining' ? intensity / AVG_RECOVERY : intensity;
+        out[cls][stage] = recon(m, usMag * fac, rampedCapacityRe(stage as Stage, active, cls, scale).USA);
+      }
     }
   }
   return out;

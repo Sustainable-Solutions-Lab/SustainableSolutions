@@ -110,6 +110,49 @@ export function integratedTRI(sc: Scenario, alliedHHI?: Record<string, number>):
   return den ? num / den : 0;
 }
 
+// ── Light (Nd/Pr) vs heavy (Dy/Tb) split ─────────────────────────────────────
+// The US + allies DO have light-REE reserves (Mountain Pass, Mt Weld…), so the
+// light-mining reserve risk is low; heavy-REE (Dy/Tb) is the real chokepoint (ion-
+// adsorption clay, ~China/Myanmar; no US/ally reserves), so it keeps the high DI.
+const LIGHT_MINING_DI = 0.25;
+// Integrate the two classes weighting HEAVY higher — it's the binding, strategic
+// constraint even though it's a small mass fraction. Tunable, paper-relevant.
+export const RE_CLASS_WEIGHT = { heavy: 0.6, light: 0.4 };
+
+type SupplyMap = Record<string, Mix> | undefined;
+function breakdownOf(us: SupplyMap, alliedHHI?: Record<string, number>, di?: Record<string, number>) {
+  return TRI_STAGES.map((s) => {
+    const mix = us?.[s.key];
+    const d = clamp01(mix?.domestic ?? 0), a = clamp01(mix?.allied ?? 0), c = clamp01(mix?.china ?? 0);
+    return { ...s, tri: stageTRI(mix, s.key, di?.[s.key], alliedHHI?.[s.key]),
+      reliance: Math.min(1, a + c), unmet: Math.max(0, 1 - d - Math.min(1, a + c)), domestic: d };
+  });
+}
+function integratedOf(us: SupplyMap, alliedHHI?: Record<string, number>, di?: Record<string, number>) {
+  let num = 0, den = 0;
+  for (const s of TRI_STAGES) { const w = TRI_WEIGHT[s.key] ?? 0; num += w * stageTRI(us?.[s.key], s.key, di?.[s.key], alliedHHI?.[s.key]); den += w; }
+  return den ? num / den : 0;
+}
+const classDI = (sc: Scenario, cls: 'light' | 'heavy') => {
+  const di = diOf(sc) ?? {};
+  return cls === 'light' ? { ...di, mining: LIGHT_MINING_DI } : di;  // light: US has reserves
+};
+const classSupply = (sc: Scenario, cls: 'light' | 'heavy'): SupplyMap =>
+  sc.us_supply_re?.[cls] ?? sc.us_supply;   // fall back to aggregate if the grid lacks the split
+
+export function stageBreakdownClass(sc: Scenario, cls: 'light' | 'heavy', alliedHHI?: Record<string, number>) {
+  return breakdownOf(classSupply(sc, cls), alliedHHI, sc.us_supply_re ? classDI(sc, cls) : diOf(sc));
+}
+export function classTRI(sc: Scenario, cls: 'light' | 'heavy', alliedHHI?: Record<string, number>): number {
+  return integratedOf(classSupply(sc, cls), alliedHHI, sc.us_supply_re ? classDI(sc, cls) : diOf(sc));
+}
+/** Integrated TRI across both RE classes (heavy weighted higher). Falls back to the
+ * aggregate index when the grid has no light/heavy split. */
+export function integratedRE(sc: Scenario, alliedHHI?: Record<string, number>): number {
+  if (!sc.us_supply_re) return integratedTRI(sc, alliedHHI);
+  return RE_CLASS_WEIGHT.heavy * classTRI(sc, 'heavy', alliedHHI) + RE_CLASS_WEIGHT.light * classTRI(sc, 'light', alliedHHI);
+}
+
 // green (secure) → amber → red (exposed)
 export function riskColor(tri: number): string {
   const t = clamp01(tri);

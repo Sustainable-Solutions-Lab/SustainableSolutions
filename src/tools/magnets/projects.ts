@@ -139,6 +139,20 @@ export function regionalCapacity(stage: Stage, active: Set<string>, scale: Recor
   return out;
 }
 
+/** Class-specific US/China/RoW capacity at a stage: heavy-REE projects (ion-clay,
+ * Round Top, Lynas Seadrift…) count toward 'heavy', the rest toward 'light'. Used to
+ * floor the light vs heavy trade-risk index separately (magnet stage uses the
+ * element-agnostic regionalCapacity instead). */
+export function regionalCapacityRe(stage: Stage, active: Set<string>, cls: 'light' | 'heavy', scale: Record<string, number> = {}): Record<'USA' | 'China' | 'RoW', number> {
+  const out: Record<'USA' | 'China' | 'RoW', number> = { USA: 0, China: 0, RoW: 0 };
+  for (const p of PROJECTS) {
+    if (p.stage !== stage || !active.has(p.id)) continue;
+    if ((cls === 'heavy') !== !!p.heavy) continue;   // heavy class ⟷ heavy-flagged projects
+    out[REGION_OF_BLOC[p.bloc]] += p.capacityKt * (scale[p.id] ?? 1);
+  }
+  return out;
+}
+
 /** Default selection = the realistic (operating + under-construction) projects. */
 export const DEFAULT_ACTIVE = new Set(PROJECTS.filter(isRealistic).map((p) => p.id));
 export const ALL_IDS = new Set(PROJECTS.map((p) => p.id));

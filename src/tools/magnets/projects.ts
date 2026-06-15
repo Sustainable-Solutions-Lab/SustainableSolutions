@@ -142,3 +142,12 @@ export function regionalCapacity(stage: Stage, active: Set<string>, scale: Recor
 /** Default selection = the realistic (operating + under-construction) projects. */
 export const DEFAULT_ACTIVE = new Set(PROJECTS.filter(isRealistic).map((p) => p.id));
 export const ALL_IDS = new Set(PROJECTS.map((p) => p.id));
+
+// Operating plants are ALWAYS included (they won't stop operating), so they're not
+// in the toggle menu. Only the uncertain future supply (under construction / planned)
+// is selectable; under-construction defaults on, planned defaults off.
+export const OPERATING_IDS = new Set(PROJECTS.filter((p) => p.status === 'operating').map((p) => p.id));
+export const FUTURE_PROJECTS = PROJECTS.filter((p) => p.status === 'construction' || p.status === 'planned');
+export const DEFAULT_FUTURE = new Set(PROJECTS.filter((p) => p.status === 'construction').map((p) => p.id));
+/** The full active set the model overlay sees: operating (always) + chosen future. */
+export const activeSet = (future: Set<string>): Set<string> => new Set([...OPERATING_IDS, ...future]);

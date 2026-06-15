@@ -26,8 +26,11 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
     .map((l) => ({ ...l, perTRI: l.dTRI > 0.005 && l.dCost > 0 ? l.dCost / (l.dTRI / 0.1) : null }))
     .filter((r) => r.perTRI != null)
     .sort((a, b) => (a.perTRI! - b.perTRI!));
-  const maxPer = Math.max(1, ...rows.map((r) => r.perTRI ?? 0));
   const shadow = rows.find((r) => r.strategic)?.perTRI ?? null;
+  // Anchor the bar scale to the shadow price (Round Top), not the largest lever, so
+  // that changing one lever — e.g. recycling under a high US-recycling-cost multiplier
+  // — no longer rescales every other bar and makes them look cheaper/dearer.
+  const barRef = shadow ?? Math.max(1, ...rows.map((r) => r.perTRI ?? 0));
 
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 26 }}>
@@ -87,7 +90,7 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
                 {r.name}{r.strategic && <span title="revealed shadow price of security" style={{ color: 'var(--accent)' }}> ★</span>}
               </span>
               <div style={{ height: 16, borderRadius: 4, background: 'var(--paper-2)', border: '1px solid var(--rule)', overflow: 'hidden' }}>
-                {r.perTRI != null && <div style={{ width: `${Math.min(100, (r.perTRI / maxPer) * 100)}%`, height: '100%', background: r.strategic ? 'var(--accent)' : '#66C2A5', transition: 'width 0.15s' }} />}
+                {r.perTRI != null && <div style={{ width: `${Math.min(100, (r.perTRI / barRef) * 100)}%`, height: '100%', background: r.strategic ? 'var(--accent)' : '#66C2A5', transition: 'width 0.15s' }} />}
               </div>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textAlign: 'right' }}
                 title={r.perTRI != null ? `−${r.dTRI.toFixed(2)} TRI for +${musd(r.dCost)}` : 'no risk reduction here'}>

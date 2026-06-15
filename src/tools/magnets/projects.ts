@@ -94,17 +94,6 @@ export const PROJECTS: Project[] = [
   { id: 'noveon_rec', name: 'Noveon (recycling)', stage: 'recycling', country: 'United States', bloc: 'us', capacityKt: 3, status: 'operating', note: 'Closed-loop sintered-magnet recycling, TX.' },
   { id: 'cyclic', name: 'Cyclic Materials', stage: 'recycling', country: 'United States', bloc: 'us', capacityKt: 3, status: 'construction', note: 'EoL magnet recycling (US/Canada).' },
   { id: 'hypromag', name: 'HyProMag', stage: 'recycling', country: 'United Kingdom', bloc: 'allied', capacityKt: 2, status: 'construction', note: 'HPMS hydrogen recycling (UK + US).' },
-
-  // CHINA incumbents — included so the supply-chain Sankey's regional shares are
-  // complete (China is the residual backstop). Representative of China's dominant
-  // share at each stage (mine ~60%, separation/alloy/magnet ~85–90%); excluded from
-  // the allied HHI. Capacities are illustrative and meant for review.
-  { id: 'cn_bayan_obo', name: 'Bayan Obo + Sichuan', stage: 'mining', country: 'China', bloc: 'china', capacityKt: 85, status: 'operating', heavy: false, note: 'China’s light-REE mines (Bayan Obo, Maoniuping).' },
-  { id: 'cn_ionclay', name: 'S. China / Myanmar ion-clay', stage: 'mining', country: 'China', bloc: 'china', capacityKt: 28, status: 'operating', heavy: true, note: 'Ion-adsorption clay — the dominant heavy-REE (Dy/Tb) source.' },
-  { id: 'cn_sep', name: 'China separation', stage: 'separation', country: 'China', bloc: 'china', capacityKt: 230, status: 'operating', heavy: true, note: 'China solvent-extraction — ~85–90% of world separation.' },
-  { id: 'cn_alloy', name: 'China alloy/metal', stage: 'alloy', country: 'China', bloc: 'china', capacityKt: 240, status: 'operating', note: 'China metal + strip-cast — dominant.' },
-  { id: 'cn_magnet', name: 'China magnets', stage: 'magnet', country: 'China', bloc: 'china', capacityKt: 220, status: 'operating', note: 'China sintered NdFeB — ~90% of world magnet output.' },
-  { id: 'cn_recycle', name: 'China recycling', stage: 'recycling', country: 'China', bloc: 'china', capacityKt: 22, status: 'operating', note: 'China EoL + swarf recycling — the largest today.' },
 ];
 
 // ── Country-level allied-import HHI per stage ────────────────────────────────

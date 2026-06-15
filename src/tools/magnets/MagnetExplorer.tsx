@@ -1,6 +1,20 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
-import { integratedTRI } from './tri';
+import { integratedTRI, riskColor } from './tri';
+
+// Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
+// sheet rather than a sticky sidebar that would overlay the plots.
+function useIsMobile(): boolean {
+  const [m, setM] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 720px)');
+    const on = () => setM(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return m;
+}
 
 // Exogenous US-self-sufficiency reshoring costs ($M NPV), grounded in the model's
 // per-stage US costs (separation ~$0.5B partial → ~$1.2B for ~90%; alloy ~$0.3B →
@@ -137,6 +151,9 @@ export default function MagnetExplorer() {
   const realCost = (s: typeof sc) => REAL_COST_KEYS.reduce((a, [k]) => a + Math.max(0, s.us_cost[k] ?? 0), 0);
   const usCostReal = realCost(sc);
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
+  const isMobile = useIsMobile();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const tri = integratedTRI(sc, alliedHHIMap);   // live readout for the mobile chip
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
   // lever buys in integrated trade-risk reduction per real dollar (TRI per $).
@@ -166,7 +183,7 @@ export default function MagnetExplorer() {
   }, [china, rcost, demand, alliedHHIMap]);
 
   return (
-    <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: '28px 20px 0', color: 'var(--ink)' }}>
+    <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: isMobile ? '20px 16px 92px' : '28px 20px 0', color: 'var(--ink)' }}>
       <header style={{ marginBottom: 24 }}>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.08em', color: 'var(--accent)', marginBottom: 8 }}>
           INTERACTIVE MODEL · WORK IN PROGRESS
@@ -188,8 +205,16 @@ export default function MagnetExplorer() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 320px) 1fr', gap: 28, alignItems: 'start' }}
         className="magnet-grid">
-        <aside style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', position: 'sticky', top: 72 }}>
-          <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 16px' }}>Scenario</h2>
+        <aside style={isMobile
+          ? { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60, maxHeight: '85vh', overflowY: 'auto', background: 'var(--paper)', borderRadius: '16px 16px 0 0', borderTop: '1px solid var(--rule-strong)', padding: '0 18px 40px', transform: sheetOpen ? 'translateY(0)' : 'translateY(110%)', transition: 'transform 0.28s ease', boxShadow: '0 -8px 30px rgba(0,0,0,0.28)' }
+          : { border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', position: 'sticky', top: 72 }}>
+          {isMobile && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1, background: 'var(--paper)', padding: '12px 0 10px', borderBottom: '1px solid var(--rule)' }}>
+              <span style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6 }}>Scenario</span>
+              <button onClick={() => setSheetOpen(false)} style={{ font: '600 12px var(--font-mono)', color: 'var(--accent)', background: 'transparent', border: '1px solid var(--rule-strong)', borderRadius: 6, padding: '6px 14px', cursor: 'pointer' }}>Done</button>
+            </div>
+          )}
+          <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 16px', display: isMobile ? 'none' : 'block' }}>Scenario</h2>
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 10px' }}>Policy — IRA two prongs</div>
           <Slider label="US-made magnets (reshore)" value={make} max={AXES.makeMax} onChange={setMake} fmt={(v) => pct(v * 100)}
@@ -225,13 +250,14 @@ export default function MagnetExplorer() {
           {/* 1 — the whole chain first, so users learn the stages + connections */}
           <FlowDiagram sc={sc} />
 
-          {/* 2 — how that chain meets US magnet demand over time + the US ramp */}
-          <PathwayCharts sc={sc} years={YEARS} hiCoercShare={demand.hiCoercShare}
-            usDemandMax={US_DEMAND_SHARE * Math.max(...DEMAND_KT_REF) * 1.45} />
+          {/* 2 — how that chain meets US magnet demand over time + the US ramp
+              (desktop only — trimmed on mobile for a leaner essentials view) */}
+          {!isMobile && <PathwayCharts sc={sc} years={YEARS} hiCoercShare={demand.hiCoercShare}
+            usDemandMax={US_DEMAND_SHARE * Math.max(...DEMAND_KT_REF) * 1.45} />}
 
           {/* 3 — what it costs (absolute, growing/shrinking). Real economic cost
               only; unmet demand is shown physically (red), not as a $ penalty. */}
-          <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 22 }}>
+          {!isMobile && <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 22 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
               <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Cost to the US of supply security</h2>
               <span style={{ font: '600 15px var(--font-mono)' }}>
@@ -279,14 +305,15 @@ export default function MagnetExplorer() {
                 );
               })}
             </div>
-          </section>
+          </section>}
 
           {/* 5 — trade-risk index (per stage + integrated) + cost-effectiveness */}
           <TradeRiskPanel sc={sc} levers={securityLevers} alliedHHI={alliedHHIMap} />
 
-          {/* 5b — the real-world project build-out driving the allied country HHI */}
-          <ProjectsPanel active={activeProjects} scale={projectScale}
-            onToggle={toggleProject} onScale={scaleProject} onPreset={presetProjects} />
+          {/* 5b — the real-world project build-out driving the allied country HHI
+              (desktop only — long list, trimmed on mobile) */}
+          {!isMobile && <ProjectsPanel active={activeProjects} scale={projectScale}
+            onToggle={toggleProject} onScale={scaleProject} onPreset={presetProjects} />}
 
           {/* 6 — headline KPIs last, as a summary scorecard */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 26 }}>
@@ -308,6 +335,29 @@ export default function MagnetExplorer() {
           </div>
         </main>
       </div>
+
+      {/* Mobile: a live result chip + a button that opens the scenario controls as a
+          slide-up sheet (so the controls never overlay the plots). */}
+      {isMobile && (
+        <>
+          {sheetOpen && (
+            <div onClick={() => setSheetOpen(false)}
+              style={{ position: 'fixed', inset: 0, zIndex: 55, background: 'rgba(0,0,0,0.35)' }} />
+          )}
+          {!sheetOpen && (
+            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 16px', background: 'var(--paper)', borderTop: '1px solid var(--rule-strong)', boxShadow: '0 -4px 16px rgba(0,0,0,0.12)' }}>
+              <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>
+                <span style={{ fontSize: 12.5 }}><b style={{ color: riskColor(tri), fontFamily: 'var(--font-mono)' }}>TRI {tri.toFixed(2)}</b> <span style={{ opacity: 0.5 }}>trade-risk</span></span>
+                <span style={{ opacity: 0.6, fontSize: 11 }}>{pct(sc.kpis.us_import_pct)} of US magnets imported</span>
+              </span>
+              <button onClick={() => setSheetOpen(true)}
+                style={{ font: '600 13px var(--font-mono)', color: 'var(--paper)', background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '11px 16px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                Adjust scenario ▲
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
       <footer style={{ marginTop: 44, paddingTop: 20, borderTop: '1px solid var(--rule)', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12, maxWidth: 560 }}>
         <a href="https://github.com/Sustainable-Solutions-Lab/rare-magnets-cem" target="_blank" rel="noopener noreferrer"

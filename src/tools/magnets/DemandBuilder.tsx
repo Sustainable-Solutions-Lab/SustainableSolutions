@@ -5,7 +5,7 @@
  * demand-summary axes (demand_scale, dytb_intensity) into the supply explorer. All
  * arithmetic runs in the browser (demand.ts) — no solver.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   YEARS, SECTOR_KEYS, SECTORS_BY_SIZE, SECTOR_LABEL, SECTOR_COLOR, SCENARIO_NAMES, SCENARIO_LABEL,
   SCENARIO_TIP, DEFAULT_LEVERS, OFFSHORE_PMSG_DEFAULT, allScenario, sectorBreakdown, demandSummary,
@@ -116,20 +116,113 @@ function Lever({ label, value, min, max, onChange, fmt, desc, plausible, stretch
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
-export default function DemandBuilder({ onSummary }: {
-  onSummary: (s: { demand_scale: number; dytb_intensity: number; totalSeries: number[]; hiCoercShare: number }) => void;
+export default function DemandBuilder({ scenario, setScenario, lv, setLv, mode = 'full' }: {
+  scenario: PerSectorScenario;
+  setScenario: (s: PerSectorScenario) => void;
+  lv: Levers;
+  setLv: (l: Levers) => void;
+  mode?: 'full' | 'controls' | 'chart';
 }) {
-  const [scenario, setScenario] = useState<PerSectorScenario>(() => allScenario('STEPS'));
-  const [lv, setLv] = useState<Levers>(DEFAULT_LEVERS);
   const [custOpen, setCustOpen] = useState(false);   // '＋/－' state for the sector expander
-
   const summary = useMemo(() => demandSummary(scenario, lv), [scenario, lv]);
   const breakdown = useMemo(() => sectorBreakdown(scenario, lv), [scenario, lv]);
-  useEffect(() => { onSummary(summary); }, [summary, onSummary]);
-
   const magSeries = STACK_ORDER.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.magnet[k] }));
   const dytbSeries = STACK_ORDER.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.dytb[k] }));
 
+  const legend = (
+    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '4px 12px', marginTop: 8 }}>
+      {LIST_ORDER.map((k) => (
+        <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+          <span style={{ width: 9, height: 9, borderRadius: 2, background: SECTOR_COLOR[k], display: 'inline-block' }} />
+          <span style={{ opacity: 0.7 }}>{SECTOR_LABEL[k] ?? k}</span>
+        </span>
+      ))}
+    </div>
+  );
+
+  const controls = (
+    <>
+      <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 8px' }}>Demand scenario</div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {SCENARIO_NAMES.map((sc) => {
+          const active = SECTOR_KEYS.every((k) => scenario[k] === sc);
+          return (
+            <button key={sc} onClick={() => setScenario(allScenario(sc))} title={SCENARIO_TIP[sc]}
+              style={{ flex: 1, font: '600 11px var(--font-mono)', padding: '7px 4px', borderRadius: 6, cursor: 'pointer', lineHeight: 1.2,
+                border: `1px solid ${active ? 'var(--accent)' : 'var(--rule-strong)'}`, background: active ? 'var(--accent)' : 'transparent', color: active ? 'var(--paper)' : 'var(--ink)' }}>
+              {SCENARIO_LABEL[sc] ?? sc}
+            </button>
+          );
+        })}
+      </div>
+      <details style={{ marginTop: 8 }} onToggle={(e) => setCustOpen((e.target as HTMLDetailsElement).open)}>
+        <summary style={{ fontSize: 11, opacity: 0.6, cursor: 'pointer', listStyle: 'none' }}>
+          {custOpen ? '－' : '＋'} Customize by sector{SECTOR_KEYS.every((k) => scenario[k] === scenario[SECTOR_KEYS[0]]) ? '' : ' · custom mix set'}
+        </summary>
+        <div style={{ marginTop: 8 }}>
+          {LIST_ORDER.map((k) => (
+            <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                <span style={{ width: 9, height: 9, borderRadius: 2, background: SECTOR_COLOR[k], display: 'inline-block' }} />
+                {SECTOR_LABEL[k] ?? k}
+              </span>
+              <select value={scenario[k]} onChange={(e) => setScenario({ ...scenario, [k]: e.target.value })}
+                title={SCENARIO_TIP[scenario[k]]}
+                style={{ font: '500 11px var(--font-mono)', padding: '2px 4px', borderRadius: 5, border: '1px solid var(--rule)', background: 'var(--paper)', color: 'var(--ink)', cursor: 'pointer' }}>
+                {SCENARIO_NAMES.map((sc) => <option key={sc} value={sc}>{SCENARIO_LABEL[sc] ?? sc}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      </details>
+
+      <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '16px 0 4px' }}>Demand levers</div>
+      <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
+        The bar under each lever shades how optimistic the reduction is:
+        <span style={{ color: '#66C2A5', fontWeight: 600 }}> plausible</span> ·
+        <span style={{ color: '#D4A017', fontWeight: 600 }}> a stretch</span> ·
+        <span style={{ color: '#F46D43', fontWeight: 600 }}> aggressive</span>.
+      </p>
+      <Lever label="Dy/Tb thrifting (material)" value={lv.thrift} min={0} max={0.6} plausible={LEV_PLAUSIBLE.thrift} stretch={LEV_STRETCH.thrift} onChange={(v) => setLv({ ...lv, thrift: v })} fmt={(v) => `−${pct(v)}`}
+        desc="The % reduction in Dy/Tb (heavy rare earth) used per kg of magnet at a GIVEN coercivity grade — via grain-boundary diffusion, finer grains, or Ce/La substitution. Applied across all sectors. 0% = today's loadings. Realism: GBD alone cuts heavy-REE ~20–50% for a grade, so ≲30% is plausible, ~45% a stretch." />
+      <Lever label="Hot-motor grade downshift" value={lv.ev_downshift} min={0} max={1} plausible={LEV_PLAUSIBLE.ev_downshift} stretch={LEV_STRETCH.ev_downshift} onChange={(v) => setLv({ ...lv, ev_downshift: v })} fmt={pct}
+        desc="Better motor cooling / magnetic-circuit design lets hot-motor magnets (EVs, robotics, e-bikes) meet the same duty at a LOWER coercivity grade — which carries less Dy/Tb. Shifts those sectors' grade mix down a rung. 0% = today's grade mix. Realism: a partial downshift (~30%) is plausible with thermal design; downshifting most of the fleet is aggressive." />
+      <Lever label="RE-free motor adoption" value={lv.re_free} min={0} max={0.5} plausible={LEV_PLAUSIBLE.re_free} stretch={LEV_STRETCH.re_free} onChange={(v) => setLv({ ...lv, re_free: v })} fmt={pct}
+        desc="Share of motor demand (EVs, robotics, e-bikes) that switches to rare-earth-FREE designs (externally-excited or induction motors), removing their magnet demand entirely. 0% = all motors use permanent magnets today. Realism: RE-free motors are heavier/less efficient, so ~15% by 2035 is plausible (some OEMs are moving), >30% is aggressive." />
+      <Lever label="Offshore PMSG share reduction" value={OFFSHORE_PMSG_DEFAULT - lv.offshore_pmsg} min={0} max={OFFSHORE_PMSG_DEFAULT} plausible={LEV_PLAUSIBLE.offshore} stretch={LEV_STRETCH.offshore} onChange={(v) => setLv({ ...lv, offshore_pmsg: OFFSHORE_PMSG_DEFAULT - v })} fmt={(v) => `−${pct(v)}`}
+        desc={`Offshore wind is ~${pct(OFFSHORE_PMSG_DEFAULT)} NdFeB direct-drive PMSG by default. Drag right to reduce that share (a shift toward other generator types), which cuts offshore-wind magnet demand. 0 = today's ~${pct(OFFSHORE_PMSG_DEFAULT)}. Realism: PMSG is favored offshore for low O&M, so a ~20% shift to geared/alternatives is plausible, ~40% a stretch.`} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+        <span style={{ fontSize: 11, opacity: 0.55 }}>Set all:</span>
+        {([['None', DEFAULT_LEVERS], ['Plausible limit', presetLevers(LEV_PLAUSIBLE)], ['Stretch', presetLevers(LEV_STRETCH)]] as [string, Levers][]).map(([lbl, target]) => (
+          <button key={lbl} onClick={() => setLv(target)} title={`Set every demand lever to its ${lbl.toLowerCase()} value`}
+            style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5, cursor: 'pointer', border: '1px solid var(--rule)', background: 'transparent', color: 'var(--ink)' }}>
+            {lbl}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+
+  const totalChart = (
+    <>
+      <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 2 }}>US magnet consumption by sector</div>
+      <StackedArea series={magSeries} ymax={MAG_MAX} ylabel="kt / yr" />
+      {legend}
+    </>
+  );
+
+  // Mobile: just the controls (rendered inside the bottom sheet).
+  if (mode === 'controls') return <div>{controls}</div>;
+
+  // Mobile: just the total chart (stays on the page for live feedback).
+  if (mode === 'chart') return (
+    <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px', background: 'var(--paper)', marginBottom: 22 }}>
+      <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 8px' }}>Projected US magnet demand</h2>
+      {totalChart}
+    </section>
+  );
+
+  // Desktop: full layout (controls + both charts + footer).
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '16px 20px', background: 'var(--paper)', marginBottom: 26 }}>
       <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 8px' }}>Projected US magnet demand</h2>
@@ -140,82 +233,13 @@ export default function DemandBuilder({ onSummary }: {
             Compose the <b>US</b> magnet-demand trajectory by sector (IEA scenarios) and shape it with
             the four levers.
           </p>
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 8px' }}>Demand scenario</div>
-          {/* Three IEA scenarios up front (the common case); per-sector tinkering tucked
-              behind an expander so it doesn't cost vertical space by default. */}
-          <div style={{ display: 'flex', gap: 6 }}>
-            {SCENARIO_NAMES.map((sc) => {
-              const active = SECTOR_KEYS.every((k) => scenario[k] === sc);
-              return (
-                <button key={sc} onClick={() => setScenario(allScenario(sc))} title={SCENARIO_TIP[sc]}
-                  style={{ flex: 1, font: '600 11px var(--font-mono)', padding: '7px 4px', borderRadius: 6, cursor: 'pointer', lineHeight: 1.2,
-                    border: `1px solid ${active ? 'var(--accent)' : 'var(--rule-strong)'}`, background: active ? 'var(--accent)' : 'transparent', color: active ? 'var(--paper)' : 'var(--ink)' }}>
-                  {SCENARIO_LABEL[sc] ?? sc}
-                </button>
-              );
-            })}
-          </div>
-          <details style={{ marginTop: 8 }} onToggle={(e) => setCustOpen((e.target as HTMLDetailsElement).open)}>
-            <summary style={{ fontSize: 11, opacity: 0.6, cursor: 'pointer', listStyle: 'none' }}>
-              {custOpen ? '－' : '＋'} Customize by sector{SECTOR_KEYS.every((k) => scenario[k] === scenario[SECTOR_KEYS[0]]) ? '' : ' · custom mix set'}
-            </summary>
-            <div style={{ marginTop: 8 }}>
-              {LIST_ORDER.map((k) => (
-                <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: 2, background: SECTOR_COLOR[k], display: 'inline-block' }} />
-                    {SECTOR_LABEL[k] ?? k}
-                  </span>
-                  <select value={scenario[k]} onChange={(e) => setScenario({ ...scenario, [k]: e.target.value })}
-                    title={SCENARIO_TIP[scenario[k]]}
-                    style={{ font: '500 11px var(--font-mono)', padding: '2px 4px', borderRadius: 5, border: '1px solid var(--rule)', background: 'var(--paper)', color: 'var(--ink)', cursor: 'pointer' }}>
-                    {SCENARIO_NAMES.map((sc) => <option key={sc} value={sc}>{SCENARIO_LABEL[sc] ?? sc}</option>)}
-                  </select>
-                </div>
-              ))}
-            </div>
-          </details>
-
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '16px 0 4px' }}>Demand levers</div>
-          <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
-            The bar under each lever shades how optimistic the reduction is:
-            <span style={{ color: '#66C2A5', fontWeight: 600 }}> plausible</span> ·
-            <span style={{ color: '#D4A017', fontWeight: 600 }}> a stretch</span> ·
-            <span style={{ color: '#F46D43', fontWeight: 600 }}> aggressive</span>. Thresholds are
-            best-estimate (see each lever’s ⓘ) and meant to be refined.
-          </p>
-          <Lever label="Dy/Tb thrifting (material)" value={lv.thrift} min={0} max={0.6} plausible={LEV_PLAUSIBLE.thrift} stretch={LEV_STRETCH.thrift} onChange={(v) => setLv({ ...lv, thrift: v })} fmt={(v) => `−${pct(v)}`}
-            desc="The % reduction in Dy/Tb (heavy rare earth) used per kg of magnet at a GIVEN coercivity grade — via grain-boundary diffusion, finer grains, or Ce/La substitution. Applied across all sectors. 0% = today's loadings. Realism: GBD alone cuts heavy-REE ~20–50% for a grade, so ≲30% is plausible, ~45% a stretch." />
-          <Lever label="Hot-motor grade downshift" value={lv.ev_downshift} min={0} max={1} plausible={LEV_PLAUSIBLE.ev_downshift} stretch={LEV_STRETCH.ev_downshift} onChange={(v) => setLv({ ...lv, ev_downshift: v })} fmt={pct}
-            desc="Better motor cooling / magnetic-circuit design lets hot-motor magnets (EVs, robotics, e-bikes) meet the same duty at a LOWER coercivity grade — which carries less Dy/Tb. Shifts those sectors' grade mix down a rung. 0% = today's grade mix. Realism: a partial downshift (~30%) is plausible with thermal design; downshifting most of the fleet is aggressive." />
-          <Lever label="RE-free motor adoption" value={lv.re_free} min={0} max={0.5} plausible={LEV_PLAUSIBLE.re_free} stretch={LEV_STRETCH.re_free} onChange={(v) => setLv({ ...lv, re_free: v })} fmt={pct}
-            desc="Share of motor demand (EVs, robotics, e-bikes) that switches to rare-earth-FREE designs (externally-excited or induction motors), removing their magnet demand entirely. 0% = all motors use permanent magnets today. Realism: RE-free motors are heavier/less efficient, so ~15% by 2035 is plausible (some OEMs are moving), >30% is aggressive." />
-          <Lever label="Offshore PMSG share reduction" value={OFFSHORE_PMSG_DEFAULT - lv.offshore_pmsg} min={0} max={OFFSHORE_PMSG_DEFAULT} plausible={LEV_PLAUSIBLE.offshore} stretch={LEV_STRETCH.offshore} onChange={(v) => setLv({ ...lv, offshore_pmsg: OFFSHORE_PMSG_DEFAULT - v })} fmt={(v) => `−${pct(v)}`}
-            desc={`Offshore wind is ~${pct(OFFSHORE_PMSG_DEFAULT)} NdFeB direct-drive PMSG by default. Drag right to reduce that share (a shift toward other generator types), which cuts offshore-wind magnet demand. 0 = today's ~${pct(OFFSHORE_PMSG_DEFAULT)}. Realism: PMSG is favored offshore for low O&M, so a ~20% shift to geared/alternatives is plausible, ~40% a stretch.`} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-            <span style={{ fontSize: 11, opacity: 0.55 }}>Set all:</span>
-            {([['None', DEFAULT_LEVERS], ['Plausible limit', presetLevers(LEV_PLAUSIBLE)], ['Stretch', presetLevers(LEV_STRETCH)]] as [string, Levers][]).map(([lbl, target]) => (
-              <button key={lbl} onClick={() => setLv(target)} title={`Set every demand lever to its ${lbl.toLowerCase()} value`}
-                style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5, cursor: 'pointer', border: '1px solid var(--rule)', background: 'transparent', color: 'var(--ink)' }}>
-                {lbl}
-              </button>
-            ))}
-          </div>
+          {controls}
         </div>
 
         <div className="demand-charts">
-          <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 2 }}>US magnet consumption by sector</div>
-          <StackedArea series={magSeries} ymax={MAG_MAX} ylabel="kt / yr" />
+          {totalChart}
           <div style={{ fontSize: 12.5, fontWeight: 600, margin: '10px 0 2px' }}>US Dy/Tb demand by sector <span style={{ fontWeight: 400, opacity: 0.55 }}>— where the heavy chokepoint comes from</span></div>
           <StackedArea series={dytbSeries} ymax={DYTB_MAX} ylabel="kt Dy/Tb" />
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '4px 12px', marginTop: 8 }}>
-            {LIST_ORDER.map((k) => (
-              <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
-                <span style={{ width: 9, height: 9, borderRadius: 2, background: SECTOR_COLOR[k], display: 'inline-block' }} />
-                <span style={{ opacity: 0.7 }}>{SECTOR_LABEL[k] ?? k}</span>
-              </span>
-            ))}
-          </div>
         </div>
       </div>
 

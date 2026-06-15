@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
 import { integratedTRI, integratedRE, stageBreakdownClass, riskColor } from './tri';
 
@@ -42,6 +42,13 @@ const musd = (x: number) => `$${(x / 1000).toFixed(1)}B`;
 // Fixed x-axis for the absolute cost bar so it visibly grows/shrinks with sliders
 // (real US cost-of-security spans ~$2.5B baseline to ~$10B under heavy reshoring).
 const COST_AXIS_MAX = 12000;  // $M
+
+// Polka-dot overlay marking the cleanly heavy-REE (Dy/Tb) cost on the cost bar —
+// stippling, distinct from the hatching that denotes unmet demand on the pathway charts.
+const STIPPLE: CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(248,248,232,0.85) 0.9px, transparent 1.2px)',
+  backgroundSize: '5px 5px',
+};
 
 const COST_KEYS: [string, string, string][] = [
   ['mining', 'Mining', '#F46D43'],
@@ -362,8 +369,10 @@ export default function MagnetExplorer() {
               <p style={{ fontSize: 11.5, opacity: 0.5, margin: '0 0 12px', lineHeight: 1.45 }}>
                 Absolute build + operating cost of US-located capacity by stage, plus the heavy-REE price
                 premium and any stockpile (2026–35 NPV); the bar grows as you force more security and
-                shrinks as imports do the work. When the chain can’t deliver, that surfaces as
-                <span style={{ color: WORSE }}> unmet demand</span>, not a dollar cost.
+                shrinks as imports do the work. The <span style={{
+                  padding: '0 4px', borderRadius: 2, color: '#fff', backgroundColor: '#762A83', ...STIPPLE,
+                }}>stippled</span> segment is the heavy-REE (Dy/Tb) cost. When the chain can’t deliver, that
+                surfaces as <span style={{ color: WORSE }}> unmet demand</span>, not a dollar cost.
               </p>
             )}
             <div style={{ height: 30, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--rule)', background: 'var(--paper-2)' }}>
@@ -371,7 +380,9 @@ export default function MagnetExplorer() {
                 {REAL_COST_KEYS.map(([k, lbl, color]) => {
                   const v = Math.max(0, sc.us_cost[k] ?? 0);
                   if (v <= 0) return null;
-                  return <div key={k} title={`${lbl}: ${musd(v)}`} style={{ width: `${(v / usCostReal) * 100}%`, background: color }} />;
+                  const heavy = k === 'dytb_premium';   // stipple the cleanly-heavy (Dy/Tb) cost
+                  return <div key={k} title={`${lbl}: ${musd(v)}${heavy ? ' · heavy-REE (Dy/Tb)' : ''}`}
+                    style={{ width: `${(v / usCostReal) * 100}%`, background: color, ...(heavy ? STIPPLE : {}) }} />;
                 })}
               </div>
             </div>
@@ -387,7 +398,7 @@ export default function MagnetExplorer() {
                 return (
                   // compact one-line legend item to squeeze vertical space
                   <span key={k} title={COST_DESC[k]} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'help' }}>
-                    <span style={{ width: 9, height: 9, borderRadius: 2, background: color, flexShrink: 0 }} />
+                    <span style={{ width: 9, height: 9, borderRadius: 2, background: color, flexShrink: 0, ...(k === 'dytb_premium' ? STIPPLE : {}) }} />
                     <span style={{ opacity: 0.7 }}>{lbl}</span>
                     <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{musd(v)}</span>
                     {showDelta && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: dv > 0 ? WORSE : 'var(--brand-green)' }}>{dv > 0 ? '+' : ''}{musd(dv)}</span>}

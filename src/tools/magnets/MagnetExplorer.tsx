@@ -229,7 +229,10 @@ export default function MagnetExplorer() {
       ...sc,
       us_supply: reconcileUsSupply(sc, activeProjects),
       us_supply_re: reconcileUsSupplyRe(sc, activeProjects),
-      us_cost: { ...sc.us_cost, consumer_premium: consumerPremium(rpath) },
+      // Round Top lowers the mining DI (TRI) AND costs money to build — both must move
+      // together, or the tool shows security for free. ROUND_TOP_COST mirrors the
+      // cost-of-security lever; it flows into REAL_COST_KEYS, so the NPV + cost bar update.
+      us_cost: { ...sc.us_cost, consumer_premium: consumerPremium(rpath), round_top: hasUSHeavyMine ? ROUND_TOP_COST : 0 },
       path: rpath,
       _di: hasUSHeavyMine ? { ...sc._di, mining: ROUND_TOP_MINING_DI } : sc._di,
     };

@@ -22,17 +22,21 @@ const REGION_COLOR: Record<string, string> = { China: '#D53E4F', RoW: '#FDAE61',
 // Each column is the MATERIAL flowing between stages; `stage` names the process
 // that produces it (shown as a sub-label) so mining etc. are visible even though
 // they sit "between" columns rather than being columns themselves.
+// `mass` names the physical quantity each column tracks — they are NOT the same mass:
+// the first three columns are rare-earth OXIDE (the RE content only); the magnet +
+// demand columns are FINISHED-magnet mass (RE + iron + boron), ~3× heavier. The ribbons
+// taper to fill both bars at each interface, so this mass change is handled per-stage.
 const COLS = [
-  { label: 'Concentrate', stage: 'from mining', iface: 'concentrate' as string | null,
-    desc: 'Mixed rare-earth concentrate — the output of MINING. Ore is extracted, beneficiated (crush / grind / flotation or leach), and cracked (roast / acid-bake) into a mixed rare-earth oxide concentrate. All the rare earths are still together here, before separation.' },
-  { label: 'Oxide', stage: 'from separation', iface: 'oxide',
-    desc: 'Separated individual rare-earth oxides — the output of SEPARATION. Solvent extraction (hundreds of mixer-settler stages) splits the mixed concentrate into purified Nd/Pr and Dy/Tb oxides. Includes recycling-derived oxide.' },
-  { label: 'Alloy', stage: 'from alloying', iface: 'alloy',
-    desc: 'NdFeB strip-cast alloy — the output of ALLOYING. Oxides are reduced to metal (molten-salt electrolysis / metallothermic reduction) and strip-cast into alloy flake.' },
-  { label: 'Magnet', stage: 'from sintering', iface: 'magnet',
-    desc: 'Finished sintered NdFeB magnets — the output of MAGNET MAKING. Alloy is hydrogen-decrepitated, jet-milled, aligned and pressed, sintered, machined, coated, and magnetized.' },
-  { label: 'Demand', stage: 'consumption', iface: null,
-    desc: 'Finished-magnet consumption by region.' },
+  { label: 'Concentrate', stage: 'from mining', iface: 'concentrate' as string | null, mass: 'rare-earth oxide',
+    desc: 'Mixed rare-earth concentrate — the output of MINING. Ore is extracted, beneficiated (crush / grind / flotation or leach), and cracked into a mixed rare-earth oxide concentrate. MASS SHOWN: rare-earth-oxide (REO) content — the Nd/Pr + Dy/Tb that flow on to separation, NOT the bulk ore.' },
+  { label: 'Oxide', stage: 'from separation', iface: 'oxide', mass: 'rare-earth oxide',
+    desc: 'Separated individual rare-earth oxides — the output of SEPARATION. Solvent extraction splits the concentrate into purified Nd/Pr and Dy/Tb oxides (incl. recycling-derived oxide). MASS SHOWN: rare-earth-oxide mass.' },
+  { label: 'Alloy', stage: 'from alloying', iface: 'alloy', mass: 'rare-earth oxide-equiv.',
+    desc: 'NdFeB strip-cast alloy — the output of ALLOYING. Oxides are reduced to metal and strip-cast into alloy flake. MASS SHOWN: the rare-earth-oxide-equivalent flowing into alloying (so it lines up with the oxide column), NOT the full alloy mass with iron + boron.' },
+  { label: 'Magnet', stage: 'from sintering', iface: 'magnet', mass: 'finished magnet',
+    desc: 'Finished sintered NdFeB magnets — the output of MAGNET MAKING. Alloy is milled, aligned, pressed, sintered, machined, coated, magnetized. MASS SHOWN: FINISHED-magnet mass (RE + iron + boron) — ~3× the rare-earth-oxide mass of the earlier columns, because iron + boron are ~64% of an NdFeB magnet.' },
+  { label: 'Demand', stage: 'consumption', iface: null, mass: 'finished magnet',
+    desc: 'Finished-magnet consumption by region. MASS SHOWN: finished-magnet mass.' },
 ];
 // Sankey material interface → the producing project stage (for the facility hover).
 const IFACE_TO_STAGE: Record<string, Stage> = {
@@ -79,9 +83,9 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
     const barPct = Math.round((h / innerH) * 100);
     const regionMass = colVals[i][r] ?? 0;   // this region's kt at this stage
     const stage = IFACE_TO_STAGE[COLS[i].iface ?? ''];
-    if (!stage) return { head: `${r} — ${barPct}% of US magnet demand`, sub: `${kt(regionMass)} kt`, rows: [], note: '' };
+    if (!stage) return { head: `${r} — ${barPct}% of US magnet demand`, sub: `${kt(regionMass)} kt finished magnet`, rows: [], note: '' };
     const head = `${r} · ${COLS[i].label} — ${barPct}%`;
-    const sub = `${kt(regionMass)} kt`;
+    const sub = `${kt(regionMass)} kt ${COLS[i].mass}`;   // name the mass (oxide vs finished magnet)
     const facs = facilityBreakdown(stage, r as 'USA' | 'China' | 'RoW', active, scale, cls === 'total' ? undefined : cls);
     if (facs.length === 0)
       return { head, sub, rows: [], note: r === 'China' ? 'Residual balance — China is the model’s backstop (no listed facilities).' : 'No listed ex-China facilities at this stage.' };
@@ -223,10 +227,12 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
         The <b>real-world-projected</b> chain, ~2035. Each bar is a region’s share of that stage
         (concentrate → oxide → alloy → magnet → demand), set by the <b>real projects selected below</b>
         — the world’s actual + announced build-out — with <b>China the residual</b>; total throughput
-        scales with demand. Toggle projects (Round Top, Mt Weld, Lynas, …) to change it. The model,
-        left to itself, mines almost all-China (Chinese ore isn’t export-restricted and is cheapest),
-        which is why ex-China mining has to be anchored to real projects. Read the palette as a
-        US-security signal:
+        scales with demand. <b>Note the masses differ by stage</b> (hover any bar): the first three
+        columns are <b>rare-earth oxide</b> (the RE content), while magnet + demand are <b>finished-magnet
+        mass</b> (RE + iron + boron), ~3× heavier — the ribbons taper to fit both. Toggle projects
+        (Round Top, Mt Weld, Lynas, …) to change it. The model, left to itself, mines almost all-China
+        (Chinese ore isn’t export-restricted and is cheapest), which is why ex-China mining has to be
+        anchored to real projects. Read the palette as a US-security signal:
         <span style={{ color: '#66C2A5', fontWeight: 600 }}> US-made</span> (secure) ·
         <span style={{ color: '#FDAE61', fontWeight: 600 }}> allies</span> (medium) ·
         <span style={{ color: '#D53E4F', fontWeight: 600 }}> China</span> (exposed).

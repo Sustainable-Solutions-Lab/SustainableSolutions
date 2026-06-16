@@ -5,7 +5,7 @@
  * demand-summary axes (demand_scale, dytb_intensity) into the supply explorer. All
  * arithmetic runs in the browser (demand.ts) — no solver.
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   YEARS, SECTOR_KEYS, SECTORS_BY_SIZE, SECTOR_LABEL, SECTOR_COLOR, SCENARIO_NAMES, SCENARIO_LABEL,
   SCENARIO_TIP, DEFAULT_LEVERS, OFFSHORE_PMSG_DEFAULT, allScenario, sectorBreakdown, demandSummary,
@@ -41,12 +41,21 @@ const presetLevers = (t: typeof LEV_PLAUSIBLE): Levers => ({
   offshore_pmsg: OFFSHORE_PMSG_DEFAULT - t.offshore,
 });
 
-function StackedArea({ series, ymax, ylabel }: {
+function StackedArea({ series, ymax, ylabel, mag, ndpr, dytb, cls }: {
   series: { key: string; color: string; values: number[] }[]; ymax: number; ylabel: string;
+  mag: number[]; ndpr: number[]; dytb: number[]; cls: 'total' | 'heavy' | 'light';
 }) {
   const yv = (v: number) => PADT + innerH - (v / ymax) * innerH;
   // small axes (e.g. US Dy/Tb oxide, ~1–2 kt) need a decimal or integer ticks collide
   const tickDec = ymax < 5 ? 1 : 0;
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [hi, setHi] = useState<number | null>(null);   // hovered year index
+  const onMove = (e: ReactMouseEvent) => {
+    const r = wrapRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const vbx = ((e.clientX - r.left) / r.width) * W;
+    setHi(Math.max(0, Math.min(YEARS.length - 1, Math.round(((vbx - PADL) / innerW) * (YEARS.length - 1)))));
+  };
   const lower = Array(YEARS.length).fill(0);
   const paths = series.map((s) => {
     const top = s.values.map((v, i) => lower[i] + Math.max(0, v));
@@ -57,21 +66,45 @@ function StackedArea({ series, ymax, ylabel }: {
     for (let i = 0; i < YEARS.length; i++) lower[i] = top[i];
     return <path key={s.key} d={d} fill={s.color} fillOpacity={0.85} />;
   });
+  const kt = (v: number) => (v >= 10 ? v.toFixed(0) : v.toFixed(1));
+  const wrapW = wrapRef.current?.clientWidth ?? 0;
+  const flip = hi != null && xi(hi) / W > 0.6;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }}>
-      {[0, 0.25, 0.5, 0.75, 1].map((f) => {
-        const y = PADT + innerH - f * innerH;
-        return <g key={f}>
-          <line x1={PADL} y1={y} x2={W - PADR} y2={y} stroke="var(--rule)" strokeWidth={f === 0 ? 1 : 0.5} />
-          <text x={PADL - 5} y={y} textAnchor="end" dominantBaseline="central" style={{ font: '400 8px var(--font-mono)', fill: 'var(--ink)', opacity: 0.5 }}>{(ymax * f).toFixed(tickDec)}</text>
-        </g>;
-      })}
-      {YEARS.map((yr, i) => (i % 3 === 0 || i === YEARS.length - 1) && (
-        <text key={yr} x={xi(i)} y={H - PADB + 12} textAnchor="middle" style={{ font: '400 8px var(--font-mono)', fill: 'var(--ink)', opacity: 0.5 }}>{`'${String(yr).slice(2)}`}</text>
-      ))}
-      <text x={9} y={PADT + innerH / 2} textAnchor="middle" transform={`rotate(-90 9 ${PADT + innerH / 2})`} style={{ font: '400 8px var(--font-mono)', fill: 'var(--ink)', opacity: 0.55 }}>{ylabel}</text>
-      {paths}
-    </svg>
+    <div ref={wrapRef} style={{ position: 'relative' }} onMouseMove={onMove} onMouseLeave={() => setHi(null)}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }}>
+        {[0, 0.25, 0.5, 0.75, 1].map((f) => {
+          const y = PADT + innerH - f * innerH;
+          return <g key={f}>
+            <line x1={PADL} y1={y} x2={W - PADR} y2={y} stroke="var(--rule)" strokeWidth={f === 0 ? 1 : 0.5} />
+            <text x={PADL - 5} y={y} textAnchor="end" dominantBaseline="central" style={{ font: '400 8px var(--font-mono)', fill: 'var(--ink)', opacity: 0.5 }}>{(ymax * f).toFixed(tickDec)}</text>
+          </g>;
+        })}
+        {YEARS.map((yr, i) => (i % 3 === 0 || i === YEARS.length - 1) && (
+          <text key={yr} x={xi(i)} y={H - PADB + 12} textAnchor="middle" style={{ font: '400 8px var(--font-mono)', fill: 'var(--ink)', opacity: 0.5 }}>{`'${String(yr).slice(2)}`}</text>
+        ))}
+        <text x={9} y={PADT + innerH / 2} textAnchor="middle" transform={`rotate(-90 9 ${PADT + innerH / 2})`} style={{ font: '400 8px var(--font-mono)', fill: 'var(--ink)', opacity: 0.55 }}>{ylabel}</text>
+        {paths}
+        {hi != null && <line x1={xi(hi)} y1={PADT} x2={xi(hi)} y2={PADT + innerH} stroke="var(--ink)" strokeWidth={0.7} strokeDasharray="3 2" opacity={0.5} />}
+      </svg>
+      {hi != null && (
+        <div style={{
+          position: 'absolute', top: 6, pointerEvents: 'none', zIndex: 20,
+          ...(flip ? { right: wrapW - (xi(hi) / W) * wrapW + 8 } : { left: (xi(hi) / W) * wrapW + 8 }),
+          background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 6,
+          boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 6px 18px rgba(0,0,0,0.10)', padding: '6px 9px', whiteSpace: 'nowrap',
+        }}>
+          <div style={{ font: '600 11px var(--font-mono)', marginBottom: 4 }}>{YEARS[hi]}</div>
+          {([['Magnet (finished)', mag[hi], cls === 'total'], ['Nd/Pr oxide', ndpr[hi], cls === 'light'], ['Dy/Tb oxide', dytb[hi], cls === 'heavy']] as const).map(([lbl, v, on]) => (
+            <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', gap: 14, fontSize: 11, fontWeight: on ? 700 : 400, opacity: on ? 1 : 0.7 }}>
+              <span>{lbl}</span><span style={{ fontFamily: 'var(--font-mono)' }}>{kt(v ?? 0)} kt</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 9.5, opacity: 0.5, marginTop: 4, maxWidth: 160, whiteSpace: 'normal', lineHeight: 1.35 }}>
+            oxides are the RE content of the magnet, so they don’t sum to its mass
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -131,6 +164,10 @@ export default function DemandBuilder({ scenario, setScenario, lv, setLv, mode =
   const magSeries = STACK_ORDER.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.magnet[k] }));
   const dytbSeries = STACK_ORDER.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.dytb[k] }));
   const ndprSeries = STACK_ORDER.map((k) => ({ key: k, color: SECTOR_COLOR[k], values: breakdown.ndpr[k] }));
+  // per-year totals across sectors, for the hover (magnet mass vs embodied Nd/Pr + Dy/Tb oxide)
+  const magTot = YEARS.map((_, i) => STACK_ORDER.reduce((a, k) => a + (breakdown.magnet[k]?.[i] ?? 0), 0));
+  const ndprTot = YEARS.map((_, i) => STACK_ORDER.reduce((a, k) => a + (breakdown.ndpr[k]?.[i] ?? 0), 0));
+  const dytbTot = YEARS.map((_, i) => STACK_ORDER.reduce((a, k) => a + (breakdown.dytb[k]?.[i] ?? 0), 0));
 
   const legend = (
     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '4px 12px', marginTop: 8 }}>
@@ -224,7 +261,7 @@ export default function DemandBuilder({ scenario, setScenario, lv, setLv, mode =
           ))}
         </div>
       </div>
-      <StackedArea series={chartSeries} ymax={chartMax} ylabel={chartYlabel} />
+      <StackedArea series={chartSeries} ymax={chartMax} ylabel={chartYlabel} mag={magTot} ndpr={ndprTot} dytb={dytbTot} cls={chartClass} />
       {legend}
     </>
   );

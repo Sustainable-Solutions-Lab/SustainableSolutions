@@ -153,6 +153,26 @@ export function regionalCapacityRe(stage: Stage, active: Set<string>, cls: 'ligh
   return out;
 }
 
+// Illustrative US build cost ($M) per kt/yr of stage capacity, calibrated so Round Top
+// (2.5 kt mining) ≈ the ROUND_TOP_COST $400M used by the cost-of-security lever. Tunable,
+// like all security-investment figures (US separation is the capital-intensive standout).
+export const US_PROJECT_BUILD_RATE: Record<Stage, number> = {
+  mining: 160, separation: 100, alloy: 45, magnet: 50, recycling: 50,
+};
+/** Build cost ($M) of the active US-bloc projects still being BUILT (construction +
+ * planned) — the forward-looking US strategic build whose cost belongs in the NPV.
+ * Operating/ramping US plants are sunk and already in the modeled baseline, so they are
+ * excluded to avoid double-counting; the model meets the residual demand at modeled cost. */
+export function usProjectsBuildCost(active: Set<string>, scale: Record<string, number> = {}): number {
+  let cost = 0;
+  for (const p of PROJECTS) {
+    if (p.bloc !== 'us' || !active.has(p.id)) continue;
+    if (p.status !== 'construction' && p.status !== 'planned') continue;
+    cost += p.capacityKt * (scale[p.id] ?? 1) * US_PROJECT_BUILD_RATE[p.stage];
+  }
+  return cost;
+}
+
 /** The active projects making up a (stage, model-region) node, with each one's
  * nameplate (scaled) capacity — for the Sankey facility hover. For mining/separation a
  * class (heavy/light) filter applies (a light mine doesn't make heavy oxide); alloy +

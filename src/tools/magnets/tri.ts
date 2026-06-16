@@ -1,7 +1,8 @@
 /**
  * Trade Risk Index (TRI) for the US magnet supply chain, adapting the framework of
  * Cheng et al. (2025, Nature Climate Change, "Trade risks to energy security in
- * net-zero emissions energy scenarios"). Their per-commodity index is
+ * net-zero emissions energy scenarios"; https://www.nature.com/articles/s41558-025-02305-1).
+ * Their per-commodity index is
  *
  *     TRI = HHI(import sources) · import-reliance  +  DI(domestic reserves) · (1 − import-reliance)
  *

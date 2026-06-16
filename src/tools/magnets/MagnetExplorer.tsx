@@ -464,6 +464,7 @@ export default function MagnetExplorer() {
               lever to buy it down, plus import dependence + unmet. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 26 }}>
             <ScoreCard label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)} chip sub="0 secure → 1 exposed" />
+            <ScoreCard label="US cost of supply" value={musd(usCostReal)} valueColor="var(--ink)" sub="2026–35 NPV" />
             <ScoreCard label="Tightest chokepoint" value={`${chokepoint.elem} ${chokepoint.label.split(' ')[0].toLowerCase()}`} valueColor={riskColor(chokepoint.tri)} chip small sub={`stage TRI ${chokepoint.tri.toFixed(2)}`} />
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : 'raise the China restriction'} />

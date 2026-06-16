@@ -31,6 +31,20 @@ const US_MAGNET_RESHORE_COST = 900;
 // of US magnet demand (NPV 2026–35), so friendshoring's expense is gauged, not ignored.
 const ALLIED_MAGNET_PREMIUM = 0.25;   // ex-China NdFeB ~25% pricier (no Chinese subsidy/scale); tunable
 const MAGNET_PRICE = 75;              // $/kg finished sintered NdFeB == $M/kt; representative, tunable
+// Consumer premium ($M NPV): the ex-China premium the US pays for ALLY-sourced supply —
+// Nd/Pr-oxide premium on allied light oxide + a manufacturing premium on any finished
+// magnets imported from allies (the heavy Dy/Tb premium is separate, in dytb_premium).
+// Mirrors core/trade_risk.consumer_premium so the tool + paper agree.
+const LIGHT_OXIDE_PREMIUM = 45, MAGNET_MFG_PREMIUM = 15, CONS_DISCOUNT = 0.05;
+function consumerPremium(path: { us_mix?: Record<string, number[]>; us_mix_re?: { light?: Record<string, number[]> } }): number {
+  const lightAllied = path?.us_mix_re?.light?.allied ?? [];
+  const magAllied = path?.us_mix?.allied ?? [];
+  const n = Math.max(lightAllied.length, magAllied.length);
+  let tot = 0;
+  for (let t = 0; t < n; t++)
+    tot += (LIGHT_OXIDE_PREMIUM * Math.max(0, lightAllied[t] ?? 0) + MAGNET_MFG_PREMIUM * Math.max(0, magAllied[t] ?? 0)) / (1 + CONS_DISCOUNT) ** t;
+  return tot;
+}
 import FlowDiagram from './FlowDiagram';
 import PathwayCharts from './PathwayCharts';
 import DemandBuilder from './DemandBuilder';
@@ -69,6 +83,7 @@ const COST_KEYS: [string, string, string][] = [
   ['round_top', 'Round Top (assumed)', '#3288BD'],
   ['stockpile', 'Strategic stockpile', '#5E4FA2'],
   ['dytb_premium', 'Heavy-REE price premium', '#762A83'],
+  ['consumer_premium', 'Consumer premium (ally imports)', '#9970AB'],
   ['trade', 'Shipping', '#5E4FA2'],
   ['coproduct', 'Co-product La/Ce', '#FEE08B'],
   ['shortage', 'Unmet-demand penalty', '#9E0142'],
@@ -82,6 +97,7 @@ const COST_DESC: Record<string, string> = {
   round_top: 'Assumed cost (~$400M, ≈ Round Top’s 2019 PEA capex incl. on-site separation) of bringing the Round Top, TX heavy-REE deposit online — but it yields only ~0.22 kt/yr Dy+Tb, ≈12% of US Dy/Tb need, so one mine is far from a fix. Exogenous (not a cost-optimal build); a strategic move whose security benefit per dollar reveals a shadow price of security.',
   stockpile: 'Cost of the strategic magnet stockpile: size × an all-in acquire + hold rate (~$110/kg, grounded in Benchmark Feb-2026 prices for Dy/Tb-rich grades). A real, paid cost that buys down the unmet-demand penalty by covering the earliest shortfall.',
   dytb_premium: 'Price-taker premium the US pays on the Dy/Tb it imports (as oxide, alloy, or embodied in magnets) as China’s export controls inflate the heavy-REE benchmarks Western buyers are bound to. Scales with the China-restriction slider; the US escapes by separating or recycling Dy/Tb domestically — limited in the near term, since the one active US mine (Mountain Pass) is light-REE and domestic heavy-REE prospects (e.g. Round Top, TX) are pre-commercial.',
+  consumer_premium: 'The ex-China premium US buyers pay for ALLY-sourced supply rather than cheaper Chinese material — the Nd/Pr-oxide premium on allied light oxide (~$45/kg) plus a manufacturing premium on any finished magnets imported from allies (~$15/kg). Borne as a higher import price, not US capital, so it rises with friendshoring. The heavy Dy/Tb premium is shown separately above.',
   shortage: 'Penalty on US unmet magnet demand: unmet tonnes × a high penalty rate. Not a market cost — it flags US demand the chain can’t deliver in time (e.g. under a ban).',
 };
 const WORSE = '#D53E4F';
@@ -186,7 +202,6 @@ export default function MagnetExplorer() {
   // solver flag at $10k/kg, not money) and surfaced physically as unmet demand (kt).
   const REAL_COST_KEYS = US_COST_KEYS.filter(([k]) => k !== 'shortage');
   const realCost = (s: typeof sc) => REAL_COST_KEYS.reduce((a, [k]) => a + Math.max(0, s.us_cost[k] ?? 0), 0);
-  const usCostReal = realCost(sc);
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -208,13 +223,18 @@ export default function MagnetExplorer() {
   const hasUSHeavyMine = useMemo(
     () => PROJECTS.some((p) => activeProjects.has(p.id) && p.bloc === 'us' && p.stage === 'mining' && p.heavy),
     [activeProjects]);
-  const scR = useMemo(() => ({
-    ...sc,
-    us_supply: reconcileUsSupply(sc, activeProjects),
-    us_supply_re: reconcileUsSupplyRe(sc, activeProjects),
-    path: { ...sc.path, us_mix: reconcileUsMix(sc, activeProjects), us_mix_re: reconcileUsMixRe(sc, activeProjects) ?? sc.path.us_mix_re },
-    _di: hasUSHeavyMine ? { ...sc._di, mining: ROUND_TOP_MINING_DI } : sc._di,
-  }), [sc, activeProjects, hasUSHeavyMine]);
+  const scR = useMemo(() => {
+    const rpath = { ...sc.path, us_mix: reconcileUsMix(sc, activeProjects), us_mix_re: reconcileUsMixRe(sc, activeProjects) ?? sc.path.us_mix_re };
+    return {
+      ...sc,
+      us_supply: reconcileUsSupply(sc, activeProjects),
+      us_supply_re: reconcileUsSupplyRe(sc, activeProjects),
+      us_cost: { ...sc.us_cost, consumer_premium: consumerPremium(rpath) },
+      path: rpath,
+      _di: hasUSHeavyMine ? { ...sc._di, mining: ROUND_TOP_MINING_DI } : sc._di,
+    };
+  }, [sc, activeProjects, hasUSHeavyMine]);
+  const usCostReal = realCost(scR);   // includes the consumer premium on ally-sourced supply
   const tri = integratedRE(scR, alliedHHIMap);   // live readout (light+heavy weighted)
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
@@ -406,7 +426,7 @@ export default function MagnetExplorer() {
             <div style={{ height: 30, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--rule)', background: 'var(--paper-2)' }}>
               <div style={{ display: 'flex', height: '100%', width: `${Math.min(100, (usCostReal / COST_AXIS_MAX) * 100)}%`, transition: 'width 0.15s' }}>
                 {REAL_COST_KEYS.map(([k, lbl, color]) => {
-                  const v = Math.max(0, sc.us_cost[k] ?? 0);
+                  const v = Math.max(0, scR.us_cost[k] ?? 0);
                   if (v <= 0) return null;
                   const heavy = k === 'dytb_premium';   // stipple the cleanly-heavy (Dy/Tb) cost
                   return <div key={k} title={`${lbl}: ${musd(v)}${heavy ? ' · heavy-REE (Dy/Tb)' : ''}`}
@@ -419,7 +439,7 @@ export default function MagnetExplorer() {
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', marginTop: 10 }}>
               {REAL_COST_KEYS.map(([k, lbl, color]) => {
-                const v = sc.us_cost[k] ?? 0;
+                const v = scR.us_cost[k] ?? 0;
                 if (v <= 0 && (BASE.us_cost[k] ?? 0) <= 0) return null;   // hide irrelevant components
                 const dv = v - (BASE.us_cost[k] ?? 0);
                 const showDelta = Math.abs(dv) >= 100;

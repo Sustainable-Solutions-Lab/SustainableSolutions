@@ -479,7 +479,7 @@ export default function MagnetExplorer() {
             <ScoreCard label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)} chip sub="0 secure → 1 exposed" />
             <ScoreCard label="US cost of supply" value={musd(usCostReal)} valueColor="var(--ink)"
               delta={`${npvDelta >= 0 ? '+' : '−'}${musd(Math.abs(npvDelta))}`}
-              deltaColor={npvDelta < -50 ? 'var(--brand-green)' : 'var(--ink-3)'}
+              deltaColor={npvDelta > 50 ? WORSE : npvDelta < -50 ? 'var(--brand-green)' : 'var(--ink-3)'}
               sub="2026–35 NPV · Δ vs do-nothing" />
             <ScoreCard label="Tightest chokepoint" value={`${chokepoint.elem} ${chokepoint.label.split(' ')[0].toLowerCase()}`} valueColor={riskColor(chokepoint.tri)} chip small sub={`stage TRI ${chokepoint.tri.toFixed(2)}`} />
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : 'none yet'} valueColor="var(--ink)" small

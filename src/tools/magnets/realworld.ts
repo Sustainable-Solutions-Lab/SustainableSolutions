@@ -67,8 +67,13 @@ function scaleTo(r: Reg, total: number): Reg {
  * cross-bloc (China ↔ ex-China) trade by (1 − severity): the market bifurcates GRADUALLY
  * as the slider rises, rather than flipping at a single threshold. At 1 it's fully split
  * (China trades only with China) — so US oxide isn't shipped to China for alloying under
- * a ban (any ex-China surplus with no ex-China buyer is simply idle, not routed onward). */
-function route(supply: Reg, demand: Reg, restrict = 0): Flow[] {
+ * a ban (any ex-China surplus with no ex-China buyer is simply idle, not routed onward).
+ * `usMineral` is the US FRIENDSHORING / mineral-prong severity: China-embodied RE to the
+ * US ≤ (1 − usMineral), so it additionally throttles China→USA at EVERY interface (oxide,
+ * alloy, magnet) — that's why the US then draws its alloy/oxide from ALLIES, not China.
+ * RoW is unaffected (the mandate is US-only). The binding China→US throttle is the larger
+ * of restrict and usMineral. */
+function route(supply: Reg, demand: Reg, restrict = 0, usMineral = 0): Flow[] {
   const sup = { ...supply }, dem = { ...demand };
   const flows: Flow[] = [];
   for (const r of REGIONS) {            // own-region (no shipment) first
@@ -78,8 +83,13 @@ function route(supply: Reg, demand: Reg, restrict = 0): Flow[] {
   }
   for (const s of REGIONS) {            // residual: each source to its deficits
     if (sup[s] <= 1e-9) continue;
-    // cross-bloc destinations keep only (1 − severity) of their pull; same-bloc full.
-    const wt = (d: Region) => dem[d] * (((s === 'China') === (d === 'China')) ? 1 : 1 - restrict);
+    // cross-bloc destinations keep only (1 − severity); China→US is additionally capped by
+    // the US mineral prong, so the binding block on that arc is max(restrict, usMineral).
+    const wt = (d: Region) => {
+      if ((s === 'China') === (d === 'China')) return dem[d];   // same bloc → full pull
+      const block = (s === 'China' && d === 'USA') ? Math.max(restrict, usMineral) : restrict;
+      return dem[d] * (1 - block);
+    };
     const dests = REGIONS.filter((d) => dem[d] > 1e-9 && wt(d) > 1e-9);
     const totW = dests.reduce((a, d) => a + wt(d), 0);
     if (totW <= 1e-9) continue;          // no allowed buyer → surplus idle
@@ -242,7 +252,8 @@ export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<
   // Class view scales throughput to that RE class's mass fraction and re-floors the
   // element-specific upstream (mining/separation) with class-specific projects.
   const frac = cls === 'heavy' ? 0.094 : cls === 'light' ? 0.906 : 1;
-  const restrict = sc.china ?? 0;     // export-restriction severity → graded market bifurcation
+  const restrict = sc.china ?? 0;     // China export-restriction severity → graded market bifurcation
+  const usMineral = sc.source ?? 0;   // US friendshoring / mineral prong → throttles China→US RE
   const prod: Record<string, Reg> = {};
   for (const [iface, stage] of IFACE_STAGE) {
     const model = modelOrigin(sc, iface);     // model's regional production (responds to sliders)
@@ -265,9 +276,9 @@ export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<
   const consumer = modelDest(sc, 'magnet');
   const consF = { USA: consumer.USA * frac, China: consumer.China * frac, RoW: consumer.RoW * frac };
   const flows: Record<string, Flow[]> = {};
-  flows.concentrate = route(prod.concentrate, scaleTo(prod.oxide, sumReg(prod.concentrate)), restrict);
-  flows.oxide = route(prod.oxide, scaleTo(prod.alloy, sumReg(prod.oxide)), restrict);
-  flows.alloy = route(prod.alloy, scaleTo(prod.magnet, sumReg(prod.alloy)), restrict);
-  flows.magnet = route(prod.magnet, scaleTo(consF, sumReg(prod.magnet)), restrict);
+  flows.concentrate = route(prod.concentrate, scaleTo(prod.oxide, sumReg(prod.concentrate)), restrict, usMineral);
+  flows.oxide = route(prod.oxide, scaleTo(prod.alloy, sumReg(prod.oxide)), restrict, usMineral);
+  flows.alloy = route(prod.alloy, scaleTo(prod.magnet, sumReg(prod.alloy)), restrict, usMineral);
+  flows.magnet = route(prod.magnet, scaleTo(consF, sumReg(prod.magnet)), restrict, usMineral);
   return flows;
 }

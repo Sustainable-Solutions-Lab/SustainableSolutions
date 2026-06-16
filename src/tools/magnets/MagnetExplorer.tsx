@@ -145,14 +145,16 @@ function Slider({ label, value, max, min = 0, onChange, fmt, desc }: {
   );
 }
 
-function ScoreCard({ label, value, sub, valueColor, small, chip }: {
+function ScoreCard({ label, value, sub, valueColor, small, chip, delta, deltaColor }: {
   label: string; value: string; sub: string; valueColor: string; small?: boolean; chip?: boolean;
+  delta?: string; deltaColor?: string;
 }) {
   return (
     <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px', background: 'var(--paper)' }}>
       <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
-      <div style={{ font: `600 ${small ? 15 : 24}px var(--font-mono)`, lineHeight: 1.2 }}>
+      <div style={{ font: `600 ${small ? 15 : 24}px var(--font-mono)`, lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
         <span style={chip ? { ...riskChip(valueColor), display: 'inline-block' } : { color: valueColor }}>{value}</span>
+        {delta && <span style={{ fontSize: 13, fontWeight: 600, color: deltaColor ?? 'var(--ink-3)' }}>{delta}</span>}
       </div>
       <div style={{ font: '400 9.5px var(--font-mono)', opacity: 0.5, marginTop: 5, letterSpacing: '0.03em' }}>{sub}</div>
     </div>
@@ -238,6 +240,11 @@ export default function MagnetExplorer() {
     };
   }, [sc, activeProjects, hasUSHeavyMine]);
   const usCostReal = realCost(scR);   // includes the consumer premium on ally-sourced supply
+  // baseline = do-nothing (no US policy/projects) at the SAME demand scenario + threat, so
+  // the delta is the cost of the security choices made (can be negative if reshoring avoids
+  // more China premium than it costs to build).
+  const baseNPV = realCost(interpScenario({ make: 0, source: 0, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale }));
+  const npvDelta = usCostReal - baseNPV;
   const tri = integratedRE(scR, alliedHHIMap);   // live readout (light+heavy weighted)
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
@@ -467,7 +474,10 @@ export default function MagnetExplorer() {
               lever to buy it down, plus import dependence + unmet. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 26 }}>
             <ScoreCard label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)} chip sub="0 secure → 1 exposed" />
-            <ScoreCard label="US cost of supply" value={musd(usCostReal)} valueColor="var(--ink)" sub="2026–35 NPV" />
+            <ScoreCard label="US cost of supply" value={musd(usCostReal)} valueColor="var(--ink)"
+              delta={`${npvDelta >= 0 ? '+' : '−'}${musd(Math.abs(npvDelta))}`}
+              deltaColor={npvDelta < -50 ? 'var(--brand-green)' : 'var(--ink-3)'}
+              sub="2026–35 NPV · Δ vs do-nothing" />
             <ScoreCard label="Tightest chokepoint" value={`${chokepoint.elem} ${chokepoint.label.split(' ')[0].toLowerCase()}`} valueColor={riskColor(chokepoint.tri)} chip small sub={`stage TRI ${chokepoint.tri.toFixed(2)}`} />
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : 'raise the China restriction'} />

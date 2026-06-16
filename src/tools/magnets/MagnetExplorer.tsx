@@ -51,7 +51,7 @@ import DemandBuilder from './DemandBuilder';
 import { allScenario, demandSummary, DEFAULT_LEVERS, type PerSectorScenario, type Levers } from './demand';
 import TradeRiskPanel from './TradeRiskPanel';
 import ProjectsAside from './ProjectsAside';
-import { alliedHHIByStage, activeSet, DEFAULT_FUTURE, FUTURE_PROJECTS, PROJECTS, tier, type Tier } from './projects';
+import { alliedHHIByStage, activeSet, DEFAULT_FUTURE, FUTURE_PROJECTS, PROJECTS, tier, usProjectsBuildCost, type Tier } from './projects';
 import { realWorldFlows, reconcileUsSupply, reconcileUsMix, reconcileUsMixRe, reconcileUsSupplyRe } from './realworld';
 
 /**
@@ -81,6 +81,7 @@ const COST_KEYS: [string, string, string][] = [
   ['magnet', 'Magnet', '#3288BD'],
   ['recycling', 'Recycling', '#66C2A5'],
   ['round_top', 'Round Top (assumed)', '#3288BD'],
+  ['us_projects', 'US strategic projects (selected)', '#3288BD'],
   ['stockpile', 'Strategic stockpile', '#5E4FA2'],
   ['dytb_premium', 'Heavy-REE price premium', '#762A83'],
   ['consumer_premium', 'Consumer premium (ally imports)', '#9970AB'],
@@ -95,6 +96,7 @@ const COST_DESC: Record<string, string> = {
   magnet: 'Build + operating cost of US-located sintered-magnet manufacturing.',
   recycling: 'Build + operating cost of US-located end-of-life recycling capacity.',
   round_top: 'Assumed cost (~$400M, ≈ Round Top’s 2019 PEA capex incl. on-site separation) of bringing the Round Top, TX heavy-REE deposit online — but it yields only ~0.22 kt/yr Dy+Tb, ≈12% of US Dy/Tb need, so one mine is far from a fix. Exogenous (not a cost-optimal build); a strategic move whose security benefit per dollar reveals a shadow price of security.',
+  us_projects: 'Build cost of the US projects you’ve selected that are still under construction or planned (Round Top, Lynas Seadrift, e-VAC, Cyclic, Energy Fuels, …) — capacity × an illustrative per-stage build rate ($/kt, calibrated so Round Top ≈ $400M). These exogenous strategic builds lower the trade-risk index, so their cost belongs in the NPV; the model meets the residual demand at modeled cost. Operating plants (e.g. MP Fort Worth) are sunk and already in the modeled baseline, so they’re excluded to avoid double-counting.',
   stockpile: 'Cost of the strategic magnet stockpile: size × an all-in acquire + hold rate (~$110/kg, grounded in Benchmark Feb-2026 prices for Dy/Tb-rich grades). A real, paid cost that buys down the unmet-demand penalty by covering the earliest shortfall.',
   dytb_premium: 'Price-taker premium the US pays on the Dy/Tb it imports (as oxide, alloy, or embodied in magnets) as China’s export controls inflate the heavy-REE benchmarks Western buyers are bound to. Scales with the China-restriction slider; the US escapes by separating or recycling Dy/Tb domestically — limited in the near term, since the one active US mine (Mountain Pass) is light-REE and domestic heavy-REE prospects (e.g. Round Top, TX) are pre-commercial.',
   consumer_premium: 'The ex-China premium US buyers pay for ALLY-sourced supply rather than cheaper Chinese material — the Nd/Pr-oxide premium on allied light oxide (~$45/kg) plus a manufacturing premium on any finished magnets imported from allies (~$15/kg). Borne as a higher import price, not US capital, so it rises with friendshoring. The heavy Dy/Tb premium is shown separately above.',
@@ -231,10 +233,11 @@ export default function MagnetExplorer() {
       ...sc,
       us_supply: reconcileUsSupply(sc, activeProjects),
       us_supply_re: reconcileUsSupplyRe(sc, activeProjects),
-      // Round Top lowers the mining DI (TRI) AND costs money to build — both must move
-      // together, or the tool shows security for free. ROUND_TOP_COST mirrors the
-      // cost-of-security lever; it flows into REAL_COST_KEYS, so the NPV + cost bar update.
-      us_cost: { ...sc.us_cost, consumer_premium: consumerPremium(rpath), round_top: hasUSHeavyMine ? ROUND_TOP_COST : 0 },
+      // Selected US projects (construction + planned — Round Top, Lynas Seadrift, e-VAC,
+      // Cyclic, …) cost money to build AND lower the TRI; both must move together, or the
+      // tool shows security for free. Their build cost flows into REAL_COST_KEYS so the NPV
+      // + cost bar rise; the model meets the residual demand at modeled cost.
+      us_cost: { ...sc.us_cost, consumer_premium: consumerPremium(rpath), us_projects: usProjectsBuildCost(activeProjects) },
       path: rpath,
       _di: hasUSHeavyMine ? { ...sc._di, mining: ROUND_TOP_MINING_DI } : sc._di,
     };

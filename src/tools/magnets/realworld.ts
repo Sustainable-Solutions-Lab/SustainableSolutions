@@ -261,7 +261,13 @@ export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<
   // element-specific upstream (mining/separation) with class-specific projects.
   const frac = cls === 'heavy' ? 0.094 : cls === 'light' ? 0.906 : 1;
   const restrict = sc.china ?? 0;     // China export-restriction severity → graded market bifurcation
-  const usMineral = sc.source ?? 0;   // US friendshoring / mineral prong → throttles China→US RE
+  // The US throttle on China→US RE is the LARGER of friendshoring and the price floor:
+  // both push China out of US sourcing. The mineral prong does it by mandate; the price
+  // floor does it on price (tariffing Chinese imports up to the ex-China premium). Without
+  // the price-floor term the Sankey kept routing Chinese alloy into US magnets that the
+  // model doesn't carry — the model prices Chinese imports out and leans on allied supply
+  // (which itself draws on China, so a China→ally ribbon appears upstream instead).
+  const usMineral = Math.max(sc.source ?? 0, sc.pfloor ?? 0);
   const prod: Record<string, Reg> = {};
   for (const [iface, stage] of IFACE_STAGE) {
     const model = modelOrigin(sc, iface);     // model's regional production (responds to sliders)

@@ -325,19 +325,40 @@ export default function MagnetExplorer() {
     ...stageBreakdownClass(scR, 'light', alliedHHIMap).map((s) => ({ ...s, elem: 'Nd/Pr' })),
   ];
   const chokepoint = cpStages.reduce((a, b) => (b.tri > a.tri ? b : a), cpStages[0]);
-  // A lever is "already taken" once its control is maxed (sliders) or its project is
-  // built — so the KPI recommends the NEXT-best UNtaken move (e.g. once Round Top is
-  // selected it stops recommending Round Top, and points to the next-cheapest action).
-  const leverTaken = (name: string) =>
-    (name === 'Develop Round Top' && activeProjects.has('round_top')) ||
-    (name === 'US-make mandate' && make >= AXES.makeMax - 1e-6) ||
-    (name === 'Friendshore sourcing' && source >= AXES.sourceMax - 1e-6) ||
-    (name === 'Recycling build-out' && rec >= AXES.recMax - 1e-6) ||
-    (name === 'Strategic stockpile' && stockpile >= STOCKPILE_MAX - 1e-6);
+  // MARGINAL TRI benefit of each lever FROM THE CURRENT state (vs securityLevers' from-
+  // no-policy benefit). This makes the KPI truly dynamic: a lever that's exhausted —
+  // slider maxed, project built, or already satisfied by ANOTHER lever (e.g. maxing
+  // "US-made magnets" also satisfies "Build US magnet") — drops to ~0 marginal benefit
+  // and the recommendation advances to the next-cheapest move on its own.
+  const marginalDTRI = useMemo(() => {
+    const cp = { china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale };
+    const triR = (scn: Parameters<typeof reconcileUsSupply>[0]) =>
+      integratedTRI({ ...scn, us_supply: reconcileUsSupply(scn, activeProjects) }, alliedHHIMap);
+    const withDi = (s: typeof sc) => (hasUSHeavyMine ? { ...s, _di: { ...s._di, mining: ROUND_TOP_MINING_DI } } : s);
+    const at = (o: Record<string, number>) => withDi(applyStockpile(interpScenario({ ...cp, make, source, rec, pfloor, ...o }), stockpile));
+    const cur = at({});
+    const curTRI = triR(cur);
+    const noBuf = withDi(interpScenario({ ...cp, make, source, rec, pfloor }));
+    return {
+      'US-make mandate': curTRI - triR(at({ make: AXES.makeMax })),
+      'Friendshore sourcing': curTRI - triR(at({ source: AXES.sourceMax })),
+      'Recycling build-out': curTRI - triR(at({ rec: AXES.recMax })),
+      'Strategic stockpile': curTRI - triR(applyStockpile(noBuf, STOCKPILE_MAX)),
+      'Develop Round Top': activeProjects.has('round_top') ? 0 : curTRI - triR(applyRoundTop(cur, true)),
+      'Build US separation': curTRI - triR(reshoreSupply(cur, ['separation'], 0.9)),
+      'Build US alloy': curTRI - triR(reshoreSupply(cur, ['alloy'], 0.9)),
+      'Build US magnet': curTRI - triR(reshoreSupply(cur, ['magnet'], 0.9)),
+    } as Record<string, number>;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [china, rcost, demand, make, source, rec, pfloor, stockpile, hasUSHeavyMine, activeProjects, alliedHHIMap]);
+  // Rank only levers that still buy meaningful security FROM HERE, by $ per 0.1 marginal TRI.
   const bestLever = securityLevers
-    .filter((l) => !l.demand && l.dTRI > 0.005 && l.dCost > 0 && !leverTaken(l.name))
-    .map((l) => ({ ...l, perTRI: l.dCost / (l.dTRI / 0.1) }))
+    .filter((l) => !l.demand && l.dCost > 0 && (marginalDTRI[l.name] ?? 0) > 0.005)
+    .map((l) => ({ ...l, perTRI: l.dCost / (marginalDTRI[l.name] / 0.1) }))
     .sort((a, b) => a.perTRI - b.perTRI)[0];
+  // When nothing left buys security cost-effectively, that's itself a finding (the US is
+  // at its security floor for this threat — only demand-side or deeper structural moves remain).
+  const leversExhausted = !bestLever && securityLevers.some((l) => !l.demand && l.dCost > 0);
 
   return (
     <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: isMobile ? '20px 16px 92px' : '28px 20px 0', color: 'var(--ink)' }}>
@@ -509,8 +530,8 @@ export default function MagnetExplorer() {
               deltaColor={npvDelta > 50 ? WORSE : npvDelta < -50 ? 'var(--brand-green)' : 'var(--ink-3)'}
               sub="2026–35 NPV · Δ vs do-nothing" />
             <ScoreCard label="Tightest chokepoint" value={`${chokepoint.elem} ${chokepoint.label.split(' ')[0].toLowerCase()}`} valueColor={riskColor(chokepoint.tri)} chip small sub={`stage TRI ${chokepoint.tri.toFixed(2)}`} />
-            <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : 'none yet'} valueColor="var(--ink)" small
-              sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : 'raise the China restriction'} />
+            <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : leversExhausted ? 'all spent' : 'none yet'} valueColor="var(--ink)" small
+              sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : leversExhausted ? 'at the security floor — only demand-side moves left' : 'raise the China restriction'} />
             <ScoreCard label="US magnets imported" value={pct(sc.kpis.us_import_pct)} valueColor="var(--ink)" sub="2035" />
             <ScoreCard label="US unmet demand" value={`${usUnmet.toFixed(0)} kt`} valueColor={usUnmet > 0.05 ? WORSE : 'var(--ink)'} sub="2026–35 cumulative" />
           </div>

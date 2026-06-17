@@ -36,7 +36,7 @@ const COLS = [
   { label: 'Magnet', stage: 'from sintering', iface: 'magnet', mass: 'finished magnet',
     desc: 'Finished sintered NdFeB magnets — the output of MAGNET MAKING. Alloy is milled, aligned, pressed, sintered, machined, coated, magnetized. MASS SHOWN: FINISHED-magnet mass (RE + iron + boron) — ~3× the rare-earth-oxide mass of the earlier columns, because iron + boron are ~64% of an NdFeB magnet.' },
   { label: 'Demand', stage: 'consumption', iface: null, mass: 'finished magnet',
-    desc: 'Finished-magnet consumption by region. MASS SHOWN: finished-magnet mass.' },
+    desc: 'Finished-magnet consumption by region — each bar is that region’s share of WORLD magnet demand (China ~50%, allies ~38%, US ~12%), NOT of US demand. MASS SHOWN: finished-magnet mass.' },
 ];
 // Sankey material interface → the producing project stage (for the facility hover).
 const IFACE_TO_STAGE: Record<string, Stage> = {
@@ -83,7 +83,8 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
     const barPct = Math.round((h / innerH) * 100);
     const regionMass = colVals[i][r] ?? 0;   // this region's kt at this stage
     const stage = IFACE_TO_STAGE[COLS[i].iface ?? ''];
-    if (!stage) return { head: `${r} — ${barPct}% of US magnet demand`, sub: `${kt(regionMass)} kt finished magnet`, rows: [], note: '' };
+    if (!stage) return { head: `${r} — ${barPct}% of global magnet demand`, sub: `${kt(regionMass)} kt finished magnet`,
+      rows: [], note: r === 'China' ? 'China’s share of WORLD demand (it consumes about half of all NdFeB) — not of US demand.' : `${r}’s share of world magnet demand.` };
     const head = `${r} · ${COLS[i].label} — ${barPct}%`;
     const sub = `${kt(regionMass)} kt ${COLS[i].mass}`;   // name the mass (oxide vs finished magnet)
     const facs = facilityBreakdown(stage, r as 'USA' | 'China' | 'RoW', active, scale, cls === 'total' ? undefined : cls);

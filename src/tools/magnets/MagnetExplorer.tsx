@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE } from './interp';
+import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE, ensurePriceFloorSlices, priceFloorReady } from './interp';
 import { integratedTRI, integratedRE, stageBreakdownClass, riskColor, riskChip } from './tri';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
@@ -84,6 +84,7 @@ const COST_KEYS: [string, string, string][] = [
   ['us_projects', 'US strategic projects (selected)', '#3288BD'],
   ['stockpile', 'Strategic stockpile', '#5E4FA2'],
   ['dytb_premium', 'Heavy-REE price premium', '#762A83'],
+  ['price_floor', 'Price floor (tariff on China imports)', '#5E4FA2'],
   ['consumer_premium', 'Consumer premium (ally imports)', '#9970AB'],
   ['trade', 'Shipping', '#5E4FA2'],
   ['coproduct', 'Co-product La/Ce', '#FEE08B'],
@@ -99,6 +100,7 @@ const COST_DESC: Record<string, string> = {
   us_projects: 'Build cost of the US projects you’ve selected that are still under construction or planned (Round Top, Lynas Seadrift, e-VAC, Cyclic, Energy Fuels, …) — capacity × an illustrative per-stage build rate ($/kt, calibrated so Round Top ≈ $400M). These exogenous strategic builds lower the trade-risk index, so their cost belongs in the NPV; the model meets the residual demand at modeled cost. Operating plants (e.g. MP Fort Worth) are sunk and already in the modeled baseline, so they’re excluded to avoid double-counting.',
   stockpile: 'Cost of the strategic magnet stockpile: size × an all-in acquire + hold rate (~$110/kg, grounded in Benchmark Feb-2026 prices for Dy/Tb-rich grades). A real, paid cost that buys down the unmet-demand penalty by covering the earliest shortfall.',
   dytb_premium: 'Price-taker premium the US pays on the Dy/Tb it imports (as oxide, alloy, or embodied in magnets) as China’s export controls inflate the heavy-REE benchmarks Western buyers are bound to. Scales with the China-restriction slider; the US escapes by separating or recycling Dy/Tb domestically — limited in the near term, since the one active US mine (Mountain Pass) is light-REE and domestic heavy-REE prospects (e.g. Round Top, TX) are pre-commercial.',
+  price_floor: 'Cost of the US price-floor policy: the tariff paid on whatever Chinese oxide / alloy / magnet the US still imports after the floor is set (rate scaled by the slider, sized to the ex-China premium). Borne by consumers as a higher import price, not US capital — no factory needed. As the floor rises it pushes China out of US sourcing, so this line often falls toward zero while the avoided-China cost reappears as domestic build + the ally consumer premium.',
   consumer_premium: 'The ex-China premium US buyers pay for ALLY-sourced supply rather than cheaper Chinese material — the Nd/Pr-oxide premium on allied light oxide (~$45/kg) plus a manufacturing premium on any finished magnets imported from allies (~$15/kg). Borne as a higher import price, not US capital, so it rises with friendshoring. The heavy Dy/Tb premium is shown separately above.',
   shortage: 'Penalty on US unmet magnet demand: unmet tonnes × a high penalty rate. Not a market cost — it flags US demand the chain can’t deliver in time (e.g. under a ban).',
 };
@@ -170,6 +172,12 @@ export default function MagnetExplorer() {
   const [china, setChina] = useState(0);     // China export-restriction severity
   const [rcost, setRcost] = useState(AXES.rcostMin); // US recycling cost factor
   const [stockpile, setStockpile] = useState(0);     // strategic stockpile size (kt)
+  const [pfloor, setPfloor] = useState(0);           // US price floor on China imports (0 / .5 / 1)
+  // The floor=0 grid is eager; the half/full slices load on first use of the slider.
+  const [pfReady, setPfReady] = useState(priceFloorReady());
+  useEffect(() => {
+    if (pfloor > 0 && !pfReady) ensurePriceFloorSlices().then(() => setPfReady(true));
+  }, [pfloor, pfReady]);
   // Real-world projects overlay (default = operating + under-construction). The
   // active allied set drives the country-level allied HHI in the trade-risk index.
   // Only the uncertain future supply is toggled; operating plants are always in.
@@ -197,8 +205,8 @@ export default function MagnetExplorer() {
   const demandNoLever = useMemo(() => demandSummary(scenario, DEFAULT_LEVERS), [scenario]);
 
   const sc = useMemo(() => applyStockpile(interpScenario({
-    make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale,
-  }), stockpile), [make, source, rec, china, rcost, demand, stockpile]);
+    make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale, pfloor,
+  }), stockpile), [make, source, rec, china, rcost, demand, stockpile, pfloor, pfReady]);
   // The cost breakdown is US-specific (the cost the US bears to supply itself) —
   // this analysis is about US supply security. Global trade/co-product don't apply.
   const US_COST_KEYS = COST_KEYS.filter(([k]) => k !== 'trade' && k !== 'coproduct');
@@ -385,6 +393,8 @@ export default function MagnetExplorer() {
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Geopolitics</div>
           <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
             desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium (see the cost bar)." />
+          <Slider label="US price floor on China imports" value={pfloor} max={AXES.pfloorMax} onChange={setPfloor} fmt={(v) => pct(v * 100)}
+            desc="A US guaranteed price floor (DoD / MP-Materials-style) modeled as a tariff that lifts the price of Chinese oxide, alloy & magnet imports toward the ex-China premium — 0% = off, 50% = half, 100% = the full premium. It makes domestic + allied supply cost-competitive WITHOUT a mandate, so the market reshores on price rather than by rule. Its cost is borne by consumers as a higher import price (no factory needed), shown as 'Price floor' in the cost bar. A distinct instrument from friendshoring (a quantity mandate) — try them separately." />
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Resilience</div>
           <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
@@ -396,7 +406,7 @@ export default function MagnetExplorer() {
           )}
           <ProjectsAside future={futureSel} onToggle={toggleFuture} onSetGroup={setProjectGroup} />
 
-          <button onClick={() => { setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setFutureSel(new Set(DEFAULT_FUTURE)); }}
+          <button onClick={() => { setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setPfloor(0); setFutureSel(new Set(DEFAULT_FUTURE)); }}
             style={{ marginTop: 14, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>
             RESET TO BASELINE
           </button>

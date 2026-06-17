@@ -202,7 +202,7 @@ export function addStaticLayers(map, scheme, opts = {}) {
   // project. CONUS-wide projects (e.g. Just Air) pass false to suppress them.
   const californiaOverlays = opts.californiaOverlays !== false
   // CONUS state-border overlay. Opt-in (defaults false). Loads
-  // /us-states.geojson and renders state boundaries as a single thin line
+  // /geo/us-states.geojson and renders state boundaries as a single thin line
   // layer; the outermost segments collectively form the CONUS coastline.
   const usOverlays = opts.usOverlays === true
   const borderColor =
@@ -225,7 +225,7 @@ export function addStaticLayers(map, scheme, opts = {}) {
   if (californiaOverlays && !map.getSource('ca-mask')) {
     map.addSource('ca-mask', {
       type: 'geojson',
-      data: '/ca-mask.geojson',
+      data: '/geo/ca-mask.geojson',
     })
   }
 
@@ -251,7 +251,7 @@ export function addStaticLayers(map, scheme, opts = {}) {
   if (californiaOverlays && !map.getSource('ca-boundary')) {
     map.addSource('ca-boundary', {
       type: 'geojson',
-      data: '/ca-boundary.geojson',
+      data: '/geo/ca-boundary.geojson',
     })
   }
 
@@ -276,7 +276,7 @@ export function addStaticLayers(map, scheme, opts = {}) {
   if (californiaOverlays && !map.getSource('counties')) {
     map.addSource('counties', {
       type: 'geojson',
-      data: '/counties-ca.geojson',
+      data: '/geo/counties-ca.geojson',
     })
   }
 
@@ -306,7 +306,7 @@ export function addStaticLayers(map, scheme, opts = {}) {
   if (usOverlays && !map.getSource('us-states')) {
     map.addSource('us-states', {
       type: 'geojson',
-      data: '/us-states.geojson',
+      data: '/geo/us-states.geojson',
     })
   }
 
@@ -381,10 +381,10 @@ export function addStaticLayers(map, scheme, opts = {}) {
   // Curated list of named places inside the 15 Just Air metros — Brooklyn,
   // Santa Monica, Sandy Springs, etc. Visible from z=6.5 so the user sees
   // community names exactly when the 3 km / 1 km city tiers reveal the
-  // intra-metro detail. Loaded from /public/us-communities.geojson; extend
+  // intra-metro detail. Loaded from /public/geo/us-communities.geojson; extend
   // that file to add more places.
   if (usOverlays && !map.getSource('us-communities')) {
-    map.addSource('us-communities', { type: 'geojson', data: '/us-communities.geojson' })
+    map.addSource('us-communities', { type: 'geojson', data: '/geo/us-communities.geojson' })
   }
   // Slightly lighter than the city labels and italic so they read as a
   // separate annotation tier.

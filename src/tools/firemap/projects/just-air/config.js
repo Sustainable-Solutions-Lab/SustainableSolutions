@@ -41,7 +41,7 @@ const config = {
     // state border, county borders, CA-city labels) baked in for Firefuels.
     // Without this, the mask would hide everything outside California.
     useCaliforniaOverlay: false,
-    // Render 48-state borders from /us-states.geojson (single thin line
+    // Render 48-state borders from /geo/us-states.geojson (single thin line
     // layer; outermost segments collectively form the CONUS coastline).
     useUsOverlay: true,
   },

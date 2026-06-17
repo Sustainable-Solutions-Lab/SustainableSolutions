@@ -156,7 +156,7 @@ export function useMapLayer(map, config, state, opacityP95) {
     if (config.scales) return
 
     const sourceConfig = isPlaceholder
-      ? { type: 'geojson', data: '/fuel-treatment.geojson' }
+      ? { type: 'geojson', data: '/geo/fuel-treatment.geojson' }
       : { type: 'vector', url: `pmtiles://${config.tilesUrl}` }
 
     function addLayers() {

@@ -9,6 +9,7 @@ import data from './scenarios.json';
 export type Flow = { from: string; to: string; value: number };
 export type Scenario = {
   make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number;
+  pfloor: number;
   kpis: Record<string, number>;
   cost: Record<string, number>;
   us_cost: Record<string, number>;
@@ -36,13 +37,13 @@ export const YEARS = (data as any).meta.years as number[];
 export const DEMAND_KT_REF = (data as any).meta.demand_kt_ref as number[];
 export const US_DEMAND_SHARE = (data as any).meta.us_demand_share as number;
 
-type AxisField = 'make' | 'source' | 'rec' | 'dytb' | 'china' | 'rcost' | 'dscale';
+type AxisField = 'make' | 'source' | 'rec' | 'dytb' | 'china' | 'rcost' | 'dscale' | 'pfloor';
 const SC = (data as any).scenarios as Scenario[];
 const AX = (data as any).meta.axes as Record<string, number[]>;
 // scenario field -> grid-axis name
 const FIELD_AXIS: [AxisField, string][] = [
   ['make', 'us_make'], ['source', 'non_china_source'], ['rec', 'recycling'], ['dytb', 'dytb'],
-  ['china', 'china'], ['rcost', 'us_recyc_cost'], ['dscale', 'demand_scale'],
+  ['china', 'china'], ['rcost', 'us_recyc_cost'], ['dscale', 'demand_scale'], ['pfloor', 'price_floor'],
 ];
 export const AXES = {
   makeMax: Math.max(...AX.us_make),
@@ -53,12 +54,41 @@ export const AXES = {
   dscaleMin: Math.min(...AX.demand_scale),  // lowest total-demand scale (most RE-free / efficient)
   rcostMin: Math.min(...AX.us_recyc_cost),  // baseline US recycling cost factor
   rcostMax: Math.max(...AX.us_recyc_cost),
+  pfloorMax: Math.max(...(AX.price_floor ?? [0])),  // US price floor: 0=off … 1=full ex-China premium
 };
 
-type Point = { make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number };
+type Point = { make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number; pfloor?: number };
 const key = (s: Point) =>
-  `${s.make}|${s.source}|${s.rec}|${s.dytb}|${s.china}|${s.rcost}|${s.dscale}`;
+  `${s.make}|${s.source}|${s.rec}|${s.dytb}|${s.china}|${s.rcost}|${s.dscale}|${s.pfloor ?? 0}`;
 const LOOKUP = new Map(SC.map((s) => [key(s), s]));
+
+// Price-floor slices ship separately so the default page load is unchanged: the eager
+// grid IS the floor=0 slice; the half/full slices (~3 MB gz) are dynamically imported
+// (code-split into lazy chunks) the first time the user engages the price-floor slider,
+// then merged into LOOKUP. Until loaded, a pfloor>0 query gracefully degrades to floor=0.
+const SLICE_LOADERS: Record<string, () => Promise<any>> = {
+  '0.5': () => import('./scenarios.pf1.json'),
+  '1.0': () => import('./scenarios.pf2.json'),
+};
+const loadedSlices = new Set<string>();
+let pfLoadPromise: Promise<void> | null = null;
+export function priceFloorReady(): boolean {
+  return Object.keys(SLICE_LOADERS).every((k) => loadedSlices.has(k));
+}
+export function ensurePriceFloorSlices(): Promise<void> {
+  if (priceFloorReady()) return Promise.resolve();
+  if (!pfLoadPromise) {
+    pfLoadPromise = Promise.all(
+      Object.entries(SLICE_LOADERS).map(async ([lvl, load]) => {
+        if (loadedSlices.has(lvl)) return;
+        const mod: any = await load();
+        for (const s of (((mod.default ?? mod).scenarios as Scenario[]) || [])) LOOKUP.set(key(s), s);
+        loadedSlices.add(lvl);
+      }),
+    ).then(() => undefined);
+  }
+  return pfLoadPromise;
+}
 const snap = (arr: number[], x: number) =>
   arr.reduce((p, c) => (Math.abs(c - x) < Math.abs(p - x) ? c : p), arr[0]);
 
@@ -162,7 +192,8 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
 }
 
 export function interpScenario(pt: Point): Scenario {
-  const brk = FIELD_AXIS.map(([f, ax]) => bracket(AX[ax], pt[f]));
+  pt = { ...pt, pfloor: pt.pfloor ?? 0 };   // default the price-floor axis for callers that omit it
+  const brk = FIELD_AXIS.map(([f, ax]) => bracket(AX[ax] ?? [0], (pt[f] as number) ?? 0));
   const n = FIELD_AXIS.length;
   const parts: { s: Scenario; w: number }[] = [];
   for (let m = 0; m < (1 << n); m++) {
@@ -179,7 +210,14 @@ export function interpScenario(pt: Point): Scenario {
     const s = LOOKUP.get(sk);
     if (s) parts.push({ s, w });
   }
-  return parts.length ? combine(parts) : BASE;
+  const out = parts.length ? combine(parts) : { ...BASE };
+  // combine() copies the axis scalars from a grid NODE; overwrite them with the
+  // actually-queried slider position so downstream consumers see the real value
+  // smoothly — notably the Sankey's China→US throttle (usMineral = sc.source) and
+  // the restriction severity (sc.china), which were otherwise quantized to the
+  // nearest grid coordinate (e.g. a 0.8 slider read as 0.5).
+  for (const [f] of FIELD_AXIS) (out as any)[f] = pt[f];
+  return out;
 }
 
 // ── Strategic stockpile overlay ──────────────────────────────────────────────

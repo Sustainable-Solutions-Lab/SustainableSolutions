@@ -94,8 +94,16 @@ function route(supply: Reg, demand: Reg, restrict = 0, usMineral = 0): Flow[] {
     const totW = dests.reduce((a, d) => a + wt(d), 0);
     if (totW <= 1e-9) continue;          // no allowed buyer → surplus idle
     for (const d of dests) {
-      const f = sup[s] * (wt(d) / totW);
+      // wt(d) is the ABSOLUTE ceiling on this arc — for a cross-bloc arc it's
+      // dem[d]·(1−block), the mineral-prong / restriction cap — NOT just a split
+      // weight. Capping at it (not only normalizing by totW) is what stops China
+      // from dumping its whole surplus onto the US when the US is the only
+      // alloy-short buyer: the throttle then actually SHRINKS the China→US ribbon
+      // as you friendshore, instead of leaving a phantom thread. Excess China
+      // surplus with no allowed buyer stays idle (the market bifurcates).
+      const f = Math.min(sup[s] * (wt(d) / totW), wt(d));
       if (f > 0.01) flows.push({ from: s, to: d, value: f });
+      sup[s] -= f; dem[d] -= f;
     }
   }
   return flows;

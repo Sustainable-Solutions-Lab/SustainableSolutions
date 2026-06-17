@@ -219,6 +219,7 @@ export default function MagnetExplorer() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [infoCost, setInfoCost] = useState(false);   // ⓘ toggle for the cost-bar method note
   const [rcostOpen, setRcostOpen] = useState(false); // ＋/－ for the recycling-cost stress-test
+  const [resetFlash, setResetFlash] = useState(false); // brief confirm-flash on "reset to baseline"
   // Real-world-anchored Sankey: selected projects locked in by region, China residual.
   const rwFlows = useMemo(() => ({
     total: realWorldFlows(sc, activeProjects),
@@ -324,8 +325,17 @@ export default function MagnetExplorer() {
     ...stageBreakdownClass(scR, 'light', alliedHHIMap).map((s) => ({ ...s, elem: 'Nd/Pr' })),
   ];
   const chokepoint = cpStages.reduce((a, b) => (b.tri > a.tri ? b : a), cpStages[0]);
+  // A lever is "already taken" once its control is maxed (sliders) or its project is
+  // built — so the KPI recommends the NEXT-best UNtaken move (e.g. once Round Top is
+  // selected it stops recommending Round Top, and points to the next-cheapest action).
+  const leverTaken = (name: string) =>
+    (name === 'Develop Round Top' && activeProjects.has('round_top')) ||
+    (name === 'US-make mandate' && make >= AXES.makeMax - 1e-6) ||
+    (name === 'Friendshore sourcing' && source >= AXES.sourceMax - 1e-6) ||
+    (name === 'Recycling build-out' && rec >= AXES.recMax - 1e-6) ||
+    (name === 'Strategic stockpile' && stockpile >= STOCKPILE_MAX - 1e-6);
   const bestLever = securityLevers
-    .filter((l) => !l.demand && l.dTRI > 0.005 && l.dCost > 0)
+    .filter((l) => !l.demand && l.dTRI > 0.005 && l.dCost > 0 && !leverTaken(l.name))
     .map((l) => ({ ...l, perTRI: l.dCost / (l.dTRI / 0.1) }))
     .sort((a, b) => a.perTRI - b.perTRI)[0];
 
@@ -406,9 +416,16 @@ export default function MagnetExplorer() {
           )}
           <ProjectsAside future={futureSel} onToggle={toggleFuture} onSetGroup={setProjectGroup} />
 
-          <button onClick={() => { setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setPfloor(0); setFutureSel(new Set(DEFAULT_FUTURE)); }}
-            style={{ marginTop: 14, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em', color: 'var(--ink)', background: 'transparent', border: '1px solid var(--rule)', borderRadius: 6, cursor: 'pointer' }}>
-            RESET TO BASELINE
+          <button onClick={() => {
+              setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setPfloor(0); setFutureSel(new Set(DEFAULT_FUTURE));
+              setResetFlash(true); window.setTimeout(() => setResetFlash(false), 650);
+            }}
+            style={{ marginTop: 14, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em',
+              color: resetFlash ? 'var(--paper)' : 'var(--ink)',
+              background: resetFlash ? 'var(--accent)' : 'transparent',
+              border: `1px solid ${resetFlash ? 'var(--accent)' : 'var(--rule)'}`,
+              borderRadius: 6, cursor: 'pointer', transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease' }}>
+            {resetFlash ? '✓ RESET TO BASELINE' : 'RESET TO BASELINE'}
           </button>
         </aside>
 

@@ -177,7 +177,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     }
 
     if (state.projectId === 'fuel-treatment') {
-      fetch('/fuel-treatment.geojson')
+      fetch('/geo/fuel-treatment.geojson')
         .then((r) => r.json())
         .then((data) => {
           const vals = data.features

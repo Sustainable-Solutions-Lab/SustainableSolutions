@@ -1,14 +1,30 @@
 /**
- * Real-world-anchored supply-chain flows for the Sankey. The optimization, left to
- * itself, mines almost entirely in China (Chinese ORE isn't export-restricted and is
- * cheapest), so the cost-optimal Sankey shows no ex-China mining. But the world IS
- * building ex-China capacity for strategic reasons (the shadow price of security).
+ * Real-world-anchored supply-chain flows for the Sankey.
  *
- * So we re-derive the diagram from the REAL projects the user has selected: at each
- * stage the selected projects are locked in as production by region (USA / China /
- * RoW), with China the residual backstop. The model still sets the magnitudes (each
- * stage's total throughput and the regional demand endpoint); only the ORIGIN split
- * is replaced. Toggling projects on/off (Round Top, Mt Weld, Lynas, …) moves the bars.
+ * BASE = the model's OWN flows (`sc.flows`, interpolated from the grid by every
+ * slider). These are faithful: they already carry the cross-region routing the
+ * optimization produces — including allies→US (RoW→USA) supply under friendshoring —
+ * and they already encode the China export-restriction / price-floor effects (the
+ * grid was solved at the chosen china / source / pfloor). We render them as-is.
+ *
+ * DELTA = the projects the user has selected. The optimization, left to itself, mines
+ * almost entirely in China (Chinese ORE isn't export-restricted and is cheapest), so
+ * the cost-optimal grid shows little ex-China mining. But the world IS building
+ * ex-China capacity for strategic reasons. So at each stage, where selected ex-China
+ * project capacity exceeds the model's own ex-China production, we DISPLACE
+ * Chinese-origin arcs to USA / RoW while PRESERVING their destinations. This adds
+ * ex-China supply (ex-China mining appears; US/ally processing grows) without ever
+ * deleting the model's existing allies→US arcs, and it leaves every interface's total
+ * throughput and the regional demand endpoint untouched (so the consumption split
+ * stays the model's). Toggling Round Top / Mt Weld / Lynas / … moves the bars; with
+ * no projects selected the diagram is exactly the model flows.
+ *
+ * Faithfulness rule on re-origin destinations: domestic/allied capacity substitutes
+ * for IMPORTS into ex-China regions. At MINING we also allow re-origining into a China
+ * destination (an ex-China mine shipping concentrate to Chinese separation is real —
+ * the export ban is on China's processed OUTPUTS, not on ore imports). Downstream
+ * (oxide/alloy/magnet) we never fabricate an ex-China→China export; project capacity
+ * beyond the importable deficit simply stays latent (China keeps producing it).
  */
 import type { Flow, Scenario } from './interp';
 import { regionalCapacity, regionalCapacityRe, type Stage } from './projects';
@@ -23,7 +39,6 @@ const IFACE_STAGE: [string, Stage][] = [
 ];
 
 const zero = (): Reg => ({ China: 0, RoW: 0, USA: 0 });
-const sumReg = (r: Reg) => r.China + r.RoW + r.USA;
 
 // Horizon-average utilization of project NAMEPLATE capacity over 2026–2035. Mines run
 // near capacity once open (~0.85); ex-China processing is nearly all new + ramping
@@ -38,75 +53,6 @@ function rampedCapacity(stage: Stage, active: Set<string>, scale: Record<string,
   const c = regionalCapacity(stage, active, scale) as Reg;
   const r = RAMP[stage] ?? 0.6;
   return { USA: c.USA * r, China: c.China * r, RoW: c.RoW * r };
-}
-
-/** Each region's outgoing total at an interface, from the model flows. */
-function modelOrigin(sc: Scenario, iface: string): Reg {
-  const out = zero();
-  for (const f of sc.flows[iface] ?? []) out[f.from as Region] += f.value;
-  return out;
-}
-/** Each region's incoming total at an interface (e.g. magnet consumption). */
-function modelDest(sc: Scenario, iface: string): Reg {
-  const out = zero();
-  for (const f of sc.flows[iface] ?? []) out[f.to as Region] += f.value;
-  return out;
-}
-
-/** Scale a region vector so it sums to `total` (no-op if it's already empty). */
-function scaleTo(r: Reg, total: number): Reg {
-  const s = sumReg(r);
-  if (s <= 1e-9) return zero();
-  const k = total / s;
-  return { China: r.China * k, RoW: r.RoW * k, USA: r.USA * k };
-}
-
-/** Route a stage's production to the next stage's production (= its consumption of
- * this stage's output): own-region first, then the residual proportionally. `restrict`
- * is the China export-restriction SEVERITY (0 = open market, 1 = full ban). It throttles
- * cross-bloc (China ↔ ex-China) trade by (1 − severity): the market bifurcates GRADUALLY
- * as the slider rises, rather than flipping at a single threshold. At 1 it's fully split
- * (China trades only with China) — so US oxide isn't shipped to China for alloying under
- * a ban (any ex-China surplus with no ex-China buyer is simply idle, not routed onward).
- * `usMineral` is the US FRIENDSHORING / mineral-prong severity: China-embodied RE to the
- * US ≤ (1 − usMineral), so it additionally throttles China→USA at EVERY interface (oxide,
- * alloy, magnet) — that's why the US then draws its alloy/oxide from ALLIES, not China.
- * RoW is unaffected (the mandate is US-only). The binding China→US throttle is the larger
- * of restrict and usMineral. */
-function route(supply: Reg, demand: Reg, restrict = 0, usMineral = 0): Flow[] {
-  const sup = { ...supply }, dem = { ...demand };
-  const flows: Flow[] = [];
-  for (const r of REGIONS) {            // own-region (no shipment) first
-    const f = Math.min(sup[r], dem[r]);
-    if (f > 0.01) flows.push({ from: r, to: r, value: f });
-    sup[r] -= f; dem[r] -= f;
-  }
-  for (const s of REGIONS) {            // residual: each source to its deficits
-    if (sup[s] <= 1e-9) continue;
-    // cross-bloc destinations keep only (1 − severity); China→US is additionally capped by
-    // the US mineral prong, so the binding block on that arc is max(restrict, usMineral).
-    const wt = (d: Region) => {
-      if ((s === 'China') === (d === 'China')) return dem[d];   // same bloc → full pull
-      const block = (s === 'China' && d === 'USA') ? Math.max(restrict, usMineral) : restrict;
-      return dem[d] * (1 - block);
-    };
-    const dests = REGIONS.filter((d) => dem[d] > 1e-9 && wt(d) > 1e-9);
-    const totW = dests.reduce((a, d) => a + wt(d), 0);
-    if (totW <= 1e-9) continue;          // no allowed buyer → surplus idle
-    for (const d of dests) {
-      // wt(d) is the ABSOLUTE ceiling on this arc — for a cross-bloc arc it's
-      // dem[d]·(1−block), the mineral-prong / restriction cap — NOT just a split
-      // weight. Capping at it (not only normalizing by totW) is what stops China
-      // from dumping its whole surplus onto the US when the US is the only
-      // alloy-short buyer: the throttle then actually SHRINKS the China→US ribbon
-      // as you friendshore, instead of leaving a phantom thread. Excess China
-      // surplus with no allowed buyer stays idle (the market bifurcates).
-      const f = Math.min(sup[s] * (wt(d) / totW), wt(d));
-      if (f > 0.01) flows.push({ from: s, to: d, value: f });
-      sup[s] -= f; dem[d] -= f;
-    }
-  }
-  return flows;
 }
 
 // Model constants (steer_magnet_cem): oxide-equivalent per kt magnet, and average
@@ -165,8 +111,8 @@ export function reconcileUsMix(sc: Scenario, active: Set<string>, scale: Record<
   const out: Record<string, number[]> = {};
   for (const k of keys) out[k] = [...(mix[k] ?? Array(n).fill(0))];
   for (let t = 0; t < n; t++) {
-    const demand = keys.reduce((a, k) => a + (out[k][t] || 0), 0);
     const dom0 = out.domestic[t] || 0;
+    const demand = keys.reduce((a, k) => a + (out[k][t] || 0), 0);
     const dom = Math.min(demand, Math.max(dom0, usMagCap));
     out.domestic[t] = dom;
     let toReduce = dom - dom0;                 // extra US-made displaces imports
@@ -250,49 +196,79 @@ export function reconcileUsSupplyRe(sc: Scenario, active: Set<string>, scale: Re
   return out;
 }
 
-/** Synthesize the real-world-anchored flows for every interface. Each stage's
- * ex-China production is a FLOOR = the selected projects, raised to the model's own
- * value wherever the model reshores beyond them; CHINA is the residual. So the
- * locked-in projects pin ex-China supply (ex-China mining appears), while the
- * unlocked balance still responds to every slider (China restriction, friendshoring,
- * demand…) through the model. */
+/** The model's own arcs for an interface, scaled to a class fraction (1 for total). */
+function classedArcs(sc: Scenario, iface: string, frac: number): Flow[] {
+  return (sc.flows[iface] ?? []).map((f) => ({ from: f.from, to: f.to, value: f.value * frac }));
+}
+
+/** Merge arcs sharing the same from→to, dropping negligible ones. */
+function mergeArcs(arcs: Flow[]): Flow[] {
+  const m = new Map<string, number>();
+  for (const f of arcs) m.set(`${f.from}|${f.to}`, (m.get(`${f.from}|${f.to}`) || 0) + f.value);
+  const out: Flow[] = [];
+  for (const [k, v] of m) {
+    if (v <= 0.01) continue;
+    const [from, to] = k.split('|');
+    out.push({ from, to, value: v });
+  }
+  return out;
+}
+
+/** Apply the project DELTA to one interface's model arcs: raise ex-China (USA / RoW)
+ * production to the selected-project FLOOR by re-origining Chinese-origin arcs to
+ * USA / RoW while KEEPING their destinations — so domestic / allied capacity
+ * substitutes for Chinese supply without deleting any of the model's existing arcs
+ * (allies→US stays). `chinaDestOK` allows re-origining into a China destination (true
+ * only at MINING, where ore ships freely to Chinese separation). The per-interface
+ * total throughput and every destination total are preserved (we only relabel some
+ * origins), so the column magnitudes and the demand endpoint stay the model's. */
+function applyProjectDelta(arcs: Flow[], origin: Reg, floorUSA: number, floorRoW: number, chinaDestOK: boolean): Flow[] {
+  const result: Flow[] = arcs.filter((f) => f.from !== 'China').map((f) => ({ ...f }));
+  const china = arcs.filter((f) => f.from === 'China').map((f) => ({ ...f }));
+  const pull = (region: Region, need: number, destOrder: Region[]) => {
+    for (const dest of destOrder) {
+      if (need <= 1e-9) break;
+      for (const a of china) {
+        if (need <= 1e-9) break;
+        if (a.to !== dest || a.value <= 1e-9) continue;
+        const take = Math.min(a.value, need);
+        a.value -= take; need -= take;
+        result.push({ from: region, to: dest, value: take });
+      }
+    }
+  };
+  // Serve own region first, then the other ally region; China destination last and
+  // only where allowed (mining). USA capacity displaces US imports of Chinese supply
+  // before it "exports" to an ally; RoW symmetrically.
+  const usDest: Region[] = chinaDestOK ? ['USA', 'RoW', 'China'] : ['USA', 'RoW'];
+  const rowDest: Region[] = chinaDestOK ? ['RoW', 'USA', 'China'] : ['RoW', 'USA'];
+  pull('USA', Math.max(0, floorUSA - origin.USA), usDest);
+  pull('RoW', Math.max(0, floorRoW - origin.RoW), rowDest);
+  for (const a of china) if (a.value > 1e-9) result.push(a);  // China keeps the un-displaced remainder
+  return mergeArcs(result);
+}
+
+/** Real-world-anchored flows = the model's own flows (faithful base, carries allies→US
+ * and the slider-driven restriction effects) with the selected projects applied as an
+ * origin-substitution DELTA (China→ex-China up to the project floor; see header). */
 export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<string, number> = {}, cls?: 'heavy' | 'light'): Record<string, Flow[]> {
-  // Class view scales throughput to that RE class's mass fraction and re-floors the
-  // element-specific upstream (mining/separation) with class-specific projects.
+  // Class view scales throughput to that RE class's mass fraction and floors the
+  // element-specific upstream (mining/separation) with class-specific project capacity.
   const frac = cls === 'heavy' ? 0.094 : cls === 'light' ? 0.906 : 1;
-  const restrict = sc.china ?? 0;     // China export-restriction severity → graded market bifurcation
-  // The US throttle on China→US RE is the LARGER of friendshoring and the price floor:
-  // both push China out of US sourcing. The mineral prong does it by mandate; the price
-  // floor does it on price (tariffing Chinese imports up to the ex-China premium). Without
-  // the price-floor term the Sankey kept routing Chinese alloy into US magnets that the
-  // model doesn't carry — the model prices Chinese imports out and leans on allied supply
-  // (which itself draws on China, so a China→ally ribbon appears upstream instead).
-  const usMineral = Math.max(sc.source ?? 0, sc.pfloor ?? 0);
-  const prod: Record<string, Reg> = {};
+  const out: Record<string, Flow[]> = {};
   for (const [iface, stage] of IFACE_STAGE) {
-    const model = modelOrigin(sc, iface);     // model's regional production (responds to sliders)
-    const T = sumReg(model) * frac;
-    let usP: number, rowP: number;
+    const arcs = classedArcs(sc, iface, frac);
+    const origin = zero();
+    for (const f of arcs) origin[f.from as Region] += f.value;
+    let floorUSA: number, floorRoW: number;
     if (cls && (stage === 'mining' || stage === 'separation')) {
       const cap = rampedCapacityRe(stage as Stage, active, cls, scale);  // class-specific ex-China floor
-      usP = cap.USA; rowP = cap.RoW;          // model heavy ex-China ≈ 0, so projects only
+      floorUSA = cap.USA; floorRoW = cap.RoW;            // model heavy ex-China ≈ 0, so projects only
     } else {
       const cap = rampedCapacity(stage, active, scale);
-      usP = Math.max(cap.USA, model.USA) * frac;
-      rowP = Math.max(cap.RoW, model.RoW) * frac;
+      floorUSA = cap.USA * frac; floorRoW = cap.RoW * frac;
     }
-    const exc = usP + rowP;
-    prod[iface] = exc >= T
-      ? { USA: (usP * T) / (exc || 1), RoW: (rowP * T) / (exc || 1), China: 0 }
-      : { USA: usP, RoW: rowP, China: T - exc };
+    out[iface] = applyProjectDelta(arcs, origin, floorUSA, floorRoW, stage === 'mining');
   }
-
-  const consumer = modelDest(sc, 'magnet');
-  const consF = { USA: consumer.USA * frac, China: consumer.China * frac, RoW: consumer.RoW * frac };
-  const flows: Record<string, Flow[]> = {};
-  flows.concentrate = route(prod.concentrate, scaleTo(prod.oxide, sumReg(prod.concentrate)), restrict, usMineral);
-  flows.oxide = route(prod.oxide, scaleTo(prod.alloy, sumReg(prod.oxide)), restrict, usMineral);
-  flows.alloy = route(prod.alloy, scaleTo(prod.magnet, sumReg(prod.alloy)), restrict, usMineral);
-  flows.magnet = route(prod.magnet, scaleTo(consF, sumReg(prod.magnet)), restrict, usMineral);
-  return flows;
+  return out;
 }

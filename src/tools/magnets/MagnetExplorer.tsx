@@ -178,7 +178,7 @@ export default function MagnetExplorer() {
   useEffect(() => {
     if (pfloor > 0 && !pfReady) ensurePriceFloorSlices().then(() => setPfReady(true));
   }, [pfloor, pfReady]);
-  // Real-world projects overlay (default = operating + under-construction). The
+  // Real-world projects overlay (default = operating only; construction + planned off). The
   // active allied set drives the country-level allied HHI in the trade-risk index.
   // Only the uncertain future supply is toggled; operating plants are always in.
   const [futureSel, setFutureSel] = useState<Set<string>>(() => new Set(DEFAULT_FUTURE));
@@ -258,6 +258,16 @@ export default function MagnetExplorer() {
   const baseNPV = realCost(interpScenario({ make: 0, source: 0, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale }));
   const npvDelta = usCostReal - baseNPV;
   const tri = integratedRE(scR, alliedHHIMap);   // live readout (light+heavy weighted)
+  // China-exposed demand (PROXY): the share of US magnet demand that touches China at
+  // ANY chain stage. A unit is China-free only if its magnet AND alloy AND oxide AND ore
+  // are all non-Chinese, so 1 − Π(1 − china_share) over the reconciled per-stage US
+  // sourcing. This catches the component-prong loophole the "magnets imported" KPI misses:
+  // a US-MADE magnet built from Chinese alloy/oxide still counts as exposed, so maxing
+  // US-make alone barely moves this — only adding non-China sourcing (the mineral prong)
+  // does. APPROXIMATE (assumes stages source independently); a faithful flow-traced
+  // version is a model refinement (see the deferred FEOC-content item).
+  const chinaTouch = 1 - ['mining', 'separation', 'alloy', 'magnet']
+    .reduce((p, st) => p * (1 - Math.min(1, Math.max(0, scR.us_supply?.[st]?.china ?? 0))), 1);
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
   // lever buys in integrated trade-risk reduction per real dollar (TRI per $).
@@ -533,6 +543,7 @@ export default function MagnetExplorer() {
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : leversExhausted ? 'all spent' : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : leversExhausted ? 'at the security floor — only demand-side moves left' : 'raise the China restriction'} />
             <ScoreCard label="US magnets imported" value={pct(sc.kpis.us_import_pct)} valueColor="var(--ink)" sub="2035" />
+            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip sub="approx · any chain stage" />
             <ScoreCard label="US unmet demand" value={`${usUnmet.toFixed(0)} kt`} valueColor={usUnmet > 0.05 ? WORSE : 'var(--ink)'} sub="2026–35 cumulative" />
           </div>
         </main>

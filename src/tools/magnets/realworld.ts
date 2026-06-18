@@ -222,8 +222,13 @@ function stageProduction(sc: Scenario, stage: Stage, iface: string, active: Set<
   const T = sumReg(model);
   let usP: number, rowP: number;
   if (cls && (stage === 'mining' || stage === 'separation')) {
-    const cap = rampedCapacityRe(stage, active, cls, scale);   // class-specific ex-China floor
-    usP = Math.max(model.USA, cap.USA); rowP = Math.max(model.RoW, cap.RoW);
+    // Element-specific stage in a CLASS view: ex-China heavy/light supply comes ONLY
+    // from class-tagged projects. The aggregate model production × frac would mis-
+    // attribute (e.g. the US's light Mountain Pass ore would show up as ~2% of HEAVY
+    // mining); there are no listed US heavy-mining facilities, so US heavy = 0 here
+    // until a heavy project (Round Top, …) is selected. China is the residual.
+    const cap = rampedCapacityRe(stage, active, cls, scale);
+    usP = cap.USA; rowP = cap.RoW;
   } else {
     const cap = rampedCapacity(stage, active, scale);
     usP = Math.max(model.USA, cap.USA * frac); rowP = Math.max(model.RoW, cap.RoW * frac);

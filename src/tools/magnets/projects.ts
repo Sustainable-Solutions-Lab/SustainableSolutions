@@ -239,7 +239,10 @@ export const tier = (p: Project): Tier =>
   RAMPING_IDS.has(p.id) ? 'ramping' : p.status === 'operating' ? 'mature' : (p.status as Tier);
 export const OPERATING_IDS = new Set(PROJECTS.filter((p) => tier(p) === 'mature').map((p) => p.id));
 export const FUTURE_PROJECTS = PROJECTS.filter((p) => tier(p) !== 'mature');
+// Baseline default = operating only (mature always-on + ramping new-operating plants).
+// Construction and planned are OFF by default, so the baseline reflects capacity that
+// is actually producing today; toggle them on to see the effect of those investments.
 export const DEFAULT_FUTURE = new Set(
-  PROJECTS.filter((p) => tier(p) === 'ramping' || tier(p) === 'construction').map((p) => p.id));
+  PROJECTS.filter((p) => tier(p) === 'ramping').map((p) => p.id));
 /** The full active set the model overlay sees: operating (always) + chosen future. */
 export const activeSet = (future: Set<string>): Set<string> => new Set([...OPERATING_IDS, ...future]);

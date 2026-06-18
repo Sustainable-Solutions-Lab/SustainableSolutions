@@ -19,23 +19,23 @@ const REGIONS = ['China', 'RoW', 'USA'];
 // US = green, allies = amber, China = red — so the chain reads as a US-security
 // signal (secure → medium → exposed), the same palette as the trade-risk index.
 const REGION_COLOR: Record<string, string> = { China: '#D53E4F', RoW: '#FDAE61', USA: '#66C2A5' };
-// Each column is the MATERIAL flowing between stages; `stage` names the process
-// that produces it (shown as a sub-label) so mining etc. are visible even though
-// they sit "between" columns rather than being columns themselves.
+// Each column is a PROCESS stage (Mining → Separation → Alloying → Magnet); `label`
+// names the process (big text), `sub` lists its sub-steps (small text). The bar is
+// that process's OUTPUT material flowing onward to the next stage.
 // `mass` names the physical quantity each column tracks — they are NOT the same mass:
 // the first three columns are rare-earth OXIDE (the RE content only); the magnet +
 // demand columns are FINISHED-magnet mass (RE + iron + boron), ~3× heavier. The ribbons
 // taper to fill both bars at each interface, so this mass change is handled per-stage.
 const COLS = [
-  { label: 'Concentrate', stage: 'from mining', iface: 'concentrate' as string | null, mass: 'rare-earth oxide',
-    desc: 'Mixed rare-earth concentrate — the output of MINING. Ore is extracted, beneficiated (crush / grind / flotation or leach), and cracked into a mixed rare-earth oxide concentrate. MASS SHOWN: rare-earth-oxide (REO) content — the Nd/Pr + Dy/Tb that flow on to separation, NOT the bulk ore.' },
-  { label: 'Oxide', stage: 'from separation', iface: 'oxide', mass: 'rare-earth oxide',
-    desc: 'Separated individual rare-earth oxides — the output of SEPARATION. Solvent extraction splits the concentrate into purified Nd/Pr and Dy/Tb oxides (incl. recycling-derived oxide). MASS SHOWN: rare-earth-oxide mass.' },
-  { label: 'Alloy', stage: 'from alloying', iface: 'alloy', mass: 'rare-earth oxide-equiv.',
-    desc: 'NdFeB strip-cast alloy — the output of ALLOYING. Oxides are reduced to metal and strip-cast into alloy flake. MASS SHOWN: the rare-earth-oxide-equivalent flowing into alloying (so it lines up with the oxide column), NOT the full alloy mass with iron + boron.' },
-  { label: 'Magnet', stage: 'from sintering', iface: 'magnet', mass: 'finished magnet',
-    desc: 'Finished sintered NdFeB magnets — the output of MAGNET MAKING. Alloy is milled, aligned, pressed, sintered, machined, coated, magnetized. MASS SHOWN: FINISHED-magnet mass (RE + iron + boron) — ~3× the rare-earth-oxide mass of the earlier columns, because iron + boron are ~64% of an NdFeB magnet.' },
-  { label: 'Demand', stage: 'consumption', iface: null, mass: 'finished magnet',
+  { label: 'Mining', sub: 'Beneficiation and cracking', iface: 'concentrate' as string | null, mass: 'rare-earth oxide',
+    desc: 'MINING → mixed rare-earth concentrate. Ore is extracted, beneficiated (crush / grind / flotation or leach), and cracked into a mixed rare-earth oxide concentrate. The bar is each region’s share of mining output. MASS SHOWN: rare-earth-oxide (REO) content — the Nd/Pr + Dy/Tb that flow on to separation, NOT the bulk ore.' },
+  { label: 'Separation', sub: 'Solvent extraction of oxides', iface: 'oxide', mass: 'rare-earth oxide',
+    desc: 'SEPARATION → individual rare-earth oxides. Solvent extraction splits the concentrate into purified Nd/Pr and Dy/Tb oxides (incl. recycling-derived oxide). The strategic chokepoint of the chain. MASS SHOWN: rare-earth-oxide mass.' },
+  { label: 'Alloying', sub: 'Reduction to metal and casting', iface: 'alloy', mass: 'rare-earth oxide-equiv.',
+    desc: 'ALLOYING → NdFeB strip-cast alloy. Oxides are reduced to metal and strip-cast into alloy flake. MASS SHOWN: the rare-earth-oxide-equivalent flowing into alloying (so it lines up with the oxide column), NOT the full alloy mass with iron + boron.' },
+  { label: 'Magnet', sub: 'Powdering, alignment, sintering, magnetization', iface: 'magnet', mass: 'finished magnet',
+    desc: 'MAGNET MAKING → finished sintered NdFeB magnets. Alloy is milled to powder, field-aligned, pressed, sintered, machined, coated, and magnetized. MASS SHOWN: FINISHED-magnet mass (RE + iron + boron) — ~3× the rare-earth-oxide mass of the earlier columns, because iron + boron are ~64% of an NdFeB magnet.' },
+  { label: 'Demand', sub: 'Consumption', iface: null, mass: 'finished magnet',
     desc: 'Finished-magnet consumption by region — each bar is that region’s share of WORLD magnet demand (China ~50%, allies ~38%, US ~12%), NOT of US demand. MASS SHOWN: finished-magnet mass.' },
 ];
 // Sankey material interface → the producing project stage (for the facility hover).
@@ -44,6 +44,19 @@ const IFACE_TO_STAGE: Record<string, Stage> = {
 };
 // kt formatter: integers for big numbers, one decimal for small (heavy oxide ~1 kt).
 const kt = (v: number) => (v >= 10 ? Math.round(v).toString() : v.toFixed(1));
+// Wrap a stage sub-label onto ≤2 centered lines so the step lists don't overrun the
+// column width; the split point is chosen to balance the two lines. Short labels
+// (≤14 chars, e.g. "Consumption") stay on one line.
+const wrapLabel = (s: string): string[] => {
+  const words = s.split(' ');
+  if (s.length <= 14 || words.length === 1) return [s];
+  let best = 1, bestMax = Infinity;
+  for (let k = 1; k < words.length; k++) {
+    const mx = Math.max(words.slice(0, k).join(' ').length, words.slice(k).join(' ').length);
+    if (mx < bestMax) { bestMax = mx; best = k; }
+  }
+  return [words.slice(0, best).join(' '), words.slice(best).join(' ')];
+};
 // Drop the stage word from a facility name — it's redundant with the column we're
 // hovering (e.g. "Mountain Pass separation" → "Mountain Pass", "MP Fort Worth
 // (metal/alloy)" → "MP Fort Worth"). Word-bounded so "e-VAC Magnetics" is untouched.
@@ -59,7 +72,7 @@ const cleanName = (name: string, stage: Stage) => {
     .replace(/[,;]\s*\)/g, ')').replace(/\(\s*[,;]?\s*\)/g, '')   // tidy "(Estonia, )" / empty "()"
     .replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').replace(/\s{2,}/g, ' ').trim();
 };
-const W = 900, H = 460, PADX = 64, PADY = 46, NODE_W = 16;
+const W = 900, H = 460, PADX = 64, PADY = 52, NODE_W = 16;
 const innerH = H - 2 * PADY;
 const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
 
@@ -194,12 +207,15 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
                 </text>
               );
             })}
-            <text x={colX[i] + NODE_W / 2} y={PADY - 24} textAnchor="middle" style={{ font: '600 17px var(--font-mono)', fill: 'var(--ink)', opacity: 0.8, cursor: 'help' }}>
+            <text x={colX[i] + NODE_W / 2} y={15} textAnchor="middle" style={{ font: '600 16px var(--font-mono)', fill: 'var(--ink)', opacity: 0.85, cursor: 'help' }}>
               {c.label}<title>{c.desc}</title>
             </text>
-            <text x={colX[i] + NODE_W / 2} y={PADY - 9} textAnchor="middle" style={{ font: '400 12px var(--font-mono)', fill: 'var(--accent)', opacity: 0.7, cursor: 'help' }}>
-              {c.stage}<title>{c.desc}</title>
-            </text>
+            {wrapLabel(c.sub).map((ln, li, arr) => (
+              <text key={`sub${li}`} x={colX[i] + NODE_W / 2} y={(arr.length === 2 ? 31 : 36) + li * 11} textAnchor="middle"
+                style={{ font: '400 11px var(--font-mono)', fill: 'var(--accent)', opacity: 0.75, cursor: 'help' }}>
+                {ln}<title>{c.desc}</title>
+              </text>
+            ))}
           </g>
         ))}
       </svg>

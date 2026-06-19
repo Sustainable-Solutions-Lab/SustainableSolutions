@@ -1,3 +1,15 @@
+> # ⚠️ ARCHIVED — superseded, do not deploy or edit
+>
+> This standalone app is an **earlier prototype**. The current, maintained
+> "Fire Fuels" tool now lives **inside the SustainableSolutions site** at
+> `src/tools/firemap/` and is served at
+> **https://sustainablesolutions.stanford.edu/tools/firefuels**
+> (repo: `Sustainable-Solutions-Lab/SustainableSolutions`).
+>
+> This repo is kept for reference only. _Archived 2026-06-19._
+
+---
+
 # Prioritizing Wildfire Fuel Management — Firemap
 
 Interactive per-km² map of wildfire fuel treatment costs and benefits across California.  

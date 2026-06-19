@@ -15,3 +15,7 @@ __pycache__/
 scripts/venv/
 scripts/.venv/
 .vercel
+
+# Large data files (kept in Dropbox/external backup, not git)
+*.nc
+data/old/

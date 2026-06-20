@@ -258,16 +258,22 @@ export default function MagnetExplorer() {
   const baseNPV = realCost(interpScenario({ make: 0, source: 0, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale }));
   const npvDelta = usCostReal - baseNPV;
   const tri = integratedRE(scR, alliedHHIMap);   // live readout (light+heavy weighted)
-  // China-exposed demand (PROXY): the share of US magnet demand that touches China at
-  // ANY chain stage. A unit is China-free only if its magnet AND alloy AND oxide AND ore
-  // are all non-Chinese, so 1 − Π(1 − china_share) over the reconciled per-stage US
-  // sourcing. This catches the component-prong loophole the "magnets imported" KPI misses:
-  // a US-MADE magnet built from Chinese alloy/oxide still counts as exposed, so maxing
-  // US-make alone barely moves this — only adding non-China sourcing (the mineral prong)
-  // does. APPROXIMATE (assumes stages source independently); a faithful flow-traced
-  // version is a model refinement (see the deferred FEOC-content item).
-  const chinaTouch = 1 - ['mining', 'separation', 'alloy', 'magnet']
-    .reduce((p, st) => p * (1 - Math.min(1, Math.max(0, scR.us_supply?.[st]?.china ?? 0))), 1);
+  // China-exposed demand — FAITHFUL flow-traced provenance from the model export
+  // (kpis.china_exposed_pct): the share of DELIVERED US magnet demand whose material
+  // touched China at ANY chain stage. A unit is China-free only if its ore AND oxide AND
+  // alloy AND magnet are all non-Chinese; the model traces this by proportional (Leontief)
+  // mixing through the regional flow vars. This replaces the old 1−Π(1−china_share) proxy:
+  // it catches the trans-shipment loophole (Chinese ore separated in an ally then shipped
+  // to the US still counts as exposed) and the heavy Dy/Tb chokepoint (the alloy still
+  // traces to Chinese separation), so maxing US-MAKE alone barely moves it.
+  // The model KPI reflects the model's own (committed/operating) project set. To keep this
+  // card responsive to the INTERACTIVE project toggles — the same way the TRI, Sankey, and
+  // pathway move — we nudge the faithful base by the project-floor delta the old per-stage
+  // proxy still captures (reconciled minus raw US per-stage China share).
+  const proxyTouch = (u: typeof scR.us_supply) => 1 - ['mining', 'separation', 'alloy', 'magnet']
+    .reduce((p, st) => p * (1 - Math.min(1, Math.max(0, u?.[st]?.china ?? 0))), 1);
+  const projDelta = proxyTouch(scR.us_supply) - proxyTouch(sc.us_supply);
+  const chinaTouch = Math.min(1, Math.max(0, (sc.kpis.china_exposed_pct ?? 0) / 100 + projDelta));
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
   // lever buys in integrated trade-risk reduction per real dollar (TRI per $).
@@ -543,7 +549,7 @@ export default function MagnetExplorer() {
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : leversExhausted ? 'all spent' : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : leversExhausted ? 'at the security floor — only demand-side moves left' : 'raise the China restriction'} />
             <ScoreCard label="US magnets imported" value={pct(sc.kpis.us_import_pct)} valueColor="var(--ink)" sub="2035" />
-            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip sub="approx · any chain stage" />
+            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip sub="flow-traced · any chain stage" />
             <ScoreCard label="US unmet demand" value={`${usUnmet.toFixed(0)} kt`} valueColor={usUnmet > 0.05 ? WORSE : 'var(--ink)'} sub="2026–35 cumulative" />
           </div>
         </main>

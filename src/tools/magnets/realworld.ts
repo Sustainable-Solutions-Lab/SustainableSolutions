@@ -81,18 +81,20 @@ export function reconcileUsSupply(sc: Scenario, active: Set<string>, scale: Reco
   const usMag = usMagnetDemand(sc);
   const out: Scenario['us_supply'] = {};
   for (const stage of ['mining', 'separation', 'alloy', 'magnet']) {
-    const m = sc.us_supply?.[stage] ?? { domestic: 0, allied: 0, china: 0 };
+    const m: any = sc.us_supply?.[stage] ?? { domestic: 0, allied: 0, china: 0 };
     const req = usMag * (STAGE_REQ_FACTOR[stage] ?? 1);
     const usCap = rampedCapacity(stage as Stage, active, scale).USA;
     const floor = req > 1e-9 ? Math.min(1, usCap / req) : 0;
-    const dom = Math.max(m.domestic ?? 0, floor);
-    const rest = Math.max(0, 1 - dom);
+    const recyc = m.recycled ?? 0;                 // recycled (secondary) supply passes through
+    const dom = Math.max(m.domestic ?? 0, floor);  // a US project floors PRIMARY domestic
+    const rest = Math.max(0, 1 - dom - recyc);
     const imp = (m.allied ?? 0) + (m.china ?? 0);
     out[stage] = {
       domestic: dom,
+      recycled: recyc,
       allied: imp > 1e-9 ? (rest * (m.allied ?? 0)) / imp : 0,
       china: imp > 1e-9 ? (rest * (m.china ?? 0)) / imp : 0,
-    };
+    } as any;
   }
   return out;
 }
@@ -173,10 +175,11 @@ export function reconcileUsSupplyRe(sc: Scenario, active: Set<string>, scale: Re
   const aggR = reconcileUsSupply(sc, active, scale);   // for the element-agnostic alloy + magnet stages
   const recon = (m: any, req: number, usCap: number) => {
     const floor = req > 1e-9 ? Math.min(1, usCap / req) : 0;
+    const recyc = m?.recycled ?? 0;                // recycled (secondary) supply passes through
     const dom = Math.max(m?.domestic ?? 0, floor);
-    const rest = Math.max(0, 1 - dom);
+    const rest = Math.max(0, 1 - dom - recyc);
     const imp = (m?.allied ?? 0) + (m?.china ?? 0);
-    return { domestic: dom, allied: imp > 1e-9 ? (rest * (m?.allied ?? 0)) / imp : 0, china: imp > 1e-9 ? (rest * (m?.china ?? 0)) / imp : 0 };
+    return { domestic: dom, recycled: recyc, allied: imp > 1e-9 ? (rest * (m?.allied ?? 0)) / imp : 0, china: imp > 1e-9 ? (rest * (m?.china ?? 0)) / imp : 0 };
   };
   const out: any = { light: {}, heavy: {} };
   for (const cls of ['light', 'heavy'] as const) {

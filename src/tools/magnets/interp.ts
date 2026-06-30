@@ -321,12 +321,16 @@ export function reshoreSupply(sc: Scenario, stages: string[], coverage: number):
 // site) separation shift domestic by that share; ~$400M (inflated capex) is counted.
 export const ROUND_TOP_COST = 400;        // $M (≈ 2019 PEA capex, inflated)
 export const ROUND_TOP_COVERAGE = 0.12;   // share of US heavy-REE need it meets
-// Developing Round Top means the US now HAS a domestic heavy-REE reserve, so its
-// domestic mining is no longer reserve-poor — the mining DI falls from the "no US
-// deposits" default (0.9) to a reserve-backed level (Round Top is a 100-yr, large-
-// tonnage resource → good reserve adequacy; ~0.25). Without this the TRI would
-// penalize Round Top's own output as if the US still had no reserves.
-export const ROUND_TOP_MINING_DI = 0.25;
+// Developing Round Top gives the US a domestic heavy-REE reserve, lowering the mining
+// reserve risk from the "no US deposits" default (0.9) toward a reserve-backed level
+// (~0.25). But the credit must scale with how much of US heavy need the reserve actually
+// backs (~12%) — a single small mine does NOT solve the reserve risk. The old wholesale
+// 0.9→0.25 flip rewarded mere existence, overstating Round Top's TRI benefit (~0.1) and
+// pushing the apparent chokepoint to separation; supply-scaling keeps mining the binding
+// stage, consistent with the flow-traced model (heavy ore stays ~95%+ China).
+const HEAVY_MINING_DI_NODEP = 0.9, HEAVY_MINING_DI_DEVELOPED = 0.25;
+export const ROUND_TOP_MINING_DI =
+  HEAVY_MINING_DI_NODEP - (HEAVY_MINING_DI_NODEP - HEAVY_MINING_DI_DEVELOPED) * ROUND_TOP_COVERAGE;  // ≈ 0.82
 
 export function applyRoundTop(sc: Scenario, on: boolean): Scenario {
   if (!on) return sc;

@@ -257,6 +257,16 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
         <span style={{ color: '#FDAE61', fontWeight: 600 }}> allies</span> (medium) ·
         <span style={{ color: '#D53E4F', fontWeight: 600 }}> China</span> (exposed).
       </p>
+      {cls === 'heavy' && (
+        <p style={{ fontSize: 11, opacity: 0.72, marginTop: 6, lineHeight: 1.5,
+                    borderLeft: '2px solid var(--cardinal)', paddingLeft: 8 }}>
+          <b>Reading the Dy/Tb view:</b> the mining and separation bars are <b>ore and oxide tonnage</b>,
+          not pure dysprosium + terbium. A “heavy” deposit is heavy-<i>enriched</i> but still mostly light
+          REO — only ~6% of its output is Dy/Tb — so an ex-China heavy project covers far less of the heavy
+          chokepoint than its headline capacity implies, and the binding constraint is heavy <b>ore</b>
+          (a China/Myanmar ion-clay near-monopoly), not where the separation plant sits.
+        </p>
+      )}
     </section>
   );
 }

@@ -1,6 +1,5 @@
 # Sustainable Solutions Lab
 
-
 Website for the Sustainable Solutions Lab at Stanford's Doerr School of Sustainability.
 
 See `CLAUDE.md` for the full project brief — stack decisions, content model, and development sequence.

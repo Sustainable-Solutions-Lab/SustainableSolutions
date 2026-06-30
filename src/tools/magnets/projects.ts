@@ -174,12 +174,22 @@ export function regionalCapacity(stage: Stage, active: Set<string>, scale: Recor
  * Round Top, Lynas Seadrift…) count toward 'heavy', the rest toward 'light'. Used to
  * floor the light vs heavy trade-risk index separately (magnet stage uses the
  * element-agnostic regionalCapacity instead). */
+// A heavy-flagged deposit/plant is heavy-ENRICHED but still mostly light REO: dysprosium +
+// terbium are only ~6% of its output by mass (the model's deposit rho_DyTb runs 0.04–0.065).
+// Crediting a project's FULL nameplate as heavy-REE capacity overstated ex-China heavy supply
+// ~15x and made China's heavy share collapse to 0 when projects were toggled on, contradicting
+// the faithful flow-traced model (heavy ore stays ~95%+ China — the chokepoint is heavy MINING,
+// not separation). Scale heavy-class capacity by this yield. Light class is unchanged (a
+// light-flagged project's output is ~all light).
+const HEAVY_YIELD = 0.06;
+
 export function regionalCapacityRe(stage: Stage, active: Set<string>, cls: 'light' | 'heavy', scale: Record<string, number> = {}): Record<'USA' | 'China' | 'RoW', number> {
   const out: Record<'USA' | 'China' | 'RoW', number> = { USA: 0, China: 0, RoW: 0 };
+  const yld = cls === 'heavy' ? HEAVY_YIELD : 1;
   for (const p of PROJECTS) {
     if (p.stage !== stage || !active.has(p.id)) continue;
     if ((cls === 'heavy') !== !!p.heavy) continue;   // heavy class ⟷ heavy-flagged projects
-    out[REGION_OF_BLOC[p.bloc]] += p.capacityKt * (scale[p.id] ?? 1);
+    out[REGION_OF_BLOC[p.bloc]] += p.capacityKt * (scale[p.id] ?? 1) * yld;
   }
   return out;
 }

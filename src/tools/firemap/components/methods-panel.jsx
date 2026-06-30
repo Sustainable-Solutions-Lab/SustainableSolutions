@@ -167,7 +167,7 @@ function JustAirMethods() {
         <em>Low CDR</em>, which reaches net zero with limited carbon-dioxide
         removal, and <em>High CDR</em>, which leans more heavily on CDR.
         For details, see{' '}
-        <strong>Bergero et al., <em>Nature Climate Change</em>, in press</strong>{' '}
+        <strong>Bergero et al., <em>Nature Climate Change</em></strong>{' '}
         (<a
           href="https://assets-eu.researchsquare.com/files/rs-7359464/v1/e95da285-43f3-4f1b-b892-d899d3335dda.pdf"
           target="_blank"

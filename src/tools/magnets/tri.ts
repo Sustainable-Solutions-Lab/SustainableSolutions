@@ -62,12 +62,19 @@ export type Mix = { domestic: number; allied: number; china: number };
  * diOverride replaces the stage's domestic-reserve risk DI — used when a domestic
  * RESERVE has been developed (e.g. Round Top), so US production is no longer
  * reserve-poor and its DI should fall from the "no domestic deposits" default. */
+// Recycled (secondary) supply is circular — it rests on the in-use stock, not scarce
+// geological reserves, and bypasses the mining chokepoint — so it carries far lower
+// reserve risk than primary domestic supply. Charging it the primary DI (esp. heavy
+// mining's 0.9) erased recycling's security value; credit it near the floor.
+export const RECYCLED_DI = 0.1;
+
 export function stageTRI(mix: Mix | undefined, stage: string, diOverride?: number, alliedHHI?: number): number {
   const d = clamp01(mix?.domestic ?? 0);
+  const rec = clamp01((mix as any)?.recycled ?? 0);   // domestic-recycled (low reserve risk)
   const a = clamp01(mix?.allied ?? 0);
   const c = clamp01(mix?.china ?? 0);
   const imp = Math.min(1, a + c);
-  const unmet = Math.max(0, 1 - d - imp);   // demand the chain can't deliver
+  const unmet = Math.max(0, 1 - d - rec - imp);   // demand the chain can't deliver
   let hhi = 0;
   if (imp > 1e-6) {
     const sa = a / (a + c), sc = c / (a + c);
@@ -77,8 +84,8 @@ export function stageTRI(mix: Mix | undefined, stage: string, diOverride?: numbe
     hhi = sa * sa * aH + sc * sc;
   }
   const di = diOverride ?? TRI_DI[stage] ?? 0;
-  // imports weighted by concentration; domestic weighted by reserve risk; unmet = max
-  return hhi * imp + di * d + 1.0 * unmet;
+  // imports by concentration; primary domestic by reserve risk; recycled at the low floor; unmet = max
+  return hhi * imp + di * d + RECYCLED_DI * rec + 1.0 * unmet;
 }
 
 // per-stage DI override carried on a scenario by a reserve-developing overlay

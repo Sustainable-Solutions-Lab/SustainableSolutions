@@ -20,6 +20,11 @@ export type Scenario = {
                    heavy: Record<string, { domestic: number; allied: number; china: number }> };
   utilization: Record<string, Record<string, number | null>>;
   flows: Record<string, Flow[]>;
+  // Real per-RE-class inter-regional flows (kt of that class), emitted by the model so
+  // the heavy/light Sankey shows the model's actual Dy/Tb (or Nd/Pr) shipments instead
+  // of scaling the aggregate by a flat mass fraction. Optional: only present once the
+  // grid is regenerated with the per-class flow emit; realworld.ts falls back otherwise.
+  flows_re?: { light: Record<string, Flow[]>; heavy: Record<string, Flow[]> };
   path: {
     us_mix: Record<string, number[]>;   // domestic / allied / china / unmet, per year
     us_cap: Record<string, number[]>;   // mining / separation / alloy / magnet, per year
@@ -136,6 +141,22 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
     const [iface, from, to] = k.split('|');
     (flows[iface] ??= []).push({ from, to, value: v });
   }
+  // per-RE-class flows (light/heavy → iface → Flow[]): same weighted-merge as `flows`
+  let flows_re: Scenario['flows_re'];
+  if (ps.some((p) => p.s.flows_re)) {
+    const frm = new Map<string, number>();   // cls|iface|from|to → value
+    for (const { s, w } of ps)
+      for (const cls of ['light', 'heavy'] as const)
+        for (const iface in s.flows_re?.[cls] ?? {})
+          for (const f of s.flows_re![cls][iface])
+            frm.set(`${cls}|${iface}|${f.from}|${f.to}`, (frm.get(`${cls}|${iface}|${f.from}|${f.to}`) || 0) + f.value * w);
+    flows_re = { light: {}, heavy: {} };
+    for (const [k, v] of frm) {
+      if (v < 0.02) continue;
+      const [cls, iface, from, to] = k.split('|') as ['light' | 'heavy', string, string, string];
+      (flows_re[cls][iface] ??= []).push({ from, to, value: v });
+    }
+  }
   // annual pathway series: element-wise weighted sum
   const H = base.path.cost_annual.length;
   const zeros = () => Array(H).fill(0) as number[];
@@ -183,11 +204,11 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
   };
   return {
     make: base.make, source: base.source, rec: base.rec, dytb: base.dytb, china: base.china,
-    rcost: base.rcost,
+    rcost: base.rcost, pfloor: base.pfloor,
     dscale: base.dscale, kpis: wDict('kpis'), cost: wDict('cost'), us_cost: wDict('us_cost'),
     production: wNested('production') as any, us_supply: wNested('us_supply') as any,
     us_supply_re: wSupplyRe(),
-    utilization: wNested('utilization') as any, flows, path: wPath(),
+    utilization: wNested('utilization') as any, flows, flows_re, path: wPath(),
   };
 }
 

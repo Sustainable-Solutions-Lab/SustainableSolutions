@@ -197,16 +197,16 @@ export function reconcileUsSupplyRe(sc: Scenario, active: Set<string>, scale: Re
 }
 
 /** The model's regional production at an interface (sum of outgoing flow by region),
- * scaled to a class fraction (1 for total). */
-function modelProduction(sc: Scenario, iface: string, frac: number): Reg {
+ * scaled to a class fraction (1 for total or when `flows` is already class-specific). */
+function modelProduction(flows: Record<string, Flow[]>, iface: string, frac: number): Reg {
   const out = zero();
-  for (const f of sc.flows[iface] ?? []) out[f.from as Region] += f.value * frac;
+  for (const f of flows[iface] ?? []) out[f.from as Region] += f.value * frac;
   return out;
 }
 /** The model's regional CONSUMPTION at an interface (sum of incoming flow by region). */
-function modelConsumption(sc: Scenario, iface: string, frac: number): Reg {
+function modelConsumption(flows: Record<string, Flow[]>, iface: string, frac: number): Reg {
   const out = zero();
-  for (const f of sc.flows[iface] ?? []) out[f.to as Region] += f.value * frac;
+  for (const f of flows[iface] ?? []) out[f.to as Region] += f.value * frac;
   return out;
 }
 const sumReg = (r: Reg) => r.China + r.RoW + r.USA;
@@ -220,8 +220,8 @@ function scaleTo(r: Reg, total: number): Reg {
 /** STEP 1: each stage's per-region PRODUCTION = max(model, selected-project capacity)
  * for ex-China, with China the residual that fills the model's total throughput (0 if
  * ex-China capacity already exceeds it). */
-function stageProduction(sc: Scenario, stage: Stage, iface: string, active: Set<string>, scale: Record<string, number>, frac: number, cls?: 'heavy' | 'light'): Reg {
-  const model = modelProduction(sc, iface, frac);
+function stageProduction(flows: Record<string, Flow[]>, stage: Stage, iface: string, active: Set<string>, scale: Record<string, number>, frac: number, cls?: 'heavy' | 'light'): Reg {
+  const model = modelProduction(flows, iface, frac);
   const T = sumReg(model);
   let usP: number, rowP: number;
   if (cls && (stage === 'mining' || stage === 'separation')) {
@@ -278,12 +278,15 @@ function route(supplyIn: Reg, demandIn: Reg, usMix: { allied?: number; china?: n
  * stage-to-stage with the model's US sourcing mix (STEP 2) so mass is conserved
  * end-to-end and allies→US shows. See the header. */
 export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<string, number> = {}, cls?: 'heavy' | 'light'): Record<string, Flow[]> {
-  // Class view scales throughput to that RE class's mass fraction and floors the
-  // element-specific upstream (mining/separation) with class-specific project capacity.
-  const frac = cls === 'heavy' ? 0.094 : cls === 'light' ? 0.906 : 1;
+  // Prefer the model's REAL per-class flows (emitted as flows_re) so the heavy/light
+  // Sankey shows the model's actual Dy/Tb (or Nd/Pr) shipments. Fall back to scaling the
+  // aggregate flows by the RE class's mass fraction only for older JSON without flows_re.
+  const reFlows = cls ? sc.flows_re?.[cls] : undefined;
+  const flows = reFlows ?? sc.flows;
+  const frac = reFlows ? 1 : cls === 'heavy' ? 0.094 : cls === 'light' ? 0.906 : 1;
   // STEP 1: production bars per stage.
   const prod: Record<string, Reg> = {};
-  for (const [iface, stage] of IFACE_STAGE) prod[iface] = stageProduction(sc, stage, iface, active, scale, frac, cls);
+  for (const [iface, stage] of IFACE_STAGE) prod[iface] = stageProduction(flows, stage, iface, active, scale, frac, cls);
   // STEP 2: route each interface's supply to the next stage's production (demand). The
   // magnet interface's demand is the model's consumption endpoint (who uses magnets).
   const out: Record<string, Flow[]> = {};
@@ -291,7 +294,7 @@ export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<
     const [iface, stage] = IFACE_STAGE[i];
     const supply = prod[iface];
     const nextIface = IFACE_STAGE[i + 1]?.[0];
-    const demandRaw = nextIface ? prod[nextIface] : modelConsumption(sc, 'magnet', frac);
+    const demandRaw = nextIface ? prod[nextIface] : modelConsumption(flows, 'magnet', frac);
     const demand = scaleTo(demandRaw, sumReg(supply));   // conserve this interface's total
     out[iface] = route(supply, demand, sc.us_supply?.[stage]);
   }

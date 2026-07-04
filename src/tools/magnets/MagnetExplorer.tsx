@@ -272,8 +272,17 @@ export default function MagnetExplorer() {
   // proxy still captures (reconciled minus raw US per-stage China share).
   const proxyTouch = (u: typeof scR.us_supply) => 1 - ['mining', 'separation', 'alloy', 'magnet']
     .reduce((p, st) => p * (1 - Math.min(1, Math.max(0, u?.[st]?.china ?? 0))), 1);
-  const projDelta = proxyTouch(scR.us_supply) - proxyTouch(sc.us_supply);
-  const chinaTouch = Math.min(1, Math.max(0, (sc.kpis.china_exposed_pct ?? 0) / 100 + projDelta));
+  // Headline the HEAVY (Dy/Tb) China-exposure — the binding chokepoint and the paper's
+  // central metric (~82% at baseline: nearly all heavy ore is Chinese, so ex-China
+  // separation only launders it). Nudge with the heavy per-stage proxy so the card tracks
+  // the project toggles. Falls back to the aggregate KPI for older JSON without the split.
+  const heavyFeoc = sc.kpis.china_exposed_heavy_pct;
+  const feocIsHeavy = heavyFeoc != null;
+  const feocSupplyBase = (feocIsHeavy ? sc.us_supply_re?.heavy : undefined) ?? sc.us_supply;
+  const feocSupplyR = (feocIsHeavy ? scR.us_supply_re?.heavy : undefined) ?? scR.us_supply;
+  const projDelta = proxyTouch(feocSupplyR) - proxyTouch(feocSupplyBase);
+  const feocBase = (feocIsHeavy ? heavyFeoc : sc.kpis.china_exposed_pct ?? 0) / 100;
+  const chinaTouch = Math.min(1, Math.max(0, feocBase + projDelta));
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
   // lever buys in integrated trade-risk reduction per real dollar (TRI per $).
@@ -423,8 +432,8 @@ export default function MagnetExplorer() {
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 6px' }}>Policy — IRA two prongs</div>
           <Slider label="US-made magnets (reshore)" value={make} max={AXES.makeMax} onChange={setMake} fmt={(v) => pct(v * 100)}
             desc="Component prong, like the IRA EV credit: the share of US magnets that must be manufactured in the US — reshoring the final step. On its own it can still be met with imported (incl. Chinese) alloy or oxide; pair it with non-China sourcing to close that loophole." />
-          <Slider label="Non-China sourcing (friendshore)" value={source} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
-            desc="Mineral prong: the minimum share of US rare-earth need — counting oxide, alloy, AND the REE embodied in imported finished magnets — that must come from the US, allies, or recycling rather than China. This is the friendshoring lever: it shifts sourcing from China toward allies across the chain." />
+          <Slider label="Clean heavy sourcing (friendshore)" value={source} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
+            desc="Friendshoring the heavy rare earths, FEOC-traced: the minimum share of US Dy/Tb need met by a chain-of-custody-CLEAN supply that never touched Chinese ore, oxide, or alloy at any stage — pulling ex-China-mined or recycled heavy material to US demand. Unlike a provenance-blind sourcing quota (which ex-China separation of Chinese ore defeats), this can only be met by genuinely China-free material, so it moves the flow-traced exposure. The US pays an ex-China premium for it (shown in the cost bar)." />
 
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Recycling</div>
           <Slider label="End-of-life collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
@@ -549,7 +558,7 @@ export default function MagnetExplorer() {
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : leversExhausted ? 'all spent' : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : leversExhausted ? 'at the security floor — only demand-side moves left' : 'raise the China restriction'} />
             <ScoreCard label="US magnets imported" value={pct(sc.kpis.us_import_pct)} valueColor="var(--ink)" sub="2035" />
-            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip sub="flow-traced · any chain stage" />
+            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip sub={feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
             <ScoreCard label="US unmet demand" value={`${usUnmet.toFixed(0)} kt`} valueColor={usUnmet > 0.05 ? WORSE : 'var(--ink)'} sub="2026–35 cumulative" />
           </div>
         </main>

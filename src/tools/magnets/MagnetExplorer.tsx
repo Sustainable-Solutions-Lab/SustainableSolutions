@@ -291,8 +291,12 @@ export default function MagnetExplorer() {
   const securityLevers = useMemo(() => {
     const base = { china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale };
     // TRI with the project floors applied (so lever ROI is consistent with the panel).
+    // Use integratedRE — the SAME heavy-weighted metric the panel displays — not the
+    // aggregate integratedTRI; otherwise a lever that only helps the (low-weight, non-
+    // chokepoint) magnet stage, like "Build US magnet", spuriously topped the ranking.
     const triR = (scn: Parameters<typeof reconcileUsSupply>[0]) =>
-      integratedTRI({ ...scn, us_supply: reconcileUsSupply(scn, activeProjects) }, alliedHHIMap);
+      integratedRE({ ...scn, us_supply: reconcileUsSupply(scn, activeProjects),
+        us_supply_re: reconcileUsSupplyRe(scn, activeProjects) ?? (scn as any).us_supply_re }, alliedHHIMap);
     const ref = interpScenario({ ...base, make: 0, source: 0, rec: 0 });
     const refTRI = triR(ref), refCost = realCost(ref);
     const makeMandate = interpScenario({ ...base, make: AXES.makeMax, source: 0, rec: 0 });

@@ -292,19 +292,31 @@ export function applyStockpile(sc: Scenario, stockpileKt: number): Scenario {
     totDemand += (mix.domestic?.[t] ?? 0) + (mix.allied?.[t] ?? 0)
       + (mix.china?.[t] ?? 0) + (unmet[t] + draw[t]);   // unmet[t]+draw[t] = original unmet
   const coverage = totDemand > 1e-9 ? drawn / totDemand : 0;
-  const usSupply: Record<string, { domestic: number; allied: number; china: number }> = {};
-  for (const stage in sc.us_supply) {
-    const m = sc.us_supply[stage];
-    const d = m.domestic ?? 0, a = m.allied ?? 0, c = m.china ?? 0;
-    const stageUnmet = Math.max(0, 1 - d - a - c);
-    const credit = Math.min(coverage, stageUnmet);
-    usSupply[stage] = { domestic: d + credit, allied: a, china: c };
+  // Credit the covered fraction into the secure US-held ("domestic") bucket, capped per
+  // stage at that stage's shortfall. A stockpiled finished magnet embodies its ore/oxide/
+  // alloy, so the credit applies to every stage AND every RE class (us_supply_re) — the
+  // latter so the heavy-weighted integrated TRI (integratedRE) actually sees the buffer.
+  const creditMap = (supply: Record<string, any>) => {
+    const out: Record<string, any> = {};
+    for (const stage in supply) {
+      const m = supply[stage];
+      const d = m.domestic ?? 0, rec = m.recycled ?? 0, a = m.allied ?? 0, c = m.china ?? 0;
+      const stageUnmet = Math.max(0, 1 - d - rec - a - c);
+      out[stage] = { domestic: d + Math.min(coverage, stageUnmet), recycled: rec, allied: a, china: c };
+    }
+    return out;
+  };
+  let us_re = sc.us_supply_re as any;
+  if (us_re) {
+    us_re = { ...us_re };
+    for (const cls of ['light', 'heavy'] as const) if (us_re[cls]) us_re[cls] = creditMap(us_re[cls]);
   }
 
   return {
     ...sc,
     kpis: { ...sc.kpis, us_unmet_kt: Math.max(0, (sc.kpis.us_unmet_kt ?? 0) - drawn) },
-    us_supply: usSupply,
+    us_supply: creditMap(sc.us_supply),
+    us_supply_re: us_re,
     us_cost: {
       ...sc.us_cost,
       shortage: (sc.us_cost.shortage ?? 0) * shortageScale,
@@ -319,20 +331,33 @@ export function applyStockpile(sc: Scenario, stockpileKt: number): Scenario {
 // is intractable), so we ASSUME a stage goes domestic and just count its cost. The
 // TRI drop ÷ cost is the security bought per dollar. reshoreSupply shifts a stage's
 // US sourcing toward domestic; the explorer pairs it with an exogenous cost.
-export function reshoreSupply(sc: Scenario, stages: string[], coverage: number): Scenario {
-  const us: Record<string, { domestic: number; allied: number; china: number }> = {};
-  for (const stage in sc.us_supply) {
-    const m = sc.us_supply[stage];
-    if (stages.includes(stage)) {
-      const dom = Math.max(m.domestic ?? 0, coverage);
-      const rest = Math.max(0, 1 - dom);
-      const imp = (m.allied ?? 0) + (m.china ?? 0) || 1;
-      us[stage] = { domestic: dom, allied: rest * (m.allied ?? 0) / imp, china: rest * (m.china ?? 0) / imp };
-    } else {
-      us[stage] = m;
-    }
+function floorStageDomestic(m: any, coverage: number) {
+  const rec = m?.recycled ?? 0;
+  const dom = Math.max(m?.domestic ?? 0, coverage);
+  const rest = Math.max(0, 1 - dom - rec);
+  const imp = (m?.allied ?? 0) + (m?.china ?? 0) || 1;
+  return { domestic: dom, recycled: rec, allied: rest * (m?.allied ?? 0) / imp, china: rest * (m?.china ?? 0) / imp };
+}
+// Floor the given stages' US domestic share. `classes` also floors the per-class
+// us_supply_re for those RE classes — needed because the integrated TRI shown in the
+// tool is heavy-weighted (integratedRE, reads us_supply_re), so a reshore overlay that
+// touched only aggregate us_supply would (wrongly) register as ZERO security. A generic
+// US separation/alloy/magnet build reshores both classes; a heavy-only project (Round
+// Top) passes ['heavy'] so it doesn't spuriously secure the light class.
+export function reshoreSupply(sc: Scenario, stages: string[], coverage: number,
+                             classes: ('light' | 'heavy')[] = ['light', 'heavy']): Scenario {
+  const mapStages = (supply: Record<string, any>) => {
+    const out: Record<string, any> = {};
+    for (const stage in supply) out[stage] = stages.includes(stage) ? floorStageDomestic(supply[stage], coverage) : supply[stage];
+    return out;
+  };
+  const us = mapStages(sc.us_supply);
+  let us_re = sc.us_supply_re as any;
+  if (us_re) {
+    us_re = { ...us_re };
+    for (const cls of classes) if (us_re[cls]) us_re[cls] = mapStages(us_re[cls]);
   }
-  return { ...sc, us_supply: us };
+  return { ...sc, us_supply: us, us_supply_re: us_re };
 }
 
 // Round Top (USA Rare Earth): the US government's investment in it is a strategic,
@@ -355,6 +380,6 @@ export const ROUND_TOP_MINING_DI =
 
 export function applyRoundTop(sc: Scenario, on: boolean): Scenario {
   if (!on) return sc;
-  const s = reshoreSupply(sc, ['mining', 'separation'], ROUND_TOP_COVERAGE);
+  const s = reshoreSupply(sc, ['mining', 'separation'], ROUND_TOP_COVERAGE, ['heavy']);  // heavy-only mine
   return { ...s, us_cost: { ...s.us_cost, round_top: ROUND_TOP_COST }, _di: { mining: ROUND_TOP_MINING_DI } };
 }

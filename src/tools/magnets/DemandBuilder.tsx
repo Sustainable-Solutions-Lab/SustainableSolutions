@@ -223,6 +223,10 @@ export default function DemandBuilder({ scenario, setScenario, lv, setLv, mode =
         <span style={{ color: '#D4A017', fontWeight: 600 }}> a stretch</span> ·
         <span style={{ color: '#F46D43', fontWeight: 600 }}> aggressive</span>.
       </p>
+      <p style={{ fontSize: 11, opacity: 0.6, margin: '2px 0 6px', lineHeight: 1.45 }}>
+        The first two levers cut <b>Dy/Tb intensity only</b> (watch the Dy/Tb view) — they leave total
+        magnet mass and Nd/Pr unchanged. Total demand moves with <b>RE-free adoption</b> and <b>offshore-PMSG</b>.
+      </p>
       <Lever label="Dy/Tb thrifting (material)" value={lv.thrift} min={0} max={0.6} plausible={LEV_PLAUSIBLE.thrift} stretch={LEV_STRETCH.thrift} onChange={(v) => setLv({ ...lv, thrift: v })} fmt={(v) => `−${pct(v)}`}
         desc="The % reduction in Dy/Tb (heavy rare earth) used per kg of magnet at a GIVEN coercivity grade — via grain-boundary diffusion, finer grains, or Ce/La substitution. Applied across all sectors. 0% = today's loadings. Realism: GBD alone cuts heavy-REE ~20–50% for a grade, so ≲30% is plausible, ~45% a stretch." />
       <Lever label="Hot-motor grade downshift" value={lv.ev_downshift} min={0} max={1} plausible={LEV_PLAUSIBLE.ev_downshift} stretch={LEV_STRETCH.ev_downshift} onChange={(v) => setLv({ ...lv, ev_downshift: v })} fmt={pct}

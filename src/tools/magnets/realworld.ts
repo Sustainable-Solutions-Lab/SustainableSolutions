@@ -220,7 +220,7 @@ function scaleTo(r: Reg, total: number): Reg {
 /** STEP 1: each stage's per-region PRODUCTION = max(model, selected-project capacity)
  * for ex-China, with China the residual that fills the model's total throughput (0 if
  * ex-China capacity already exceeds it). */
-function stageProduction(flows: Record<string, Flow[]>, stage: Stage, iface: string, active: Set<string>, scale: Record<string, number>, frac: number, cls?: 'heavy' | 'light'): Reg {
+function stageProduction(flows: Record<string, Flow[]>, stage: Stage, iface: string, active: Set<string>, scale: Record<string, number>, frac: number, capFrac: number, cls?: 'heavy' | 'light'): Reg {
   const model = modelProduction(flows, iface, frac);
   const T = sumReg(model);
   let usP: number, rowP: number;
@@ -233,8 +233,14 @@ function stageProduction(flows: Record<string, Flow[]>, stage: Stage, iface: str
     const cap = rampedCapacityRe(stage, active, cls, scale);
     usP = cap.USA; rowP = cap.RoW;
   } else {
+    // Element-AGNOSTIC alloy/magnet stage. The project capacity is in TOTAL magnet-mass
+    // units, so it must be scaled to this class before flooring the (class-unit) model
+    // flow — else in the heavy view a region's total-mass capacity (tens of kt) dwarfs
+    // the heavy-embodied flow (single-digit kt Dy/Tb) and forces China to the 0 residual.
+    // capFrac = this interface's class share of aggregate mass (≈0.03–0.09 for heavy);
+    // it equals frac in the legacy no-flows_re path (both = the flat class mass fraction).
     const cap = rampedCapacity(stage, active, scale);
-    usP = Math.max(model.USA, cap.USA * frac); rowP = Math.max(model.RoW, cap.RoW * frac);
+    usP = Math.max(model.USA, cap.USA * capFrac); rowP = Math.max(model.RoW, cap.RoW * capFrac);
   }
   const exc = usP + rowP;
   return exc >= T
@@ -284,9 +290,18 @@ export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<
   const reFlows = cls ? sc.flows_re?.[cls] : undefined;
   const flows = reFlows ?? sc.flows;
   const frac = reFlows ? 1 : cls === 'heavy' ? 0.094 : cls === 'light' ? 0.906 : 1;
+  // Class share of aggregate mass at each interface, used to scale the (total-mass)
+  // project-capacity floor into class units for the element-agnostic alloy/magnet stages.
+  // With real per-class flows this varies by interface (heavy ≈ 0.03 magnet → 0.98 ore);
+  // without flows_re it collapses to the flat `frac`, preserving the legacy behavior.
+  const capFracFor = (iface: string): number => {
+    if (!reFlows) return frac;
+    const agg = sumReg(modelProduction(sc.flows, iface, 1));
+    return agg > 1e-9 ? sumReg(modelProduction(reFlows, iface, 1)) / agg : frac;
+  };
   // STEP 1: production bars per stage.
   const prod: Record<string, Reg> = {};
-  for (const [iface, stage] of IFACE_STAGE) prod[iface] = stageProduction(flows, stage, iface, active, scale, frac, cls);
+  for (const [iface, stage] of IFACE_STAGE) prod[iface] = stageProduction(flows, stage, iface, active, scale, frac, capFracFor(iface), cls);
   // STEP 2: route each interface's supply to the next stage's production (demand). The
   // magnet interface's demand is the model's consumption endpoint (who uses magnets).
   const out: Record<string, Flow[]> = {};

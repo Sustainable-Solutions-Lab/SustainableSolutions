@@ -362,11 +362,13 @@ export function reshoreSupply(sc: Scenario, stages: string[], coverage: number,
 
 // Round Top (USA Rare Earth): the US government's investment in it is a strategic,
 // not cost-optimal, move — so it's exogenous, and its $/TRI is a revealed shadow
-// price of security. 2019 PEA: ~$350M capex (incl. on-site separation), ~0.22 kt/yr
-// Dy+Tb ≈ only ~12% of US Dy/Tb need — one mine is far from a fix. Its mining + (on-
-// site) separation shift domestic by that share; ~$400M (inflated capex) is counted.
-export const ROUND_TOP_COST = 400;        // $M (≈ 2019 PEA capex, inflated)
-export const ROUND_TOP_COVERAGE = 0.12;   // share of US heavy-REE need it meets
+// price of security. SOURCED (BNEF Critical Minerals Primer 2020, Table 3 / 2019 PEA):
+// mine $602M + commercial processor $487M ≈ $1.09B capex; output 2,212 t REO/yr incl.
+// 200 t Dy + 23 t Tb = 223 t/yr Dy+Tb — ~25% of the model's US Dy/Tb oxide need
+// (~0.8-0.9 kt/yr APS). One mine still is far from a fix. Its mining + (on-site)
+// separation shift domestic by that share; the full capex is counted.
+export const ROUND_TOP_COST = 1090;       // $M (mine $602M + processor $487M, 2019 PEA)
+export const ROUND_TOP_COVERAGE = 0.25;   // share of US heavy-REE need it meets (223 t / ~0.85 kt)
 // Developing Round Top gives the US a domestic heavy-REE reserve, lowering the mining
 // reserve risk from the "no US deposits" default (0.9) toward a reserve-backed level
 // (~0.25). But the credit must scale with how much of US heavy need the reserve actually

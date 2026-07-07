@@ -247,6 +247,26 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
           </p>
         )}
 
+        {/* Above the impact row — the Altmetric/Dimensions donuts visually
+            overflow their zoom-shrunk layout boxes, so anything placed
+            below them looks jammed no matter the margin. */}
+        {toolsForPub.length > 0 && (
+          <p class="font-mono text-xs text-ink-3 mt-3 m-0">
+            <span class="uppercase tracking-wider mr-1">Companion tool:</span>
+            {toolsForPub.map((t, i) => (
+              <>
+                {i > 0 && <span class="dot">·</span>}
+                <a
+                  href={toolHref(t)}
+                  class="text-ink-2 hover:text-ink border-b-0"
+                  data-external={isExternalHref(toolHref(t)) || undefined}
+                  title={t.summary ?? undefined}
+                >{t.title}</a>
+              </>
+            ))}
+          </p>
+        )}
+
         {/* Single horizontal row: chart · badges · action links (matches
             the non-featured card; cleaner than three stacked rows). */}
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
@@ -286,22 +306,6 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
           </div>
         </div>
 
-        {toolsForPub.length > 0 && (
-          <p class="font-mono text-xs text-ink-3 mt-6 -mb-2">
-            <span class="uppercase tracking-wider mr-1">Companion tool:</span>
-            {toolsForPub.map((t, i) => (
-              <>
-                {i > 0 && <span class="dot">·</span>}
-                <a
-                  href={toolHref(t)}
-                  class="text-ink-2 hover:text-ink border-b-0"
-                  data-external={isExternalHref(toolHref(t)) || undefined}
-                  title={t.summary ?? undefined}
-                >{t.title}</a>
-              </>
-            ))}
-          </p>
-        )}
       </div>
 
       {heroImageUrl ? (
@@ -379,6 +383,24 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
         ))}
       </p>
 
+      {/* Above the impact row — see the featured branch's note on badge overflow. */}
+      {toolsForPub.length > 0 && (
+        <p class="font-mono text-xs text-ink-3 mt-2 m-0">
+          <span class="uppercase tracking-wider mr-1">Companion tool:</span>
+          {toolsForPub.map((t, i) => (
+            <>
+              {i > 0 && <span class="dot">·</span>}
+              <a
+                href={toolHref(t)}
+                class="text-ink-2 hover:text-ink border-b-0"
+                data-external={isExternalHref(toolHref(t)) || undefined}
+                title={t.summary ?? undefined}
+              >{t.title}</a>
+            </>
+          ))}
+        </p>
+      )}
+
       {/* Single horizontal row: chart · badges · action links. Wraps on narrow screens. */}
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3">
         {showImpact && citationsForPub && (
@@ -413,23 +435,6 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
           {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
         </div>
       </div>
-
-      {toolsForPub.length > 0 && (
-        <p class:list={['font-mono text-xs text-ink-3 mt-6 m-0', newsForPub.length === 0 && '-mb-2']}>
-          <span class="uppercase tracking-wider mr-1">Companion tool:</span>
-          {toolsForPub.map((t, i) => (
-            <>
-              {i > 0 && <span class="dot">·</span>}
-              <a
-                href={toolHref(t)}
-                class="text-ink-2 hover:text-ink border-b-0"
-                data-external={isExternalHref(toolHref(t)) || undefined}
-                title={t.summary ?? undefined}
-              >{t.title}</a>
-            </>
-          ))}
-        </p>
-      )}
 
       {newsForPub.length > 0 && (
         <p class="font-mono text-xs text-ink-3 mt-2 m-0">

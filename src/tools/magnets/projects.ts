@@ -63,7 +63,8 @@ export const BLOC_LABEL: Record<Bloc, string> = {
 export const PROJECTS: Project[] = [
   // MINING (kt REO concentrate / yr, representative)
   { id: 'mp_mine', name: 'Mountain Pass', stage: 'mining', country: 'United States', bloc: 'us', capacityKt: 42, status: 'operating', heavy: false, note: 'MP Materials — the only operating US REE mine; light-REE (bastnäsite).' },
-  { id: 'round_top', name: 'Round Top', stage: 'mining', country: 'United States', bloc: 'us', capacityKt: 2.5, status: 'planned', heavy: true, note: 'USA Rare Earth, TX — heavy-REE-enriched rhyolite; pre-commercial (2019 PEA).' },
+  { id: 'round_top', name: 'Round Top', stage: 'mining', country: 'United States', bloc: 'us', capacityKt: 2.5, status: 'planned', heavy: true, note: 'USA Rare Earth, TX — heavy-REE-enriched rhyolite; pre-commercial. Sourced (BNEF 2020, 2019 PEA): 2.2 kt REO/yr incl. 200 t Dy + 23 t Tb; mine $602M + processor $487M.' },
+  { id: 'browns_range', name: 'Browns Range', stage: 'mining', country: 'Australia', bloc: 'allied', capacityKt: 0.6, status: 'planned', heavy: true, note: 'Northern Minerals — the flagship ex-China DYSPROSIUM mine (xenotime); feasibility, ~2027; tiny scale (BNEF: ~88 t NdPr-eq/yr) underscores how thin the ex-China heavy pipeline is.' },
   { id: 'mt_weld', name: 'Mt Weld (Lynas)', stage: 'mining', country: 'Australia', bloc: 'allied', capacityKt: 22, status: 'operating', heavy: false, note: 'Lynas — the largest ex-China light-REE mine.' },
   { id: 'nolans', name: 'Nolans', stage: 'mining', country: 'Australia', bloc: 'allied', capacityKt: 13, status: 'planned', heavy: false, note: 'Arafura — NdPr-focused, financing stage.' },
   { id: 'serra_verde', name: 'Serra Verde', stage: 'mining', country: 'Brazil', bloc: 'allied', capacityKt: 5, status: 'operating', heavy: true, note: 'Ion-adsorption clay (2024) — a rare ex-China heavy-REE source.' },

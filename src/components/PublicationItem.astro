@@ -1,8 +1,10 @@
 ---
-import type { Publication, Person, NewsItem } from '../lib/types';
+import type { Publication, Person, NewsItem, Tool } from '../lib/types';
 import people from '../data/people.json';
 import news from '../data/news.json';
+import tools from '../data/tools.json';
 import { splitAndLinkAuthors, toNaturalOrder } from '../lib/author-links';
+import { toolHref, toolsForPublication } from '../lib/tools';
 import { roleColor } from '../lib/roles';
 import { SYSTEMS } from '../lib/systems';
 import { citationsArray, totalCitations } from '../lib/citations';
@@ -66,6 +68,13 @@ function newsYearLabel(d: string | null | undefined): string {
   return m ? m[1] : '';
 }
 
+// Companion interactive tools — explicit `tool` slugs on the pub row plus
+// Tools-tab entries whose `doi` matches this paper.
+const toolsForPub: Tool[] = toolsForPublication(pub, tools as Tool[]);
+function isExternalHref(href: string): boolean {
+  return /^https?:\/\//i.test(href);
+}
+
 // Gate the impact row (citation chart + Altmetric/Dimensions badges) on a
 // minimum citation count or featured status. Featured papers always get
 // the impact strip even if they're new/lightly-cited; otherwise we wait
@@ -114,7 +123,13 @@ const detectedLabSlugs = Array.from(
 const isConceptual = pub.conceptual === true;
 
 // Search blob — concatenated lowercase string the client-side filter greps.
-const searchBlob = [pub.authors, pub.title, pub.journal, String(pub.year)]
+const searchBlob = [
+  pub.authors,
+  pub.title,
+  pub.journal,
+  String(pub.year),
+  ...toolsForPub.flatMap((t) => [t.slug, t.title]),
+]
   .filter(Boolean)
   .join(' ')
   .toLowerCase();
@@ -270,6 +285,23 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
             {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
           </div>
         </div>
+
+        {toolsForPub.length > 0 && (
+          <p class="font-mono text-xs text-ink-3 mt-2 m-0">
+            <span class="uppercase tracking-wider mr-1">Companion tool:</span>
+            {toolsForPub.map((t, i) => (
+              <>
+                {i > 0 && <span class="dot">·</span>}
+                <a
+                  href={toolHref(t)}
+                  class="text-ink-2 hover:text-ink border-b-0"
+                  data-external={isExternalHref(toolHref(t)) || undefined}
+                  title={t.summary ?? undefined}
+                >{t.title}</a>
+              </>
+            ))}
+          </p>
+        )}
       </div>
 
       {heroImageUrl ? (
@@ -381,6 +413,23 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
           {pub.press_url && (<a href={pub.press_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Press</a>)}
         </div>
       </div>
+
+      {toolsForPub.length > 0 && (
+        <p class="font-mono text-xs text-ink-3 mt-2 m-0">
+          <span class="uppercase tracking-wider mr-1">Companion tool:</span>
+          {toolsForPub.map((t, i) => (
+            <>
+              {i > 0 && <span class="dot">·</span>}
+              <a
+                href={toolHref(t)}
+                class="text-ink-2 hover:text-ink border-b-0"
+                data-external={isExternalHref(toolHref(t)) || undefined}
+                title={t.summary ?? undefined}
+              >{t.title}</a>
+            </>
+          ))}
+        </p>
+      )}
 
       {newsForPub.length > 0 && (
         <p class="font-mono text-xs text-ink-3 mt-2 m-0">

@@ -5,6 +5,7 @@ import publications from '../../data/publications.json';
 import tools from '../../data/tools.json';
 import type { NewsItem, Publication, Tool } from '../../lib/types';
 import { SYSTEMS } from '../../lib/systems';
+import { toolHref } from '../../lib/tools';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -20,13 +21,6 @@ function resolveNewsImage(filename: string | null | undefined): string | null {
     if (existsSync(resolve('public', folder, filename))) return `/${folder}/${filename}`;
   }
   return null;
-}
-
-const TOOLS_WITHOUT_DETAIL_PAGE = new Set(['cornerstone']);
-function toolHref(t: Tool): string {
-  if (t.link) return t.link;
-  if (TOOLS_WITHOUT_DETAIL_PAGE.has(t.slug)) return '/tools';
-  return `/tools/${t.slug}`;
 }
 
 // Filter taxonomy mirrors the publications page so users get the same

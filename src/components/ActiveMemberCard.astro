@@ -7,6 +7,7 @@ import externalPubs from '../data/external-pubs.json';
 import tools from '../data/tools.json';
 import news from '../data/news.json';
 import { totalCitations } from '../lib/citations';
+import { toolHref } from '../lib/tools';
 
 interface Props {
   person: Person;
@@ -99,21 +100,13 @@ const mostRecent = [...personPubs].sort((a, b) =>
 // Recent slot, alongside the existing DOI-based publication path.
 const toolsBySlug = new Map<string, Tool>();
 for (const t of tools as Tool[]) toolsBySlug.set(t.slug, t);
-// Slugs whose own /tools/<slug> page isn't generated (multi-link
-// initiatives etc.) — fall back to /tools for the work link.
-const TOOLS_WITHOUT_DETAIL_PAGE = new Set(['cornerstone']);
-
 function resolveTool(value: string | null): Tool | null {
   if (!value) return null;
   const m = value.trim().match(/^tool:(.+)$/i);
   if (!m) return null;
   return toolsBySlug.get(m[1].trim()) ?? null;
 }
-function toolUrl(t: Tool): string {
-  if (t.link) return t.link;
-  if (TOOLS_WITHOUT_DETAIL_PAGE.has(t.slug)) return '/tools';
-  return `/tools/${t.slug}`;
-}
+const toolUrl = toolHref;
 function toolMetaLine(t: Tool): string {
   if (!t.eyebrow) return '';
   // "OPEN DATA INITIATIVE" → "Open data initiative" for the mono caption.

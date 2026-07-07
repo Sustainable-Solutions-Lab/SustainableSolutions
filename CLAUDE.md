@@ -247,6 +247,7 @@ off-screen otherwise.
 | M      | system            | Text, comma-separated                          | Manual. Two-axis taxonomy. Allowed values: `energy`, `food`, `water`, `materials`. |
 | N      | response          | Text, comma-separated                          | Manual. Allowed values: `mitigation`, `mitigation:trade`, `mitigation:corporate`, `mitigation:carbon-management`, `impacts`, `impacts:air-pollution`, `impacts:heat`, `impacts:flooding`. |
 | —      | conceptual        | Boolean (TRUE/FALSE)                           | Manual. TRUE = conceptual / synthesis / theory-first work (often by CIU members); blank or FALSE = data-driven (default). Drives the Conceptual card on `/research` and the Approach filter on `/publications`. Add anywhere in the sheet — fetch-sheets reads by header name. |
+| —      | tool              | Text, comma-separated                          | Manual. Slugs from the Tools tab (e.g. `just-air`). Surfaces a "Companion tool" link on the publication card. Tools-tab rows whose `doi` matches the paper are linked automatically without this column. Add anywhere in the sheet — fetch-sheets reads by header name. |
 | O      | lab_authors       | Text, comma-separated                          | Manual; slugs matching People sheet            |
 | P      | pdf_url           | Text                                           | Manual                                         |
 | Q      | code_url          | Text                                           | Manual; replication code link                  |
@@ -313,7 +314,7 @@ off-screen otherwise.
 | E      | description       | Text                                           | Optional. Longer prose for the detail page     |
 | F      | image_filename    | Text                                           | Hero image, in `/public/tools/` or `/public/images/` |
 | G      | link              | Text                                           | Internal route (`/tools/firefuels`) or external URL |
-| H      | doi               | Text                                           | DOI of the companion publication, optional     |
+| H      | doi               | Text                                           | DOI of the companion publication, optional. Also surfaces a "Companion tool" link on that publication's card. |
 | I      | order             | Integer                                        | Sort order on `/tools` (lower = earlier)       |
 
 ### Tab: `Featured`

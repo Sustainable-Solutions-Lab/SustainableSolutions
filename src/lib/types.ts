@@ -56,6 +56,12 @@ export type Publication = {
   // data-driven; flip to TRUE to surface the paper under /research's
   // Conceptual card and the publications page's Approach=Conceptual filter.
   conceptual: boolean;
+  // Companion interactive tools — Tools-tab slugs (e.g. just-air), tagged
+  // manually in the sheet (Publications tab → `tool` column, comma-separated).
+  // Surfaces a "Companion tool" link on the publication card. Optional until
+  // the column exists in the sheet; tools whose own `doi` matches the paper
+  // are linked automatically either way.
+  tool?: string[];
   lab_authors: string[];
   featured: boolean;
   press_url: string | null;

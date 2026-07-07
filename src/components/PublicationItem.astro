@@ -287,7 +287,7 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
         </div>
 
         {toolsForPub.length > 0 && (
-          <p class="font-mono text-xs text-ink-3 mt-4 m-0">
+          <p class="font-mono text-xs text-ink-3 mt-6 -mb-2">
             <span class="uppercase tracking-wider mr-1">Companion tool:</span>
             {toolsForPub.map((t, i) => (
               <>
@@ -415,7 +415,7 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
       </div>
 
       {toolsForPub.length > 0 && (
-        <p class="font-mono text-xs text-ink-3 mt-4 m-0">
+        <p class:list={['font-mono text-xs text-ink-3 mt-6 m-0', newsForPub.length === 0 && '-mb-2']}>
           <span class="uppercase tracking-wider mr-1">Companion tool:</span>
           {toolsForPub.map((t, i) => (
             <>

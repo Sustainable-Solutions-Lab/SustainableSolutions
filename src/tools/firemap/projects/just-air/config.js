@@ -23,7 +23,7 @@ const config = {
   title: 'Just Air',
   summary: 'Air-quality and mortality consequences of two net-zero scenarios across 15 U.S. metros.',
   description:
-    'Annual PM₂.₅ concentrations and PM₂.₅-related mortality projected to 2050 under two net-zero scenarios — Low CDR (limited carbon-dioxide removal) and High CDR — at high spatial resolution for the 15 most populous U.S. metros. Difference layers show where each scenario yields cleaner or more polluted air, and where the resulting health burden shifts. For details, see <a href="https://assets-eu.researchsquare.com/files/rs-7359464/v1/e95da285-43f3-4f1b-b892-d899d3335dda.pdf" target="_blank" rel="noopener noreferrer"><strong>Bergero et al., Nature Climate Change.</strong></a>',
+    'Annual PM₂.₅ concentrations and PM₂.₅-related mortality projected to 2050 under two net-zero scenarios — Low CDR (limited carbon-dioxide removal) and High CDR — at high spatial resolution for the 15 most populous U.S. metros. Difference layers show where each scenario yields cleaner or more polluted air, and where the resulting health burden shifts. For details, see <a href="https://www.nature.com/articles/s41558-026-02675-0" target="_blank" rel="noopener noreferrer"><strong>Bergero et al. (2026), Nature Climate Change.</strong></a>',
 
   // CONUS-wide framing with city-by-city zoom-in allowed. The default
   // zoom shows the full lower-48 footprint with margin; minZoom is

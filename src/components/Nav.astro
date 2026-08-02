@@ -157,6 +157,14 @@ const path = Astro.url.pathname;
       sync();
     });
 
+    // The nav button isn't the only theme writer — the map tool has its own
+    // toggle that flips data-theme on <html>. Observe the attribute so the
+    // label follows the actual theme no matter who changed it.
+    new MutationObserver(sync).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+
     sync();
   })();
 

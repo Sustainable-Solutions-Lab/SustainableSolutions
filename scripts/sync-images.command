@@ -15,7 +15,7 @@ set -e
 #      changes — so an image upload now reaches the live site
 #      with no further action.
 
-cd "$HOME/Claude Projects/SustainableSolutions"
+cd "$HOME/Library/CloudStorage/Dropbox/Sites/SustainableSolutions"
 
 clear
 echo

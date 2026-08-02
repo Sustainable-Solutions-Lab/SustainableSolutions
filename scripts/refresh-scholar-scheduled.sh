@@ -14,7 +14,7 @@ if OUT=$(npm run refresh-scholar 2>&1); then
   echo "$OUT" >> "$LOG"
   NEW=$(echo "$OUT" | sed -n 's/.*new since last sheet refresh:[[:space:]]*\([0-9][0-9]*\).*/\1/p')
   if [ -n "$NEW" ] && [ "$NEW" -gt 0 ]; then
-    osascript -e "display notification \"$NEW new paper(s) found — paste templates/publications-from-scholar.csv into the Publications sheet\" with title \"Scholar refresh\"" >/dev/null 2>&1
+    osascript -e "display notification \"$NEW paper(s) on Scholar not yet in the Publications sheet — add row(s) manually when ready\" with title \"Scholar refresh\"" >/dev/null 2>&1
   fi
 else
   echo "$OUT" >> "$LOG"

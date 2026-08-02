@@ -9,7 +9,7 @@ set -e
 #   3. Merge everything into templates/publications-from-scholar.csv
 #   4. Tell you what to do next
 
-cd "$HOME/Claude Projects/SustainableSolutions"
+cd "$HOME/Library/CloudStorage/Dropbox/Sites/SustainableSolutions"
 
 clear
 echo

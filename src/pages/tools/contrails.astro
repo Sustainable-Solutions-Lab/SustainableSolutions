@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ContrailsTool from '../../tools/contrails/ContrailsTool';
+---
+
+<BaseLayout
+  title="Contrail warming at booking time"
+  description="Predict a flight's contrail climate impact from schedule information alone — months before departure."
+  noindex
+>
+  <section class="mx-auto max-w-[820px] px-4 pt-10 pb-4">
+    <p class="font-mono text-[11px] uppercase tracking-wider opacity-60">Prototype · not yet public</p>
+    <h1 class="mt-2 font-serif text-3xl">Contrail warming at booking time</h1>
+    <p class="mt-3 max-w-[620px] text-base leading-relaxed">
+      A minority of flights cause most contrail warming. Weather-based
+      forecasts can steer aircraft hours ahead; this tool instead predicts a
+      flight's likely contrail warming from information available when you
+      book — route, date, time of day, and aircraft — months in advance.
+    </p>
+  </section>
+  <section class="pb-16" aria-label="Contrail prediction tool">
+    <ContrailsTool client:only="react" />
+  </section>
+</BaseLayout>

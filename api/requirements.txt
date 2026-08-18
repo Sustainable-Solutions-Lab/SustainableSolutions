@@ -1,6 +1,5 @@
 numpy
-pandas
-xgboost
+xgboost-cpu
 ephem
 shapely
 pyproj

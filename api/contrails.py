@@ -31,7 +31,6 @@ from zoneinfo import ZoneInfo
 
 import ephem
 import numpy as np
-import pandas as pd
 import xgboost as xgb
 from pyproj import Geod
 from shapely import wkb as shapely_wkb
@@ -136,10 +135,18 @@ def _features(origin, dest, dep_utc, aircraft):
 
 
 def _predict(rows):
-    df = pd.DataFrame(rows)
-    df["aircraft_type_icao"] = pd.Categorical(
-        df["aircraft_type_icao"], categories=_aircraft["categories"])
-    dm = xgb.DMatrix(df[LEAN_AC_FEATS], enable_categorical=True)
+    # numpy path (no pandas in the bundle): categorical feature passed as
+    # its training category CODE with feature_types — verified to produce
+    # byte-identical predictions to the pandas-categorical path.
+    idx = {c: i for i, c in enumerate(_aircraft["categories"])}
+    X = np.array(
+        [[r[f] if f != "aircraft_type_icao" else idx[r[f]]
+          for f in LEAN_AC_FEATS] for r in rows],
+        dtype=np.float32)
+    ftypes = ["c" if f == "aircraft_type_icao" else "q"
+              for f in LEAN_AC_FEATS]
+    dm = xgb.DMatrix(X, feature_names=LEAN_AC_FEATS, feature_types=ftypes,
+                     enable_categorical=True)
     return _booster.predict(dm)
 
 

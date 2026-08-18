@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/contrails.py": {
+      "excludeFiles": "{node_modules/**,dist/**,build/**,src/**,public/**,scripts/**,templates/**,docs/**,design-system/**}"
+    }
+  }
+}

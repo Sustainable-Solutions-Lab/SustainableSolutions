@@ -10,6 +10,11 @@ distillation metrics.
 Routes (GET):
   /api/contrails?meta=1
       → { aircraft: [{icao, n}...], n_calibration_flights, model }
+  /api/contrails?flights=1&origin=SFO&dest=DEL&date=2026-09-19
+      → real bookable itineraries from the Amadeus Flight Offers API,
+        each leg scored by the model (requires AMADEUS_CLIENT_ID /
+        AMADEUS_CLIENT_SECRET env vars; AMADEUS_ENV=production to leave
+        the test sandbox)
   /api/contrails?route=1&origin=SFO&dest=LHR
       → { known, n_flights, aircraft: [{icao, share}...] } — whether the
         corpus contains direct flights on this airport pair, and the
@@ -32,6 +37,10 @@ from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
+
+import os
+import urllib.request
+import urllib.parse
 
 import ephem
 import numpy as np
@@ -233,6 +242,137 @@ def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
     return out, 200
 
 
+# ── Amadeus integration ──────────────────────────────────────────────────
+# IATA aircraft type designators (returned by Amadeus) → ICAO types the
+# model was trained on. Covers the common fleet; unknown codes fall back
+# to the route's most common type, flagged in the response.
+IATA_TO_ICAO_AC = {
+    "319": "A319", "320": "A320", "321": "A321", "32A": "A320",
+    "32B": "A321", "32N": "A20N", "32Q": "A21N", "32S": "A320",
+    "332": "A332", "333": "A333", "338": "A338", "339": "A339",
+    "343": "A343", "346": "A346", "351": "A35K", "359": "A359",
+    "388": "A388", "717": "B712", "737": "B737", "738": "B738",
+    "739": "B739", "73G": "B737", "73H": "B738", "73J": "B739",
+    "7M8": "B38M", "7M9": "B39M", "744": "B744", "748": "B748",
+    "752": "B752", "753": "B753", "763": "B763", "764": "B764",
+    "772": "B772", "773": "B773", "77L": "B77L", "77W": "B77W",
+    "781": "B78X", "788": "B788", "789": "B789",
+    "CR7": "CRJ7", "CR9": "CRJ9", "CRK": "CRJX", "E70": "E170",
+    "E75": "E75L", "E90": "E190", "E95": "E195", "290": "E290",
+    "295": "E295", "221": "BCS1", "223": "BCS3",
+}
+
+_amadeus_token = {"value": None, "expires": 0.0}
+_flights_cache = {}
+
+
+def _amadeus_base():
+    env = os.environ.get("AMADEUS_ENV", "test")
+    return ("https://api.amadeus.com" if env == "production"
+            else "https://test.api.amadeus.com")
+
+
+def _get_amadeus_token():
+    import time as _time
+    cid = os.environ.get("AMADEUS_CLIENT_ID")
+    sec = os.environ.get("AMADEUS_CLIENT_SECRET")
+    if not cid or not sec:
+        return None
+    if _amadeus_token["value"] and _time.time() < _amadeus_token["expires"] - 60:
+        return _amadeus_token["value"]
+    data = urllib.parse.urlencode({
+        "grant_type": "client_credentials",
+        "client_id": cid, "client_secret": sec,
+    }).encode()
+    req = urllib.request.Request(
+        f"{_amadeus_base()}/v1/security/oauth2/token", data=data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        tok = json.load(r)
+    _amadeus_token["value"] = tok["access_token"]
+    _amadeus_token["expires"] = _time.time() + int(tok.get("expires_in", 1799))
+    return _amadeus_token["value"]
+
+
+def bookable_flights(origin, dest, date_s):
+    """Real itineraries for the date, each leg scored by the model."""
+    token = _get_amadeus_token()
+    if token is None:
+        return {"error": "amadeus_not_configured"}, 503
+    ck = (origin, dest, date_s)
+    if ck in _flights_cache:
+        return _flights_cache[ck], 200
+
+    qs = urllib.parse.urlencode({
+        "originLocationCode": origin, "destinationLocationCode": dest,
+        "departureDate": date_s, "adults": 1, "max": 40,
+        "currencyCode": "USD",
+    })
+    req = urllib.request.Request(
+        f"{_amadeus_base()}/v2/shopping/flight-offers?{qs}",
+        headers={"Authorization": f"Bearer {token}"})
+    try:
+        with urllib.request.urlopen(req, timeout=25) as r:
+            offers = json.load(r).get("data", [])
+    except urllib.error.HTTPError as e:
+        return {"error": f"amadeus {e.code}: {e.read().decode()[:200]}"}, 502
+
+    results = {}
+    for off in offers:
+        it = off["itineraries"][0]
+        legs = []
+        total_t = 0.0
+        worst_pct = 0.0
+        approx = False
+        key_parts = []
+        ok = True
+        for seg in it["segments"]:
+            o = seg["departure"]["iataCode"]
+            d = seg["arrival"]["iataCode"]
+            dep_local = seg["departure"]["at"][:16]          # local ISO
+            iata_ac = (seg.get("aircraft") or {}).get("code", "")
+            icao_ac = IATA_TO_ICAO_AC.get(iata_ac)
+            if icao_ac is None or icao_ac not in _aircraft["categories"]:
+                rm = _routes.get(f"{o}>{d}")
+                icao_ac = next(iter(rm["ac"])) if rm else "B738"
+                approx = True
+            if o not in _airports or d not in _airports:
+                ok = False
+                break
+            date_p, time_p = dep_local.split("T")
+            body, code = score(o, d, date_p, time_p, icao_ac, "local", False)
+            if code != 200:
+                ok = False
+                break
+            legs.append({
+                "from": o, "to": d, "dep_local": dep_local,
+                "carrier": f'{seg.get("carrierCode","")}{seg.get("number","")}',
+                "aircraft": icao_ac,
+                "percentile": body["percentile"],
+                "t_co2e": body["expected_co2e_t_per_flight"],
+            })
+            total_t += body["expected_co2e_t_per_flight"]
+            worst_pct = max(worst_pct, body["percentile"])
+            key_parts.append(f'{seg.get("carrierCode","")}{seg.get("number","")}@{dep_local}')
+        if not ok or not legs:
+            continue
+        key = "|".join(key_parts)
+        price = float(off.get("price", {}).get("grandTotal", 0) or 0)
+        if key not in results or price < results[key]["price_usd"]:
+            results[key] = {
+                "legs": legs, "n_stops": len(legs) - 1,
+                "dep_local": legs[0]["dep_local"],
+                "total_t_co2e": round(total_t, 2),
+                "worst_leg_percentile": worst_pct,
+                "aircraft_estimated": approx,
+                "price_usd": price,
+            }
+    out = {"flights": sorted(results.values(),
+                             key=lambda f: f["total_t_co2e"])}
+    _flights_cache[ck] = out
+    return out, 200
+
+
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         _load()
@@ -244,6 +384,12 @@ class handler(BaseHTTPRequestHandler):
                     "n_calibration_flights": _calib["n_flights"],
                     "model": "LEAN+AC schedule-only XGBoost",
                 }, 200
+            elif q.get("flights"):
+                o, d = q.get("origin", "").upper(), q.get("dest", "").upper()
+                if o not in _airports or d not in _airports:
+                    body, code = {"error": "unknown airport"}, 400
+                else:
+                    body, code = bookable_flights(o, d, q.get("date", ""))
             elif q.get("route"):
                 o, d = q.get("origin", "").upper(), q.get("dest", "").upper()
                 if o not in _airports or d not in _airports:

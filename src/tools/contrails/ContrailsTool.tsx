@@ -30,6 +30,16 @@ type ScoreResult = {
   error?: string;
 };
 
+type FlightLeg = {
+  from: string; to: string; dep_local: string; carrier: string;
+  aircraft: string; percentile: number; t_co2e: number;
+};
+type FlightOption = {
+  legs: FlightLeg[]; n_stops: number; dep_local: string;
+  total_t_co2e: number; worst_leg_percentile: number;
+  aircraft_estimated: boolean; price_usd: number;
+};
+
 type RouteInfo = {
   known: boolean;
   n_flights: number;
@@ -190,6 +200,8 @@ export default function ContrailsTool() {
   const [result, setResult] = useState<ScoreResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [flights, setFlights] = useState<FlightOption[] | null>(null);
+  const [flightsState, setFlightsState] = useState<'idle' | 'busy' | 'unconfigured' | 'error'>('idle');
 
   useEffect(() => {
     fetch(`${API}?meta=1`)
@@ -246,6 +258,21 @@ export default function ContrailsTool() {
       setResult(null);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function findFlights() {
+    setFlightsState('busy');
+    setFlights(null);
+    try {
+      const r = await fetch(`${API}?flights=1&origin=${origin}&dest=${dest}&date=${date}`);
+      const body = await r.json();
+      if (r.status === 503) { setFlightsState('unconfigured'); return; }
+      if (!r.ok || body.error) throw new Error(body.error);
+      setFlights(body.flights ?? []);
+      setFlightsState('idle');
+    } catch {
+      setFlightsState('error');
     }
   }
 
@@ -361,11 +388,68 @@ export default function ContrailsTool() {
           {result.hour_curve && (
             <figure className="mt-6">
               <figcaption className="mb-2 font-mono text-[11px] uppercase tracking-wider opacity-60">
-                Same route and date, by local departure hour
+                Same route and date, by local departure hour — {result.aircraft}
               </figcaption>
               <HourCurve curve={result.hour_curve} selHourLocal={selHourLocal} />
             </figure>
           )}
+
+          <div className="mt-8 border-t border-rule pt-5">
+            <div className="flex items-baseline gap-4">
+              <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
+                Bookable flights on {date} (beta)
+              </span>
+              <button
+                type="button"
+                onClick={() => void findFlights()}
+                disabled={flightsState === 'busy'}
+                className="rounded-sm border border-rule bg-paper-3 px-3 py-1 text-xs hover:border-rule-strong"
+              >
+                {flightsState === 'busy' ? 'Searching…' : 'Search real flights'}
+              </button>
+            </div>
+            {flightsState === 'unconfigured' && (
+              <p className="mt-2 text-sm opacity-70">
+                Flight search is not yet connected for this deployment.
+              </p>
+            )}
+            {flightsState === 'error' && (
+              <p className="mt-2 font-mono text-sm text-cardinal">Flight search failed — try again.</p>
+            )}
+            {flights && flights.length === 0 && (
+              <p className="mt-2 text-sm opacity-70">No bookable itineraries returned for this date.</p>
+            )}
+            {flights && flights.length > 0 && (
+              <ul className="mt-3 divide-y divide-rule">
+                {flights.map((f, i) => {
+                  const worstTotal = Math.max(...flights.map((g) => g.total_t_co2e));
+                  const saving = worstTotal > 0 ? Math.round(100 * (1 - f.total_t_co2e / worstTotal)) : 0;
+                  return (
+                    <li key={i} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2 text-sm">
+                      <span className="font-mono">{f.dep_local.slice(11)}</span>
+                      <span className="font-mono text-xs opacity-70">
+                        {f.legs.map((l) => `${l.carrier} ${l.from}→${l.to} (${l.aircraft})`).join(' · ')}
+                      </span>
+                      <span className="font-mono" style={{ color: pctColor(f.worst_leg_percentile) }}>
+                        {f.total_t_co2e.toFixed(1)} t · p{f.worst_leg_percentile.toFixed(0)}
+                      </span>
+                      {i === 0 && flights.length > 1 && (
+                        <span className="rounded-sm border border-rule px-1.5 font-mono text-[11px] uppercase tracking-wider" style={{ color: '#66C2A5' }}>
+                          lowest — {saving}% less than worst option
+                        </span>
+                      )}
+                      {f.aircraft_estimated && (
+                        <span className="text-[11px] italic opacity-60">aircraft estimated</span>
+                      )}
+                      {f.price_usd > 0 && (
+                        <span className="text-xs opacity-60">${f.price_usd.toFixed(0)}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
 
           <p className="mt-4 max-w-[620px] text-sm italic opacity-70">
             A climatological expectation from schedule information alone — not a

@@ -20,8 +20,17 @@
  * z-stack (matches firemap): header 30 > drawer 21 > scrim 20 > in-map
  * overlays 10.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+
+// Single-line + ellipsis, inline so it wins over the design system's
+// unlayered `text-wrap` rules (which reset wrap mode and defeat `truncate`).
+const oneLine: CSSProperties = {
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  textWrap: 'nowrap',
+};
 
 export type ToolShellProps = {
   eyebrow?: string;
@@ -99,16 +108,22 @@ export default function ToolShell({
       {eyebrow && (
         <p
           className="m-0 font-mono uppercase text-ink-3"
-          style={{ fontSize: compact ? 10 : 11, letterSpacing: '0.12em' }}
+          style={{
+            fontSize: compact ? 10 : 11,
+            letterSpacing: '0.12em',
+            // inline because the design system's unlayered text-wrap rules
+            // beat utility classes; the compact header must stay one line
+            ...(compact ? oneLine : null),
+          }}
         >
           {eyebrow}
         </p>
       )}
       <h1
-        className={`font-serif text-ink ${compact ? 'truncate' : ''}`}
+        className="font-serif text-ink"
         style={
           compact
-            ? { fontSize: 19, fontWeight: 600, lineHeight: 1.15, margin: 0 }
+            ? { fontSize: 19, fontWeight: 600, lineHeight: 1.15, margin: 0, ...oneLine }
             : { fontSize: 32, fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.01em', margin: '4px 0 0' }
         }
       >
@@ -127,7 +142,17 @@ export default function ToolShell({
         <div className="min-w-0 flex-1">
           {titleBlock(true)}
           {summary && headerSummary && (
-            <p className="m-0 truncate text-ink-2" style={{ fontSize: 12, lineHeight: 1.3 }}>
+            <p
+              className="m-0 text-ink-2"
+              style={{
+                fontSize: 12,
+                lineHeight: 1.3,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}
+            >
               {summary}
             </p>
           )}

@@ -69,6 +69,10 @@ function durationMin(iso?: string): number | null {
   return Number(m[1] ?? 0) * 1440 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0);
 }
 
+function fmtT(t: number): string {
+  return `${t.toFixed(1)} t${t < 0 ? ' (cooling)' : ''}`;
+}
+
 function fmtMin(min: number): string {
   const h = Math.floor(Math.abs(min) / 60);
   const mm = Math.round(Math.abs(min) % 60);
@@ -310,32 +314,7 @@ function FlightMap({
           </g>
         );
       })}
-      {(() => {
-        // hover chip pinned to the hovered arc's midpoint: flight facts
-        // on the first line, plain-language city chain on the second
-        const a = arcs.find((x) => x.key === hoverKey);
-        const label = hoverKey ? labels[hoverKey] : undefined;
-        if (!a || !label) return null;
-        const all = a.segs.flat();
-        const mid = all[Math.floor(all.length / 2)];
-        const cx = px(mid[1]);
-        const cy = py(mid[0]);
-        const w = Math.max(label.top.length, label.sub.length) * 6.2 + 14;
-        const bx = Math.min(Math.max(cx - w / 2, 4), W - w - 4);
-        const by = cy > 52 ? cy - 44 : cy + 14;
-        return (
-          <g pointerEvents="none">
-            <circle cx={cx} cy={cy} r={4} fill={a.color} stroke="var(--paper, #fff)" strokeWidth={1.5} />
-            <rect x={bx} y={by} width={w} height={34} rx={3} fill="var(--paper, #fff)" stroke={a.color} strokeWidth={1} />
-            <text x={bx + 7} y={by + 14} fontSize={10.5} fontFamily="var(--font-mono, monospace)" fill="currentColor">
-              {label.top}
-            </text>
-            <text x={bx + 7} y={by + 27} fontSize={10} fontFamily="var(--font-mono, monospace)" fill="currentColor" opacity={0.75}>
-              {label.sub}
-            </text>
-          </g>
-        );
-      })()}
+
       {(() => {
         // percentile color bar, bottom-left
         const segsBar = [
@@ -373,12 +352,38 @@ function FlightMap({
           </text>
         </g>
       ))}
+      {(() => {
+        // hover chip pinned to the hovered arc's midpoint: flight facts
+        // on the first line, plain-language city chain on the second
+        const a = arcs.find((x) => x.key === hoverKey);
+        const label = hoverKey ? labels[hoverKey] : undefined;
+        if (!a || !label) return null;
+        const all = a.segs.flat();
+        const mid = all[Math.floor(all.length / 2)];
+        const cx = px(mid[1]);
+        const cy = py(mid[0]);
+        const w = Math.max(label.top.length, label.sub.length) * 6.2 + 14;
+        const bx = Math.min(Math.max(cx - w / 2, 4), W - w - 4);
+        const by = cy > 52 ? cy - 44 : cy + 14;
+        return (
+          <g pointerEvents="none">
+            <circle cx={cx} cy={cy} r={4} fill={a.color} stroke="var(--paper, #fff)" strokeWidth={1.5} />
+            <rect x={bx} y={by} width={w} height={34} rx={3} fill="var(--paper, #fff)" stroke={a.color} strokeWidth={1} />
+            <text x={bx + 7} y={by + 14} fontSize={10.5} fontFamily="var(--font-mono, monospace)" fill="currentColor">
+              {label.top}
+            </text>
+            <text x={bx + 7} y={by + 27} fontSize={10} fontFamily="var(--font-mono, monospace)" fill="currentColor" opacity={0.75}>
+              {label.sub}
+            </text>
+          </g>
+        );
+      })()}
     </svg>
   );
 }
 
 export default function ContrailsTool() {
-  const [mode, setMode] = useState<'route' | 'flightno'>('route');
+  const [mode, setMode] = useState<'route' | 'flightno'>('flightno');
   const [flightNo, setFlightNo] = useState('');
   const [origin, setOrigin] = useState('SFO');
   const [dest, setDest] = useState('LHR');
@@ -551,14 +556,14 @@ export default function ContrailsTool() {
     const out: Record<string, { top: string; sub: string }> = {};
     if (result) {
       out.main = {
-        top: `Your flight · ${result.expected_co2e_t_per_flight.toFixed(1)} t`,
+        top: `Your flight · ${fmtT(result.expected_co2e_t_per_flight)}`,
         sub: `${cityOf(result.origin)} → ${cityOf(result.dest)}`,
       };
     }
     topAlts.forEach((f, i) => {
       const chain = [f.legs[0].from, ...f.legs.map((l) => l.to)];
       out[`alt${i}`] = {
-        top: `${f.legs.map((l) => l.carrier).join('·')} · ${f.total_t_co2e.toFixed(1)} t${f.price_usd > 0 ? ` · $${f.price_usd.toFixed(0)}` : ''}`,
+        top: `${f.legs.map((l) => l.carrier).join('·')} · ${fmtT(f.total_t_co2e)}${f.price_usd > 0 ? ` · $${f.price_usd.toFixed(0)}` : ''}`,
         sub: chain.map(cityOf).join(' → '),
       };
     });
@@ -574,7 +579,7 @@ export default function ContrailsTool() {
           position: absolute;
           inset: 0;
           transform: translateX(-100%);
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+          background: linear-gradient(90deg, transparent, rgba(24,24,56,0.10), transparent);
           animation: contrail-shimmer-sweep 1.4s ease-in-out infinite;
         }
         [data-theme='dark'] .contrail-shimmer::after {
@@ -593,7 +598,7 @@ export default function ContrailsTool() {
           </p>
         </div>
         <div className="flex gap-1 font-mono text-[11px] uppercase tracking-wider">
-          {(['route', 'flightno'] as const).map((m) => (
+          {(['flightno', 'route'] as const).map((m) => (
             <button
               key={m}
               type="button"
@@ -722,7 +727,9 @@ export default function ContrailsTool() {
                 <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Expected contrail warming</span>
                 <div className="text-2xl">
                   {result.expected_co2e_t_per_flight.toFixed(1)}{' '}
-                  <span className="text-base opacity-70">t CO₂-eq / flight</span>
+                  <span className="text-base opacity-70">
+                    t CO₂-eq / flight{result.expected_co2e_t_per_flight < 0 ? ' (cooling)' : ''}
+                  </span>
                 </div>
               </div>
               {result.flagged_top10 && (
@@ -804,7 +811,7 @@ export default function ContrailsTool() {
                 </span>
               </div>
               <span className="font-mono text-sm" style={{ color: pctColor(result.percentile) }}>
-                {result.expected_co2e_t_per_flight.toFixed(1)} t
+                {fmtT(result.expected_co2e_t_per_flight)}
               </span>
               {origPrice !== null && <span className="ml-auto font-mono text-sm opacity-80">${origPrice.toFixed(0)}</span>}
               {resolvedLabel && <span className="text-[11px] italic opacity-60">{resolvedLabel.split(' · ')[1]}</span>}
@@ -887,7 +894,7 @@ export default function ContrailsTool() {
                         </span>
                       </div>
                       <span className="font-mono text-sm" style={{ color: pctColor(f.worst_leg_percentile) }}>
-                        {f.total_t_co2e.toFixed(1)} t
+                        {fmtT(f.total_t_co2e)}
                       </span>
                       {dt < 0 && (
                         <span className="font-mono text-xs" style={{ color: '#66C2A5' }}>

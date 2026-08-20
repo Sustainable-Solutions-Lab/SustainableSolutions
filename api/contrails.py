@@ -76,10 +76,11 @@ _booster = None
 _calib = None
 _aircraft = None
 _routes = None
+_flightnos = None
 
 
 def _load():
-    global _airports, _land, _booster, _calib, _aircraft, _routes
+    global _airports, _land, _booster, _calib, _aircraft, _routes, _flightnos
     if _booster is None:
         with open(ASSETS / "airports.json") as f:
             _airports = json.load(f)
@@ -95,6 +96,8 @@ def _load():
             _aircraft = json.load(f)
         with open(ASSETS / "routes.json") as f:
             _routes = json.load(f)
+        fp = ASSETS / "flightnos.json"
+        _flightnos = json.load(open(fp)) if fp.exists() else {}
 
 
 def _night_score(olon, olat, dlon, dlat, dep_utc, arr_utc):
@@ -170,6 +173,25 @@ def _percentile(pred):
     return float(np.interp(pred, grid, np.linspace(0, 100, len(grid))))
 
 
+def resolve_flightno(fn):
+    """IATA flight number -> typical route/dep-time/aircraft (2019+2021
+    schedules; numbers change, so treat as a convenience prefill)."""
+    rec = _flightnos.get(fn.upper().replace(" ", ""))
+    if rec is None:
+        return {"found": False}
+    o, d, mod_utc, ac, n = rec
+    if o not in _airports or d not in _airports:
+        return {"found": False}
+    # convert median UTC minute-of-day to origin-local clock time
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    utc = _dt(2021, 6, 15, mod_utc // 60, mod_utc % 60, tzinfo=_tz.utc)
+    local = utc.astimezone(ZoneInfo(_airports[o]["tz"]))
+    return {"found": True, "origin": o, "dest": d,
+            "time_local": local.strftime("%H:%M"),
+            "aircraft": ac if ac in _aircraft["categories"] else "",
+            "n_observed": n}
+
+
 def route_info(origin, dest):
     r = _routes.get(f"{origin}>{dest}")
     if r is None:
@@ -213,6 +235,9 @@ def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
         "expected_co2e_kg_per_km": round(kg_km, 3),
         "expected_co2e_t_per_flight": round(
             kg_km * feats["total_flight_distance_km"] / 1000.0, 2),
+        "est_duration_h": round(
+            DURATION_INTERCEPT_H
+            + DURATION_SLOPE_H_PER_KM * feats["total_flight_distance_km"], 2),
     }
     # Score every aircraft flown on this route at the same departure —
     # engine generation can move a flight across most of the percentile
@@ -404,6 +429,8 @@ class handler(BaseHTTPRequestHandler):
                     "n_calibration_flights": _calib["n_flights"],
                     "model": "LEAN+AC schedule-only XGBoost",
                 }, 200
+            elif q.get("flightno"):
+                body, code = resolve_flightno(q["flightno"]), 200
             elif q.get("flights"):
                 o, d = q.get("origin", "").upper(), q.get("dest", "").upper()
                 flex_h = int(float(q.get("flex_h", "0") or 0))

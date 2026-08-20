@@ -24,6 +24,8 @@ type ScoreResult = {
   percentile: number;
   flagged_top10: boolean;
   route_in_corpus: boolean;
+  origin_ll?: [number, number];
+  dest_ll?: [number, number];
   expected_co2e_t_per_flight: number;
   aircraft_comparison?: { icao: string; share: number; percentile: number }[];
   hour_curve?: HourPoint[];
@@ -33,6 +35,7 @@ type ScoreResult = {
 type FlightLeg = {
   from: string; to: string; dep_local: string; carrier: string;
   aircraft: string; percentile: number; t_co2e: number;
+  from_ll?: [number, number]; to_ll?: [number, number];
 };
 type FlightOption = {
   legs: FlightLeg[]; n_stops: number; dep_local: string;
@@ -153,33 +156,95 @@ function AirportInput({
   );
 }
 
-function HourCurve({ curve, selHourLocal }: { curve: HourPoint[]; selHourLocal: number }) {
-  const W = 640;
-  const H = 180;
-  const padL = 34;
-  const padB = 26;
-  const pts = [...curve].sort((a, b) => a.hour_local - b.hour_local);
-  const x = (h: number) => padL + (h / 24) * (W - padL - 8);
-  const y = (p: number) => 8 + (1 - p / 100) * (H - padB - 8);
-  const path = pts.map((d, i) => `${i ? 'L' : 'M'}${x(d.hour_local).toFixed(1)},${y(d.percentile).toFixed(1)}`).join(' ');
+// Great-circle interpolation via 3D slerp; segments split at the
+// antimeridian so Pacific routes draw cleanly.
+function gcPoints(a: [number, number], b: [number, number], n = 72): [number, number][][] {
+  const rad = Math.PI / 180;
+  const v = (ll: [number, number]) => {
+    const [lat, lon] = [ll[0] * rad, ll[1] * rad];
+    return [Math.cos(lat) * Math.cos(lon), Math.cos(lat) * Math.sin(lon), Math.sin(lat)];
+  };
+  const va = v(a);
+  const vb = v(b);
+  const dot = Math.min(1, Math.max(-1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2]));
+  const om = Math.acos(dot);
+  const segs: [number, number][][] = [];
+  let cur: [number, number][] = [];
+  let prevLon: number | null = null;
+  for (let i = 0; i <= n; i++) {
+    const f = i / n;
+    const s = Math.sin(om) || 1e-9;
+    const w1 = Math.sin((1 - f) * om) / s;
+    const w2 = Math.sin(f * om) / s;
+    const x = w1 * va[0] + w2 * vb[0];
+    const y = w1 * va[1] + w2 * vb[1];
+    const z = w1 * va[2] + w2 * vb[2];
+    const lat = Math.atan2(z, Math.hypot(x, y)) / rad;
+    const lon = Math.atan2(y, x) / rad;
+    if (prevLon !== null && Math.abs(lon - prevLon) > 180) {
+      segs.push(cur);
+      cur = [];
+    }
+    cur.push([lat, lon]);
+    prevLon = lon;
+  }
+  segs.push(cur);
+  return segs.filter((sg) => sg.length > 1);
+}
+
+function FlightMap({
+  main,
+  mainColor,
+  mainLabel,
+  alts,
+  land,
+}: {
+  main: { from: [number, number]; to: [number, number]; codes: [string, string] };
+  mainColor: string;
+  mainLabel: string;
+  alts: { legs: { from_ll?: [number, number]; to_ll?: [number, number]; from: string; to: string }[]; color: string }[];
+  land: [number, number][][] | null;
+}) {
+  // collect all arc points to auto-fit the viewport
+  const arcs: { segs: [number, number][][]; color: string; width: number; dash?: string }[] = [];
+  for (const alt of alts) {
+    for (const l of alt.legs) {
+      if (l.from_ll && l.to_ll) arcs.push({ segs: gcPoints(l.from_ll, l.to_ll), color: alt.color, width: 1.4, dash: '5 3' });
+    }
+  }
+  arcs.push({ segs: gcPoints(main.from, main.to), color: mainColor, width: 3 });
+
+  const pts = arcs.flatMap((a) => a.segs.flat());
+  let latMin = Math.min(...pts.map((p) => p[0])) - 6;
+  let latMax = Math.max(...pts.map((p) => p[0])) + 6;
+  let lonMin = Math.min(...pts.map((p) => p[1])) - 6;
+  let lonMax = Math.max(...pts.map((p) => p[1])) + 6;
+  latMin = Math.max(-85, latMin); latMax = Math.min(88, latMax);
+  const W = 680;
+  const cosc = Math.cos((((latMin + latMax) / 2) * Math.PI) / 180);
+  const H = Math.max(180, Math.min(430, (W * (latMax - latMin)) / ((lonMax - lonMin) * cosc || 1)));
+  const px = (lon: number) => ((lon - lonMin) / (lonMax - lonMin)) * W;
+  const py = (lat: number) => ((latMax - lat) / (latMax - latMin)) * H;
+  const path = (sg: [number, number][]) => sg.map((p, i) => `${i ? 'L' : 'M'}${px(p[1]).toFixed(1)},${py(p[0]).toFixed(1)}`).join(' ');
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Predicted contrail-forcing percentile by local departure hour" style={{ width: '100%', height: 'auto' }}>
-      <rect x={padL} y={y(100)} width={W - padL - 8} height={y(90) - y(100)} fill="#9E0142" opacity={0.08} />
-      <line x1={padL} x2={W - 8} y1={y(90)} y2={y(90)} stroke="#9E0142" strokeDasharray="4 3" strokeWidth={1} opacity={0.6} />
-      <text x={W - 10} y={y(90) - 4} textAnchor="end" fontSize={10} fill="#9E0142" fontFamily="var(--font-mono, monospace)">
-        top-10% threshold
-      </text>
-      {[0, 25, 50, 75, 100].map((p) => (
-        <text key={p} x={padL - 6} y={y(p) + 3} textAnchor="end" fontSize={10} fill="currentColor" opacity={0.55} fontFamily="var(--font-mono, monospace)">{p}</text>
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={mainLabel} style={{ width: '100%', height: 'auto' }}>
+      <rect x={0} y={0} width={W} height={H} fill="var(--paper-2, #f6f6f2)" />
+      {land && land.map((poly, i) => (
+        <path key={i} d={path(poly.map(([x, y]) => [y, x] as [number, number]))} fill="var(--paper-3, #eaeae2)" stroke="var(--rule, #d8d8ce)" strokeWidth={0.5} />
       ))}
-      {[0, 6, 12, 18, 24].map((h) => (
-        <text key={h} x={x(h)} y={H - 8} textAnchor="middle" fontSize={10} fill="currentColor" opacity={0.55} fontFamily="var(--font-mono, monospace)">
-          {String(h).padStart(2, '0')}:00
-        </text>
-      ))}
-      <path d={path} fill="none" stroke="currentColor" strokeWidth={1.8} />
-      {pts.map((d) => (
-        <circle key={d.hour_utc} cx={x(d.hour_local)} cy={y(d.percentile)} r={Math.abs(d.hour_local - selHourLocal) < 0.5 ? 5 : 2.5} fill={pctColor(d.percentile)} stroke={Math.abs(d.hour_local - selHourLocal) < 0.5 ? 'currentColor' : 'none'} strokeWidth={1.2} />
+      {arcs.map((a, i) =>
+        a.segs.map((sg, j) => (
+          <path key={`${i}-${j}`} d={path(sg)} fill="none" stroke={a.color} strokeWidth={a.width} strokeDasharray={a.dash} strokeLinecap="round" opacity={a.dash ? 0.85 : 1} />
+        )),
+      )}
+      {[{ ll: main.from, code: main.codes[0] }, { ll: main.to, code: main.codes[1] }].map((e) => (
+        <g key={e.code}>
+          <circle cx={px(e.ll[1])} cy={py(e.ll[0])} r={4} fill="currentColor" />
+          <text x={px(e.ll[1])} y={py(e.ll[0]) - 8} textAnchor="middle" fontSize={11} fontFamily="var(--font-mono, monospace)" fill="currentColor" fontWeight={700}>
+            {e.code}
+          </text>
+        </g>
       ))}
     </svg>
   );
@@ -202,6 +267,7 @@ export default function ContrailsTool() {
   const [error, setError] = useState<string | null>(null);
   const [flights, setFlights] = useState<FlightOption[] | null>(null);
   const [flexH, setFlexH] = useState('');
+  const [land, setLand] = useState<[number, number][][] | null>(null);
   const [flightsState, setFlightsState] = useState<'idle' | 'busy' | 'unconfigured' | 'error'>('idle');
 
   useEffect(() => {
@@ -213,6 +279,10 @@ export default function ContrailsTool() {
       .then((r) => r.json())
       .then(setAirports)
       .catch(() => setAirports([]));
+    fetch('/tools/world-land.json')
+      .then((r) => r.json())
+      .then(setLand)
+      .catch(() => setLand(null));
   }, []);
 
   // Route metadata: preselect the most common aircraft, gray out the rest
@@ -249,7 +319,7 @@ export default function ContrailsTool() {
     setBusy(true);
     setError(null);
     try {
-      const q = new URLSearchParams({ origin, dest, date, time, aircraft, curve: '1' });
+      const q = new URLSearchParams({ origin, dest, date, time, aircraft });
       const r = await fetch(`${API}?${q}`);
       const body: ScoreResult = await r.json();
       if (!r.ok || body.error) throw new Error(body.error ?? `HTTP ${r.status}`);
@@ -277,8 +347,6 @@ export default function ContrailsTool() {
       setFlightsState('error');
     }
   }
-
-  const selHourLocal = Number(time.split(':')[0]) + Number(time.split(':')[1] ?? 0) / 60;
 
   return (
     <div className="mx-auto max-w-[820px] px-4">
@@ -387,12 +455,21 @@ export default function ContrailsTool() {
             </div>
           )}
 
-          {result.hour_curve && (
+          {result.origin_ll && result.dest_ll && (
             <figure className="mt-6">
               <figcaption className="mb-2 font-mono text-[11px] uppercase tracking-wider opacity-60">
-                Same route and date, by local departure hour — {result.aircraft}
+                Your flight{flights && flights.length > 0 ? ' and lower-warming alternatives (dashed)' : ''} — color = warming percentile
               </figcaption>
-              <HourCurve curve={result.hour_curve} selHourLocal={selHourLocal} />
+              <FlightMap
+                main={{ from: result.origin_ll, to: result.dest_ll, codes: [result.origin, result.dest] }}
+                mainColor={pctColor(result.percentile)}
+                mainLabel={`Great-circle route ${result.origin} to ${result.dest}`}
+                alts={(flights ?? [])
+                  .filter((f) => f.total_t_co2e < result.expected_co2e_t_per_flight)
+                  .slice(0, 4)
+                  .map((f) => ({ legs: f.legs, color: pctColor(f.worst_leg_percentile) }))}
+                land={land}
+              />
             </figure>
           )}
 

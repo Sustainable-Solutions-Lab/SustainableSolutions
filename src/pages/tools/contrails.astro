@@ -1,36 +1,12 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import ToolFrame from '../../layouts/ToolFrame.astro';
 import ContrailsTool from '../../tools/contrails/ContrailsTool';
 ---
 
-<BaseLayout
+<ToolFrame
   title="Contrail warming at booking time"
   description="Predict a flight's contrail climate impact from schedule information alone — months before departure."
   noindex
-  hideFooter={true}
 >
-  <section aria-label="Contrail prediction tool">
-    <div
-      class="contrails-frame"
-      style="width: 100%; overflow: hidden; background: var(--paper);"
-    >
-      <ContrailsTool client:only="react" />
-    </div>
-  </section>
-</BaseLayout>
-
-<style is:global>
-  /* Full-viewport tool below the sticky nav, like firefuels/just-air:
-     the body doesn't scroll; the rail and results scroll internally. */
-  body:has(.contrails-frame) { overflow: hidden; }
-  .contrails-frame {
-    position: relative;
-    height: calc(100vh - 56px);
-    height: calc(100dvh - 56px);
-  }
-  /* size the astro-island wrapper so the tool's h-full has something to inherit */
-  .contrails-frame > * {
-    width: 100%;
-    height: 100%;
-  }
-</style>
+  <ContrailsTool client:only="react" />
+</ToolFrame>

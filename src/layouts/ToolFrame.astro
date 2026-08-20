@@ -1,0 +1,54 @@
+---
+/**
+ * ToolFrame — the standard page frame for full-viewport interactive tools.
+ *
+ * Owns the page-level conventions every tool shares: footer hidden, body
+ * scroll disabled, a frame that fills the viewport from below the sticky
+ * nav (56px) using dvh so iOS Safari's collapsing URL bar doesn't hide
+ * bottom-anchored UI, and sizing for the astro-island wrapper so the tool's
+ * `h-full` chrome has a height to inherit. Pair with the ToolShell React
+ * component, which owns the in-tool chrome (rail / mobile drawer / header).
+ *
+ * Usage:
+ *   <ToolFrame title="…" description="…" noindex>
+ *     <MyTool client:only="react" />
+ *   </ToolFrame>
+ */
+interface Props {
+  title: string;
+  description?: string;
+  noindex?: boolean;
+  /** CSS background for the frame while the island hydrates. */
+  background?: string;
+}
+import BaseLayout from './BaseLayout.astro';
+
+const { title, description, noindex = false, background = 'var(--paper)' } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} noindex={noindex} hideFooter={true}>
+  <section aria-label={title}>
+    <div class="tool-frame" style={`width: 100%; overflow: hidden; background: ${background};`}>
+      <slot />
+    </div>
+  </section>
+</BaseLayout>
+
+<style is:global>
+  body:has(.tool-frame) {
+    overflow: hidden;
+  }
+  .tool-frame {
+    position: relative;
+    height: calc(100vh - 56px);
+    /* dvh tracks the actually-visible viewport on iOS Safari (excludes the
+       URL bar when it slides into view), so bottom-anchored UI doesn't end
+       up hidden behind browser chrome. */
+    height: calc(100dvh - 56px);
+  }
+  /* Size the astro-island wrapper so the tool's h-full has a height. */
+  .tool-frame > * {
+    width: 100%;
+    height: 100%;
+  }
+</style>

@@ -136,7 +136,7 @@
         var br = li.getBoundingClientRect();
         line.style.cssText = 'position:absolute;z-index:2;white-space:nowrap;' +
           'left:' + Math.round(lf.left - br.left) + 'px;' +
-          'top:' + Math.round(lr.bottom - br.top + 1) + 'px;';
+          'top:' + Math.round(lr.bottom - br.top - 4) + 'px;';
       } else {
         line.style.cssText = 'position:absolute;z-index:2;white-space:nowrap;right:14px;bottom:8px;';
       }

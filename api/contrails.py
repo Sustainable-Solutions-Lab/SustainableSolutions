@@ -11,10 +11,9 @@ Routes (GET):
   /api/contrails?meta=1
       → { aircraft: [{icao, n}...], n_calibration_flights, model }
   /api/contrails?flights=1&origin=SFO&dest=DEL&date=2026-09-19
-      → real bookable itineraries from the Amadeus Flight Offers API,
-        each leg scored by the model (requires AMADEUS_CLIENT_ID /
-        AMADEUS_CLIENT_SECRET env vars; AMADEUS_ENV=production to leave
-        the test sandbox)
+      → real bookable itineraries from the Duffel API, each leg scored
+        by the model (requires DUFFEL_API_TOKEN env var; test tokens
+        return sandbox "Duffel Airways" data)
   /api/contrails?route=1&origin=SFO&dest=LHR
       → { known, n_flights, aircraft: [{icao, share}...] } — whether the
         corpus contains direct flights on this airport pair, and the
@@ -242,8 +241,9 @@ def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
     return out, 200
 
 
-# ── Amadeus integration ──────────────────────────────────────────────────
-# IATA aircraft type designators (returned by Amadeus) → ICAO types the
+# ── Duffel integration ───────────────────────────────────────────────────
+# (Amadeus self-service was decommissioned 2026-07-17.)
+# IATA aircraft type designators (returned by Duffel) → ICAO types the
 # model was trained on. Covers the common fleet; unknown codes fall back
 # to the route's most common type, flagged in the response.
 IATA_TO_ICAO_AC = {
@@ -262,83 +262,60 @@ IATA_TO_ICAO_AC = {
     "295": "E295", "221": "BCS1", "223": "BCS3",
 }
 
-_amadeus_token = {"value": None, "expires": 0.0}
 _flights_cache = {}
 
 
-def _amadeus_base():
-    env = os.environ.get("AMADEUS_ENV", "test")
-    return ("https://api.amadeus.com" if env == "production"
-            else "https://test.api.amadeus.com")
-
-
-def _get_amadeus_token():
-    import time as _time
-    cid = os.environ.get("AMADEUS_CLIENT_ID")
-    sec = os.environ.get("AMADEUS_CLIENT_SECRET")
-    if not cid or not sec:
-        return None
-    if _amadeus_token["value"] and _time.time() < _amadeus_token["expires"] - 60:
-        return _amadeus_token["value"]
-    data = urllib.parse.urlencode({
-        "grant_type": "client_credentials",
-        "client_id": cid, "client_secret": sec,
-    }).encode()
-    req = urllib.request.Request(
-        f"{_amadeus_base()}/v1/security/oauth2/token", data=data,
-        headers={"Content-Type": "application/x-www-form-urlencoded"})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        tok = json.load(r)
-    _amadeus_token["value"] = tok["access_token"]
-    _amadeus_token["expires"] = _time.time() + int(tok.get("expires_in", 1799))
-    return _amadeus_token["value"]
-
-
 def bookable_flights(origin, dest, date_s):
-    """Real itineraries for the date, each leg scored by the model."""
-    token = _get_amadeus_token()
-    if token is None:
-        return {"error": "amadeus_not_configured"}, 503
+    """Real itineraries for the date via Duffel, each leg model-scored."""
+    token = os.environ.get("DUFFEL_API_TOKEN")
+    if not token:
+        return {"error": "flight_search_not_configured"}, 503
     ck = (origin, dest, date_s)
     if ck in _flights_cache:
         return _flights_cache[ck], 200
 
-    qs = urllib.parse.urlencode({
-        "originLocationCode": origin, "destinationLocationCode": dest,
-        "departureDate": date_s, "adults": 1, "max": 40,
-        "currencyCode": "USD",
-    })
+    payload = json.dumps({"data": {
+        "slices": [{"origin": origin, "destination": dest,
+                    "departure_date": date_s}],
+        "passengers": [{"type": "adult"}],
+        "cabin_class": "economy",
+    }}).encode()
     req = urllib.request.Request(
-        f"{_amadeus_base()}/v2/shopping/flight-offers?{qs}",
-        headers={"Authorization": f"Bearer {token}"})
+        "https://api.duffel.com/air/offer_requests?return_offers=true",
+        data=payload, method="POST",
+        headers={"Authorization": f"Bearer {token}",
+                 "Duffel-Version": "v2",
+                 "Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=25) as r:
-            offers = json.load(r).get("data", [])
+        with urllib.request.urlopen(req, timeout=30) as r:
+            offers = json.load(r)["data"].get("offers", [])
     except urllib.error.HTTPError as e:
-        return {"error": f"amadeus {e.code}: {e.read().decode()[:200]}"}, 502
+        return {"error": f"duffel {e.code}: {e.read().decode()[:200]}"}, 502
 
     results = {}
     for off in offers:
-        it = off["itineraries"][0]
+        sl = off["slices"][0]
         legs = []
         total_t = 0.0
         worst_pct = 0.0
         approx = False
         key_parts = []
         ok = True
-        for seg in it["segments"]:
-            o = seg["departure"]["iataCode"]
-            d = seg["arrival"]["iataCode"]
-            dep_local = seg["departure"]["at"][:16]          # local ISO
-            iata_ac = (seg.get("aircraft") or {}).get("code", "")
+        for seg in sl.get("segments", []):
+            o = (seg.get("origin") or {}).get("iata_code", "")
+            d = (seg.get("destination") or {}).get("iata_code", "")
+            dep_local = (seg.get("departing_at") or "")[:16]
+            iata_ac = ((seg.get("aircraft") or {}) or {}).get("iata_code") or ""
             icao_ac = IATA_TO_ICAO_AC.get(iata_ac)
             if icao_ac is None or icao_ac not in _aircraft["categories"]:
                 rm = _routes.get(f"{o}>{d}")
                 icao_ac = next(iter(rm["ac"])) if rm else "B738"
                 approx = True
-            if o not in _airports or d not in _airports:
+            if o not in _airports or d not in _airports or not dep_local:
                 ok = False
                 break
+            carrier = ((seg.get("marketing_carrier") or {}).get("iata_code", "")
+                       + str(seg.get("marketing_carrier_flight_number", "")))
             date_p, time_p = dep_local.split("T")
             body, code = score(o, d, date_p, time_p, icao_ac, "local", False)
             if code != 200:
@@ -346,19 +323,18 @@ def bookable_flights(origin, dest, date_s):
                 break
             legs.append({
                 "from": o, "to": d, "dep_local": dep_local,
-                "carrier": f'{seg.get("carrierCode","")}{seg.get("number","")}',
-                "aircraft": icao_ac,
+                "carrier": carrier, "aircraft": icao_ac,
                 "percentile": body["percentile"],
                 "t_co2e": body["expected_co2e_t_per_flight"],
             })
             total_t += body["expected_co2e_t_per_flight"]
             worst_pct = max(worst_pct, body["percentile"])
-            key_parts.append(f'{seg.get("carrierCode","")}{seg.get("number","")}@{dep_local}')
+            key_parts.append(f"{carrier}@{dep_local}")
         if not ok or not legs:
             continue
         key = "|".join(key_parts)
-        price = float(off.get("price", {}).get("grandTotal", 0) or 0)
-        if key not in results or price < results[key]["price_usd"]:
+        price = float(off.get("total_amount") or 0)
+        if key not in results or (0 < price < results[key]["price_usd"]):
             results[key] = {
                 "legs": legs, "n_stops": len(legs) - 1,
                 "dep_local": legs[0]["dep_local"],
@@ -366,6 +342,7 @@ def bookable_flights(origin, dest, date_s):
                 "worst_leg_percentile": worst_pct,
                 "aircraft_estimated": approx,
                 "price_usd": price,
+                "currency": off.get("total_currency", "USD"),
             }
     out = {"flights": sorted(results.values(),
                              key=lambda f: f["total_t_co2e"])}

@@ -236,14 +236,29 @@ function FlightMap({
   arcs.push({ key: 'main', segs: gcPoints(main.from, main.to), color: mainColor, width: 4.2 });
 
   const pts = arcs.flatMap((a) => a.segs.flat());
-  let latMin = Math.min(...pts.map((p) => p[0])) - 6;
-  let latMax = Math.max(...pts.map((p) => p[0])) + 6;
-  const lonMin = Math.min(...pts.map((p) => p[1])) - 6;
-  const lonMax = Math.max(...pts.map((p) => p[1])) + 6;
+  let latMin = Math.min(...pts.map((p) => p[0])) - 5;
+  let latMax = Math.max(...pts.map((p) => p[0])) + 5;
+  let lonMin = Math.min(...pts.map((p) => p[1])) - 5;
+  let lonMax = Math.max(...pts.map((p) => p[1])) + 5;
   latMin = Math.max(-85, latMin); latMax = Math.min(88, latMax);
+  // Fixed, thin canvas: instead of letting tall routes grow the map,
+  // widen whichever window dimension is short so the aspect always fits.
   const W = 680;
-  const cosc = Math.cos((((latMin + latMax) / 2) * Math.PI) / 180);
-  const H = Math.max(200, Math.min(430, (W * (latMax - latMin)) / ((lonMax - lonMin) * cosc || 1)));
+  const H = 240;
+  const cosc = Math.cos((((latMin + latMax) / 2) * Math.PI) / 180) || 1;
+  const targetLatPerLon = (H / W) * cosc;
+  const latR = latMax - latMin;
+  const lonR = lonMax - lonMin;
+  if (latR / lonR > targetLatPerLon) {
+    const need = latR / targetLatPerLon;
+    const cx0 = (lonMin + lonMax) / 2;
+    lonMin = cx0 - need / 2; lonMax = cx0 + need / 2;
+  } else {
+    const need = lonR * targetLatPerLon;
+    let cy0 = (latMin + latMax) / 2;
+    cy0 = Math.min(Math.max(cy0, -85 + need / 2), 88 - need / 2);
+    latMin = cy0 - need / 2; latMax = cy0 + need / 2;
+  }
   const px = (lon: number) => ((lon - lonMin) / (lonMax - lonMin)) * W;
   const py = (lat: number) => ((latMax - lat) / (latMax - latMin)) * H;
   const path = (sg: [number, number][]) => sg.map((p, i) => `${i ? 'L' : 'M'}${px(p[1]).toFixed(1)},${py(p[0]).toFixed(1)}`).join(' ');
@@ -536,16 +551,13 @@ export default function ContrailsTool() {
   return (
     <div className="flex h-full flex-col lg:flex-row">
       {/* ── Left rail ── */}
-      <div className="flex w-full shrink-0 flex-col gap-3 overflow-y-auto border-b border-rule bg-paper-2 p-4 lg:w-[300px] lg:border-b-0 lg:border-r">
+      <div className="flex w-full shrink-0 flex-col gap-2.5 overflow-y-auto border-b border-rule bg-paper-2 p-3.5 lg:w-[300px] lg:border-b-0 lg:border-r">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">Prototype · schedule-only model</p>
-          <h1 className="mt-1 font-serif text-xl leading-snug">Contrail warming at booking time</h1>
-          <p className="mt-2 text-xs leading-relaxed opacity-80">
-            A minority of flights cause most contrail warming. This tool
-            predicts a flight's likely contrail climate impact from
-            information available when you book — route, date, time and
-            aircraft — months ahead, and finds lower-warming bookable
-            alternatives.
+          <h1 className="mt-0.5 font-serif text-lg leading-snug">Predicting contrails at booking</h1>
+          <p className="mt-1 text-xs leading-snug opacity-80">
+            Predicts a flight's contrail climate impact from schedule
+            information alone, and finds lower-warming bookable alternatives.
           </p>
         </div>
         <div className="flex gap-1 font-mono text-[11px] uppercase tracking-wider">

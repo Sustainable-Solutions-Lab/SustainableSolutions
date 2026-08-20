@@ -97,6 +97,11 @@
       }, true);
       return pop;
     };
+    // text-safe Spectral ramp graded by warming percentile
+    var grade = function (p) {
+      return p >= 90 ? '#9E0142' : p >= 75 ? '#D53E4F' : p >= 50 ? '#E06D1F'
+        : p >= 25 ? '#B08C00' : p >= 10 ? '#5da26b' : '#2c8767';
+    };
     j.results.forEach(function (res, i) {
       var li = rows[i];
       // Google's per-passenger CO2 figure for this row, if displayed
@@ -148,10 +153,10 @@
         color = '#9aa0a6';
       } else if (pc !== null) {
         txt = (pc > 0 ? '+' : '') + pc + '% contrail warming';
-        color = pc > 0 ? '#c5221f' : pc < 0 ? '#137333' : '#5f6368';
+        color = grade(res.p);
       } else {
         txt = (kg > 0 ? '+' : '') + kg + ' kg contrails';
-        color = kg > 0 ? '#c5221f' : '#137333';
+        color = grade(res.p);
       }
       line.textContent = '';
       var span = document.createElement('span');
@@ -177,7 +182,7 @@
           return e;
         };
         pop.textContent = '';
-        var valColor = res.error ? '#5f6368' : kg > 0 ? '#c5221f' : kg < 0 ? '#137333' : '#5f6368';
+        var valColor = res.error ? '#5f6368' : grade(res.p);
         // caret pointing up at the info icon (positioned after layout below)
         var caret = mk('div', 'position:absolute;top:-6px;width:12px;height:12px;background:#fff;transform:rotate(45deg);box-shadow:-2px -2px 2px rgba(60,64,67,.06);');
         pop.appendChild(caret);

@@ -37,7 +37,7 @@ type FlightLeg = {
 type FlightOption = {
   legs: FlightLeg[]; n_stops: number; dep_local: string;
   total_t_co2e: number; worst_leg_percentile: number;
-  aircraft_estimated: boolean; price_usd: number;
+  aircraft_estimated: boolean; price_usd: number; date?: string;
 };
 
 type RouteInfo = {
@@ -201,6 +201,7 @@ export default function ContrailsTool() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flights, setFlights] = useState<FlightOption[] | null>(null);
+  const [flex, setFlex] = useState('0');
   const [flightsState, setFlightsState] = useState<'idle' | 'busy' | 'unconfigured' | 'error'>('idle');
 
   useEffect(() => {
@@ -265,7 +266,7 @@ export default function ContrailsTool() {
     setFlightsState('busy');
     setFlights(null);
     try {
-      const r = await fetch(`${API}?flights=1&origin=${origin}&dest=${dest}&date=${date}`);
+      const r = await fetch(`${API}?flights=1&origin=${origin}&dest=${dest}&date=${date}&flex=${flex}`);
       const body = await r.json();
       if (r.status === 503) { setFlightsState('unconfigured'); return; }
       if (!r.ok || body.error) throw new Error(body.error);
@@ -399,6 +400,17 @@ export default function ContrailsTool() {
               <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
                 Bookable flights on {date} (beta)
               </span>
+              <select
+                value={flex}
+                onChange={(e) => setFlex(e.target.value)}
+                className="rounded-sm border border-rule bg-paper-2 px-2 py-1 text-xs"
+                aria-label="Booking flexibility"
+              >
+                <option value="0">exact date</option>
+                <option value="1">±1 day</option>
+                <option value="2">±2 days</option>
+                <option value="3">±3 days</option>
+              </select>
               <button
                 type="button"
                 onClick={() => void findFlights()}
@@ -419,6 +431,13 @@ export default function ContrailsTool() {
             {flights && flights.length === 0 && (
               <p className="mt-2 text-sm opacity-70">No bookable itineraries returned for this date.</p>
             )}
+            {flights && flights.length > 0 && result && flights[0].total_t_co2e < result.expected_co2e_t_per_flight && (
+              <p className="mt-2 max-w-[640px] text-sm">
+                {flights[0].total_t_co2e <= 0
+                  ? `Best option more than eliminates your selected flight's expected contrail warming (net-cooling itinerary, ${flights[0].total_t_co2e.toFixed(1)} t vs ${result.expected_co2e_t_per_flight.toFixed(1)} t).`
+                  : `Best option cuts expected contrail warming ${Math.round(100 * (1 - flights[0].total_t_co2e / result.expected_co2e_t_per_flight))}% vs your selected flight (${flights[0].total_t_co2e.toFixed(1)} t vs ${result.expected_co2e_t_per_flight.toFixed(1)} t).`}
+              </p>
+            )}
             {flights && flights.length > 0 && (
               <ul className="mt-3 divide-y divide-rule">
                 {flights.map((f, i) => {
@@ -426,7 +445,7 @@ export default function ContrailsTool() {
                   const saving = worstTotal > 0 ? Math.round(100 * (1 - f.total_t_co2e / worstTotal)) : 0;
                   return (
                     <li key={i} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2 text-sm">
-                      <span className="font-mono">{f.dep_local.slice(11)}</span>
+                      <span className="font-mono">{f.date ? `${f.date.slice(5)} ` : ''}{f.dep_local.slice(11)}</span>
                       <span className="font-mono text-xs opacity-70">
                         {f.legs.map((l) => `${l.carrier} ${l.from}→${l.to} (${l.aircraft})`).join(' · ')}
                       </span>

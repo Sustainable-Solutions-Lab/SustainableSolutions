@@ -219,7 +219,7 @@ function WorldIdle({ land }: { land: [number, number][][] | null }) {
       {land && land.map((poly, i) => (
         <path
           key={i}
-          d={poly.map(([lat, lon], j) => `${j ? 'L' : 'M'}${px(lon).toFixed(1)},${py(lat).toFixed(1)}`).join(' ')}
+          d={poly.map(([lon, lat], j) => `${j ? 'L' : 'M'}${px(lon).toFixed(1)},${py(lat).toFixed(1)}`).join(' ')}
           fill="var(--paper-3, #eaeae2)"
           stroke="var(--rule, #d8d8ce)"
           strokeWidth={0.5}

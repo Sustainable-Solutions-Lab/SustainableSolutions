@@ -567,16 +567,23 @@ export default function ContrailsTool() {
           if (fr.ok && !fb.error) {
             const list: FlightOption[] = fb.flights ?? [];
             // guess which bookable itinerary IS the user's flight:
-            // nonstop, same pair, departure within 100 min of selection
+            // nonstop, same pair, departure within 100 min of selection.
+            // In flight-number mode, an offer marketed by the entered
+            // carrier beats a closer departure on another carrier — the
+            // same physical flight is often listed under a codeshare.
+            const wantCarrier =
+              mode === 'flightno' ? flightNo.trim().toUpperCase().replace(/\s+/g, '').slice(0, 2) : null;
             const selMin = Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
             let best: FlightOption | null = null;
-            let bestGap = 101;
+            let bestScore = Infinity;
             for (const f of list) {
               if (f.n_stops !== 0 || f.legs[0].from !== o || f.legs[0].to !== d) continue;
               if ((f.date ?? f.dep_local.slice(0, 10)) !== date) continue;
               const m = Number(f.dep_local.slice(11, 13)) * 60 + Number(f.dep_local.slice(14, 16));
               const gap = Math.abs(m - selMin);
-              if (gap < bestGap) { bestGap = gap; best = f; }
+              if (gap > 100) continue;
+              const score = gap + (wantCarrier && !f.legs[0].carrier.startsWith(wantCarrier) ? 10000 : 0);
+              if (score < bestScore) { bestScore = score; best = f; }
             }
             setOrigMatch(best);
             setFlights(best ? list.filter((f) => f !== best) : list);

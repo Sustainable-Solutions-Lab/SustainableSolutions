@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
@@ -78,10 +79,11 @@ _aircraft = None
 _routes = None
 _flightnos = None
 _pax = None
+_airnames = None
 
 
 def _load():
-    global _airports, _land, _booster, _calib, _aircraft, _routes, _flightnos, _pax
+    global _airports, _land, _booster, _calib, _aircraft, _routes, _flightnos, _pax, _airnames
     if _booster is None:
         with open(ASSETS / "airports.json") as f:
             _airports = json.load(f)
@@ -101,6 +103,8 @@ def _load():
         _flightnos = json.load(open(fp)) if fp.exists() else {}
         pp = ASSETS / "pax_by_type.json"
         _pax = json.load(open(pp)) if pp.exists() else {}
+        ap = ASSETS / "airport_names.json"
+        _airnames = json.load(open(ap)) if ap.exists() else {}
 
 
 def _night_score(olon, olat, dlon, dlat, dep_utc, arr_utc):
@@ -429,6 +433,87 @@ def advisor_flights(origin, dest, date_s, time_s, flex_h):
             "failed_dates": failed, "window_h": flex_h}, 200
 
 
+
+_NAME_STOP = {"airport", "international", "intl", "regional", "municipal",
+              "field", "aeropuerto", "airfield"}
+
+
+def _resolve_air(label):
+    """IATA code or airport/city name (as Google Flights labels them) -> IATA."""
+    import unicodedata
+    s = str(label).strip()
+    if len(s) == 3 and s.isalpha() and s.upper() in _airports:
+        return s.upper()
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+    s = re.sub(r"[^a-z0-9 ]", " ", s.lower())
+    s = re.sub(r"\s+", " ", s).strip()
+    if s in _airnames:
+        return _airnames[s]
+    stripped = " ".join(t for t in s.split() if t not in _NAME_STOP)
+    return _airnames.get(stripped)
+
+
+def batch_score(payload):
+    """Score up to 50 itineraries in one call (bookmarklet / extension).
+
+    payload = {"air": [<IATA or displayed airport name>...],
+               "f": [{"o": i, "d": i, "via": [i...], "lay": [min...],
+                      "date": "YYYY-MM-DD", "time": "HH:MM", "ac": "B789"?}]}
+    Aircraft defaults to each leg route's most common type. Connections
+    estimate downstream departure clocks from modeled leg durations plus
+    the reported layovers (default 120 min).
+    """
+    air = [_resolve_air(a) for a in payload.get("air", [])]
+    results = []
+    for it in payload.get("f", [])[:50]:
+        try:
+            chain = ([air[it["o"]]] + [air[v] for v in it.get("via", [])]
+                     + [air[it["d"]]])
+            if any(c is None for c in chain):
+                bad = [payload["air"][j] for j in
+                       [it["o"], *it.get("via", []), it["d"]]
+                       if air[j] is None][:1]
+                results.append({"error": f"airport not recognized: {bad[0] if bad else '?'}"})
+                continue
+            lay = it.get("lay") or []
+            cur = datetime.fromisoformat(f"{it['date']}T{it.get('time', '12:00')}")
+            kg = t = worst = 0.0
+            acs, est_any = [], False
+            for i in range(len(chain) - 1):
+                o, d = chain[i], chain[i + 1]
+                ac = str(it.get("ac") or "").upper()
+                est = ac not in _aircraft["categories"]
+                if est:
+                    r = _routes.get(f"{o}>{d}")
+                    ac = max(r["ac"], key=r["ac"].get) if r else "B738"
+                res, c = score(o, d, cur.strftime("%Y-%m-%d"),
+                               cur.strftime("%H:%M"), ac, "local", False)
+                if c != 200:
+                    raise ValueError(res.get("error", "scoring failed"))
+                kg += res["expected_co2e_kg_per_pax"]
+                t += res["expected_co2e_t_per_flight"]
+                worst = max(worst, res["percentile"])
+                acs.append(ac)
+                est_any = est_any or est
+                if i < len(chain) - 2:
+                    dur_h = res.get("est_duration_h") or (
+                        0.356 + 1.148e-3 * res["distance_km"])
+                    lay_min = lay[i] if i < len(lay) else 120
+                    dep = cur.replace(tzinfo=ZoneInfo(_airports[o]["tz"]))
+                    arr = (dep + timedelta(hours=dur_h)) \
+                        .astimezone(ZoneInfo(_airports[d]["tz"]))
+                    cur = (arr + timedelta(minutes=lay_min)) \
+                        .replace(tzinfo=None)
+            results.append({
+                "p": round(worst, 1), "kg_pax": round(kg, 1),
+                "t_flight": round(t, 2),
+                "ac": "/".join(dict.fromkeys(acs)), "ac_estimated": est_any,
+            })
+        except Exception as e:  # noqa: BLE001 — isolate per itinerary
+            results.append({"error": str(e)})
+    return {"results": results}, 200
+
+
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         _load()
@@ -452,6 +537,8 @@ class handler(BaseHTTPRequestHandler):
                                                  q.get("time", "12:00"), flex_h)
                 else:
                     body, code = bookable_flights(o, d, q.get("date", ""))
+            elif q.get("batch"):
+                body, code = batch_score(json.loads(q.get("q", "{}")))
             elif q.get("route"):
                 o, d = q.get("origin", "").upper(), q.get("dest", "").upper()
                 if o not in _airports or d not in _airports:

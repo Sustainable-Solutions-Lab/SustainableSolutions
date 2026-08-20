@@ -480,6 +480,7 @@ export default function ContrailsTool() {
   const [sortMode, setSortMode] = useState<'warming' | 'value' | 'time'>('warming');
   const [nonstopOnly, setNonstopOnly] = useState(false);
   const [origMatch, setOrigMatch] = useState<FlightOption | null>(null);
+  const [fetchedFlex, setFetchedFlex] = useState(0); // widest window already fetched
   const [hoverKey, setHoverKey] = useState<string | null>(null);
   // Mobile controls drawer (chrome lives in ToolShell); closes itself
   // whenever an assessment kicks off so the results are visible.
@@ -530,6 +531,50 @@ export default function ContrailsTool() {
     return { onRoute, rest };
   }, [route, routeTypes, globalTypes]);
 
+  // effective rebooking window in hours (blank input means the API default)
+  function effFlex(): number {
+    const n = Number(flexH);
+    return n > 0 ? Math.min(n, 72) : 24;
+  }
+
+  async function fetchFlights(o: string, d: string, t: string, flex: number) {
+    setAltsBusy(true);
+    try {
+        const fr = await fetch(`${API}?flights=1&origin=${o}&dest=${d}&date=${date}&flex_h=${flex}&time=${t}&${SV}`);
+        if (fr.status === 503) setFlightsNote('Flight search not yet connected for this deployment.');
+        else {
+          const fb = await fr.json();
+          if (fr.ok && !fb.error) {
+            const list: FlightOption[] = fb.flights ?? [];
+            // guess which bookable itinerary IS the user's flight:
+            // nonstop, same pair, departure within 100 min of selection.
+            // In flight-number mode, an offer marketed by the entered
+            // carrier beats a closer departure on another carrier — the
+            // same physical flight is often listed under a codeshare.
+            const wantCarrier =
+              mode === 'flightno' ? flightNo.trim().toUpperCase().replace(/\s+/g, '').slice(0, 2) : null;
+            const selMin = Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+            let best: FlightOption | null = null;
+            let bestScore = Infinity;
+            for (const f of list) {
+              if (f.n_stops !== 0 || f.legs[0].from !== o || f.legs[0].to !== d) continue;
+              if ((f.date ?? f.dep_local.slice(0, 10)) !== date) continue;
+              const m = Number(f.dep_local.slice(11, 13)) * 60 + Number(f.dep_local.slice(14, 16));
+              const gap = Math.abs(m - selMin);
+              if (gap > 100) continue;
+              const score = gap + (wantCarrier && !f.legs[0].carrier.startsWith(wantCarrier) ? 10000 : 0);
+              if (score < bestScore) { bestScore = score; best = f; }
+            }
+            setOrigMatch(best);
+            setFetchedFlex(flex);
+            setFlights(best ? list.filter((f) => f !== best) : list);
+          } else setFlightsNote('Flight search failed.');
+        }
+    } finally {
+      setAltsBusy(false);
+    }
+  }
+
   async function assess() {
     setBusy(true);
     setError(null);
@@ -557,41 +602,7 @@ export default function ContrailsTool() {
       setResult(body);
       setBusy(false);
       // alternatives in the same action (slower — separate indicator)
-      setAltsBusy(true);
-      try {
-        const fh = Number(flexH) > 0 ? `&flex_h=${Number(flexH)}&time=${t}` : '';
-        const fr = await fetch(`${API}?flights=1&origin=${o}&dest=${d}&date=${date}${fh}&${SV}`);
-        if (fr.status === 503) setFlightsNote('Flight search not yet connected for this deployment.');
-        else {
-          const fb = await fr.json();
-          if (fr.ok && !fb.error) {
-            const list: FlightOption[] = fb.flights ?? [];
-            // guess which bookable itinerary IS the user's flight:
-            // nonstop, same pair, departure within 100 min of selection.
-            // In flight-number mode, an offer marketed by the entered
-            // carrier beats a closer departure on another carrier — the
-            // same physical flight is often listed under a codeshare.
-            const wantCarrier =
-              mode === 'flightno' ? flightNo.trim().toUpperCase().replace(/\s+/g, '').slice(0, 2) : null;
-            const selMin = Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-            let best: FlightOption | null = null;
-            let bestScore = Infinity;
-            for (const f of list) {
-              if (f.n_stops !== 0 || f.legs[0].from !== o || f.legs[0].to !== d) continue;
-              if ((f.date ?? f.dep_local.slice(0, 10)) !== date) continue;
-              const m = Number(f.dep_local.slice(11, 13)) * 60 + Number(f.dep_local.slice(14, 16));
-              const gap = Math.abs(m - selMin);
-              if (gap > 100) continue;
-              const score = gap + (wantCarrier && !f.legs[0].carrier.startsWith(wantCarrier) ? 10000 : 0);
-              if (score < bestScore) { bestScore = score; best = f; }
-            }
-            setOrigMatch(best);
-            setFlights(best ? list.filter((f) => f !== best) : list);
-          } else setFlightsNote('Flight search failed.');
-        }
-      } finally {
-        setAltsBusy(false);
-      }
+      await fetchFlights(o, d, t, effFlex());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setResult(null);
@@ -608,6 +619,14 @@ export default function ContrailsTool() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!result || fetchedFlex === 0) return;
+    if (effFlex() <= fetchedFlex) return;
+    const id = setTimeout(() => void fetchFlights(result.origin, result.dest, time, effFlex()), 700);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flexH]);
+
   const origPrice = origMatch && origMatch.price_usd > 0 ? origMatch.price_usd : null;
   const estMin = result?.est_duration_h ? result.est_duration_h * 60 : null;
   const baselineMin = (origMatch && durationMin(origMatch.duration)) ?? estMin;
@@ -615,10 +634,16 @@ export default function ContrailsTool() {
   useEffect(() => {
     if (sortMode === 'value' && origPrice === null) setSortMode('warming');
   }, [sortMode, origPrice]);
-  const pool = useMemo(
-    () => (flights ?? []).filter((f) => !nonstopOnly || f.n_stops === 0),
-    [flights, nonstopOnly],
-  );
+  const pool = useMemo(() => {
+    // dep_local strings are naive origin-local; parsing both sides in the
+    // browser tz keeps the difference correct
+    const base = new Date(`${date}T${time}`).getTime();
+    const win = effFlex() * 3600e3;
+    return (flights ?? [])
+      .filter((f) => !nonstopOnly || f.n_stops === 0)
+      .filter((f) => !Number.isFinite(base) || Math.abs(new Date(f.dep_local).getTime() - base) <= win);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flights, nonstopOnly, flexH, date, time]);
   // only genuinely lower-warming options count as alternatives
   const betterPool = useMemo(
     () => (result ? pool.filter((f) => f.total_kg_per_pax < result.expected_co2e_kg_per_pax - 0.5) : []),

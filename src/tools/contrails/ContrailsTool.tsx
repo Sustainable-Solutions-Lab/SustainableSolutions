@@ -201,7 +201,7 @@ export default function ContrailsTool() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flights, setFlights] = useState<FlightOption[] | null>(null);
-  const [flex, setFlex] = useState('0');
+  const [flexH, setFlexH] = useState('');
   const [flightsState, setFlightsState] = useState<'idle' | 'busy' | 'unconfigured' | 'error'>('idle');
 
   useEffect(() => {
@@ -266,7 +266,8 @@ export default function ContrailsTool() {
     setFlightsState('busy');
     setFlights(null);
     try {
-      const r = await fetch(`${API}?flights=1&origin=${origin}&dest=${dest}&date=${date}&flex=${flex}`);
+      const fh = Number(flexH) > 0 ? `&flex_h=${Number(flexH)}&time=${time}` : '';
+      const r = await fetch(`${API}?flights=1&origin=${origin}&dest=${dest}&date=${date}${fh}`);
       const body = await r.json();
       if (r.status === 503) { setFlightsState('unconfigured'); return; }
       if (!r.ok || body.error) throw new Error(body.error);
@@ -400,17 +401,20 @@ export default function ContrailsTool() {
               <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
                 Bookable flights on {date} (beta)
               </span>
-              <select
-                value={flex}
-                onChange={(e) => setFlex(e.target.value)}
-                className="rounded-sm border border-rule bg-paper-2 px-2 py-1 text-xs"
-                aria-label="Booking flexibility"
-              >
-                <option value="0">exact date</option>
-                <option value="1">±1 day</option>
-                <option value="2">±2 days</option>
-                <option value="3">±3 days</option>
-              </select>
+              <label className="flex items-baseline gap-1 text-xs">
+                <span className="opacity-60">flexibility ±</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={72}
+                  placeholder="0"
+                  value={flexH}
+                  onChange={(e) => setFlexH(e.target.value)}
+                  className="w-14 rounded-sm border border-rule bg-paper-2 px-1.5 py-1 text-xs"
+                  aria-label="Booking flexibility in hours around selected departure"
+                />
+                <span className="opacity-60">h of selected departure</span>
+              </label>
               <button
                 type="button"
                 onClick={() => void findFlights()}

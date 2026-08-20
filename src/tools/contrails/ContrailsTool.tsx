@@ -1,18 +1,23 @@
 /**
- * Contrails booking tool — v2.
+ * Contrails booking tool — v3.
  *
- * Schedule-only prediction of a flight's contrail warming, months ahead
- * of departure. v2 adds booking-style airport autocomplete (type a code
- * or city), route-aware aircraft selection (preselects the most common
- * type on the chosen route; types never flown on it are grayed out),
- * and an explicit flag when the airport pair has no direct flights in
- * the 2019+2021 corpus (the estimate is then a hypothetical direct).
- * Estimates are per FLIGHT: score each leg of a connection separately.
+ * Left rail holds every input (route OR flight-number mode, date, time,
+ * aircraft, rebooking flexibility) behind a single "Assess contrails"
+ * action that scores the flight and fetches the five least-warming real
+ * alternatives in one pass. Right column: headline percentile, the
+ * same-route aircraft comparison, a hover-linked great-circle map
+ * (thick arc = your flight, thin solid arcs = alternatives), and
+ * comparison cards showing deltas vs the selected flight (contrail
+ * tonnes, duration parenthetical, stops, price).
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-type HourPoint = { hour_utc: number; hour_local: number; percentile: number };
+type FlightLeg = {
+  from: string; to: string; dep_local: string; carrier: string;
+  aircraft: string; percentile: number; t_co2e: number;
+  from_ll?: [number, number]; to_ll?: [number, number];
+};
 
 type ScoreResult = {
   origin: string;
@@ -27,29 +32,17 @@ type ScoreResult = {
   origin_ll?: [number, number];
   dest_ll?: [number, number];
   expected_co2e_t_per_flight: number;
+  est_duration_h?: number;
   aircraft_comparison?: { icao: string; share: number; percentile: number }[];
-  hour_curve?: HourPoint[];
   error?: string;
 };
 
-type FlightLeg = {
-  from: string; to: string; dep_local: string; carrier: string;
-  aircraft: string; percentile: number; t_co2e: number;
-  from_ll?: [number, number]; to_ll?: [number, number];
-};
 type FlightOption = {
   legs: FlightLeg[]; n_stops: number; dep_local: string; arr_local?: string;
   duration?: string; airline?: string; airline_logo?: string;
   total_t_co2e: number; worst_leg_percentile: number;
   aircraft_estimated: boolean; price_usd: number; currency?: string; date?: string;
 };
-
-function fmtDuration(iso?: string): string {
-  const m = iso?.match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/);
-  if (!m) return '';
-  const h = Number(m[1] ?? 0) * 24 + Number(m[2] ?? 0);
-  return `${h}h${m[3] ? ` ${m[3]}m` : ''}`;
-}
 
 type RouteInfo = {
   known: boolean;
@@ -68,6 +61,18 @@ function pctColor(p: number): string {
   if (p >= 50) return '#FDAE61';
   if (p >= 25) return '#ABDDA4';
   return '#66C2A5';
+}
+
+function durationMin(iso?: string): number | null {
+  const m = iso?.match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!m) return null;
+  return Number(m[1] ?? 0) * 1440 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0);
+}
+
+function fmtMin(min: number): string {
+  const h = Math.floor(Math.abs(min) / 60);
+  const mm = Math.round(Math.abs(min) % 60);
+  return h > 0 ? `${h}h${mm ? ` ${mm}m` : ''}` : `${mm}m`;
 }
 
 function rankMatches(q: string, airports: AirportRow[]): AirportRow[] {
@@ -123,7 +128,7 @@ function AirportInput({
     <div ref={boxRef} className="relative flex flex-col gap-1 text-sm">
       <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">{label}</span>
       <input
-        className="rounded-sm border border-rule bg-paper-2 px-2 py-1.5"
+        className="rounded-sm border border-rule bg-paper px-2 py-1.5"
         value={text}
         placeholder="code or city"
         onChange={(e) => {
@@ -142,7 +147,6 @@ function AirportInput({
           if (e.key === 'Enter') { e.preventDefault(); choose(matches[hi]); }
           if (e.key === 'Escape') setOpen(false);
         }}
-        required
       />
       {open && matches.length > 0 && (
         <ul className="absolute top-full z-20 mt-1 w-72 rounded-sm border border-rule bg-paper shadow-lg">
@@ -200,51 +204,78 @@ function gcPoints(a: [number, number], b: [number, number], n = 72): [number, nu
   return segs.filter((sg) => sg.length > 1);
 }
 
+type MapArc = { key: string; segs: [number, number][][]; color: string; width: number };
+
 function FlightMap({
   main,
   mainColor,
-  mainLabel,
   alts,
   land,
+  hoverKey,
+  onHover,
 }: {
   main: { from: [number, number]; to: [number, number]; codes: [string, string] };
   mainColor: string;
-  mainLabel: string;
-  alts: { legs: { from_ll?: [number, number]; to_ll?: [number, number]; from: string; to: string }[]; color: string }[];
+  alts: { key: string; legs: FlightLeg[]; color: string }[];
   land: [number, number][][] | null;
+  hoverKey: string | null;
+  onHover: (k: string | null) => void;
 }) {
-  // collect all arc points to auto-fit the viewport
-  const arcs: { segs: [number, number][][]; color: string; width: number; dash?: string }[] = [];
+  const arcs: MapArc[] = [];
   for (const alt of alts) {
+    const segs: [number, number][][] = [];
     for (const l of alt.legs) {
-      if (l.from_ll && l.to_ll) arcs.push({ segs: gcPoints(l.from_ll, l.to_ll), color: alt.color, width: 1.4, dash: '5 3' });
+      if (l.from_ll && l.to_ll) segs.push(...gcPoints(l.from_ll, l.to_ll));
     }
+    if (segs.length) arcs.push({ key: alt.key, segs, color: alt.color, width: 1.6 });
   }
-  arcs.push({ segs: gcPoints(main.from, main.to), color: mainColor, width: 3 });
+  arcs.push({ key: 'main', segs: gcPoints(main.from, main.to), color: mainColor, width: 4.2 });
 
   const pts = arcs.flatMap((a) => a.segs.flat());
   let latMin = Math.min(...pts.map((p) => p[0])) - 6;
   let latMax = Math.max(...pts.map((p) => p[0])) + 6;
-  let lonMin = Math.min(...pts.map((p) => p[1])) - 6;
-  let lonMax = Math.max(...pts.map((p) => p[1])) + 6;
+  const lonMin = Math.min(...pts.map((p) => p[1])) - 6;
+  const lonMax = Math.max(...pts.map((p) => p[1])) + 6;
   latMin = Math.max(-85, latMin); latMax = Math.min(88, latMax);
   const W = 680;
   const cosc = Math.cos((((latMin + latMax) / 2) * Math.PI) / 180);
-  const H = Math.max(180, Math.min(430, (W * (latMax - latMin)) / ((lonMax - lonMin) * cosc || 1)));
+  const H = Math.max(200, Math.min(430, (W * (latMax - latMin)) / ((lonMax - lonMin) * cosc || 1)));
   const px = (lon: number) => ((lon - lonMin) / (lonMax - lonMin)) * W;
   const py = (lat: number) => ((latMax - lat) / (latMax - latMin)) * H;
   const path = (sg: [number, number][]) => sg.map((p, i) => `${i ? 'L' : 'M'}${px(p[1]).toFixed(1)},${py(p[0]).toFixed(1)}`).join(' ');
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={mainLabel} style={{ width: '100%', height: 'auto' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Route map ${main.codes[0]} to ${main.codes[1]}`} style={{ width: '100%', height: 'auto' }}>
       <rect x={0} y={0} width={W} height={H} fill="var(--paper-2, #f6f6f2)" />
       {land && land.map((poly, i) => (
         <path key={i} d={path(poly.map(([x, y]) => [y, x] as [number, number]))} fill="var(--paper-3, #eaeae2)" stroke="var(--rule, #d8d8ce)" strokeWidth={0.5} />
       ))}
-      {arcs.map((a, i) =>
-        a.segs.map((sg, j) => (
-          <path key={`${i}-${j}`} d={path(sg)} fill="none" stroke={a.color} strokeWidth={a.width} strokeDasharray={a.dash} strokeLinecap="round" opacity={a.dash ? 0.85 : 1} />
-        )),
+      {arcs.map((a) =>
+        a.segs.map((sg, j) => {
+          const hovered = hoverKey === a.key;
+          const dimmed = hoverKey !== null && !hovered;
+          return (
+            <g key={`${a.key}-${j}`}>
+              <path
+                d={path(sg)}
+                fill="none"
+                stroke={a.color}
+                strokeWidth={hovered ? a.width + 1.8 : a.width}
+                strokeLinecap="round"
+                opacity={dimmed ? 0.35 : 1}
+              />
+              <path
+                d={path(sg)}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={12}
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={() => onHover(a.key)}
+                onMouseLeave={() => onHover(null)}
+              />
+            </g>
+          );
+        }),
       )}
       {[{ ll: main.from, code: main.codes[0] }, { ll: main.to, code: main.codes[1] }].map((e) => (
         <g key={e.code}>
@@ -259,6 +290,8 @@ function FlightMap({
 }
 
 export default function ContrailsTool() {
+  const [mode, setMode] = useState<'route' | 'flightno'>('route');
+  const [flightNo, setFlightNo] = useState('');
   const [origin, setOrigin] = useState('SFO');
   const [dest, setDest] = useState('LHR');
   const [date, setDate] = useState(() => {
@@ -267,16 +300,18 @@ export default function ContrailsTool() {
   });
   const [time, setTime] = useState('21:30');
   const [aircraft, setAircraft] = useState('B789');
+  const [flexH, setFlexH] = useState('24');
   const [globalTypes, setGlobalTypes] = useState<string[]>([]);
   const [airports, setAirports] = useState<AirportRow[]>([]);
+  const [land, setLand] = useState<[number, number][][] | null>(null);
   const [route, setRoute] = useState<RouteInfo | null>(null);
+  const [resolvedLabel, setResolvedLabel] = useState<string | null>(null);
   const [result, setResult] = useState<ScoreResult | null>(null);
+  const [flights, setFlights] = useState<FlightOption[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [flights, setFlights] = useState<FlightOption[] | null>(null);
-  const [flexH, setFlexH] = useState('24');
-  const [land, setLand] = useState<[number, number][][] | null>(null);
-  const [flightsState, setFlightsState] = useState<'idle' | 'busy' | 'unconfigured' | 'error'>('idle');
+  const [flightsNote, setFlightsNote] = useState<string | null>(null);
+  const [hoverKey, setHoverKey] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`${API}?meta=1`)
@@ -293,9 +328,9 @@ export default function ContrailsTool() {
       .catch(() => setLand(null));
   }, []);
 
-  // Route metadata: preselect the most common aircraft, gray out the rest
+  // Route metadata: preselect the most common aircraft for the pair
   useEffect(() => {
-    if (origin.length !== 3 || dest.length !== 3 || origin === dest) {
+    if (mode !== 'route' || origin.length !== 3 || dest.length !== 3 || origin === dest) {
       setRoute(null);
       return;
     }
@@ -311,7 +346,7 @@ export default function ContrailsTool() {
     return () => {
       stale = true;
     };
-  }, [origin, dest]);
+  }, [origin, dest, mode]);
 
   const routeTypes = useMemo(
     () => new Map((route?.aircraft ?? []).map((a) => [a.icao, a.share])),
@@ -323,16 +358,38 @@ export default function ContrailsTool() {
     return { onRoute, rest };
   }, [route, routeTypes, globalTypes]);
 
-  async function run() {
+  async function assess() {
     setBusy(true);
     setError(null);
+    setFlights(null);
+    setFlightsNote(null);
+    setResolvedLabel(null);
+    setHoverKey(null);
     try {
-      const q = new URLSearchParams({ origin, dest, date, time, aircraft });
+      let o = origin, d = dest, t = time, ac = aircraft;
+      if (mode === 'flightno') {
+        const rr = await fetch(`${API}?flightno=${encodeURIComponent(flightNo)}`);
+        const rb = await rr.json();
+        if (!rb.found) throw new Error(`Flight ${flightNo.toUpperCase().replace(/\s/g, '')} not found in our 2019–2021 schedules — try route mode.`);
+        o = rb.origin; d = rb.dest; t = rb.time_local;
+        if (rb.aircraft) ac = rb.aircraft;
+        setOrigin(o); setDest(d); setTime(t); if (rb.aircraft) setAircraft(rb.aircraft);
+        setResolvedLabel(`${flightNo.toUpperCase().replace(/\s/g, '')} · typical schedule from ${rb.n_observed} observed flights`);
+      }
+      const q = new URLSearchParams({ origin: o, dest: d, date, time: t, aircraft: ac });
       const r = await fetch(`${API}?${q}`);
       const body: ScoreResult = await r.json();
       if (!r.ok || body.error) throw new Error(body.error ?? `HTTP ${r.status}`);
       setResult(body);
-      void findFlights();
+      // alternatives in the same action
+      const fh = Number(flexH) > 0 ? `&flex_h=${Number(flexH)}&time=${t}` : '';
+      const fr = await fetch(`${API}?flights=1&origin=${o}&dest=${d}&date=${date}${fh}`);
+      if (fr.status === 503) setFlightsNote('Flight search not yet connected for this deployment.');
+      else {
+        const fb = await fr.json();
+        if (fr.ok && !fb.error) setFlights(fb.flights ?? []);
+        else setFlightsNote('Flight search failed.');
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setResult(null);
@@ -341,206 +398,240 @@ export default function ContrailsTool() {
     }
   }
 
-  async function findFlights() {
-    setFlightsState('busy');
-    setFlights(null);
-    try {
-      const fh = Number(flexH) > 0 ? `&flex_h=${Number(flexH)}&time=${time}` : '';
-      const r = await fetch(`${API}?flights=1&origin=${origin}&dest=${dest}&date=${date}${fh}`);
-      const body = await r.json();
-      if (r.status === 503) { setFlightsState('unconfigured'); return; }
-      if (!r.ok || body.error) throw new Error(body.error);
-      setFlights(body.flights ?? []);
-      setFlightsState('idle');
-    } catch {
-      setFlightsState('error');
-    }
-  }
+  const topAlts = (flights ?? []).slice(0, 5);
+  const estMin = result?.est_duration_h ? result.est_duration_h * 60 : null;
 
   return (
-    <div className="mx-auto max-w-[820px] px-4">
-      <form
-        className="grid grid-cols-2 gap-3 sm:grid-cols-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run();
-        }}
-      >
-        <AirportInput label="From" value={`${origin} — San Francisco`} onSelect={setOrigin} airports={airports} />
-        <AirportInput label="To" value={`${dest} — London`} onSelect={setDest} airports={airports} />
+    <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
+      {/* ── Left rail ── */}
+      <div className="flex flex-col gap-3 self-start rounded-sm border border-rule bg-paper-2 p-4 lg:sticky lg:top-6">
+        <div className="flex gap-1 font-mono text-[11px] uppercase tracking-wider">
+          {(['route', 'flightno'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={`rounded-sm border px-2 py-1 ${mode === m ? 'border-rule-strong bg-paper-3 font-bold' : 'border-rule opacity-60'}`}
+            >
+              {m === 'route' ? 'Route' : 'Flight #'}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'flightno' ? (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Flight number</span>
+            <input
+              className="rounded-sm border border-rule bg-paper px-2 py-1.5 font-mono uppercase"
+              value={flightNo}
+              placeholder="UA 875"
+              onChange={(e) => setFlightNo(e.target.value)}
+            />
+            <span className="text-[11px] italic opacity-60">Route, time and aircraft filled from 2019–2021 schedules.</span>
+          </label>
+        ) : (
+          <>
+            <AirportInput label="From" value={`${origin} — San Francisco`} onSelect={setOrigin} airports={airports} />
+            <AirportInput label="To" value={`${dest} — London`} onSelect={setDest} airports={airports} />
+          </>
+        )}
+
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Date</span>
-          <input type="date" className="rounded-sm border border-rule bg-paper-2 px-2 py-1.5" value={date} onChange={(e) => setDate(e.target.value)} required />
+          <input type="date" className="rounded-sm border border-rule bg-paper px-2 py-1.5" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Local departure</span>
-          <input type="time" className="rounded-sm border border-rule bg-paper-2 px-2 py-1.5" value={time} onChange={(e) => setTime(e.target.value)} required />
+
+        {mode === 'route' && (
+          <>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Local departure</span>
+              <input type="time" className="rounded-sm border border-rule bg-paper px-2 py-1.5" value={time} onChange={(e) => setTime(e.target.value)} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Aircraft</span>
+              <select className="rounded-sm border border-rule bg-paper px-2 py-1.5" value={aircraft} onChange={(e) => setAircraft(e.target.value)}>
+                {aircraftOptions.onRoute.length > 0 && (
+                  <optgroup label="Flown on this route">
+                    {aircraftOptions.onRoute.map((t) => (
+                      <option key={t} value={t}>
+                        {t} ({Math.round((routeTypes.get(t) ?? 0) * 100)}%)
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label={aircraftOptions.onRoute.length > 0 ? 'Not seen on this route' : 'Common types'}>
+                  {aircraftOptions.rest.map((t) => (
+                    <option key={t} value={t} disabled={aircraftOptions.onRoute.length > 0}>
+                      {t}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </label>
+          </>
+        )}
+
+        <label className="flex items-baseline gap-1 text-sm">
+          <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Flexibility ±</span>
+          <input
+            type="number"
+            min={1}
+            max={72}
+            value={flexH}
+            onChange={(e) => setFlexH(e.target.value)}
+            className="w-16 rounded-sm border border-rule bg-paper px-1.5 py-1"
+          />
+          <span className="text-xs opacity-60">hours</span>
         </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Aircraft</span>
-          <select className="rounded-sm border border-rule bg-paper-2 px-2 py-1.5" value={aircraft} onChange={(e) => setAircraft(e.target.value)}>
-            {aircraftOptions.onRoute.length > 0 && (
-              <optgroup label="Flown on this route">
-                {aircraftOptions.onRoute.map((t) => (
-                  <option key={t} value={t}>
-                    {t} ({Math.round((routeTypes.get(t) ?? 0) * 100)}%)
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            <optgroup label={aircraftOptions.onRoute.length > 0 ? 'Not seen on this route' : 'Common types'}>
-              {aircraftOptions.rest.map((t) => (
-                <option key={t} value={t} disabled={aircraftOptions.onRoute.length > 0}>
-                  {t}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-        </label>
-        <button type="submit" disabled={busy} className="col-span-2 rounded-sm border border-rule bg-paper-3 px-4 py-1.5 text-sm hover:border-rule-strong sm:col-span-5">
-          {busy ? 'Scoring…' : 'Predict contrail warming'}
+
+        <button
+          type="button"
+          onClick={() => void assess()}
+          disabled={busy || (mode === 'flightno' && flightNo.trim().length < 3)}
+          className="mt-1 rounded-sm border border-rule-strong bg-paper-3 px-4 py-2 text-sm font-bold hover:border-ink disabled:opacity-50"
+        >
+          {busy ? 'Assessing…' : 'Assess contrails'}
         </button>
-      </form>
 
-      {route && !route.known && origin !== dest && (
-        <p className="mt-3 rounded-sm border border-rule bg-paper-2 px-3 py-2 text-sm">
-          No direct flights between {origin} and {dest} appear in our 2019–2021
-          database — the estimate below treats this as a hypothetical nonstop.
-          For a connecting itinerary, score each leg separately.
-        </p>
-      )}
+        {route && !route.known && mode === 'route' && origin !== dest && (
+          <p className="text-xs opacity-70">
+            No direct flights between {origin} and {dest} in our 2019–2021
+            database — the estimate treats this as a hypothetical nonstop.
+          </p>
+        )}
+        {error && <p className="font-mono text-xs text-cardinal">{error}</p>}
+      </div>
 
-      {error && <p className="mt-4 font-mono text-sm text-cardinal">{error}</p>}
+      {/* ── Right column ── */}
+      <div className="min-w-0">
+        {!result && !busy && (
+          <p className="mt-2 text-sm italic opacity-60">
+            Choose a flight on the left and assess it to see its predicted
+            contrail warming, the aircraft lever on its route, and
+            lower-warming bookable alternatives.
+          </p>
+        )}
 
-      {result && (
-        <div className="mt-6 border-t border-rule pt-5">
-          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-            <div>
-              <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Contrail-warming percentile</span>
-              <div className="text-4xl" style={{ color: pctColor(result.percentile) }}>
-                {result.percentile.toFixed(0)}
-                <span className="text-xl opacity-70">/100</span>
+        {result && (
+          <>
+            <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+              <div>
+                <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Contrail-warming percentile</span>
+                <div className="text-4xl" style={{ color: pctColor(result.percentile) }}>
+                  {result.percentile.toFixed(0)}
+                  <span className="text-xl opacity-70">/100</span>
+                </div>
               </div>
-            </div>
-            <div>
-              <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Expected contrail warming</span>
-              <div className="text-2xl">
-                {result.expected_co2e_t_per_flight.toFixed(1)}{' '}
-                <span className="text-base opacity-70">t CO₂-eq / flight</span>
+              <div>
+                <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Expected contrail warming</span>
+                <div className="text-2xl">
+                  {result.expected_co2e_t_per_flight.toFixed(1)}{' '}
+                  <span className="text-base opacity-70">t CO₂-eq / flight</span>
+                </div>
               </div>
-            </div>
-            {result.flagged_top10 && (
-              <div className="rounded-sm border border-cardinal px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-cardinal">
-                flagged: worst 10% of flights
-              </div>
-            )}
-          </div>
-
-          {result.aircraft_comparison && result.aircraft_comparison.length > 1 && (
-            <div className="mt-5">
-              <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
-                Same flight, by aircraft flown on this route
-              </span>
-              <div className="mt-1.5 flex flex-wrap gap-2">
-                {result.aircraft_comparison.map((a) => (
-                  <span
-                    key={a.icao}
-                    className={`rounded-sm border px-2 py-1 font-mono text-xs ${a.icao === result.aircraft ? 'border-rule-strong font-bold' : 'border-rule opacity-80'}`}
-                    style={{ color: pctColor(a.percentile) }}
-                  >
-                    {a.icao} · {a.percentile.toFixed(0)}
-                  </span>
-                ))}
-              </div>
-              {result.aircraft_comparison[result.aircraft_comparison.length - 1].percentile -
-                result.aircraft_comparison[0].percentile >= 30 && (
-                <p className="mt-2 max-w-[620px] text-sm opacity-80">
-                  Aircraft choice matters a lot on this route: newer types
-                  (787, A320neo/737 MAX families) have cleaner-burning engines
-                  that emit far less soot, and typically seed much weaker
-                  contrails than older types at the same time and place.
-                </p>
+              {result.flagged_top10 && (
+                <div className="rounded-sm border border-cardinal px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-cardinal">
+                  flagged: worst 10% of flights
+                </div>
               )}
             </div>
-          )}
 
-          {result.origin_ll && result.dest_ll && (
-            <figure className="mt-6">
-              <figcaption className="mb-2 font-mono text-[11px] uppercase tracking-wider opacity-60">
-                Your flight{flights && flights.length > 0 ? ' and lower-warming alternatives (dashed)' : ''} — color = warming percentile
-              </figcaption>
-              <FlightMap
-                main={{ from: result.origin_ll, to: result.dest_ll, codes: [result.origin, result.dest] }}
-                mainColor={pctColor(result.percentile)}
-                mainLabel={`Great-circle route ${result.origin} to ${result.dest}`}
-                alts={(flights ?? [])
-                  .filter((f) => f.total_t_co2e < result.expected_co2e_t_per_flight)
-                  .slice(0, 4)
-                  .map((f) => ({ legs: f.legs, color: pctColor(f.worst_leg_percentile) }))}
-                land={land}
-              />
-            </figure>
-          )}
+            {result.aircraft_comparison && result.aircraft_comparison.length > 1 && (
+              <div className="mt-4">
+                <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
+                  Same flight, by aircraft flown on this route
+                </span>
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  {result.aircraft_comparison.map((a) => (
+                    <span
+                      key={a.icao}
+                      className={`rounded-sm border px-2 py-1 font-mono text-xs ${a.icao === result.aircraft ? 'border-rule-strong font-bold' : 'border-rule opacity-80'}`}
+                      style={{ color: pctColor(a.percentile) }}
+                    >
+                      {a.icao} · {a.percentile.toFixed(0)}
+                    </span>
+                  ))}
+                </div>
+                {result.aircraft_comparison[result.aircraft_comparison.length - 1].percentile -
+                  result.aircraft_comparison[0].percentile >= 30 && (
+                  <p className="mt-2 max-w-[640px] text-sm opacity-80">
+                    Aircraft choice matters a lot on this route: newer types have
+                    cleaner-burning engines that emit far less soot and typically
+                    seed much weaker contrails at the same time and place.
+                  </p>
+                )}
+              </div>
+            )}
 
-          <div className="mt-8 border-t border-rule pt-5">
-            <div className="flex items-baseline gap-4">
-              <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
-                Bookable flights on {date} (beta)
-              </span>
-              <label className="flex items-baseline gap-1 text-xs">
-                <span className="opacity-60">flexibility ±</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={72}
-                  placeholder="0"
-                  value={flexH}
-                  onChange={(e) => setFlexH(e.target.value)}
-                  className="w-14 rounded-sm border border-rule bg-paper-2 px-1.5 py-1 text-xs"
-                  aria-label="Booking flexibility in hours around selected departure"
+            {result.origin_ll && result.dest_ll && (
+              <figure className="mt-5">
+                <figcaption className="mb-2 font-mono text-[11px] uppercase tracking-wider opacity-60">
+                  Your flight (thick) {topAlts.length > 0 ? 'and alternatives (thin)' : ''} — color = warming percentile · hover to match routes and cards
+                </figcaption>
+                <FlightMap
+                  main={{ from: result.origin_ll, to: result.dest_ll, codes: [result.origin, result.dest] }}
+                  mainColor={pctColor(result.percentile)}
+                  alts={topAlts.map((f, i) => ({ key: `alt${i}`, legs: f.legs, color: pctColor(f.worst_leg_percentile) }))}
+                  land={land}
+                  hoverKey={hoverKey}
+                  onHover={setHoverKey}
                 />
-                <span className="opacity-60">h of selected departure</span>
-              </label>
-              <button
-                type="button"
-                onClick={() => void findFlights()}
-                disabled={flightsState === 'busy'}
-                className="rounded-sm border border-rule bg-paper-3 px-3 py-1 text-xs hover:border-rule-strong"
-              >
-                {flightsState === 'busy' ? 'Searching…' : 'Search real flights'}
-              </button>
+              </figure>
+            )}
+
+            {/* original-flight card */}
+            <div
+              className={`mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-sm border-2 px-3 py-2 ${hoverKey === 'main' ? 'border-ink' : 'border-rule-strong'}`}
+              onMouseEnter={() => setHoverKey('main')}
+              onMouseLeave={() => setHoverKey(null)}
+            >
+              <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(result.percentile) }} />
+              <div className="flex min-w-[200px] flex-col">
+                <span className="font-mono text-sm font-bold">
+                  {resolvedLabel ? resolvedLabel.split(' · ')[0] : 'Your flight'}
+                  <span className="ml-2 font-normal opacity-70">{result.origin} → {result.dest}</span>
+                </span>
+                <span className="font-mono text-xs opacity-70">
+                  {date} · {time}
+                  {estMin ? ` · ~${fmtMin(estMin)}` : ''} · {result.aircraft}
+                  {!result.route_in_corpus ? ' · hypothetical nonstop' : ''}
+                </span>
+              </div>
+              <span className="font-mono text-sm" style={{ color: pctColor(result.percentile) }}>
+                {result.expected_co2e_t_per_flight.toFixed(1)} t
+              </span>
+              {resolvedLabel && <span className="text-[11px] italic opacity-60">{resolvedLabel.split(' · ')[1]}</span>}
             </div>
-            {flightsState === 'unconfigured' && (
-              <p className="mt-2 text-sm opacity-70">
-                Flight search is not yet connected for this deployment.
-              </p>
-            )}
-            {flightsState === 'error' && (
-              <p className="mt-2 font-mono text-sm text-cardinal">Flight search failed — try again.</p>
-            )}
+
+            {flightsNote && <p className="mt-3 text-sm opacity-70">{flightsNote}</p>}
             {flights && flights.length === 0 && (
-              <p className="mt-2 text-sm opacity-70">No bookable itineraries returned for this date.</p>
+              <p className="mt-3 text-sm opacity-70">No bookable itineraries found in this window.</p>
             )}
-            {flights && flights.length > 0 && result && flights[0].total_t_co2e < result.expected_co2e_t_per_flight && (
-              <p className="mt-2 max-w-[640px] text-sm">
-                {flights[0].total_t_co2e <= 0
-                  ? `Best option more than eliminates your selected flight's expected contrail warming (net-cooling itinerary, ${flights[0].total_t_co2e.toFixed(1)} t vs ${result.expected_co2e_t_per_flight.toFixed(1)} t).`
-                  : `Best option cuts expected contrail warming ${Math.round(100 * (1 - flights[0].total_t_co2e / result.expected_co2e_t_per_flight))}% vs your selected flight (${flights[0].total_t_co2e.toFixed(1)} t vs ${result.expected_co2e_t_per_flight.toFixed(1)} t).`}
-              </p>
-            )}
-            {flights && flights.length > 0 && (
-              <div className="mt-3 flex flex-col gap-2">
-                {flights.slice(0, 5).map((f, i) => {
-                  const dt = result ? f.total_t_co2e - result.expected_co2e_t_per_flight : null;
+
+            {topAlts.length > 0 && (
+              <div className="mt-2 flex flex-col gap-2">
+                <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
+                  Lower-warming alternatives within ±{flexH || 24} h
+                </span>
+                {topAlts.map((f, i) => {
+                  const dt = f.total_t_co2e - result.expected_co2e_t_per_flight;
+                  const altMin = durationMin(f.duration);
+                  const dMin = altMin !== null && estMin !== null ? altMin - estMin : null;
                   const nextDay = f.arr_local && f.dep_local.slice(0, 10) !== f.arr_local.slice(0, 10);
+                  const key = `alt${i}`;
                   return (
-                    <div key={i} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-sm border border-rule bg-paper-2 px-3 py-2">
+                    <div
+                      key={i}
+                      className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-sm border bg-paper-2 px-3 py-2 ${hoverKey === key ? 'border-ink' : 'border-rule'}`}
+                      onMouseEnter={() => setHoverKey(key)}
+                      onMouseLeave={() => setHoverKey(null)}
+                    >
                       {f.airline_logo ? (
                         <img src={f.airline_logo} alt={f.airline ?? ''} width={26} height={26} loading="lazy" />
                       ) : (
                         <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(f.worst_leg_percentile) }} />
                       )}
-                      <div className="flex min-w-[200px] flex-col">
+                      <div className="flex min-w-[220px] flex-col">
                         <span className="font-mono text-sm font-bold">
                           {f.legs.map((l) => l.carrier).join(' · ')}
                           <span className="ml-2 font-normal opacity-70">
@@ -550,14 +641,15 @@ export default function ContrailsTool() {
                         <span className="font-mono text-xs opacity-70">
                           {f.date ?? f.dep_local.slice(0, 10)} · {f.dep_local.slice(11)}
                           {f.arr_local ? ` → ${f.arr_local.slice(11)}${nextDay ? ' +1' : ''}` : ''}
-                          {f.duration ? ` · ${fmtDuration(f.duration)}` : ''}
+                          {altMin !== null ? ` · ${fmtMin(altMin)}` : ''}
+                          {dMin !== null && Math.abs(dMin) > 20 ? ` (${dMin > 0 ? '+' : '−'}${fmtMin(dMin)})` : ''}
                           {f.n_stops > 0 ? ` · ${f.n_stops} stop${f.n_stops > 1 ? 's' : ''}` : ' · nonstop'}
                         </span>
                       </div>
                       <span className="font-mono text-sm" style={{ color: pctColor(f.worst_leg_percentile) }}>
                         {f.total_t_co2e.toFixed(1)} t
                       </span>
-                      {dt !== null && dt < 0 && (
+                      {dt < 0 && (
                         <span className="font-mono text-xs" style={{ color: '#66C2A5' }}>
                           {dt.toFixed(0)} t vs yours
                         </span>
@@ -567,24 +659,23 @@ export default function ContrailsTool() {
                     </div>
                   );
                 })}
-                {flights.length > 5 && (
+                {flights && flights.length > 5 && (
                   <p className="text-xs opacity-60">
                     {flights.length - 5} more options in this window — the five shown produce the least contrail warming.
                   </p>
                 )}
               </div>
             )}
-          </div>
 
-          <p className="mt-4 max-w-[620px] text-sm italic opacity-70">
-            A climatological expectation from schedule information alone — not a
-            weather forecast. Percentile is relative to 22M scheduled commercial
-            flights flown in 2021; flights in the worst decile account for roughly
-            60% of positive contrail forcing. Estimates are per flight: for a
-            connecting journey, score each leg.
-          </p>
-        </div>
-      )}
+            <p className="mt-5 max-w-[640px] text-sm italic opacity-70">
+              A climatological expectation from schedule information alone — not a
+              weather forecast. Percentile is relative to 22M scheduled commercial
+              flights flown in 2021. Estimates are per flight; connecting
+              itineraries sum their legs.
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }

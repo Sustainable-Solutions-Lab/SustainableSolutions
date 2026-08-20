@@ -25,6 +25,7 @@ type ScoreResult = {
   flagged_top10: boolean;
   route_in_corpus: boolean;
   expected_co2e_t_per_flight: number;
+  aircraft_comparison?: { icao: string; share: number; percentile: number }[];
   hour_curve?: HourPoint[];
   error?: string;
 };
@@ -328,6 +329,34 @@ export default function ContrailsTool() {
               </div>
             )}
           </div>
+
+          {result.aircraft_comparison && result.aircraft_comparison.length > 1 && (
+            <div className="mt-5">
+              <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
+                Same flight, by aircraft flown on this route
+              </span>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {result.aircraft_comparison.map((a) => (
+                  <span
+                    key={a.icao}
+                    className={`rounded-sm border px-2 py-1 font-mono text-xs ${a.icao === result.aircraft ? 'border-rule-strong font-bold' : 'border-rule opacity-80'}`}
+                    style={{ color: pctColor(a.percentile) }}
+                  >
+                    {a.icao} · {a.percentile.toFixed(0)}
+                  </span>
+                ))}
+              </div>
+              {result.aircraft_comparison[result.aircraft_comparison.length - 1].percentile -
+                result.aircraft_comparison[0].percentile >= 30 && (
+                <p className="mt-2 max-w-[620px] text-sm opacity-80">
+                  Aircraft choice matters a lot on this route: newer types
+                  (787, A320neo/737 MAX families) have cleaner-burning engines
+                  that emit far less soot, and typically seed much weaker
+                  contrails than older types at the same time and place.
+                </p>
+              )}
+            </div>
+          )}
 
           {result.hour_curve && (
             <figure className="mt-6">

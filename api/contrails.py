@@ -203,6 +203,21 @@ def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
         "expected_co2e_t_per_flight": round(
             kg_km * feats["total_flight_distance_km"] / 1000.0, 2),
     }
+    # Score every aircraft flown on this route at the same departure —
+    # engine generation can move a flight across most of the percentile
+    # range, so the UI surfaces the comparison.
+    rkey = _routes.get(f"{origin}>{dest}")
+    if rkey:
+        comp_types = [t for t in rkey["ac"] if t in _aircraft["categories"]]
+        if comp_types:
+            rows = [dict(feats, aircraft_type_icao=t) for t in comp_types]
+            preds = _predict(rows)
+            out["aircraft_comparison"] = sorted(
+                [{"icao": t, "share": rkey["ac"][t],
+                  "percentile": round(_percentile(float(pp)), 1)}
+                 for t, pp in zip(comp_types, preds)],
+                key=lambda x: x["percentile"])
+
     if want_curve:
         base = dep_utc.replace(hour=0, minute=0)
         rows = [_features(origin, dest, base + timedelta(hours=h), aircraft)

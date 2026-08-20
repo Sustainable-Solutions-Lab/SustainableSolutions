@@ -10,6 +10,10 @@ distillation metrics.
 Routes (GET):
   /api/contrails?meta=1
       → { aircraft: [{icao, n}...], n_calibration_flights, model }
+  /api/contrails?route=1&origin=SFO&dest=LHR
+      → { known, n_flights, aircraft: [{icao, share}...] } — whether the
+        corpus contains direct flights on this airport pair, and the
+        observed aircraft mix (2019+2021)
   /api/contrails?origin=SFO&dest=LHR&date=2026-10-12&time=21:40&aircraft=B789
       [&tz=local|utc] [&curve=1]
       → score payload (percentile vs all 2021 flights, top-10% flag,
@@ -63,10 +67,11 @@ _land = None
 _booster = None
 _calib = None
 _aircraft = None
+_routes = None
 
 
 def _load():
-    global _airports, _land, _booster, _calib, _aircraft
+    global _airports, _land, _booster, _calib, _aircraft, _routes
     if _booster is None:
         with open(ASSETS / "airports.json") as f:
             _airports = json.load(f)
@@ -80,6 +85,8 @@ def _load():
             _calib = json.load(f)
         with open(ASSETS / "aircraft.json") as f:
             _aircraft = json.load(f)
+        with open(ASSETS / "routes.json") as f:
+            _routes = json.load(f)
 
 
 def _night_score(olon, olat, dlon, dlat, dep_utc, arr_utc):
@@ -155,6 +162,14 @@ def _percentile(pred):
     return float(np.interp(pred, grid, np.linspace(0, 100, len(grid))))
 
 
+def route_info(origin, dest):
+    r = _routes.get(f"{origin}>{dest}")
+    if r is None:
+        return {"known": False, "n_flights": 0, "aircraft": []}
+    return {"known": True, "n_flights": r["n"],
+            "aircraft": [{"icao": k, "share": v} for k, v in r["ac"].items()]}
+
+
 def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
     if origin not in _airports:
         return {"error": f"unknown origin airport '{origin}'"}, 400
@@ -178,6 +193,7 @@ def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
     kg_km = _calib["bin_mean_co2e_kg_per_km"][b]
     out = {
         "origin": origin, "dest": dest,
+        "route_in_corpus": f"{origin}>{dest}" in _routes,
         "dep_utc": dep_utc.isoformat(), "aircraft": aircraft,
         "distance_km": round(feats["total_flight_distance_km"], 1),
         "night_score": round(feats["night_score_full_0"], 1),
@@ -211,8 +227,14 @@ class handler(BaseHTTPRequestHandler):
                 body, code = {
                     "aircraft": _aircraft["top_types"],
                     "n_calibration_flights": _calib["n_flights"],
-                    "model": "LEAN+AC schedule-only XGBoost (distilled)",
+                    "model": "LEAN+AC schedule-only XGBoost",
                 }, 200
+            elif q.get("route"):
+                o, d = q.get("origin", "").upper(), q.get("dest", "").upper()
+                if o not in _airports or d not in _airports:
+                    body, code = {"error": "unknown airport"}, 400
+                else:
+                    body, code = route_info(o, d), 200
             else:
                 body, code = score(
                     q.get("origin", "").upper(), q.get("dest", "").upper(),

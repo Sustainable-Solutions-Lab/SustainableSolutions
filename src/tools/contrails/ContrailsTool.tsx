@@ -400,7 +400,8 @@ export default function ContrailsTool() {
   const [error, setError] = useState<string | null>(null);
   const [flightsNote, setFlightsNote] = useState<string | null>(null);
   const [altsBusy, setAltsBusy] = useState(false);
-  const [sortMode, setSortMode] = useState<'warming' | 'value'>('warming');
+  const [sortMode, setSortMode] = useState<'warming' | 'value' | 'time'>('warming');
+  const [nonstopOnly, setNonstopOnly] = useState(false);
   const [origMatch, setOrigMatch] = useState<FlightOption | null>(null);
   const [hoverKey, setHoverKey] = useState<string | null>(null);
 
@@ -511,20 +512,36 @@ export default function ContrailsTool() {
   }
 
   const origPrice = origMatch && origMatch.price_usd > 0 ? origMatch.price_usd : null;
+  const estMin = result?.est_duration_h ? result.est_duration_h * 60 : null;
+  const baselineMin = (origMatch && durationMin(origMatch.duration)) ?? estMin;
+  // value sort needs a real fare for the user's own flight
+  useEffect(() => {
+    if (sortMode === 'value' && origPrice === null) setSortMode('warming');
+  }, [sortMode, origPrice]);
+  const pool = useMemo(
+    () => (flights ?? []).filter((f) => !nonstopOnly || f.n_stops === 0),
+    [flights, nonstopOnly],
+  );
   const topAlts = useMemo(() => {
-    const list = [...(flights ?? [])];
-    if (sortMode === 'value' && result) {
+    const list = [...pool];
+    if (result && sortMode === 'value' && origPrice !== null) {
       const value = (f: FlightOption) => {
         const avoided = result.expected_co2e_t_per_flight - f.total_t_co2e;
         if (avoided <= 0 || f.price_usd <= 0) return -Infinity;
-        const dCost = origPrice !== null ? Math.max(f.price_usd - origPrice, 1) : f.price_usd;
-        return avoided / dCost;
+        return avoided / Math.max(f.price_usd - origPrice, 1);
+      };
+      list.sort((a, b) => value(b) - value(a));
+    } else if (result && sortMode === 'time' && baselineMin !== null) {
+      const value = (f: FlightOption) => {
+        const avoided = result.expected_co2e_t_per_flight - f.total_t_co2e;
+        const dm = durationMin(f.duration);
+        if (avoided <= 0 || dm === null) return -Infinity;
+        return avoided / Math.max((dm - baselineMin) / 60, 0.1);
       };
       list.sort((a, b) => value(b) - value(a));
     }
     return list.slice(0, 5);
-  }, [flights, sortMode, result, origPrice]);
-  const estMin = result?.est_duration_h ? result.est_duration_h * 60 : null;
+  }, [pool, sortMode, result, origPrice, baselineMin]);
   const cityOf = useMemo(() => {
     const m = new Map<string, string>();
     for (const [iata, city] of airports) m.set(iata, city);
@@ -652,6 +669,15 @@ export default function ContrailsTool() {
             className="w-16 rounded-sm border border-rule bg-paper px-1.5 py-1"
           />
           <span className="text-xs opacity-60">hours</span>
+        </label>
+        <label className="flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={nonstopOnly}
+            onChange={(e) => setNonstopOnly(e.target.checked)}
+            className="h-3.5 w-3.5 accent-[var(--cardinal,#8C1515)]"
+          />
+          <span>Nonstop alternatives only</span>
         </label>
 
         <button
@@ -788,6 +814,12 @@ export default function ContrailsTool() {
             {flights && flights.length === 0 && (
               <p className="mt-3 text-sm opacity-70">No bookable itineraries found in this window.</p>
             )}
+            {flights && flights.length > 0 && pool.length === 0 && (
+              <p className="mt-3 text-sm opacity-70">
+                No nonstop alternatives in this window — uncheck "Nonstop
+                alternatives only" to see connecting options.
+              </p>
+            )}
 
             {altsBusy && (
               <div className="mt-3 flex flex-col gap-2" aria-live="polite">
@@ -810,12 +842,15 @@ export default function ContrailsTool() {
                   </span>
                   <select
                     value={sortMode}
-                    onChange={(e) => setSortMode(e.target.value as 'warming' | 'value')}
+                    onChange={(e) => setSortMode(e.target.value as 'warming' | 'value' | 'time')}
                     className="rounded-sm border border-rule bg-paper-2 px-1.5 py-0.5 font-mono text-[11px]"
                     aria-label="Sort alternatives"
                   >
                     <option value="warming">least warming</option>
-                    <option value="value">warming avoided per $</option>
+                    <option value="value" disabled={origPrice === null}>
+                      warming avoided per ${origPrice === null ? ' (needs your fare)' : ''}
+                    </option>
+                    <option value="time">warming avoided per added hour</option>
                   </select>
                 </div>
                 {topAlts.map((f, i) => {
@@ -864,12 +899,14 @@ export default function ContrailsTool() {
                     </div>
                   );
                 })}
-                {flights && flights.length > 5 && (
+                {pool.length > 5 && (
                   <p className="text-xs opacity-60">
-                    {flights.length - 5} more options in this window — the five shown
+                    {pool.length - 5} more options in this window — the five shown
                     {sortMode === 'warming'
                       ? ' are predicted to produce the least contrail warming.'
-                      : ' are predicted to avoid the most warming per dollar' + (origPrice !== null ? ' above your fare.' : ' of fare.')}
+                      : sortMode === 'value'
+                        ? ' are predicted to avoid the most warming per dollar above your fare.'
+                        : ' are predicted to avoid the most warming per added hour of travel.'}
                   </p>
                 )}
               </div>

@@ -468,7 +468,7 @@ function FlightMap({
 
 export default function ContrailsTool() {
   const [mode, setMode] = useState<'route' | 'flightno'>('flightno');
-  const [flightNo, setFlightNo] = useState('UA 875');
+  const [flightNo, setFlightNo] = useState('UA 901');
   const [origin, setOrigin] = useState('SFO');
   const [dest, setDest] = useState('LHR');
   const [date, setDate] = useState(() => {
@@ -490,7 +490,7 @@ export default function ContrailsTool() {
   const [flightsNote, setFlightsNote] = useState<string | null>(null);
   const [altsBusy, setAltsBusy] = useState(false);
   const [sortMode, setSortMode] = useState<'warming' | 'value' | 'time'>('warming');
-  const [nonstopOnly, setNonstopOnly] = useState(false);
+  const [nonstopOnly, setNonstopOnly] = useState(true);
   const [origMatch, setOrigMatch] = useState<FlightOption | null>(null);
   const [fetchedFlex, setFetchedFlex] = useState(0); // widest window already fetched
   const [hoverKey, setHoverKey] = useState<string | null>(null);
@@ -818,6 +818,14 @@ export default function ContrailsTool() {
           </p>
         )}
         {error && <p className="font-mono text-xs text-cardinal">{error}</p>}
+
+        <div className="mt-3 border-t border-rule pt-3">
+          <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">Companion paper</p>
+          <p className="mt-1 text-xs italic leading-snug opacity-70">
+            Whiteson, Bonnemaizon, Shapiro &amp; Davis (in preparation) —
+            preprint link coming when the paper is submitted.
+          </p>
+        </div>
 
         <div className="mt-3 border-t border-rule pt-3">
           <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">

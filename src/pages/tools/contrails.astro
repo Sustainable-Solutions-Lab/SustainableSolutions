@@ -28,4 +28,9 @@ import ContrailsTool from '../../tools/contrails/ContrailsTool';
     height: calc(100vh - 56px);
     height: calc(100dvh - 56px);
   }
+  /* size the astro-island wrapper so the tool's h-full has something to inherit */
+  .contrails-frame > * {
+    width: 100%;
+    height: 100%;
+  }
 </style>

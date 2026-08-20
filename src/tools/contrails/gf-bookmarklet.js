@@ -12,11 +12,14 @@
  * remote <script>, but in-page fetch to our API is allowed).
  */
 (async () => {
+  // Set by the extension's auto.js: suppress alerts and re-run on a timer
+  var AUTO = !!window.__sslContrailAuto;
+  var say = AUTO ? function () {} : function (m) { alert(m); };
   var run = async (retries) => {
   try {
     var API = 'https://sustainablesolutions.vercel.app/api/contrails';
     if (!/\/travel\/flights/.test(location.pathname)) {
-      alert('Run this on a Google Flights results page.');
+      say('Run this on a Google Flights results page.');
       return;
     }
     var MON = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
@@ -37,7 +40,7 @@
       // results render after page load (matters when run as an Arc Boost
       // or userscript): keep polling quietly before giving up
       if (retries > 0) { setTimeout(function () { run(retries - 1); }, 2000); return; }
-      alert('No flight results found — run a search first, then click the bookmarklet again.');
+      say('No flight results found — run a search first, then click the bookmarklet again.');
       return;
     }
     var air = [], airIdx = {}, items = [], rows = [];
@@ -76,10 +79,10 @@
       items.push({ o: idx(dep[1]), d: idx(arr[1]), via: vias, lay: lays, date: date, time: t24(dep[2]) });
       rows.push(li);
     });
-    if (!items.length) { alert('Could not parse any flight rows — the page format may have changed.'); return; }
+    if (!items.length) { say('Could not parse any flight rows — the page format may have changed.'); return; }
     var r = await fetch(API + '?batch=1&sv=3&q=' + encodeURIComponent(JSON.stringify({ air: air, f: items })));
     var j = await r.json();
-    if (!r.ok || !j.results) { alert('Contrails API error: ' + (j.error || r.status)); return; }
+    if (!r.ok || !j.results) { say('Contrails API error: ' + (j.error || r.status)); return; }
     var col = function (p) {
       return p >= 90 ? '#9E0142' : p >= 75 ? '#D53E4F' : p >= 50 ? '#FDAE61' : p >= 25 ? '#5da26b' : '#2c8767';
     };
@@ -109,8 +112,9 @@
       }
     });
   } catch (e) {
-    alert('Contrails bookmarklet error: ' + e);
+    say('Contrails bookmarklet error: ' + e);
   }
+  if (AUTO) setTimeout(function () { run(0); }, 5000);
   };
   run(30);
 })();

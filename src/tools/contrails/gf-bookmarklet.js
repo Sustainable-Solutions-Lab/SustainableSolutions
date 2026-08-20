@@ -20,9 +20,17 @@
     }
     var MON = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
       July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
-    var lis = Array.prototype.slice.call(document.querySelectorAll('li')).filter(function (li) {
-      var al = li.getAttribute('aria-label') || '';
-      return /flight with .+\. Leaves .+ at \d/.test(al);
+    // the full itinerary label lives on a descendant of the result <li>
+    var FULL = /flight with .+\. Leaves .+ at \d/;
+    var seen = [];
+    var lis = [];
+    Array.prototype.slice.call(document.querySelectorAll('li [aria-label], li[aria-label]')).forEach(function (el) {
+      if (!FULL.test(el.getAttribute('aria-label') || '')) return;
+      var li = el.closest('li');
+      if (li && seen.indexOf(li) === -1) {
+        seen.push(li);
+        lis.push({ li: li, al: el.getAttribute('aria-label') });
+      }
     });
     if (!lis.length) {
       alert('No flight results found — run a search first, then click the bookmarklet again.');
@@ -39,8 +47,9 @@
       var h = (+m[1] % 12) + (m[3] === 'PM' ? 12 : 0);
       return (h < 10 ? '0' : '') + h + ':' + m[2];
     };
-    lis.forEach(function (li) {
-      var al = li.getAttribute('aria-label');
+    lis.forEach(function (row) {
+      var li = row.li;
+      var al = row.al;
       var dep = al.match(/Leaves (.+?) at (\d{1,2}:\d{2}[\s ]*[AP]M) on ([A-Za-z]+), ([A-Za-z]+) (\d{1,2})/);
       var arr = al.match(/arrives at (.+?) at /);
       if (!dep || !arr) return;

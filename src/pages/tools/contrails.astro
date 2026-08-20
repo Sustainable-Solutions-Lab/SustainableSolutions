@@ -7,18 +7,25 @@ import ContrailsTool from '../../tools/contrails/ContrailsTool';
   title="Contrail warming at booking time"
   description="Predict a flight's contrail climate impact from schedule information alone — months before departure."
   noindex
+  hideFooter={true}
 >
-  <section class="mx-auto max-w-[1200px] px-4 pt-10 pb-4">
-    <p class="font-mono text-[11px] uppercase tracking-wider opacity-60">Prototype · not yet public</p>
-    <h1 class="mt-2 font-serif text-3xl">Contrail warming at booking time</h1>
-    <p class="mt-3 max-w-[620px] text-base leading-relaxed">
-      A minority of flights cause most contrail warming. Weather-based
-      forecasts can steer aircraft hours ahead; this tool instead predicts a
-      flight's likely contrail warming from information available when you
-      book — route, date, time of day, and aircraft — months in advance.
-    </p>
-  </section>
-  <section class="mx-auto max-w-[1200px] px-4 pb-16" aria-label="Contrail prediction tool">
-    <ContrailsTool client:only="react" />
+  <section aria-label="Contrail prediction tool">
+    <div
+      class="contrails-frame"
+      style="width: 100%; overflow: hidden; background: var(--paper);"
+    >
+      <ContrailsTool client:only="react" />
+    </div>
   </section>
 </BaseLayout>
+
+<style is:global>
+  /* Full-viewport tool below the sticky nav, like firefuels/just-air:
+     the body doesn't scroll; the rail and results scroll internally. */
+  body:has(.contrails-frame) { overflow: hidden; }
+  .contrails-frame {
+    position: relative;
+    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
+  }
+</style>

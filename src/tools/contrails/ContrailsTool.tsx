@@ -71,6 +71,14 @@ function durationMin(iso?: string): number | null {
   return Number(m[1] ?? 0) * 1440 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0);
 }
 
+function fmtDelta(min: number, kind: 'dep' | 'dur'): string {
+  const a = Math.abs(min);
+  if (a < 15) return kind === 'dep' ? 'similar departure' : 'similar duration';
+  const t = fmtMin(a);
+  if (kind === 'dep') return `departs ${t} ${min < 0 ? 'earlier' : 'later'}`;
+  return `${t} ${min < 0 ? 'shorter' : 'longer'}`;
+}
+
 function fmtKg(kg: number): string {
   return `${Math.round(kg)} kg${kg < 0 ? ' (cooling)' : ''}`;
 }
@@ -835,6 +843,9 @@ export default function ContrailsTool() {
                       ? `Your flight · likely ${origMatch.legs[0].carrier}`
                       : 'Your flight'}
                   <span className="ml-2 font-normal opacity-70">{result.origin} → {result.dest}</span>
+                  <span className="ml-3 font-normal" style={{ color: pctColor(result.percentile) }}>
+                    {fmtKg(result.expected_co2e_kg_per_pax)}
+                  </span>
                 </span>
                 <span className="font-mono text-xs opacity-70">
                   {date} · {origMatch ? origMatch.dep_local.slice(11) : time}
@@ -846,9 +857,6 @@ export default function ContrailsTool() {
                   {!result.route_in_corpus ? ' · hypothetical nonstop' : ''}
                 </span>
               </div>
-              <span className="font-mono text-sm" style={{ color: pctColor(result.percentile) }}>
-                {fmtKg(result.expected_co2e_kg_per_pax)}
-              </span>
               {origPrice !== null && <span className="ml-auto font-mono text-sm opacity-80">${origPrice.toFixed(0)}</span>}
               {resolvedLabel && <span className="text-[11px] italic opacity-60">{resolvedLabel.split(' · ')[1]}</span>}
             </div>
@@ -907,8 +915,11 @@ export default function ContrailsTool() {
                 {topAlts.map((f, i) => {
                   const dt = f.total_kg_per_pax - result.expected_co2e_kg_per_pax;
                   const altMin = durationMin(f.duration);
-                  const dMin = altMin !== null && estMin !== null ? altMin - estMin : null;
+                  const dDur = altMin !== null && baselineMin !== null ? altMin - baselineMin : null;
+                  const baseDep = origMatch ? origMatch.dep_local : `${date}T${time}`;
+                  const dDep = (new Date(f.dep_local).getTime() - new Date(baseDep).getTime()) / 60000;
                   const nextDay = f.arr_local && f.dep_local.slice(0, 10) !== f.arr_local.slice(0, 10);
+                  const altAc = [...new Set(f.legs.map((l) => l.aircraft))].join('/');
                   const key = `alt${i}`;
                   return (
                     <div
@@ -928,25 +939,32 @@ export default function ContrailsTool() {
                           <span className="ml-2 font-normal opacity-70">
                             {f.legs[0].from}{f.legs.slice(1).map((l) => ` → ${l.from}`).join('')} → {f.legs[f.legs.length - 1].to}
                           </span>
+                          <span className="ml-3 font-normal" style={{ color: pctColor(f.worst_leg_percentile) }}>
+                            {fmtKg(f.total_kg_per_pax)}
+                          </span>
                         </span>
                         <span className="font-mono text-xs opacity-70">
                           {f.date ?? f.dep_local.slice(0, 10)} · {f.dep_local.slice(11)}
                           {f.arr_local ? ` → ${f.arr_local.slice(11)}${nextDay ? ' +1' : ''}` : ''}
                           {altMin !== null ? ` · ${fmtMin(altMin)}` : ''}
-                          {dMin !== null && Math.abs(dMin) > 20 ? ` (${dMin > 0 ? '+' : '−'}${fmtMin(dMin)})` : ''}
                           {f.n_stops > 0 ? ` · ${f.n_stops} stop${f.n_stops > 1 ? 's' : ''}` : ' · nonstop'}
                         </span>
                       </div>
-                      <span className="font-mono text-sm" style={{ color: pctColor(f.worst_leg_percentile) }}>
-                        {fmtKg(f.total_kg_per_pax)}
-                      </span>
-                      {dt < 0 && (
-                        <span className="font-mono text-xs" style={{ color: '#66C2A5' }}>
-                          {dt.toFixed(0)} kg vs yours
+                      <div className="ml-auto flex flex-col items-end gap-0.5 text-right font-mono text-[11px]">
+                        <span style={{ color: '#66C2A5' }}>{dt.toFixed(0)} kg CO₂e vs yours</span>
+                        {Number.isFinite(dDep) && <span className="opacity-75">{fmtDelta(dDep, 'dep')}</span>}
+                        {dDur !== null && <span className="opacity-75">{fmtDelta(dDur, 'dur')}</span>}
+                        <span className="opacity-75">
+                          {altAc === result.aircraft ? `same aircraft (${altAc})` : `${altAc} vs your ${result.aircraft}`}
+                          {f.aircraft_estimated ? '*' : ''}
                         </span>
-                      )}
-                      {f.price_usd > 0 && <span className="ml-auto font-mono text-sm opacity-80">${f.price_usd.toFixed(0)}</span>}
-                      {f.aircraft_estimated && <span className="text-[10px] italic opacity-50">ac est.</span>}
+                        {f.price_usd > 0 && (
+                          <span className="opacity-75">
+                            ${f.price_usd.toFixed(0)}
+                            {origPrice !== null ? ` (${f.price_usd >= origPrice ? '+' : '−'}$${Math.abs(f.price_usd - origPrice).toFixed(0)})` : ''}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

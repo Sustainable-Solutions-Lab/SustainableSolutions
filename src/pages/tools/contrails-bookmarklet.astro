@@ -39,6 +39,35 @@ const href = `javascript:${encodeURIComponent(compact)}`;
         ☁ Contrail check
       </a>
     </p>
+    <h2>Arc (and other browsers without a bookmarks bar)</h2>
+    <p>
+      Arc runs bookmarklets, but hides the classic bookmarks bar. Either
+      pin any tab to your sidebar, then right-click it → Edit URL and
+      paste the code below — clicking the pinned item runs the check on
+      your active tab — or, for automatic badges on every search, create
+      an Arc <em>Boost</em> on google.com/travel/flights and paste the
+      same code as its custom JavaScript. (Pasting into the address bar
+      directly won't work; Chromium strips the <code>javascript:</code>
+      prefix there.)
+    </p>
+    <p>
+      <button
+        type="button"
+        id="copy-bm"
+        data-code={href}
+        class="cursor-pointer rounded-sm border border-rule-strong bg-paper-3 px-4 py-2 font-bold"
+      >
+        Copy bookmarklet code
+      </button>
+    </p>
+    <script>
+      const btn = document.getElementById('copy-bm');
+      btn?.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(btn.getAttribute('data-code') ?? '');
+        btn.textContent = 'Copied';
+        setTimeout(() => (btn.textContent = 'Copy bookmarklet code'), 1500);
+      });
+    </script>
     <h2>Notes</h2>
     <ul>
       <li>

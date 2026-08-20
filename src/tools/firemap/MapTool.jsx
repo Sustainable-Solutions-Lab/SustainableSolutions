@@ -1,5 +1,5 @@
 import { useReducer, useState, useEffect, useMemo } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import ToolShell from '../_shell/ToolShell'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { Actions, initialState } from './contracts/events.js'
@@ -249,160 +249,27 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const wordmarkSrc = isDark ? '/logos/sdss/SDSS_brand_white.png' : '/logos/sdss/SDSS_brand.png'
 
   return (
-    <div className="flex flex-col w-full h-full overflow-hidden bg-paper">
-      {/* ── Mobile header bar — sits in the normal flow below the site nav.
-          (Was previously fixed top:0 which slid under the site nav and made
-          the title appear cut off.) */}
-      <header
-        className="flex md:hidden shrink-0 items-center px-3 py-3 bg-paper border-b border-rule relative z-30"
-      >
-        <div className="flex flex-col min-w-0 gap-1">
-          <div className="flex items-baseline gap-3 min-w-0">
-            {config.eyebrow && (
-              <span
-                className="font-mono shrink-0"
-                style={{
-                  fontSize: '10px',
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: 'var(--ink-3)',
-                }}
-              >
-                {config.eyebrow}
-              </span>
-            )}
-            <span
-              className="font-serif text-ink truncate"
-              style={{ fontSize: '22px', fontWeight: 600, lineHeight: 1.1 }}
-            >
-              {config.title}
-            </span>
-          </div>
-          {config.summary && (
-            <p
-              className="text-ink-2 m-0 truncate"
-              style={{ fontSize: '12px', lineHeight: 1.3 }}
-            >
-              {config.summary}
-            </p>
-          )}
-        </div>
+    <ToolShell
+      eyebrow={config.eyebrow}
+      title={config.title}
+      summary={config.summary}
+      surface="paper"
+      railChrome={false}
+      drawerOpen={mobilePanelOpen}
+      onDrawerOpenChange={setMobilePanelOpen}
+      rail={
+        <Sidebar
+          config={config}
+          state={state}
+          dispatch={dispatch}
+          allValues={statewideValues}
+          companion={companion}
+          repoLinks={repoLinks}
+        />
+      }
+      drawer={
+        <>
 
-        <div className="flex-1" />
-
-        <button
-          type="button"
-          onClick={() => setMobilePanelOpen((o) => !o)}
-          aria-label={mobilePanelOpen ? 'Hide controls' : 'Show controls'}
-          aria-expanded={mobilePanelOpen}
-          className={[
-            'flex items-center gap-1 cursor-pointer bg-transparent border-0 px-2 py-1',
-            'font-mono text-xs uppercase tracking-wider hover:text-ink',
-            mobilePanelOpen ? 'text-ink' : 'text-ink-3',
-          ].join(' ')}
-        >
-          <span>{mobilePanelOpen ? 'Hide Controls' : 'Show Controls'}</span>
-          {mobilePanelOpen
-            ? <ChevronUp size={14} strokeWidth={1.75} />
-            : <ChevronDown size={14} strokeWidth={1.75} />}
-        </button>
-      </header>
-
-      {/* ── Content row: sidebar | map ──────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Sidebar — desktop only */}
-        <div className="hidden md:flex shrink-0">
-          <Sidebar
-            config={config}
-            state={state}
-            dispatch={dispatch}
-            allValues={statewideValues}
-            companion={companion}
-            repoLinks={repoLinks}
-          />
-        </div>
-
-        {/* Map — fills remaining space */}
-        <div className="flex-1 relative min-w-0">
-          <Map
-            config={config}
-            state={state}
-            dispatch={dispatch}
-            height="100%"
-            onMapReady={(m) => setMapInstance(m)}
-            onFilterStats={setFilterStats}
-            onToggleScheme={handleToggleScheme}
-            isDark={isDark}
-            opacityP95={opacityP95}
-            tuning={tuning}
-          />
-
-          {showDevControls && (
-            <DevControls tuning={tuning} setTuning={setTuning} mapInstance={mapInstance} />
-          )}
-
-          {/* Mobile color bar — sits above Safari's URL bar (~ 90 px tall on
-              iPhones) and above the in-map attribution strip (~14 px). Bg
-              uses the design-system paper color with transparency so it
-              blends with the surrounding map background. */}
-          <div
-            className="block md:hidden absolute z-10"
-            style={{
-              bottom: 55,
-              right: 10,
-              width: 160,
-              background: isDark ? 'rgba(12, 12, 28, 0.92)' : 'rgba(248, 248, 232, 0.92)',
-              borderRadius: 4,
-              padding: '6px 8px',
-            }}
-          >
-            <MobileLegend variable={activeVariable} allValues={statewideValues} isDark={isDark} />
-          </div>
-
-          {/* Regional data stats panel — desktop only */}
-          <div className="hidden md:block">
-            <StatsPanel
-              drawnCircle={state.drawnCircle}
-              drawnPolygon={state.drawnPolygon}
-              aggregateStats={state.aggregateStats}
-              areaToolActive={state.areaToolActive}
-              activeVariable={activeVariable}
-              isDark={isDark}
-              dispatch={dispatch}
-            />
-          </div>
-
-          {/* Area tool — desktop only */}
-          <div className="hidden md:block">
-            <AreaTool
-              map={mapInstance}
-              config={config}
-              state={state}
-              dispatch={dispatch}
-            />
-          </div>
-
-          {/* Methods overlay — covers the map area when "Read Methods" is clicked. */}
-          {state.methodsOpen && (
-            <MethodsPanel
-              config={config}
-              isDark={isDark}
-              onClose={() => dispatch({ type: Actions.TOGGLE_METHODS })}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* ── Mobile controls panel ─────────────────────────────────────── */}
-      <div
-        className="block md:hidden fixed left-0 right-0 z-[21] bg-paper border-b border-rule overflow-y-auto px-4 pt-3 pb-4"
-        style={{
-          top: 180,
-          maxHeight: 'calc(100dvh - 180px)',
-          transform: mobilePanelOpen ? 'translateY(0)' : 'translateY(-110%)',
-          transition: 'transform 0.18s ease',
-        }}
-      >
         <div className="mb-3">
           <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
             Map
@@ -497,22 +364,77 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         >
           Read Methods
         </button>
-      </div>
+        </>
+      }
+    >
+      <div className="h-full w-full relative">
+          <Map
+            config={config}
+            state={state}
+            dispatch={dispatch}
+            height="100%"
+            onMapReady={(m) => setMapInstance(m)}
+            onFilterStats={setFilterStats}
+            onToggleScheme={handleToggleScheme}
+            isDark={isDark}
+            opacityP95={opacityP95}
+            tuning={tuning}
+          />
 
-      {/* Scrim — grays out map while mobile panel is open */}
-      <div
-        className="block md:hidden fixed left-0 right-0 bottom-0"
-        style={{
-          top: 180,
-          background: 'rgba(0,0,0,0.52)',
-          zIndex: 20,
-          opacity: mobilePanelOpen ? 1 : 0,
-          pointerEvents: mobilePanelOpen ? 'auto' : 'none',
-          transition: 'opacity 0.22s ease',
-        }}
-        onClick={() => setMobilePanelOpen(false)}
-      />
+          {showDevControls && (
+            <DevControls tuning={tuning} setTuning={setTuning} mapInstance={mapInstance} />
+          )}
 
-    </div>
+          {/* Mobile color bar — sits above Safari's URL bar (~ 90 px tall on
+              iPhones) and above the in-map attribution strip (~14 px). Bg
+              uses the design-system paper color with transparency so it
+              blends with the surrounding map background. */}
+          <div
+            className="block md:hidden absolute z-10"
+            style={{
+              bottom: 55,
+              right: 10,
+              width: 160,
+              background: isDark ? 'rgba(12, 12, 28, 0.92)' : 'rgba(248, 248, 232, 0.92)',
+              borderRadius: 4,
+              padding: '6px 8px',
+            }}
+          >
+            <MobileLegend variable={activeVariable} allValues={statewideValues} isDark={isDark} />
+          </div>
+
+          {/* Regional data stats panel — desktop only */}
+          <div className="hidden md:block">
+            <StatsPanel
+              drawnCircle={state.drawnCircle}
+              drawnPolygon={state.drawnPolygon}
+              aggregateStats={state.aggregateStats}
+              areaToolActive={state.areaToolActive}
+              activeVariable={activeVariable}
+              isDark={isDark}
+              dispatch={dispatch}
+            />
+          </div>
+
+          {/* Area tool — desktop only */}
+          <div className="hidden md:block">
+            <AreaTool
+              map={mapInstance}
+              config={config}
+              state={state}
+              dispatch={dispatch}
+            />
+          </div>
+
+          {/* Methods overlay — covers the map area when "Read Methods" is clicked. */}
+          {state.methodsOpen && (
+            <MethodsPanel
+              config={config}
+              isDark={isDark}
+              onClose={() => dispatch({ type: Actions.TOGGLE_METHODS })}
+            />
+          )}
+        </div>
+    </ToolShell>
   )
 }

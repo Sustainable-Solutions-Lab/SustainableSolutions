@@ -1,5 +1,5 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import ToolFrame from '../../layouts/ToolFrame.astro';
 import MapTool from '../../tools/firemap/MapTool.jsx';
 import tools from '../../data/tools.json';
 import publications from '../../data/publications.json';
@@ -24,16 +24,7 @@ const repoLinks = {
 };
 ---
 
-<BaseLayout
-  title={tool?.title ?? 'Just Air'}
-  description={tool?.summary}
-  hideFooter={true}
->
-  <section aria-label="Interactive map">
-    <div
-      class="just-air-frame"
-      style="width: 100%; overflow: hidden; background: var(--paper-2);"
-    >
+<ToolFrame title={tool?.title ?? 'Just Air'} description={tool?.summary} background="var(--paper-2)">
       <MapTool
         client:only="react"
         projectId="just-air"
@@ -41,16 +32,5 @@ const repoLinks = {
         repoLinks={repoLinks}
         display={tool ? { title: tool.title, eyebrow: tool.eyebrow, summary: tool.summary } : null}
       />
-    </div>
-  </section>
-</BaseLayout>
+</ToolFrame>
 
-<style is:global>
-  body:has(.just-air-frame) { overflow: hidden; }
-  .just-air-frame {
-    position: relative;
-    height: calc(100vh - 56px);
-    height: calc(100dvh - 56px);
-  }
-  .just-air-frame > * { width: 100%; height: 100%; }
-</style>

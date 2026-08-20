@@ -11,7 +11,8 @@
  * tonnes, duration parenthetical, stops, price).
  */
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import ToolShell from '../_shell/ToolShell';
 
 type FlightLeg = {
   from: string; to: string; dep_local: string; carrier: string;
@@ -455,7 +456,7 @@ function FlightMap({
 
 export default function ContrailsTool() {
   const [mode, setMode] = useState<'route' | 'flightno'>('flightno');
-  const [flightNo, setFlightNo] = useState('');
+  const [flightNo, setFlightNo] = useState('UA 875');
   const [origin, setOrigin] = useState('SFO');
   const [dest, setDest] = useState('LHR');
   const [date, setDate] = useState(() => {
@@ -480,21 +481,9 @@ export default function ContrailsTool() {
   const [nonstopOnly, setNonstopOnly] = useState(false);
   const [origMatch, setOrigMatch] = useState<FlightOption | null>(null);
   const [hoverKey, setHoverKey] = useState<string | null>(null);
-  // Mobile: the rail becomes a slide-down drawer under a compact header
-  // (firemap pattern). Starts open — the tool needs input before it can
-  // show anything — and closes itself when an assessment kicks off.
-  const [panelOpen, setPanelOpen] = useState(true);
-  const [drawerTop, setDrawerTop] = useState(130);
-  const mobileHdrRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const measure = () => {
-      const r = mobileHdrRef.current?.getBoundingClientRect();
-      if (r && r.bottom > 0) setDrawerTop(Math.round(r.bottom));
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
+  // Mobile controls drawer (chrome lives in ToolShell); closes itself
+  // whenever an assessment kicks off so the results are visible.
+  const [panelOpen, setPanelOpen] = useState(false);
 
   useEffect(() => {
     fetch(`${API}?meta=1&${SV}`)
@@ -603,6 +592,15 @@ export default function ContrailsTool() {
     }
   }
 
+  // Assess the default flight on load so the map opens populated
+  const bootRef = useRef(false);
+  useEffect(() => {
+    if (bootRef.current) return;
+    bootRef.current = true;
+    void assess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const origPrice = origMatch && origMatch.price_usd > 0 ? origMatch.price_usd : null;
   const estMin = result?.est_duration_h ? result.est_duration_h * 60 : null;
   const baselineMin = (origMatch && durationMin(origMatch.duration)) ?? estMin;
@@ -663,68 +661,15 @@ export default function ContrailsTool() {
   }, [topAlts, result, cityOf]);
 
   return (
-    <div className="flex h-full flex-col md:flex-row">
-      <style>{`
-        .contrail-shimmer { position: relative; overflow: hidden; }
-        .contrail-shimmer::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          transform: translateX(-100%);
-          background: linear-gradient(90deg, transparent, rgba(24,24,56,0.10), transparent);
-          animation: contrail-shimmer-sweep 1.4s ease-in-out infinite;
-        }
-        [data-theme='dark'] .contrail-shimmer::after {
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent);
-        }
-        @keyframes contrail-shimmer-sweep { 100% { transform: translateX(100%); } }
-        @media (max-width: 767px) {
-          .contrail-rail {
-            position: fixed;
-            left: 0;
-            right: 0;
-            top: var(--drawer-top, 130px);
-            max-height: calc(100vh - var(--drawer-top, 130px));
-            max-height: calc(100dvh - var(--drawer-top, 130px));
-            transform: translateY(var(--drawer-shift, 0%));
-            transition: transform 0.18s ease;
-            z-index: 21;
-            border-bottom: 1px solid var(--rule, rgba(24, 24, 56, 0.14));
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-          }
-        }
-      `}</style>
-      {/* ── Mobile header: title + controls toggle (rail collapses into a drawer) ── */}
-      <div
-        ref={mobileHdrRef}
-        className="relative z-30 flex shrink-0 items-center justify-between gap-3 border-b border-rule bg-paper-2 px-3.5 py-2 md:hidden"
-      >
-        <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-wider opacity-60">Prototype · schedule-only model</p>
-          <h1 className="truncate font-serif text-base leading-tight">Predicting contrails at booking</h1>
-        </div>
-        <button
-          type="button"
-          onClick={() => setPanelOpen((o) => !o)}
-          className="shrink-0 rounded-sm border border-rule-strong bg-paper-3 px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider"
-          aria-expanded={panelOpen}
-        >
-          {panelOpen ? 'Hide controls ▲' : 'Controls ▼'}
-        </button>
-      </div>
-      {/* ── Left rail (desktop column; mobile slide-down drawer via .contrail-rail) ── */}
-      <div
-        className="contrail-rail flex flex-col gap-2 overflow-y-auto bg-paper-2 p-3.5 md:w-[300px] md:shrink-0 md:border-r md:border-rule"
-        style={{ '--drawer-top': `${drawerTop}px`, '--drawer-shift': panelOpen ? '0%' : '-110%' } as CSSProperties}
-      >
-        <div className="hidden md:block">
-          <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">Prototype · schedule-only model</p>
-          <h1 className="font-serif text-lg leading-tight">Predicting contrails at booking</h1>
-          <p className="mt-0.5 text-xs leading-tight opacity-80">
-            Predicts a flight's contrail climate impact from schedule
-            information alone, and finds lower-warming bookable alternatives.
-          </p>
-        </div>
+    <ToolShell
+      eyebrow="Prototype · schedule-only model"
+      title="Predicting contrails at booking"
+      summary="Predicts a flight's contrail climate impact from schedule information alone, and finds lower-warming bookable alternatives."
+      mainScroll
+      drawerOpen={panelOpen}
+      onDrawerOpenChange={setPanelOpen}
+      rail={
+        <>
         <div className="flex gap-1 font-mono text-[11px] uppercase tracking-wider">
           {(['flightno', 'route'] as const).map((m) => (
             <button
@@ -829,18 +774,25 @@ export default function ContrailsTool() {
           </p>
         )}
         {error && <p className="font-mono text-xs text-cardinal">{error}</p>}
-      </div>
-
-      {/* ── Mobile scrim: tap anywhere below the drawer to dismiss it ── */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-20 bg-black/50 transition-opacity duration-200 md:hidden"
-        style={{ top: drawerTop, opacity: panelOpen ? 1 : 0, pointerEvents: panelOpen ? 'auto' : 'none' }}
-        onClick={() => setPanelOpen(false)}
-        aria-hidden="true"
-      />
-
-      {/* ── Right column ── */}
-      <div className="min-w-0 flex-1 overflow-y-auto p-3.5 md:p-5">
+        </>
+      }
+    >
+      <style>{`
+        .contrail-shimmer { position: relative; overflow: hidden; }
+        .contrail-shimmer::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          transform: translateX(-100%);
+          background: linear-gradient(90deg, transparent, rgba(24,24,56,0.10), transparent);
+          animation: contrail-shimmer-sweep 1.4s ease-in-out infinite;
+        }
+        [data-theme='dark'] .contrail-shimmer::after {
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent);
+        }
+        @keyframes contrail-shimmer-sweep { 100% { transform: translateX(100%); } }
+      `}</style>
+      <div className="p-3.5 md:p-5">
         {!result && (
           <div>
             <p className="mt-2 text-sm italic opacity-60">
@@ -1101,6 +1053,6 @@ export default function ContrailsTool() {
           </>
         )}
       </div>
-    </div>
+    </ToolShell>
   );
 }

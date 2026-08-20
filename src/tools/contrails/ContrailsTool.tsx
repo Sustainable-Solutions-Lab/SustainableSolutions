@@ -550,6 +550,21 @@ export default function ContrailsTool() {
 
   return (
     <div className="flex h-full flex-col lg:flex-row">
+      <style>{`
+        .contrail-shimmer { position: relative; overflow: hidden; }
+        .contrail-shimmer::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          transform: translateX(-100%);
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+          animation: contrail-shimmer-sweep 1.4s ease-in-out infinite;
+        }
+        [data-theme='dark'] .contrail-shimmer::after {
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent);
+        }
+        @keyframes contrail-shimmer-sweep { 100% { transform: translateX(100%); } }
+      `}</style>
       {/* ── Left rail ── */}
       <div className="flex w-full shrink-0 flex-col gap-2 overflow-y-auto border-b border-rule bg-paper-2 p-3.5 lg:w-[300px] lg:border-b-0 lg:border-r">
         <div>
@@ -780,7 +795,7 @@ export default function ContrailsTool() {
                   Searching bookable flights within ±{flexH || 24} h…
                 </span>
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="h-12 animate-pulse rounded-sm border border-rule bg-paper-2" />
+                  <div key={i} className="contrail-shimmer h-12 rounded-sm border border-rule bg-paper-2" />
                 ))}
                 <p className="text-xs italic opacity-60">
                   Live schedule search takes up to a minute — results appear here.

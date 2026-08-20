@@ -15,7 +15,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 type FlightLeg = {
   from: string; to: string; dep_local: string; carrier: string;
-  aircraft: string; percentile: number; t_co2e: number;
+  aircraft: string; percentile: number; t_co2e: number; kg_per_pax?: number;
   from_ll?: [number, number]; to_ll?: [number, number];
 };
 
@@ -32,6 +32,8 @@ type ScoreResult = {
   origin_ll?: [number, number];
   dest_ll?: [number, number];
   expected_co2e_t_per_flight: number;
+  expected_co2e_kg_per_pax: number;
+  pax_assumed?: number;
   est_duration_h?: number;
   aircraft_comparison?: { icao: string; share: number; percentile: number }[];
   error?: string;
@@ -40,7 +42,7 @@ type ScoreResult = {
 type FlightOption = {
   legs: FlightLeg[]; n_stops: number; dep_local: string; arr_local?: string;
   duration?: string; airline?: string; airline_logo?: string;
-  total_t_co2e: number; worst_leg_percentile: number;
+  total_t_co2e: number; total_kg_per_pax: number; worst_leg_percentile: number;
   aircraft_estimated: boolean; price_usd: number; currency?: string; date?: string;
 };
 
@@ -69,8 +71,8 @@ function durationMin(iso?: string): number | null {
   return Number(m[1] ?? 0) * 1440 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0);
 }
 
-function fmtT(t: number): string {
-  return `${t.toFixed(1)} t${t < 0 ? ' (cooling)' : ''}`;
+function fmtKg(kg: number): string {
+  return `${Math.round(kg)} kg${kg < 0 ? ' (cooling)' : ''}`;
 }
 
 function fmtMin(min: number): string {
@@ -550,21 +552,21 @@ export default function ContrailsTool() {
   );
   // only genuinely lower-warming options count as alternatives
   const betterPool = useMemo(
-    () => (result ? pool.filter((f) => f.total_t_co2e < result.expected_co2e_t_per_flight - 0.05) : []),
+    () => (result ? pool.filter((f) => f.total_kg_per_pax < result.expected_co2e_kg_per_pax - 0.5) : []),
     [pool, result],
   );
   const topAlts = useMemo(() => {
     const list = [...betterPool];
     if (result && sortMode === 'value' && origPrice !== null) {
       const value = (f: FlightOption) => {
-        const avoided = result.expected_co2e_t_per_flight - f.total_t_co2e;
+        const avoided = result.expected_co2e_kg_per_pax - f.total_kg_per_pax;
         if (avoided <= 0 || f.price_usd <= 0) return -Infinity;
         return avoided / Math.max(f.price_usd - origPrice, 1);
       };
       list.sort((a, b) => value(b) - value(a));
     } else if (result && sortMode === 'time' && baselineMin !== null) {
       const value = (f: FlightOption) => {
-        const avoided = result.expected_co2e_t_per_flight - f.total_t_co2e;
+        const avoided = result.expected_co2e_kg_per_pax - f.total_kg_per_pax;
         const dm = durationMin(f.duration);
         if (avoided <= 0 || dm === null) return -Infinity;
         return avoided / Math.max((dm - baselineMin) / 60, 0.1);
@@ -582,14 +584,14 @@ export default function ContrailsTool() {
     const out: Record<string, { top: string; sub: string }> = {};
     if (result) {
       out.main = {
-        top: `Your flight · ${fmtT(result.expected_co2e_t_per_flight)}`,
+        top: `Your flight · ${fmtKg(result.expected_co2e_kg_per_pax)}/pax`,
         sub: `${cityOf(result.origin)} → ${cityOf(result.dest)}`,
       };
     }
     topAlts.forEach((f, i) => {
       const chain = [f.legs[0].from, ...f.legs.map((l) => l.to)];
       out[`alt${i}`] = {
-        top: `${f.legs.map((l) => l.carrier).join('·')} · ${fmtT(f.total_t_co2e)}${f.price_usd > 0 ? ` · $${f.price_usd.toFixed(0)}` : ''}`,
+        top: `${f.legs.map((l) => l.carrier).join('·')} · ${fmtKg(f.total_kg_per_pax)}/pax${f.price_usd > 0 ? ` · $${f.price_usd.toFixed(0)}` : ''}`,
         sub: chain.map(cityOf).join(' → '),
       };
     });
@@ -757,11 +759,14 @@ export default function ContrailsTool() {
               <div>
                 <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Expected contrail warming</span>
                 <div className="text-2xl">
-                  {result.expected_co2e_t_per_flight.toFixed(1)}{' '}
+                  {Math.round(result.expected_co2e_kg_per_pax)}{' '}
                   <span className="text-base opacity-70">
-                    t CO₂-eq / flight{result.expected_co2e_t_per_flight < 0 ? ' (cooling)' : ''}
+                    kg CO₂-eq / passenger{result.expected_co2e_kg_per_pax < 0 ? ' (cooling)' : ''}
                   </span>
                 </div>
+                <span className="font-mono text-[11px] opacity-50">
+                  aircraft total ≈ {result.expected_co2e_t_per_flight.toFixed(1)} t · assumes {Math.round(result.pax_assumed ?? 140)} passengers
+                </span>
               </div>
               {result.flagged_top10 && (
                 <div className="rounded-sm border border-cardinal px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-cardinal">
@@ -842,7 +847,7 @@ export default function ContrailsTool() {
                 </span>
               </div>
               <span className="font-mono text-sm" style={{ color: pctColor(result.percentile) }}>
-                {fmtT(result.expected_co2e_t_per_flight)}
+                {fmtKg(result.expected_co2e_kg_per_pax)}
               </span>
               {origPrice !== null && <span className="ml-auto font-mono text-sm opacity-80">${origPrice.toFixed(0)}</span>}
               {resolvedLabel && <span className="text-[11px] italic opacity-60">{resolvedLabel.split(' · ')[1]}</span>}
@@ -900,7 +905,7 @@ export default function ContrailsTool() {
                   </select>
                 </div>
                 {topAlts.map((f, i) => {
-                  const dt = f.total_t_co2e - result.expected_co2e_t_per_flight;
+                  const dt = f.total_kg_per_pax - result.expected_co2e_kg_per_pax;
                   const altMin = durationMin(f.duration);
                   const dMin = altMin !== null && estMin !== null ? altMin - estMin : null;
                   const nextDay = f.arr_local && f.dep_local.slice(0, 10) !== f.arr_local.slice(0, 10);
@@ -933,11 +938,11 @@ export default function ContrailsTool() {
                         </span>
                       </div>
                       <span className="font-mono text-sm" style={{ color: pctColor(f.worst_leg_percentile) }}>
-                        {fmtT(f.total_t_co2e)}
+                        {fmtKg(f.total_kg_per_pax)}
                       </span>
                       {dt < 0 && (
                         <span className="font-mono text-xs" style={{ color: '#66C2A5' }}>
-                          {dt.toFixed(0)} t vs yours
+                          {dt.toFixed(0)} kg vs yours
                         </span>
                       )}
                       {f.price_usd > 0 && <span className="ml-auto font-mono text-sm opacity-80">${f.price_usd.toFixed(0)}</span>}
@@ -961,7 +966,8 @@ export default function ContrailsTool() {
             <p className="mt-5 max-w-[640px] text-sm italic opacity-70">
               A climatological expectation from schedule information alone — not a
               weather forecast. Percentile is relative to 22M scheduled commercial
-              flights flown in 2021. Estimates are per flight; connecting
+              flights flown in 2021. Warming figures are per passenger, using
+              typical passenger counts for each leg's aircraft; connecting
               itineraries sum their legs.
             </p>
           </>

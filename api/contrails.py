@@ -77,10 +77,11 @@ _calib = None
 _aircraft = None
 _routes = None
 _flightnos = None
+_pax = None
 
 
 def _load():
-    global _airports, _land, _booster, _calib, _aircraft, _routes, _flightnos
+    global _airports, _land, _booster, _calib, _aircraft, _routes, _flightnos, _pax
     if _booster is None:
         with open(ASSETS / "airports.json") as f:
             _airports = json.load(f)
@@ -98,6 +99,8 @@ def _load():
             _routes = json.load(f)
         fp = ASSETS / "flightnos.json"
         _flightnos = json.load(open(fp)) if fp.exists() else {}
+        pp = ASSETS / "pax_by_type.json"
+        _pax = json.load(open(pp)) if pp.exists() else {}
 
 
 def _night_score(olon, olat, dlon, dlat, dep_utc, arr_utc):
@@ -235,6 +238,10 @@ def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
         "expected_co2e_kg_per_km": round(kg_km, 3),
         "expected_co2e_t_per_flight": round(
             kg_km * feats["total_flight_distance_km"] / 1000.0, 2),
+        "pax_assumed": _pax.get(aircraft, 140),
+        "expected_co2e_kg_per_pax": round(
+            kg_km * feats["total_flight_distance_km"]
+            / _pax.get(aircraft, 140), 1),
         "est_duration_h": round(
             DURATION_INTERCEPT_H
             + DURATION_SLOPE_H_PER_KM * feats["total_flight_distance_km"], 2),
@@ -326,6 +333,7 @@ def bookable_flights(origin, dest, date_s):
         owner = off.get("owner") or {}
         legs = []
         total_t = 0.0
+        total_pax_kg = 0.0
         worst_pct = 0.0
         approx = False
         key_parts = []
@@ -356,8 +364,10 @@ def bookable_flights(origin, dest, date_s):
                 "carrier": carrier, "aircraft": icao_ac,
                 "percentile": body["percentile"],
                 "t_co2e": body["expected_co2e_t_per_flight"],
+                "kg_per_pax": body["expected_co2e_kg_per_pax"],
             })
             total_t += body["expected_co2e_t_per_flight"]
+            total_pax_kg += body["expected_co2e_kg_per_pax"]
             worst_pct = max(worst_pct, body["percentile"])
             key_parts.append(f"{carrier}@{dep_local}")
         if not ok or not legs:
@@ -374,6 +384,7 @@ def bookable_flights(origin, dest, date_s):
                 "airline": owner.get("name", ""),
                 "airline_logo": owner.get("logo_symbol_url", ""),
                 "total_t_co2e": round(total_t, 2),
+                "total_kg_per_pax": round(total_pax_kg, 1),
                 "worst_leg_percentile": worst_pct,
                 "aircraft_estimated": approx,
                 "price_usd": price,

@@ -12,6 +12,7 @@
  * remote <script>, but in-page fetch to our API is allowed).
  */
 (async () => {
+  var run = async (retries) => {
   try {
     var API = 'https://sustainablesolutions.vercel.app/api/contrails';
     if (!/\/travel\/flights/.test(location.pathname)) {
@@ -33,6 +34,9 @@
       }
     });
     if (!lis.length) {
+      // results render after page load (matters when run as an Arc Boost
+      // or userscript): keep polling quietly before giving up
+      if (retries > 0) { setTimeout(function () { run(retries - 1); }, 2000); return; }
       alert('No flight results found — run a search first, then click the bookmarklet again.');
       return;
     }
@@ -107,4 +111,6 @@
   } catch (e) {
     alert('Contrails bookmarklet error: ' + e);
   }
+  };
+  run(30);
 })();

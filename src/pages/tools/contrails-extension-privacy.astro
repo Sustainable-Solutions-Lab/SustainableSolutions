@@ -1,0 +1,44 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Contrail check extension — privacy policy"
+  description="Privacy policy for the Contrail check for Google Flights browser extension."
+  noindex
+>
+  <article class="mx-auto max-w-[680px] px-6 py-12">
+    <p class="font-mono text-[11px] uppercase tracking-wider text-ink-3">
+      Browser extension
+    </p>
+    <h1>Contrail check — privacy policy</h1>
+    <p>
+      The Contrail check for Google Flights extension adds predicted
+      contrail-warming estimates to flight search results. It is built and
+      operated by the Sustainable Solutions Lab at Stanford University.
+    </p>
+    <h2>What the extension does with data</h2>
+    <ul>
+      <li>
+        It reads the flight details displayed on Google Flights results
+        pages you visit (airports, dates, departure times, layovers) and
+        sends only those schedule details to our prediction service
+        (sustainablesolutions.vercel.app) to compute warming estimates.
+      </li>
+      <li>
+        It does not collect, store, or transmit any personal information,
+        account details, browsing history, or page content beyond the
+        flight schedule details above.
+      </li>
+      <li>
+        It sets no cookies and keeps no local data. Our service does not
+        log identifying information with prediction requests.
+      </li>
+      <li>It contains no ads, analytics, or third-party trackers.</li>
+    </ul>
+    <p>
+      Questions: contact the Sustainable Solutions Lab via
+      <a href="https://sustainablesolutions.stanford.edu">sustainablesolutions.stanford.edu</a>.
+    </p>
+  </article>
+</BaseLayout>

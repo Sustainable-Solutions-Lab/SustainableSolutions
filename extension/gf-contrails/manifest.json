@@ -5,9 +5,20 @@
   "description": "Predicted contrail warming badges on Google Flights results, from the Sustainable Solutions Lab schedule-only model.",
   "content_scripts": [
     {
-      "matches": ["https://www.google.com/travel/flights*", "https://www.google.com/travel/*"],
-      "js": ["auto.js", "gf-bookmarklet.js"],
+      "matches": [
+        "https://www.google.com/travel/flights*",
+        "https://www.google.com/travel/*"
+      ],
+      "js": [
+        "auto.js",
+        "gf-bookmarklet.js"
+      ],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
 }

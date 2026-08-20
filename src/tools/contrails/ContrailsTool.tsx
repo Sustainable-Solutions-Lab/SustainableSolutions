@@ -301,7 +301,7 @@ function FlightMap({
         const dimmed = hoverKey !== null && !hovered;
         return (
           <g key={`via-${i}`} pointerEvents="none" opacity={dimmed ? 0.35 : 1}>
-            <circle cx={px(v.ll[1])} cy={py(v.ll[0])} r={hovered ? 3.5 : 2.5} fill={v.color} stroke="var(--paper, #fff)" strokeWidth={1} />
+            <circle cx={px(v.ll[1])} cy={py(v.ll[0])} r={hovered ? 4.5 : 3.5} fill={v.color} stroke="var(--paper, #fff)" strokeWidth={1} />
             {hovered && (
               <text x={px(v.ll[1])} y={py(v.ll[0]) - 7} textAnchor="middle" fontSize={10} fontFamily="var(--font-mono, monospace)" fill="currentColor">
                 {v.code}
@@ -346,7 +346,7 @@ function FlightMap({
           { c: '#9E0142', from: 90, to: 100 },
         ];
         const bw = 150;
-        const bx0 = 10;
+        const bx0 = (W - bw) / 2;
         const by0 = H - 30;
         return (
           <g pointerEvents="none">

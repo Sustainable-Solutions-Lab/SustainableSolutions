@@ -551,11 +551,11 @@ export default function ContrailsTool() {
   return (
     <div className="flex h-full flex-col lg:flex-row">
       {/* ── Left rail ── */}
-      <div className="flex w-full shrink-0 flex-col gap-2.5 overflow-y-auto border-b border-rule bg-paper-2 p-3.5 lg:w-[300px] lg:border-b-0 lg:border-r">
+      <div className="flex w-full shrink-0 flex-col gap-2 overflow-y-auto border-b border-rule bg-paper-2 p-3.5 lg:w-[300px] lg:border-b-0 lg:border-r">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">Prototype · schedule-only model</p>
-          <h1 className="mt-0.5 font-serif text-lg leading-snug">Predicting contrails at booking</h1>
-          <p className="mt-1 text-xs leading-snug opacity-80">
+          <h1 className="font-serif text-lg leading-tight">Predicting contrails at booking</h1>
+          <p className="mt-0.5 text-xs leading-tight opacity-80">
             Predicts a flight's contrail climate impact from schedule
             information alone, and finds lower-warming bookable alternatives.
           </p>

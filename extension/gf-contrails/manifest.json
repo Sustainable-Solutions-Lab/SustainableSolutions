@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Contrail check for Google Flights",
+  "version": "0.1.0",
+  "description": "Predicted contrail warming badges on Google Flights results, from the Sustainable Solutions Lab schedule-only model.",
+  "content_scripts": [
+    {
+      "matches": ["https://www.google.com/travel/flights*", "https://www.google.com/travel/*"],
+      "js": ["auto.js", "gf-bookmarklet.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

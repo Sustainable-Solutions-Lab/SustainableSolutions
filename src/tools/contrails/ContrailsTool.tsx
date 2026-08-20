@@ -16,13 +16,15 @@ import ToolShell from '../_shell/ToolShell';
 import bmSource from './gf-bookmarklet.js?raw';
 
 // the Google Flights bookmarklet, packed into a javascript: URI at build time
-const BM_HREF = `javascript:${encodeURIComponent(
-  bmSource
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^\s*\/\/.*$/gm, '')
-    .replace(/\n\s*/g, ' ')
-    .trim(),
-)}`;
+const BM_COMPACT = bmSource
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/^\s*\/\/.*$/gm, '')
+  .replace(/\n\s*/g, ' ')
+  .trim();
+const BM_HREF = `javascript:${encodeURIComponent(BM_COMPACT)}`;
+// unencoded variant: valid as pasted-into-console code ("javascript:" parses
+// as a label) and as a bookmark URL
+const BM_CODE = `javascript:${BM_COMPACT}`;
 
 type FlightLeg = {
   from: string; to: string; dep_local: string; carrier: string;
@@ -837,7 +839,7 @@ export default function ContrailsTool() {
               type="button"
               className="cursor-pointer rounded-sm border border-rule bg-paper px-2 py-1.5 text-xs"
               onClick={(e) => {
-                void navigator.clipboard.writeText(BM_HREF);
+                void navigator.clipboard.writeText(BM_CODE);
                 const b = e.currentTarget;
                 b.textContent = 'copied';
                 setTimeout(() => (b.textContent = 'copy code'), 1500);
@@ -851,12 +853,13 @@ export default function ContrailsTool() {
               Arc / no bookmarks bar?
             </summary>
             <p className="mt-1 leading-snug">
-              Copy the code, pin any tab, right-click → Edit URL and paste
-              (the address bar itself strips javascript: links). Or paste it
-              as an Arc Boost on google.com/travel/flights for automatic
-              badges on every search. Aircraft is assumed per route —
-              Google doesn't list equipment — and connections estimate leg
-              times from listed layovers.
+              Quickest test: on a Google Flights results page, open the
+              console (⌘⌥J), paste the copied code and hit return (type
+              "allow pasting" first if the console asks). To install it:
+              pin any tab, right-click → Edit URL, and paste the code.
+              Aircraft is assumed per route — Google doesn't list
+              equipment — and connections estimate leg times from listed
+              layovers.
             </p>
           </details>
         </div>

@@ -239,7 +239,8 @@ function WorldIdle({ land }: { land: [number, number][][] | null }) {
   );
 }
 
-type MapArc = { key: string; segs: [number, number][][]; color: string; width: number };
+type ArcPart = { segs: [number, number][][]; bow: number };
+type MapArc = { key: string; parts: ArcPart[]; segs: [number, number][][]; color: string; width: number };
 
 function FlightMap({
   main,
@@ -260,15 +261,32 @@ function FlightMap({
 }) {
   const arcs: MapArc[] = [];
   const vias: { key: string; ll: [number, number]; code: string; color: string }[] = [];
+  // Same-route arcs would overlay exactly; give duplicates a small
+  // screen-space bow (alternating sides, growing per duplicate) so each
+  // remains individually hoverable. The selected flight keeps the true
+  // great circle.
+  const seen = new Map<string, number>();
+  const bowFor = (from: string, to: string) => {
+    const k = from < to ? `${from}>${to}` : `${to}>${from}`;
+    const c = seen.get(k) ?? 0;
+    seen.set(k, c + 1);
+    return c === 0 ? 0 : (c % 2 ? 1 : -1) * Math.ceil(c / 2) * 8;
+  };
+  bowFor(main.codes[0], main.codes[1]);          // main claims the true arc
   for (const alt of alts) {
-    const segs: [number, number][][] = [];
+    const parts: ArcPart[] = [];
     for (const [li, l] of alt.legs.entries()) {
-      if (l.from_ll && l.to_ll) segs.push(...gcPoints(l.from_ll, l.to_ll));
+      if (l.from_ll && l.to_ll) {
+        parts.push({ segs: gcPoints(l.from_ll, l.to_ll), bow: bowFor(l.from, l.to) });
+      }
       if (li > 0 && l.from_ll) vias.push({ key: alt.key, ll: l.from_ll, code: l.from, color: alt.color });
     }
-    if (segs.length) arcs.push({ key: alt.key, segs, color: alt.color, width: 1.2 });
+    if (parts.length) {
+      arcs.push({ key: alt.key, parts, segs: parts.flatMap((pp) => pp.segs), color: alt.color, width: 1.2 });
+    }
   }
-  arcs.push({ key: 'main', segs: gcPoints(main.from, main.to), color: mainColor, width: 4.2 });
+  arcs.push({ key: 'main', parts: [{ segs: gcPoints(main.from, main.to), bow: 0 }],
+              segs: gcPoints(main.from, main.to), color: mainColor, width: 4.2 });
 
   const pts = arcs.flatMap((a) => a.segs.flat());
   let latMin = Math.min(...pts.map((p) => p[0])) - 5;
@@ -297,6 +315,22 @@ function FlightMap({
   const px = (lon: number) => ((lon - lonMin) / (lonMax - lonMin)) * W;
   const py = (lat: number) => ((latMax - lat) / (latMax - latMin)) * H;
   const path = (sg: [number, number][]) => sg.map((p, i) => `${i ? 'L' : 'M'}${px(p[1]).toFixed(1)},${py(p[0]).toFixed(1)}`).join(' ');
+  const pathBow = (sg: [number, number][], bow: number) => {
+    const pts2 = sg.map((p) => [px(p[1]), py(p[0])]);
+    if (!bow || pts2.length < 3) return path(sg);
+    const n = pts2.length;
+    const out: [number, number][] = [];
+    for (let i = 0; i < n; i++) {
+      const a = pts2[Math.max(0, i - 1)];
+      const b = pts2[Math.min(n - 1, i + 1)];
+      const dx = b[0] - a[0];
+      const dy = b[1] - a[1];
+      const L = Math.hypot(dx, dy) || 1;
+      const o = bow * Math.sin((Math.PI * i) / (n - 1));
+      out.push([pts2[i][0] - (dy / L) * o, pts2[i][1] + (dx / L) * o]);
+    }
+    return out.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  };
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Route map ${main.codes[0]} to ${main.codes[1]}`} style={{ width: '100%', height: 'auto' }}>
@@ -305,31 +339,34 @@ function FlightMap({
         <path key={i} d={path(poly.map(([x, y]) => [y, x] as [number, number]))} fill="var(--paper-3, #eaeae2)" stroke="var(--rule, #d8d8ce)" strokeWidth={0.5} />
       ))}
       {arcs.map((a) =>
-        a.segs.map((sg, j) => {
-          const hovered = hoverKey === a.key;
-          const dimmed = hoverKey !== null && !hovered;
-          return (
-            <g key={`${a.key}-${j}`}>
-              <path
-                d={path(sg)}
-                fill="none"
-                stroke={a.color}
-                strokeWidth={hovered ? a.width + 1.8 : a.width}
-                strokeLinecap="round"
-                opacity={dimmed ? 0.35 : 1}
-              />
-              <path
-                d={path(sg)}
-                fill="none"
-                stroke="transparent"
-                strokeWidth={12}
-                style={{ cursor: 'pointer' }}
-                onMouseEnter={() => onHover(a.key)}
-                onMouseLeave={() => onHover(null)}
-              />
-            </g>
-          );
-        }),
+        a.parts.flatMap((part, pi) =>
+          part.segs.map((sg, j) => {
+            const hovered = hoverKey === a.key;
+            const dimmed = hoverKey !== null && !hovered;
+            const d = pathBow(sg, part.bow);
+            return (
+              <g key={`${a.key}-${pi}-${j}`}>
+                <path
+                  d={d}
+                  fill="none"
+                  stroke={a.color}
+                  strokeWidth={hovered ? a.width + 1.8 : a.width}
+                  strokeLinecap="round"
+                  opacity={dimmed ? 0.35 : 1}
+                />
+                <path
+                  d={d}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={12}
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => onHover(a.key)}
+                  onMouseLeave={() => onHover(null)}
+                />
+              </g>
+            );
+          }),
+        ),
       )}
       {vias.map((v, i) => {
         const hovered = hoverKey === v.key;

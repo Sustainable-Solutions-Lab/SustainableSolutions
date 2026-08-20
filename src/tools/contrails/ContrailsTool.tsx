@@ -992,7 +992,15 @@ export default function ContrailsTool() {
                       <div className="ml-auto flex flex-col items-end gap-0.5 text-right font-mono text-[11px]">
                         <span style={{ color: '#66C2A5' }}>{dt.toFixed(0)} kg CO₂e vs yours</span>
                         {Number.isFinite(dDep) && <span className="opacity-75">{fmtDelta(dDep, 'dep')}</span>}
-                        {dDur !== null && <span className="opacity-75">{fmtDelta(dDur, 'dur')}</span>}
+                        {dDur !== null && (
+                          <span className="opacity-75">
+                            {fmtDelta(dDur, 'dur')}
+                            {f.n_stops > 0 ? ` (+${f.n_stops} stop${f.n_stops > 1 ? 's' : ''})` : ''}
+                          </span>
+                        )}
+                        {dDur === null && f.n_stops > 0 && (
+                          <span className="opacity-75">+{f.n_stops} stop{f.n_stops > 1 ? 's' : ''}</span>
+                        )}
                         <span className="opacity-75">
                           {altAc === result.aircraft ? `same aircraft (${altAc})` : `${altAc} vs your ${result.aircraft}`}
                           {f.aircraft_estimated ? '*' : ''}

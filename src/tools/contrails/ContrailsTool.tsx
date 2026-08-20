@@ -548,8 +548,13 @@ export default function ContrailsTool() {
     () => (flights ?? []).filter((f) => !nonstopOnly || f.n_stops === 0),
     [flights, nonstopOnly],
   );
+  // only genuinely lower-warming options count as alternatives
+  const betterPool = useMemo(
+    () => (result ? pool.filter((f) => f.total_t_co2e < result.expected_co2e_t_per_flight - 0.05) : []),
+    [pool, result],
+  );
   const topAlts = useMemo(() => {
-    const list = [...pool];
+    const list = [...betterPool];
     if (result && sortMode === 'value' && origPrice !== null) {
       const value = (f: FlightOption) => {
         const avoided = result.expected_co2e_t_per_flight - f.total_t_co2e;
@@ -567,7 +572,7 @@ export default function ContrailsTool() {
       list.sort((a, b) => value(b) - value(a));
     }
     return list.slice(0, 5);
-  }, [pool, sortMode, result, origPrice, baselineMin]);
+  }, [betterPool, sortMode, result, origPrice, baselineMin]);
   const cityOf = useMemo(() => {
     const m = new Map<string, string>();
     for (const [iata, city] of airports) m.set(iata, city);
@@ -853,6 +858,14 @@ export default function ContrailsTool() {
                 alternatives only" to see connecting options.
               </p>
             )}
+            {result && pool.length > 0 && betterPool.length === 0 && (
+              <p className="mt-3 max-w-[640px] rounded-sm border px-3 py-2 text-sm" style={{ borderColor: '#66C2A5' }}>
+                Good news — your chosen flight is predicted to be the
+                lowest-warming option within ±{flexH || 24} h
+                {nonstopOnly ? ' among nonstops' : ''} ({pool.length}{' '}
+                alternative{pool.length > 1 ? 's' : ''} checked).
+              </p>
+            )}
 
             {altsBusy && (
               <div className="mt-3 flex flex-col gap-2" aria-live="polite">
@@ -932,9 +945,9 @@ export default function ContrailsTool() {
                     </div>
                   );
                 })}
-                {pool.length > 5 && (
+                {betterPool.length > 5 && (
                   <p className="text-xs opacity-60">
-                    {pool.length - 5} more options in this window — the five shown
+                    {betterPool.length - 5} more lower-warming options in this window — the five shown
                     {sortMode === 'warming'
                       ? ' are predicted to produce the least contrail warming.'
                       : sortMode === 'value'

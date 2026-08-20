@@ -298,6 +298,7 @@ def bookable_flights(origin, dest, date_s):
     results = {}
     for off in offers:
         sl = off["slices"][0]
+        owner = off.get("owner") or {}
         legs = []
         total_t = 0.0
         worst_pct = 0.0
@@ -339,9 +340,14 @@ def bookable_flights(origin, dest, date_s):
         key = "|".join(key_parts)
         price = float(off.get("total_amount") or 0)
         if key not in results or (0 < price < results[key]["price_usd"]):
+            arr_local = (sl["segments"][-1].get("arriving_at") or "")[:16]
             results[key] = {
                 "legs": legs, "n_stops": len(legs) - 1,
                 "dep_local": legs[0]["dep_local"],
+                "arr_local": arr_local,
+                "duration": sl.get("duration", ""),
+                "airline": owner.get("name", ""),
+                "airline_logo": owner.get("logo_symbol_url", ""),
                 "total_t_co2e": round(total_t, 2),
                 "worst_leg_percentile": worst_pct,
                 "aircraft_estimated": approx,

@@ -38,10 +38,17 @@ type FlightLeg = {
   from_ll?: [number, number]; to_ll?: [number, number];
 };
 type FlightOption = {
-  legs: FlightLeg[]; n_stops: number; dep_local: string;
+  legs: FlightLeg[]; n_stops: number; dep_local: string; arr_local?: string;
+  duration?: string; airline?: string; airline_logo?: string;
   total_t_co2e: number; worst_leg_percentile: number;
-  aircraft_estimated: boolean; price_usd: number; date?: string;
+  aircraft_estimated: boolean; price_usd: number; currency?: string; date?: string;
 };
+
+function fmtDuration(iso?: string): string {
+  const m = iso?.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!m) return '';
+  return `${m[1] ?? 0}h${m[2] ? ` ${m[2]}m` : ''}`;
+}
 
 type RouteInfo = {
   known: boolean;
@@ -266,7 +273,7 @@ export default function ContrailsTool() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flights, setFlights] = useState<FlightOption[] | null>(null);
-  const [flexH, setFlexH] = useState('');
+  const [flexH, setFlexH] = useState('24');
   const [land, setLand] = useState<[number, number][][] | null>(null);
   const [flightsState, setFlightsState] = useState<'idle' | 'busy' | 'unconfigured' | 'error'>('idle');
 
@@ -324,6 +331,7 @@ export default function ContrailsTool() {
       const body: ScoreResult = await r.json();
       if (!r.ok || body.error) throw new Error(body.error ?? `HTTP ${r.status}`);
       setResult(body);
+      void findFlights();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setResult(null);
@@ -520,34 +528,50 @@ export default function ContrailsTool() {
               </p>
             )}
             {flights && flights.length > 0 && (
-              <ul className="mt-3 divide-y divide-rule">
-                {flights.map((f, i) => {
-                  const worstTotal = Math.max(...flights.map((g) => g.total_t_co2e));
-                  const saving = worstTotal > 0 ? Math.round(100 * (1 - f.total_t_co2e / worstTotal)) : 0;
+              <div className="mt-3 flex flex-col gap-2">
+                {flights.slice(0, 5).map((f, i) => {
+                  const dt = result ? f.total_t_co2e - result.expected_co2e_t_per_flight : null;
+                  const nextDay = f.arr_local && f.dep_local.slice(0, 10) !== f.arr_local.slice(0, 10);
                   return (
-                    <li key={i} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2 text-sm">
-                      <span className="font-mono">{f.date ? `${f.date.slice(5)} ` : ''}{f.dep_local.slice(11)}</span>
-                      <span className="font-mono text-xs opacity-70">
-                        {f.legs.map((l) => `${l.carrier} ${l.from}→${l.to} (${l.aircraft})`).join(' · ')}
+                    <div key={i} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-sm border border-rule bg-paper-2 px-3 py-2">
+                      {f.airline_logo ? (
+                        <img src={f.airline_logo} alt={f.airline ?? ''} width={26} height={26} loading="lazy" />
+                      ) : (
+                        <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(f.worst_leg_percentile) }} />
+                      )}
+                      <div className="flex min-w-[200px] flex-col">
+                        <span className="font-mono text-sm font-bold">
+                          {f.legs.map((l) => l.carrier).join(' · ')}
+                          <span className="ml-2 font-normal opacity-70">
+                            {f.legs[0].from}{f.legs.slice(1).map((l) => ` → ${l.from}`).join('')} → {f.legs[f.legs.length - 1].to}
+                          </span>
+                        </span>
+                        <span className="font-mono text-xs opacity-70">
+                          {f.date ?? f.dep_local.slice(0, 10)} · {f.dep_local.slice(11)}
+                          {f.arr_local ? ` → ${f.arr_local.slice(11)}${nextDay ? ' +1' : ''}` : ''}
+                          {f.duration ? ` · ${fmtDuration(f.duration)}` : ''}
+                          {f.n_stops > 0 ? ` · ${f.n_stops} stop${f.n_stops > 1 ? 's' : ''}` : ' · nonstop'}
+                        </span>
+                      </div>
+                      <span className="font-mono text-sm" style={{ color: pctColor(f.worst_leg_percentile) }}>
+                        {f.total_t_co2e.toFixed(1)} t
                       </span>
-                      <span className="font-mono" style={{ color: pctColor(f.worst_leg_percentile) }}>
-                        {f.total_t_co2e.toFixed(1)} t · p{f.worst_leg_percentile.toFixed(0)}
-                      </span>
-                      {i === 0 && flights.length > 1 && (
-                        <span className="rounded-sm border border-rule px-1.5 font-mono text-[11px] uppercase tracking-wider" style={{ color: '#66C2A5' }}>
-                          lowest — {saving}% less than worst option
+                      {dt !== null && dt < 0 && (
+                        <span className="font-mono text-xs" style={{ color: '#66C2A5' }}>
+                          {dt.toFixed(0)} t vs yours
                         </span>
                       )}
-                      {f.aircraft_estimated && (
-                        <span className="text-[11px] italic opacity-60">aircraft estimated</span>
-                      )}
-                      {f.price_usd > 0 && (
-                        <span className="text-xs opacity-60">${f.price_usd.toFixed(0)}</span>
-                      )}
-                    </li>
+                      {f.price_usd > 0 && <span className="ml-auto font-mono text-sm opacity-80">${f.price_usd.toFixed(0)}</span>}
+                      {f.aircraft_estimated && <span className="text-[10px] italic opacity-50">ac est.</span>}
+                    </div>
                   );
                 })}
-              </ul>
+                {flights.length > 5 && (
+                  <p className="text-xs opacity-60">
+                    {flights.length - 5} more options in this window — the five shown produce the least contrail warming.
+                  </p>
+                )}
+              </div>
             )}
           </div>
 

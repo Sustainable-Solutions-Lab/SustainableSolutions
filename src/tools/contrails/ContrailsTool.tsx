@@ -13,6 +13,16 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ToolShell from '../_shell/ToolShell';
+import bmSource from './gf-bookmarklet.js?raw';
+
+// the Google Flights bookmarklet, packed into a javascript: URI at build time
+const BM_HREF = `javascript:${encodeURIComponent(
+  bmSource
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+    .replace(/\n\s*/g, ' ')
+    .trim(),
+)}`;
 
 type FlightLeg = {
   from: string; to: string; dep_local: string; carrier: string;
@@ -806,6 +816,50 @@ export default function ContrailsTool() {
           </p>
         )}
         {error && <p className="font-mono text-xs text-cardinal">{error}</p>}
+
+        <div className="mt-3 border-t border-rule pt-3">
+          <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">
+            Google Flights bookmarklet
+          </p>
+          <p className="mt-1 text-xs leading-snug opacity-80">
+            Score every result on a Google Flights page with this model.
+            Drag the button to your bookmarks bar, then click it on any
+            results page.
+          </p>
+          <p className="mt-2 flex items-center gap-2">
+            <a
+              href={BM_HREF}
+              className="rounded-sm border border-rule-strong bg-paper-3 px-3 py-1.5 text-sm font-bold no-underline"
+            >
+              ☁ Contrail check
+            </a>
+            <button
+              type="button"
+              className="cursor-pointer rounded-sm border border-rule bg-paper px-2 py-1.5 text-xs"
+              onClick={(e) => {
+                void navigator.clipboard.writeText(BM_HREF);
+                const b = e.currentTarget;
+                b.textContent = 'copied';
+                setTimeout(() => (b.textContent = 'copy code'), 1500);
+              }}
+            >
+              copy code
+            </button>
+          </p>
+          <details className="mt-2 text-xs opacity-80">
+            <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-wider opacity-70">
+              Arc / no bookmarks bar?
+            </summary>
+            <p className="mt-1 leading-snug">
+              Copy the code, pin any tab, right-click → Edit URL and paste
+              (the address bar itself strips javascript: links). Or paste it
+              as an Arc Boost on google.com/travel/flights for automatic
+              badges on every search. Aircraft is assumed per route —
+              Google doesn't list equipment — and connections estimate leg
+              times from listed layovers.
+            </p>
+          </details>
+        </div>
         </>
       }
     >

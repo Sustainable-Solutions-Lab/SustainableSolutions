@@ -90,7 +90,7 @@
       if (pop) return pop;
       pop = document.createElement('div');
       pop.id = 'ssl-contrail-pop';
-      pop.style.cssText = 'position:fixed;display:none;z-index:99999;max-width:340px;background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:14px 16px;font:400 13px/1.5 Roboto,Arial,sans-serif;text-align:left;';
+      pop.style.cssText = 'position:fixed;display:none;z-index:99999;max-width:300px;background:#fff;color:#3c4043;border-radius:8px;box-shadow:0 1px 3px rgba(60,64,67,.3),0 4px 8px 3px rgba(60,64,67,.15);padding:12px 16px;font:400 12px/1.5 Roboto,Arial,sans-serif;text-align:left;';
       document.body.appendChild(pop);
       document.addEventListener('click', function (ev) {
         if (!pop.contains(ev.target) && !(ev.target.closest && ev.target.closest('.ssl-contrail-info'))) pop.style.display = 'none';
@@ -134,11 +134,11 @@
         var lr = (sub || leaf).getBoundingClientRect();
         var lf = leaf.getBoundingClientRect();
         var br = li.getBoundingClientRect();
-        line.style.cssText = 'position:absolute;z-index:99;white-space:nowrap;' +
+        line.style.cssText = 'position:absolute;z-index:2;white-space:nowrap;' +
           'left:' + Math.round(lf.left - br.left) + 'px;' +
           'top:' + Math.round(lr.bottom - br.top + 1) + 'px;';
       } else {
-        line.style.cssText = 'position:absolute;z-index:99;white-space:nowrap;right:14px;bottom:8px;';
+        line.style.cssText = 'position:absolute;z-index:2;white-space:nowrap;right:14px;bottom:8px;';
       }
       var kg = Math.round(res.kg_pax);
       var pc = (!res.error && gkg) ? Math.round((100 * res.kg_pax) / gkg) : null;
@@ -177,38 +177,28 @@
           return e;
         };
         pop.textContent = '';
-        pop.appendChild(mk('div', 'font-weight:500;margin-bottom:6px;color:#202124', 'Predicted contrail warming'));
-        var head = mk('div', 'margin-bottom:8px');
         if (res.error) {
-          head.textContent = 'No prediction for this itinerary (' + res.error + ').';
+          pop.appendChild(mk('div', 'font:500 14px Roboto,Arial,sans-serif;color:#202124;margin-bottom:4px;',
+            'No contrail prediction'));
+          pop.appendChild(mk('div', 'color:#5f6368;margin-bottom:8px;', res.error));
         } else {
-          head.appendChild(document.createTextNode(
-            kg > 0 ? 'Contrails from this itinerary are predicted to add '
-                   : 'Contrails from this itinerary are predicted to produce a net cooling of '));
-          head.appendChild(mk('b', '', Math.abs(kg) + ' kg CO₂e'));
-          head.appendChild(document.createTextNode(
-            (kg > 0 ? ' of warming' : '') + ' per passenger' +
-            (pc !== null ? ' — ' + (pc > 0 ? '+' : '') + pc + '% on top of the CO₂ estimate shown.' : '.')));
+          pop.appendChild(mk('div', 'font:500 14px Roboto,Arial,sans-serif;color:#202124;margin-bottom:2px;',
+            (kg > 0 ? '+' : '') + kg + ' kg CO\u2082e per passenger' + (kg < 0 ? ' (net cooling)' : '')));
+          pop.appendChild(mk('div', 'color:#5f6368;margin-bottom:8px;',
+            Math.round(res.p) + '/100 contrail-warming percentile'));
         }
-        pop.appendChild(head);
-        if (!res.error) {
-          pop.appendChild(mk('div', 'margin-bottom:8px',
-            'Condensation trails can warm the climate as much as aviation\u2019s CO\u2082. ' +
-            'This estimate comes from a schedule-only model (route, timing, season, aircraft) trained on ' +
-            '22 million simulated flights; this itinerary ranks warmer than ' + Math.round(res.p) +
-            '% of 2021 flights. ' + (res.ac_estimated ? 'Aircraft assumed: ' : 'Aircraft: ') + res.ac + '.'));
-        }
-        var a = mk('a', 'color:#1a73e8;text-decoration:none', 'Compare lower-warming flights \u2192');
+        var att = mk('div', 'color:#5f6368;');
+        att.appendChild(document.createTextNode('Prediction from the '));
+        var a = mk('a', 'color:#1a73e8;text-decoration:none;', 'Stanford Sustainable Solutions Lab');
         a.href = 'https://sustainablesolutions.vercel.app/tools/contrails';
         a.target = '_blank';
         a.rel = 'noopener';
-        pop.appendChild(a);
-        pop.appendChild(mk('div', 'margin-top:8px;color:#80868b;font-size:11px',
-          'Climatological estimate, not a weather forecast \u00b7 Sustainable Solutions Lab, Stanford'));
+        att.appendChild(a);
+        pop.appendChild(att);
         var rct = info.getBoundingClientRect();
         pop.style.display = 'block';
-        pop.style.left = Math.max(8, Math.min(rct.left - 40, window.innerWidth - 360)) + 'px';
-        pop.style.top = Math.min(rct.bottom + 8, window.innerHeight - 260) + 'px';
+        pop.style.left = Math.max(8, Math.min(rct.left - 8, window.innerWidth - 310)) + 'px';
+        pop.style.top = Math.min(rct.bottom + 6, window.innerHeight - 140) + 'px';
       }, true);
       line.appendChild(span);
       line.appendChild(info);

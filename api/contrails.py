@@ -199,8 +199,11 @@ def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
     pct = _percentile(pred)
     b = min(99, int(pct))
     kg_km = _calib["bin_mean_co2e_kg_per_km"][b]
+    o_ap, d_ap = _airports[origin], _airports[dest]
     out = {
         "origin": origin, "dest": dest,
+        "origin_ll": [round(o_ap["lat"], 3), round(o_ap["lon"], 3)],
+        "dest_ll": [round(d_ap["lat"], 3), round(d_ap["lon"], 3)],
         "route_in_corpus": f"{origin}>{dest}" in _routes,
         "dep_utc": dep_utc.isoformat(), "aircraft": aircraft,
         "distance_km": round(feats["total_flight_distance_km"], 1),
@@ -323,6 +326,7 @@ def bookable_flights(origin, dest, date_s):
                 break
             legs.append({
                 "from": o, "to": d, "dep_local": dep_local,
+                "from_ll": body["origin_ll"], "to_ll": body["dest_ll"],
                 "carrier": carrier, "aircraft": icao_ac,
                 "percentile": body["percentile"],
                 "t_co2e": body["expected_co2e_t_per_flight"],

@@ -350,29 +350,37 @@ def bookable_flights(origin, dest, date_s):
     return out, 200
 
 
-def advisor_flights(origin, dest, date_s, flex_days):
-    """Pool bookable itineraries across a flexibility window of dates,
-    sorted by total contrail CO2e. flex_days capped at 3 (7 searches);
-    per-date results are cached, so repeat queries are free."""
-    from datetime import date as _date, timedelta as _td
-    flex = max(0, min(3, flex_days))
-    d0 = _date.fromisoformat(date_s)
+def advisor_flights(origin, dest, date_s, time_s, flex_h):
+    """Pool bookable itineraries within ±flex_h HOURS of the selected
+    local departure, sorted by total contrail CO2e. flex_h capped at 72
+    (window spans at most 7 date-searches; per-date results cached)."""
+    from datetime import datetime as _dt, timedelta as _td
+    flex_h = max(1, min(72, flex_h))
+    sel = _dt.fromisoformat(f"{date_s}T{time_s}")
+    lo, hi = sel - _td(hours=flex_h), sel + _td(hours=flex_h)
     all_flights = []
     searched, failed = [], []
-    for off in range(-flex, flex + 1):
-        ds = (d0 + _td(days=off)).isoformat()
+    d = lo.date()
+    while d <= hi.date():
+        ds = d.isoformat()
         body, code = bookable_flights(origin, dest, ds)
         if code != 200:
             if body.get("error") == "flight_search_not_configured":
                 return body, 503
             failed.append(ds)
-            continue
-        searched.append(ds)
-        for f in body["flights"]:
-            all_flights.append(dict(f, date=f["dep_local"][:10]))
+        else:
+            searched.append(ds)
+            for f in body["flights"]:
+                try:
+                    dep = _dt.fromisoformat(f["dep_local"])
+                except ValueError:
+                    continue
+                if lo <= dep <= hi:
+                    all_flights.append(dict(f, date=f["dep_local"][:10]))
+        d += _td(days=1)
     all_flights.sort(key=lambda f: f["total_t_co2e"])
     return {"flights": all_flights, "searched_dates": searched,
-            "failed_dates": failed}, 200
+            "failed_dates": failed, "window_h": flex_h}, 200
 
 
 class handler(BaseHTTPRequestHandler):
@@ -388,11 +396,12 @@ class handler(BaseHTTPRequestHandler):
                 }, 200
             elif q.get("flights"):
                 o, d = q.get("origin", "").upper(), q.get("dest", "").upper()
-                flex = int(q.get("flex", "0") or 0)
+                flex_h = int(float(q.get("flex_h", "0") or 0))
                 if o not in _airports or d not in _airports:
                     body, code = {"error": "unknown airport"}, 400
-                elif flex > 0:
-                    body, code = advisor_flights(o, d, q.get("date", ""), flex)
+                elif flex_h > 0:
+                    body, code = advisor_flights(o, d, q.get("date", ""),
+                                                 q.get("time", "12:00"), flex_h)
                 else:
                     body, code = bookable_flights(o, d, q.get("date", ""))
             elif q.get("route"):

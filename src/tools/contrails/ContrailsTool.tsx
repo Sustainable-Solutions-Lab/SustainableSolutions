@@ -45,9 +45,10 @@ type FlightOption = {
 };
 
 function fmtDuration(iso?: string): string {
-  const m = iso?.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  const m = iso?.match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/);
   if (!m) return '';
-  return `${m[1] ?? 0}h${m[2] ? ` ${m[2]}m` : ''}`;
+  const h = Number(m[1] ?? 0) * 24 + Number(m[2] ?? 0);
+  return `${h}h${m[3] ? ` ${m[3]}m` : ''}`;
 }
 
 type RouteInfo = {

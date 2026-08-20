@@ -92,19 +92,25 @@ export default function ToolShell({
 
   const bg = surface === 'paper' ? 'bg-paper' : 'bg-paper-2';
 
-  const titleBlock = (
+  // Two sizes on purpose: the desktop rail uses the lab's page-title
+  // pattern (matches firemap's sidebar); the mobile header stays compact.
+  const titleBlock = (compact: boolean) => (
     <>
       {eyebrow && (
         <p
           className="m-0 font-mono uppercase text-ink-3"
-          style={{ fontSize: 10, letterSpacing: '0.12em' }}
+          style={{ fontSize: compact ? 10 : 11, letterSpacing: '0.12em' }}
         >
           {eyebrow}
         </p>
       )}
       <h1
-        className="truncate font-serif text-ink"
-        style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.15, margin: 0 }}
+        className={`font-serif text-ink ${compact ? 'truncate' : ''}`}
+        style={
+          compact
+            ? { fontSize: 19, fontWeight: 600, lineHeight: 1.15, margin: 0 }
+            : { fontSize: 32, fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.01em', margin: '4px 0 0' }
+        }
       >
         {title}
       </h1>
@@ -119,7 +125,7 @@ export default function ToolShell({
         className={`relative z-30 flex shrink-0 items-center gap-3 border-b border-rule px-3.5 py-2 md:hidden ${bg}`}
       >
         <div className="min-w-0 flex-1">
-          {titleBlock}
+          {titleBlock(true)}
           {summary && headerSummary && (
             <p className="m-0 truncate text-ink-2" style={{ fontSize: 12, lineHeight: 1.3 }}>
               {summary}
@@ -146,9 +152,9 @@ export default function ToolShell({
             style={{ width: railWidth }}
           >
             <div>
-              {titleBlock}
+              {titleBlock(false)}
               {summary && (
-                <p className="m-0 mt-0.5 text-ink-2" style={{ fontSize: 12, lineHeight: 1.35 }}>
+                <p className="m-0 mt-1 text-ink-2" style={{ fontSize: 13, lineHeight: 1.45 }}>
                   {summary}
                 </p>
               )}

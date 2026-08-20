@@ -208,6 +208,27 @@ function gcPoints(a: [number, number], b: [number, number], n = 72): [number, nu
   return segs.filter((sg) => sg.length > 1);
 }
 
+function WorldIdle({ land }: { land: [number, number][][] | null }) {
+  const W = 680;
+  const H = 260;
+  const px = (lon: number) => ((lon + 180) / 360) * W;
+  const py = (lat: number) => ((78 - lat) / (78 + 60)) * H;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="World map" style={{ width: '100%', height: 'auto' }}>
+      <rect x={0} y={0} width={W} height={H} fill="var(--paper-2, #f6f6f2)" />
+      {land && land.map((poly, i) => (
+        <path
+          key={i}
+          d={poly.map(([lat, lon], j) => `${j ? 'L' : 'M'}${px(lon).toFixed(1)},${py(lat).toFixed(1)}`).join(' ')}
+          fill="var(--paper-3, #eaeae2)"
+          stroke="var(--rule, #d8d8ce)"
+          strokeWidth={0.5}
+        />
+      ))}
+    </svg>
+  );
+}
+
 type MapArc = { key: string; segs: [number, number][][]; color: string; width: number };
 
 function FlightMap({
@@ -705,12 +726,17 @@ export default function ContrailsTool() {
 
       {/* ── Right column ── */}
       <div className="min-w-0 flex-1 overflow-y-auto p-5">
-        {!result && !busy && (
-          <p className="mt-2 text-sm italic opacity-60">
-            Choose a flight on the left and assess it to see its predicted
-            contrail warming, the aircraft lever on its route, and
-            lower-warming bookable alternatives.
-          </p>
+        {!result && (
+          <div>
+            <p className="mt-2 text-sm italic opacity-60">
+              Choose a flight on the left and assess it to see its predicted
+              contrail warming, the aircraft lever on its route, and
+              lower-warming bookable alternatives.
+            </p>
+            <div className="mt-4">
+              <WorldIdle land={land} />
+            </div>
+          </div>
         )}
 
         {result && (
@@ -857,7 +883,7 @@ export default function ContrailsTool() {
                     <option value="value" disabled={origPrice === null}>
                       warming avoided per ${origPrice === null ? ' (needs your fare)' : ''}
                     </option>
-                    <option value="time">warming avoided per added hour</option>
+                    <option value="time">warming avoided per added travel time</option>
                   </select>
                 </div>
                 {topAlts.map((f, i) => {
@@ -913,7 +939,7 @@ export default function ContrailsTool() {
                       ? ' are predicted to produce the least contrail warming.'
                       : sortMode === 'value'
                         ? ' are predicted to avoid the most warming per dollar above your fare.'
-                        : ' are predicted to avoid the most warming per added hour of travel.'}
+                        : ' are predicted to avoid the most warming per hour of additional travel time.'}
                   </p>
                 )}
               </div>

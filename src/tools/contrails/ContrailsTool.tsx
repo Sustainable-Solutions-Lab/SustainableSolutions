@@ -948,14 +948,14 @@ export default function ContrailsTool() {
             )}
             {topAlts.length > 0 && (
               <div className="mt-2 flex flex-col gap-2">
-                <div className="flex items-baseline gap-3">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
                     Alternatives within ±{flexH || 24} h
                   </span>
                   <select
                     value={sortMode}
                     onChange={(e) => setSortMode(e.target.value as 'warming' | 'value' | 'time')}
-                    className="rounded-sm border border-rule bg-paper-2 px-1.5 py-0.5 font-mono text-[11px]"
+                    className="max-w-full rounded-sm border border-rule bg-paper-2 px-1.5 py-0.5 font-mono text-[11px]"
                     aria-label="Sort alternatives"
                   >
                     <option value="warming">least warming</option>

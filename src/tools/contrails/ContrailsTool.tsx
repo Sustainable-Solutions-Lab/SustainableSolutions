@@ -71,6 +71,9 @@ type AirportRow = [string, string, string, string];
 const API = '/api/contrails';
 // bump when the API response schema changes: busts stale CDN-cached responses
 const SV = 'sv=3';
+// Chrome Web Store listing URL — set once the listing is live; null shows
+// a pending note instead of the install link
+const CWS_URL: string | null = null;
 
 function pctColor(p: number): string {
   if (p >= 90) return '#9E0142';
@@ -829,45 +832,57 @@ export default function ContrailsTool() {
 
         <div className="mt-3 border-t border-rule pt-3">
           <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">
-            Google Flights bookmarklet
+            Browser extension
           </p>
           <p className="mt-1 text-xs leading-snug opacity-80">
-            Score every result on a Google Flights page with this model.
-            Drag the button to your bookmarks bar, then click it on any
-            results page.
+            See contrail-warming predictions beside every Google Flights
+            result, automatically.
           </p>
-          <p className="mt-2 flex items-center gap-2">
-            <a
-              href={BM_HREF}
-              className="rounded-sm border border-rule-strong bg-paper-3 px-3 py-1.5 text-sm font-bold no-underline"
-            >
-              ☁ Contrail check
-            </a>
-            <button
-              type="button"
-              className="cursor-pointer rounded-sm border border-rule bg-paper px-2 py-1.5 text-xs"
-              onClick={(e) => {
-                void navigator.clipboard.writeText(BM_CODE);
-                const b = e.currentTarget;
-                b.textContent = 'copied';
-                setTimeout(() => (b.textContent = 'copy code'), 1500);
-              }}
-            >
-              copy code
-            </button>
+          <p className="mt-2">
+            {CWS_URL ? (
+              <a
+                href={CWS_URL}
+                target="_blank"
+                rel="noopener"
+                className="rounded-sm border border-rule-strong bg-paper-3 px-3 py-1.5 text-sm font-bold no-underline"
+              >
+                Get it for Chrome · Arc · Edge
+              </a>
+            ) : (
+              <span className="text-xs italic opacity-60">
+                Chrome Web Store listing pending review — link coming soon.
+              </span>
+            )}
           </p>
           <details className="mt-2 text-xs opacity-80">
             <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-wider opacity-70">
-              Arc / no bookmarks bar?
+              Prefer a bookmarklet?
             </summary>
             <p className="mt-1 leading-snug">
-              Quickest test: on a Google Flights results page, open the
-              console (⌘⌥J), paste the copied code and hit return (type
-              "allow pasting" first if the console asks). To install it:
-              pin any tab, right-click → Edit URL, and paste the code.
-              Aircraft is assumed per route — Google doesn't list
-              equipment — and connections estimate leg times from listed
-              layovers.
+              Same predictions, no install: drag the button to your
+              bookmarks bar and click it on any Google Flights results
+              page. On Arc, copy the code and paste it into a pinned
+              tab's URL, or run it in the console (⌘⌥J).
+            </p>
+            <p className="mt-2 flex items-center gap-2">
+              <a
+                href={BM_HREF}
+                className="rounded-sm border border-rule-strong bg-paper-3 px-3 py-1.5 text-sm font-bold no-underline"
+              >
+                ☁ Contrail check
+              </a>
+              <button
+                type="button"
+                className="cursor-pointer rounded-sm border border-rule bg-paper px-2 py-1.5 text-xs"
+                onClick={(e) => {
+                  void navigator.clipboard.writeText(BM_CODE);
+                  const b = e.currentTarget;
+                  b.textContent = 'copied';
+                  setTimeout(() => (b.textContent = 'copy code'), 1500);
+                }}
+              >
+                copy code
+              </button>
             </p>
           </details>
         </div>

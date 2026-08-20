@@ -385,7 +385,13 @@ class handler(BaseHTTPRequestHandler):
         payload = json.dumps(body).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Cache-Control", "public, max-age=86400")
+        # Never CDN-cache errors (a cached 503 once masked a fixed env
+        # var for a day) or live flight inventory; scores/meta are
+        # deterministic per-URL and cache fine.
+        if code != 200 or q.get("flights"):
+            self.send_header("Cache-Control", "no-store")
+        else:
+            self.send_header("Cache-Control", "public, max-age=86400")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(payload)

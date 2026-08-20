@@ -231,7 +231,7 @@ function FlightMap({
       if (l.from_ll && l.to_ll) segs.push(...gcPoints(l.from_ll, l.to_ll));
       if (li > 0 && l.from_ll) vias.push({ key: alt.key, ll: l.from_ll, code: l.from, color: alt.color });
     }
-    if (segs.length) arcs.push({ key: alt.key, segs, color: alt.color, width: 1.6 });
+    if (segs.length) arcs.push({ key: alt.key, segs, color: alt.color, width: 1.2 });
   }
   arcs.push({ key: 'main', segs: gcPoints(main.from, main.to), color: mainColor, width: 4.2 });
 
@@ -318,6 +318,35 @@ function FlightMap({
             <text x={bx + 7} y={by + 27} fontSize={10} fontFamily="var(--font-mono, monospace)" fill="currentColor" opacity={0.75}>
               {label.sub}
             </text>
+          </g>
+        );
+      })()}
+      {(() => {
+        // percentile color bar, bottom-left
+        const segsBar = [
+          { c: '#66C2A5', from: 0, to: 25 },
+          { c: '#ABDDA4', from: 25, to: 50 },
+          { c: '#FDAE61', from: 50, to: 75 },
+          { c: '#D53E4F', from: 75, to: 90 },
+          { c: '#9E0142', from: 90, to: 100 },
+        ];
+        const bw = 150;
+        const bx0 = 10;
+        const by0 = H - 30;
+        return (
+          <g pointerEvents="none">
+            <rect x={bx0 - 6} y={by0 - 16} width={bw + 12} height={40} rx={3} fill="var(--paper, #fff)" opacity={0.82} />
+            <text x={bx0} y={by0 - 5} fontSize={9} fontFamily="var(--font-mono, monospace)" fill="currentColor" opacity={0.7}>
+              WARMING PERCENTILE
+            </text>
+            {segsBar.map((sb) => (
+              <rect key={sb.c} x={bx0 + (sb.from / 100) * bw} y={by0} width={((sb.to - sb.from) / 100) * bw} height={7} fill={sb.c} />
+            ))}
+            {[0, 25, 50, 75, 90, 100].map((t) => (
+              <text key={t} x={bx0 + (t / 100) * bw} y={by0 + 17} textAnchor="middle" fontSize={8.5} fontFamily="var(--font-mono, monospace)" fill="currentColor" opacity={0.7}>
+                {t}
+              </text>
+            ))}
           </g>
         );
       })()}
@@ -679,9 +708,6 @@ export default function ContrailsTool() {
 
             {result.origin_ll && result.dest_ll && (
               <figure className="mt-5">
-                <figcaption className="mb-2 font-mono text-[11px] uppercase tracking-wider opacity-60">
-                  Your flight (thick) {topAlts.length > 0 ? 'and alternatives (thin)' : ''} — color = warming percentile · hover to match routes and cards
-                </figcaption>
                 <FlightMap
                   main={{ from: result.origin_ll, to: result.dest_ll, codes: [result.origin, result.dest] }}
                   mainColor={pctColor(result.percentile)}

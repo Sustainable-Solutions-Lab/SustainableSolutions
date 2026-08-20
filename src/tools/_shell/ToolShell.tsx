@@ -196,11 +196,13 @@ export default function ToolShell({
 
       {/* ── Mobile drawer — slides down from under the header ── */}
       <div
-        className={`fixed left-0 right-0 z-[21] flex flex-col gap-2 overflow-y-auto border-b border-rule p-3.5 shadow-lg md:hidden ${bg}`}
+        className={`fixed left-0 right-0 z-[21] flex flex-col gap-2 overflow-y-auto border-b border-rule p-3.5 md:hidden ${open ? 'shadow-lg' : ''} ${bg}`}
         style={{
           top: drawerTop,
           maxHeight: `calc(100dvh - ${drawerTop}px)`,
-          transform: open ? 'translateY(0)' : 'translateY(-110%)',
+          // closed: bottom edge exactly at viewport top — a fixed -110% can
+          // leave a tall drawer's tail visible through the translucent nav
+          transform: open ? 'translateY(0)' : `translateY(calc(-100% - ${drawerTop}px))`,
           transition: 'transform 0.18s ease',
         }}
       >

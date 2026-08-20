@@ -35,3 +35,4 @@ build/
 dist-tiles/
 dist-zips/
 dist-materials-lazy/
+extension/*.zip

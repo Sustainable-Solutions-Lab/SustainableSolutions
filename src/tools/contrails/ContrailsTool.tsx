@@ -56,6 +56,8 @@ type RouteInfo = {
 type AirportRow = [string, string, string, string];
 
 const API = '/api/contrails';
+// bump when the API response schema changes: busts stale CDN-cached responses
+const SV = 'sv=3';
 
 function pctColor(p: number): string {
   if (p >= 90) return '#9E0142';
@@ -479,7 +481,7 @@ export default function ContrailsTool() {
   const [hoverKey, setHoverKey] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API}?meta=1`)
+    fetch(`${API}?meta=1&${SV}`)
       .then((r) => r.json())
       .then((m) => setGlobalTypes((m.aircraft ?? []).map((a: { icao: string }) => a.icao)))
       .catch(() => setGlobalTypes(['B738', 'A320', 'B789', 'A359', 'B77W']));
@@ -500,7 +502,7 @@ export default function ContrailsTool() {
       return;
     }
     let stale = false;
-    fetch(`${API}?route=1&origin=${origin}&dest=${dest}`)
+    fetch(`${API}?route=1&origin=${origin}&dest=${dest}&${SV}`)
       .then((r) => r.json())
       .then((info: RouteInfo) => {
         if (stale) return;
@@ -534,7 +536,7 @@ export default function ContrailsTool() {
     try {
       let o = origin, d = dest, t = time, ac = aircraft;
       if (mode === 'flightno') {
-        const rr = await fetch(`${API}?flightno=${encodeURIComponent(flightNo)}`);
+        const rr = await fetch(`${API}?flightno=${encodeURIComponent(flightNo)}&${SV}`);
         const rb = await rr.json();
         if (!rb.found) throw new Error(`Flight ${flightNo.toUpperCase().replace(/\s/g, '')} not found in our 2019–2021 schedules — try route mode.`);
         o = rb.origin; d = rb.dest; t = rb.time_local;
@@ -543,7 +545,7 @@ export default function ContrailsTool() {
         setResolvedLabel(`${flightNo.toUpperCase().replace(/\s/g, '')} · typical schedule from ${rb.n_observed} observed flights`);
       }
       const q = new URLSearchParams({ origin: o, dest: d, date, time: t, aircraft: ac });
-      const r = await fetch(`${API}?${q}`);
+      const r = await fetch(`${API}?${q}&${SV}`);
       const body: ScoreResult = await r.json();
       if (!r.ok || body.error) throw new Error(body.error ?? `HTTP ${r.status}`);
       setResult(body);
@@ -552,7 +554,7 @@ export default function ContrailsTool() {
       setAltsBusy(true);
       try {
         const fh = Number(flexH) > 0 ? `&flex_h=${Number(flexH)}&time=${t}` : '';
-        const fr = await fetch(`${API}?flights=1&origin=${o}&dest=${d}&date=${date}${fh}`);
+        const fr = await fetch(`${API}?flights=1&origin=${o}&dest=${d}&date=${date}${fh}&${SV}`);
         if (fr.status === 503) setFlightsNote('Flight search not yet connected for this deployment.');
         else {
           const fb = await fr.json();

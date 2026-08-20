@@ -213,6 +213,7 @@ function FlightMap({
   land,
   hoverKey,
   onHover,
+  labels,
 }: {
   main: { from: [number, number]; to: [number, number]; codes: [string, string] };
   mainColor: string;
@@ -220,6 +221,7 @@ function FlightMap({
   land: [number, number][][] | null;
   hoverKey: string | null;
   onHover: (k: string | null) => void;
+  labels: Record<string, string>;
 }) {
   const arcs: MapArc[] = [];
   for (const alt of alts) {
@@ -277,6 +279,28 @@ function FlightMap({
           );
         }),
       )}
+      {(() => {
+        // hover chip pinned to the hovered arc's midpoint
+        const a = arcs.find((x) => x.key === hoverKey);
+        const label = hoverKey ? labels[hoverKey] : undefined;
+        if (!a || !label) return null;
+        const all = a.segs.flat();
+        const mid = all[Math.floor(all.length / 2)];
+        const cx = px(mid[1]);
+        const cy = py(mid[0]);
+        const w = label.length * 6.4 + 14;
+        const bx = Math.min(Math.max(cx - w / 2, 4), W - w - 4);
+        const by = cy > 40 ? cy - 32 : cy + 14;
+        return (
+          <g pointerEvents="none">
+            <circle cx={cx} cy={cy} r={4} fill={a.color} stroke="var(--paper, #fff)" strokeWidth={1.5} />
+            <rect x={bx} y={by} width={w} height={20} rx={3} fill="var(--paper, #fff)" stroke={a.color} strokeWidth={1} />
+            <text x={bx + 7} y={by + 14} fontSize={10.5} fontFamily="var(--font-mono, monospace)" fill="currentColor">
+              {label}
+            </text>
+          </g>
+        );
+      })()}
       {[{ ll: main.from, code: main.codes[0] }, { ll: main.to, code: main.codes[1] }].map((e) => (
         <g key={e.code}>
           <circle cx={px(e.ll[1])} cy={py(e.ll[0])} r={4} fill="currentColor" />
@@ -311,6 +335,9 @@ export default function ContrailsTool() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flightsNote, setFlightsNote] = useState<string | null>(null);
+  const [altsBusy, setAltsBusy] = useState(false);
+  const [sortMode, setSortMode] = useState<'warming' | 'value'>('warming');
+  const [origMatch, setOrigMatch] = useState<FlightOption | null>(null);
   const [hoverKey, setHoverKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -364,6 +391,7 @@ export default function ContrailsTool() {
     setFlights(null);
     setFlightsNote(null);
     setResolvedLabel(null);
+    setOrigMatch(null);
     setHoverKey(null);
     try {
       let o = origin, d = dest, t = time, ac = aircraft;
@@ -381,30 +409,83 @@ export default function ContrailsTool() {
       const body: ScoreResult = await r.json();
       if (!r.ok || body.error) throw new Error(body.error ?? `HTTP ${r.status}`);
       setResult(body);
-      // alternatives in the same action
-      const fh = Number(flexH) > 0 ? `&flex_h=${Number(flexH)}&time=${t}` : '';
-      const fr = await fetch(`${API}?flights=1&origin=${o}&dest=${d}&date=${date}${fh}`);
-      if (fr.status === 503) setFlightsNote('Flight search not yet connected for this deployment.');
-      else {
-        const fb = await fr.json();
-        if (fr.ok && !fb.error) setFlights(fb.flights ?? []);
-        else setFlightsNote('Flight search failed.');
+      setBusy(false);
+      // alternatives in the same action (slower — separate indicator)
+      setAltsBusy(true);
+      try {
+        const fh = Number(flexH) > 0 ? `&flex_h=${Number(flexH)}&time=${t}` : '';
+        const fr = await fetch(`${API}?flights=1&origin=${o}&dest=${d}&date=${date}${fh}`);
+        if (fr.status === 503) setFlightsNote('Flight search not yet connected for this deployment.');
+        else {
+          const fb = await fr.json();
+          if (fr.ok && !fb.error) {
+            const list: FlightOption[] = fb.flights ?? [];
+            // guess which bookable itinerary IS the user's flight:
+            // nonstop, same pair, departure within 100 min of selection
+            const selMin = Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+            let best: FlightOption | null = null;
+            let bestGap = 101;
+            for (const f of list) {
+              if (f.n_stops !== 0 || f.legs[0].from !== o || f.legs[0].to !== d) continue;
+              if ((f.date ?? f.dep_local.slice(0, 10)) !== date) continue;
+              const m = Number(f.dep_local.slice(11, 13)) * 60 + Number(f.dep_local.slice(14, 16));
+              const gap = Math.abs(m - selMin);
+              if (gap < bestGap) { bestGap = gap; best = f; }
+            }
+            setOrigMatch(best);
+            setFlights(best ? list.filter((f) => f !== best) : list);
+          } else setFlightsNote('Flight search failed.');
+        }
+      } finally {
+        setAltsBusy(false);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setResult(null);
-    } finally {
       setBusy(false);
     }
   }
 
-  const topAlts = (flights ?? []).slice(0, 5);
+  const origPrice = origMatch && origMatch.price_usd > 0 ? origMatch.price_usd : null;
+  const topAlts = useMemo(() => {
+    const list = [...(flights ?? [])];
+    if (sortMode === 'value' && result) {
+      const value = (f: FlightOption) => {
+        const avoided = result.expected_co2e_t_per_flight - f.total_t_co2e;
+        if (avoided <= 0 || f.price_usd <= 0) return -Infinity;
+        const dCost = origPrice !== null ? Math.max(f.price_usd - origPrice, 1) : f.price_usd;
+        return avoided / dCost;
+      };
+      list.sort((a, b) => value(b) - value(a));
+    }
+    return list.slice(0, 5);
+  }, [flights, sortMode, result, origPrice]);
   const estMin = result?.est_duration_h ? result.est_duration_h * 60 : null;
+  const mapLabels: Record<string, string> = useMemo(() => {
+    const out: Record<string, string> = {
+      main: result ? `Your flight · ${result.expected_co2e_t_per_flight.toFixed(1)} t` : '',
+    };
+    topAlts.forEach((f, i) => {
+      out[`alt${i}`] = `${f.legs.map((l) => l.carrier).join('·')} · ${f.total_t_co2e.toFixed(1)} t${f.price_usd > 0 ? ` · $${f.price_usd.toFixed(0)}` : ''}`;
+    });
+    return out;
+  }, [topAlts, result]);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
+    <div className="flex h-full flex-col lg:flex-row">
       {/* ── Left rail ── */}
-      <div className="flex flex-col gap-3 self-start rounded-sm border border-rule bg-paper-2 p-4 lg:sticky lg:top-6">
+      <div className="flex w-full shrink-0 flex-col gap-3 overflow-y-auto border-b border-rule bg-paper-2 p-4 lg:w-[300px] lg:border-b-0 lg:border-r">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">Prototype · schedule-only model</p>
+          <h1 className="mt-1 font-serif text-xl leading-snug">Contrail warming at booking time</h1>
+          <p className="mt-2 text-xs leading-relaxed opacity-80">
+            A minority of flights cause most contrail warming. This tool
+            predicts a flight's likely contrail climate impact from
+            information available when you book — route, date, time and
+            aircraft — months ahead, and finds lower-warming bookable
+            alternatives.
+          </p>
+        </div>
         <div className="flex gap-1 font-mono text-[11px] uppercase tracking-wider">
           {(['route', 'flightno'] as const).map((m) => (
             <button
@@ -503,7 +584,7 @@ export default function ContrailsTool() {
       </div>
 
       {/* ── Right column ── */}
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1 overflow-y-auto p-5">
         {!result && !busy && (
           <p className="mt-2 text-sm italic opacity-60">
             Choose a flight on the left and assess it to see its predicted
@@ -575,6 +656,7 @@ export default function ContrailsTool() {
                   land={land}
                   hoverKey={hoverKey}
                   onHover={setHoverKey}
+                  labels={mapLabels}
                 />
               </figure>
             )}
@@ -585,21 +667,34 @@ export default function ContrailsTool() {
               onMouseEnter={() => setHoverKey('main')}
               onMouseLeave={() => setHoverKey(null)}
             >
-              <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(result.percentile) }} />
+              {origMatch?.airline_logo ? (
+                <img src={origMatch.airline_logo} alt={origMatch.airline ?? ''} width={26} height={26} loading="lazy" />
+              ) : (
+                <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(result.percentile) }} />
+              )}
               <div className="flex min-w-[200px] flex-col">
                 <span className="font-mono text-sm font-bold">
-                  {resolvedLabel ? resolvedLabel.split(' · ')[0] : 'Your flight'}
+                  {resolvedLabel
+                    ? resolvedLabel.split(' · ')[0]
+                    : origMatch
+                      ? `Your flight · likely ${origMatch.legs[0].carrier}`
+                      : 'Your flight'}
                   <span className="ml-2 font-normal opacity-70">{result.origin} → {result.dest}</span>
                 </span>
                 <span className="font-mono text-xs opacity-70">
-                  {date} · {time}
-                  {estMin ? ` · ~${fmtMin(estMin)}` : ''} · {result.aircraft}
+                  {date} · {origMatch ? origMatch.dep_local.slice(11) : time}
+                  {origMatch?.arr_local ? ` → ${origMatch.arr_local.slice(11)}` : ''}
+                  {origMatch && durationMin(origMatch.duration) !== null
+                    ? ` · ${fmtMin(durationMin(origMatch.duration) as number)}`
+                    : estMin ? ` · ~${fmtMin(estMin)}` : ''}
+                  {' · '}{result.aircraft}
                   {!result.route_in_corpus ? ' · hypothetical nonstop' : ''}
                 </span>
               </div>
               <span className="font-mono text-sm" style={{ color: pctColor(result.percentile) }}>
                 {result.expected_co2e_t_per_flight.toFixed(1)} t
               </span>
+              {origPrice !== null && <span className="ml-auto font-mono text-sm opacity-80">${origPrice.toFixed(0)}</span>}
               {resolvedLabel && <span className="text-[11px] italic opacity-60">{resolvedLabel.split(' · ')[1]}</span>}
             </div>
 
@@ -608,11 +703,35 @@ export default function ContrailsTool() {
               <p className="mt-3 text-sm opacity-70">No bookable itineraries found in this window.</p>
             )}
 
+            {altsBusy && (
+              <div className="mt-3 flex flex-col gap-2" aria-live="polite">
+                <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
+                  Searching bookable flights within ±{flexH || 24} h…
+                </span>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-12 animate-pulse rounded-sm border border-rule bg-paper-2" />
+                ))}
+                <p className="text-xs italic opacity-60">
+                  Live schedule search takes up to a minute — results appear here.
+                </p>
+              </div>
+            )}
             {topAlts.length > 0 && (
               <div className="mt-2 flex flex-col gap-2">
-                <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
-                  Lower-warming alternatives within ±{flexH || 24} h
-                </span>
+                <div className="flex items-baseline gap-3">
+                  <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
+                    Alternatives within ±{flexH || 24} h
+                  </span>
+                  <select
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value as 'warming' | 'value')}
+                    className="rounded-sm border border-rule bg-paper-2 px-1.5 py-0.5 font-mono text-[11px]"
+                    aria-label="Sort alternatives"
+                  >
+                    <option value="warming">least warming</option>
+                    <option value="value">warming avoided per $</option>
+                  </select>
+                </div>
                 {topAlts.map((f, i) => {
                   const dt = f.total_t_co2e - result.expected_co2e_t_per_flight;
                   const altMin = durationMin(f.duration);
@@ -661,7 +780,10 @@ export default function ContrailsTool() {
                 })}
                 {flights && flights.length > 5 && (
                   <p className="text-xs opacity-60">
-                    {flights.length - 5} more options in this window — the five shown produce the least contrail warming.
+                    {flights.length - 5} more options in this window — the five shown
+                    {sortMode === 'warming'
+                      ? ' produce the least contrail warming.'
+                      : ' avoid the most warming per dollar' + (origPrice !== null ? ' above your fare.' : ' of fare.')}
                   </p>
                 )}
               </div>

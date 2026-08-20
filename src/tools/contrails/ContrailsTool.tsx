@@ -221,13 +221,15 @@ function FlightMap({
   land: [number, number][][] | null;
   hoverKey: string | null;
   onHover: (k: string | null) => void;
-  labels: Record<string, string>;
+  labels: Record<string, { top: string; sub: string }>;
 }) {
   const arcs: MapArc[] = [];
+  const vias: { key: string; ll: [number, number]; code: string; color: string }[] = [];
   for (const alt of alts) {
     const segs: [number, number][][] = [];
-    for (const l of alt.legs) {
+    for (const [li, l] of alt.legs.entries()) {
       if (l.from_ll && l.to_ll) segs.push(...gcPoints(l.from_ll, l.to_ll));
+      if (li > 0 && l.from_ll) vias.push({ key: alt.key, ll: l.from_ll, code: l.from, color: alt.color });
     }
     if (segs.length) arcs.push({ key: alt.key, segs, color: alt.color, width: 1.6 });
   }
@@ -279,8 +281,23 @@ function FlightMap({
           );
         }),
       )}
+      {vias.map((v, i) => {
+        const hovered = hoverKey === v.key;
+        const dimmed = hoverKey !== null && !hovered;
+        return (
+          <g key={`via-${i}`} pointerEvents="none" opacity={dimmed ? 0.35 : 1}>
+            <circle cx={px(v.ll[1])} cy={py(v.ll[0])} r={hovered ? 3.5 : 2.5} fill={v.color} stroke="var(--paper, #fff)" strokeWidth={1} />
+            {hovered && (
+              <text x={px(v.ll[1])} y={py(v.ll[0]) - 7} textAnchor="middle" fontSize={10} fontFamily="var(--font-mono, monospace)" fill="currentColor">
+                {v.code}
+              </text>
+            )}
+          </g>
+        );
+      })}
       {(() => {
-        // hover chip pinned to the hovered arc's midpoint
+        // hover chip pinned to the hovered arc's midpoint: flight facts
+        // on the first line, plain-language city chain on the second
         const a = arcs.find((x) => x.key === hoverKey);
         const label = hoverKey ? labels[hoverKey] : undefined;
         if (!a || !label) return null;
@@ -288,15 +305,18 @@ function FlightMap({
         const mid = all[Math.floor(all.length / 2)];
         const cx = px(mid[1]);
         const cy = py(mid[0]);
-        const w = label.length * 6.4 + 14;
+        const w = Math.max(label.top.length, label.sub.length) * 6.2 + 14;
         const bx = Math.min(Math.max(cx - w / 2, 4), W - w - 4);
-        const by = cy > 40 ? cy - 32 : cy + 14;
+        const by = cy > 52 ? cy - 44 : cy + 14;
         return (
           <g pointerEvents="none">
             <circle cx={cx} cy={cy} r={4} fill={a.color} stroke="var(--paper, #fff)" strokeWidth={1.5} />
-            <rect x={bx} y={by} width={w} height={20} rx={3} fill="var(--paper, #fff)" stroke={a.color} strokeWidth={1} />
+            <rect x={bx} y={by} width={w} height={34} rx={3} fill="var(--paper, #fff)" stroke={a.color} strokeWidth={1} />
             <text x={bx + 7} y={by + 14} fontSize={10.5} fontFamily="var(--font-mono, monospace)" fill="currentColor">
-              {label}
+              {label.top}
+            </text>
+            <text x={bx + 7} y={by + 27} fontSize={10} fontFamily="var(--font-mono, monospace)" fill="currentColor" opacity={0.75}>
+              {label.sub}
             </text>
           </g>
         );
@@ -461,15 +481,28 @@ export default function ContrailsTool() {
     return list.slice(0, 5);
   }, [flights, sortMode, result, origPrice]);
   const estMin = result?.est_duration_h ? result.est_duration_h * 60 : null;
-  const mapLabels: Record<string, string> = useMemo(() => {
-    const out: Record<string, string> = {
-      main: result ? `Your flight · ${result.expected_co2e_t_per_flight.toFixed(1)} t` : '',
-    };
+  const cityOf = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const [iata, city] of airports) m.set(iata, city);
+    return (code: string) => m.get(code) ?? code;
+  }, [airports]);
+  const mapLabels: Record<string, { top: string; sub: string }> = useMemo(() => {
+    const out: Record<string, { top: string; sub: string }> = {};
+    if (result) {
+      out.main = {
+        top: `Your flight · ${result.expected_co2e_t_per_flight.toFixed(1)} t`,
+        sub: `${cityOf(result.origin)} → ${cityOf(result.dest)}`,
+      };
+    }
     topAlts.forEach((f, i) => {
-      out[`alt${i}`] = `${f.legs.map((l) => l.carrier).join('·')} · ${f.total_t_co2e.toFixed(1)} t${f.price_usd > 0 ? ` · $${f.price_usd.toFixed(0)}` : ''}`;
+      const chain = [f.legs[0].from, ...f.legs.map((l) => l.to)];
+      out[`alt${i}`] = {
+        top: `${f.legs.map((l) => l.carrier).join('·')} · ${f.total_t_co2e.toFixed(1)} t${f.price_usd > 0 ? ` · $${f.price_usd.toFixed(0)}` : ''}`,
+        sub: chain.map(cityOf).join(' → '),
+      };
     });
     return out;
-  }, [topAlts, result]);
+  }, [topAlts, result, cityOf]);
 
   return (
     <div className="flex h-full flex-col lg:flex-row">
@@ -782,8 +815,8 @@ export default function ContrailsTool() {
                   <p className="text-xs opacity-60">
                     {flights.length - 5} more options in this window — the five shown
                     {sortMode === 'warming'
-                      ? ' produce the least contrail warming.'
-                      : ' avoid the most warming per dollar' + (origPrice !== null ? ' above your fare.' : ' of fare.')}
+                      ? ' are predicted to produce the least contrail warming.'
+                      : ' are predicted to avoid the most warming per dollar' + (origPrice !== null ? ' above your fare.' : ' of fare.')}
                   </p>
                 )}
               </div>

@@ -476,7 +476,7 @@ class handler(BaseHTTPRequestHandler):
         if code != 200 or q.get("flights"):
             self.send_header("Cache-Control", "no-store")
         else:
-            self.send_header("Cache-Control", "public, max-age=86400")
+            self.send_header("Cache-Control", "public, max-age=3600")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(payload)

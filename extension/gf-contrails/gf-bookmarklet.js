@@ -80,7 +80,7 @@
       rows.push(li);
     });
     if (!items.length) { say('Could not parse any flight rows — the page format may have changed.'); return; }
-    var r = await fetch(API + '?batch=1&sv=4&q=' + encodeURIComponent(JSON.stringify({ air: air, f: items })));
+    var r = await fetch(API + '?batch=1&sv=5&q=' + encodeURIComponent(JSON.stringify({ air: air, f: items })));
     var j = await r.json();
     if (!r.ok || !j.results) { say('Contrails API error: ' + (j.error || r.status)); return; }
     // Google-style inline line under their emissions text: "+x% contrail
@@ -215,6 +215,11 @@
           'Predicted warming from this itinerary\u2019s condensation trails, per passenger, estimated from its schedule (route, timing, season' +
           (res.error ? '' : (res.ac_estimated ? ', assumed ' : ', ') + res.ac) +
           ') by a model trained on 22 million flight simulations.'));
+        if (res.why && res.why.length) {
+          for (var wi = 0; wi < res.why.length; wi++) {
+            pop.appendChild(mk('div', 'color:#5f6368;margin-bottom:6px;', res.why[wi] + '.'));
+          }
+        }
         var att = mk('div', 'color:#5f6368;');
         att.appendChild(document.createTextNode('Prediction from the '));
         var a = mk('a', 'color:#1a73e8;text-decoration:none;white-space:nowrap;', 'Stanford Sustainable Solutions Lab');

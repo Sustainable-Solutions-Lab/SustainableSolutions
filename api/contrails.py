@@ -180,6 +180,16 @@ def _percentile(pred):
     return float(np.interp(pred, grid, np.linspace(0, 100, len(grid))))
 
 
+def _itin_percentile(kg_km):
+    """Percentile for a whole (possibly multi-leg) itinerary: its
+    distance-weighted per-km forcing inverted through the calibration's
+    per-bin means (monotonicized — low bins are slightly noisy). Keeps
+    color consistent: equal summed forcing maps to equal percentile."""
+    bins = np.maximum.accumulate(np.asarray(_calib["bin_mean_co2e_kg_per_km"]))
+    centers = np.linspace(0.5, 99.5, len(bins))
+    return float(round(np.interp(kg_km, bins, centers), 1))
+
+
 def resolve_flightno(fn):
     """IATA flight number -> typical route/dep-time/aircraft (2019+2021
     schedules; numbers change, so treat as a convenience prefill)."""
@@ -399,6 +409,7 @@ def bookable_flights(origin, dest, date_s):
         total_t = 0.0
         total_pax_kg = 0.0
         worst_pct = 0.0
+        kgkm_wsum = km_sum = 0.0
         approx = False
         key_parts = []
         ok = True
@@ -434,6 +445,8 @@ def bookable_flights(origin, dest, date_s):
             total_t += body["expected_co2e_t_per_flight"]
             total_pax_kg += body["expected_co2e_kg_per_pax"]
             worst_pct = max(worst_pct, body["percentile"])
+            kgkm_wsum += body["expected_co2e_kg_per_km"] * body["distance_km"]
+            km_sum += body["distance_km"]
             key_parts.append(f"{carrier}@{dep_local}")
         if not ok or not legs:
             continue
@@ -451,6 +464,7 @@ def bookable_flights(origin, dest, date_s):
                 "total_t_co2e": round(total_t, 2),
                 "total_kg_per_pax": round(total_pax_kg, 1),
                 "worst_leg_percentile": worst_pct,
+                "itin_percentile": _itin_percentile(kgkm_wsum / max(km_sum, 1.0)),
                 "aircraft_estimated": approx,
                 "price_usd": price,
                 "currency": off.get("total_currency", "USD"),

@@ -171,11 +171,8 @@
       if (res.error) {
         txt = 'contrails n/a';
         color = '#9aa0a6';
-      } else if (pc !== null) {
-        txt = (pc > 0 ? '+' : '') + pc + '% contrail warming';
-        color = grade(res.p);
       } else {
-        txt = (kg > 0 ? '+' : '') + kg + ' kg contrails';
+        txt = (kg > 0 ? '+' : '') + kg + ' kg CO\u2082e contrails';
         color = grade(res.p);
       }
       line.textContent = '';

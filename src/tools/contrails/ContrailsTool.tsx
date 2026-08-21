@@ -1177,11 +1177,11 @@ export default function ContrailsTool() {
                         const acUpgrade = f.legs.every((l) => CLEAN_TYPES.has(l.aircraft)) && !CLEAN_TYPES.has(result.aircraft);
                         const parts: string[] = [];
                         if (altNight !== null && altNight <= yourNight - 8) {
-                          parts.push(`flies more in daylight (${altNight}% night vs your ${yourNight}%)`);
+                          parts.push(`it flies more in daylight (${altNight}% night vs your ${yourNight}%)`);
                         }
                         if (acUpgrade) parts.push('its newer engines seed fewer contrails');
                         const note = parts.length
-                          ? `Cooler because it ${parts.join(', and ')}.`
+                          ? `Cooler because ${parts.join(', and ')}.`
                           : 'Cooler thanks to schedule differences that avoid contrail-prone conditions.';
                         return <p className="mt-1 w-full text-xs italic opacity-70">{note}</p>;
                       })()}

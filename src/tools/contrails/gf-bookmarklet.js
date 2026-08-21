@@ -80,7 +80,7 @@
       rows.push(li);
     });
     if (!items.length) { say('Could not parse any flight rows — the page format may have changed.'); return; }
-    var r = await fetch(API + '?batch=1&sv=5&q=' + encodeURIComponent(JSON.stringify({ air: air, f: items })));
+    var r = await fetch(API + '?batch=1&sv=6&q=' + encodeURIComponent(JSON.stringify({ air: air, f: items })));
     var j = await r.json();
     if (!r.ok || !j.results) { say('Contrails API error: ' + (j.error || r.status)); return; }
     // Google-style inline line under their emissions text: "+x% contrail

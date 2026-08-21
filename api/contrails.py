@@ -213,49 +213,57 @@ _CLEAN_TYPES = {"B788", "B789", "B78X", "A359", "A35K", "A20N", "A21N",
                 "B38M", "B39M", "A339", "A338", "BCS1", "BCS3", "E290", "E295"}
 
 
-def _reasons(feats, aircraft, dep_utc, o_ap, d_ap):
+def _reasons(feats, aircraft, dep_utc, o_ap, d_ap, pct):
     """Short, feature-grounded explanations of why a flight scores where it
-    does. Ordered by importance in the model (route darkness, engine
-    generation, season, distance); phrased as tendencies, not certainties."""
-    out = []
+    does, ordered by importance in the model (route darkness, engine
+    generation, season, distance). Each factor pushes toward warming (+)
+    or away from it (-); only factors aligned with the verdict are shown,
+    so a low prediction never lists amplifiers and vice versa."""
+    tagged = []
     ns = feats["night_score_full_0"]
     if ns >= 70:
-        out.append(f"About {ns:.0f}% of the route is flown in darkness — "
-                   "night contrails only trap heat, while daytime contrails "
-                   "also reflect sunlight back to space")
+        tagged.append(("+", f"About {ns:.0f}% of the route is flown in "
+                       "darkness — night contrails only trap heat, while "
+                       "daytime contrails also reflect sunlight back to space"))
     elif ns >= 40:
-        out.append(f"About {ns:.0f}% of cruise is after dark, "
-                   "when contrails warm most")
+        tagged.append(("+", f"About {ns:.0f}% of cruise is after dark, "
+                       "when contrails warm most"))
     else:
-        out.append(f"Cruise is mostly in daylight (~{100 - ns:.0f}%), "
-                   "when contrails' reflection of sunlight offsets much "
-                   "of their warming")
+        tagged.append(("-", f"Cruise is mostly in daylight (~{100 - ns:.0f}%), "
+                       "when contrails' reflection of sunlight offsets much "
+                       "of their warming"))
     if aircraft in _CLEAN_TYPES:
-        out.append(f"The {aircraft}'s newer-generation engines emit far "
-                   "less soot, seeding fewer and weaker contrails")
+        tagged.append(("-", f"The {aircraft}'s newer-generation engines emit "
+                       "far less soot, seeding fewer and weaker contrails"))
     else:
-        out.append(f"The {aircraft}'s older engine generation emits more "
-                   "soot, seeding more and thicker contrails")
+        tagged.append(("+", f"The {aircraft}'s older engine generation emits "
+                       "more soot, seeding more and thicker contrails"))
     mid_lat = abs((o_ap["lat"] + d_ap["lat"]) / 2)
     month = dep_utc.month
     nh = (o_ap["lat"] + d_ap["lat"]) / 2 >= 0
     winter = month in (11, 12, 1, 2, 3) if nh else month in (5, 6, 7, 8, 9)
-    summer = month in (6, 7, 8) if nh else month in (12, 1, 2)
+    summer = (month in (6, 7, 8)) if nh else (month in (12, 1, 2))
     if mid_lat >= 35 and winter:
-        out.append("Cold-season air on mid-latitude routes is more often "
-                   "ice-supersaturated — prime conditions for persistent "
-                   "contrails")
+        tagged.append(("+", "Cold-season air on mid-latitude routes is more "
+                       "often ice-supersaturated — prime conditions for "
+                       "persistent contrails"))
     elif mid_lat >= 35 and summer:
-        out.append("Warm-season cruise air on this route holds "
-                   "contrail-forming conditions less often")
+        tagged.append(("-", "Warm-season cruise air on this route holds "
+                       "contrail-forming conditions less often"))
     km = feats["total_flight_distance_km"]
     if km > 6000:
-        out.append(f"A very long flight (~{km:,.0f} km) spends more hours "
-                   "at contrail-forming cruise altitudes")
+        tagged.append(("+", f"A very long flight (~{km:,.0f} km) spends more "
+                       "hours at contrail-forming cruise altitudes"))
     elif km < 1500:
-        out.append("A short flight spends limited time at contrail-forming "
-                   "cruise altitudes")
-    return out
+        tagged.append(("-", "A short flight spends limited time at "
+                       "contrail-forming cruise altitudes"))
+    if pct >= 60:
+        out = [t for d, t in tagged if d == "+"]
+    elif pct <= 40:
+        out = [t for d, t in tagged if d == "-"]
+    else:
+        out = [t for _, t in tagged[:2]]
+    return out or [tagged[0][1]]
 
 
 def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
@@ -300,7 +308,7 @@ def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
         "est_duration_h": round(
             DURATION_INTERCEPT_H
             + DURATION_SLOPE_H_PER_KM * feats["total_flight_distance_km"], 2),
-        "reasons": _reasons(feats, aircraft, dep_utc, o_ap, d_ap),
+        "reasons": _reasons(feats, aircraft, dep_utc, o_ap, d_ap, pct),
     }
     # Score every aircraft flown on this route at the same departure —
     # engine generation can move a flight across most of the percentile

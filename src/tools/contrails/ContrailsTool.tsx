@@ -71,7 +71,10 @@ type AirportRow = [string, string, string, string];
 
 const API = '/api/contrails';
 // bump when the API response schema changes: busts stale CDN-cached responses
-const SV = 'sv=4';
+const SV = 'sv=5';
+// aircraft families with newer, lower-soot engines (mirrors the API's set)
+const CLEAN_TYPES = new Set(['B788', 'B789', 'B78X', 'A359', 'A35K', 'A20N', 'A21N',
+  'B38M', 'B39M', 'A339', 'A338', 'BCS1', 'BCS3', 'E290', 'E295']);
 // Chrome Web Store listing URL — flip to the staged URL once the listing
 // clears review; null shows the manual-install path instead
 // https://chromewebstore.google.com/detail/jgoiipmnojcdecidalejcadljdcjacgl
@@ -1160,18 +1163,6 @@ export default function ContrailsTool() {
                           {altAc === result.aircraft ? `same aircraft (${altAc})` : `${altAc} vs your ${result.aircraft}`}
                           {f.aircraft_estimated ? '*' : ''}
                         </span>
-                        {(() => {
-                          const nights = f.legs.map((l) => l.night).filter((n): n is number => n !== undefined);
-                          if (!nights.length) return null;
-                          const altNight = Math.round(nights.reduce((a, b) => a + b, 0) / nights.length);
-                          const yourNight = Math.round(result.night_score);
-                          if (Math.abs(altNight - yourNight) < 8) return null;
-                          return (
-                            <span className="opacity-75">
-                              {altNight}% night flying vs your {yourNight}%
-                            </span>
-                          );
-                        })()}
                         {f.price_usd > 0 && (
                           <span className="opacity-75">
                             ${f.price_usd.toFixed(0)}
@@ -1179,6 +1170,21 @@ export default function ContrailsTool() {
                           </span>
                         )}
                       </div>
+                      {(() => {
+                        const nights = f.legs.map((l) => l.night).filter((n): n is number => n !== undefined);
+                        const altNight = nights.length ? Math.round(nights.reduce((a, b) => a + b, 0) / nights.length) : null;
+                        const yourNight = Math.round(result.night_score);
+                        const acUpgrade = f.legs.every((l) => CLEAN_TYPES.has(l.aircraft)) && !CLEAN_TYPES.has(result.aircraft);
+                        const parts: string[] = [];
+                        if (altNight !== null && altNight <= yourNight - 8) {
+                          parts.push(`flies more in daylight (${altNight}% night vs your ${yourNight}%)`);
+                        }
+                        if (acUpgrade) parts.push('its newer engines seed fewer contrails');
+                        const note = parts.length
+                          ? `Cooler because it ${parts.join(', and ')}.`
+                          : 'Cooler thanks to schedule differences that avoid contrail-prone conditions.';
+                        return <p className="mt-1 w-full text-xs italic opacity-70">{note}</p>;
+                      })()}
                     </div>
                   );
                 })}

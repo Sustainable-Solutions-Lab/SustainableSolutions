@@ -55,7 +55,7 @@ NB_WAYPOINTS = 30
 DURATION_INTERCEPT_H = 0.356
 DURATION_SLOPE_H_PER_KM = 1.148e-3
 
-LEAN_AC_FEATS = [
+MODEL_FEATS = [
     "total_flight_distance_km",
     "day_sin", "day_cos",
     "start_hour_sin", "start_hour_cos",
@@ -166,11 +166,11 @@ def _predict(rows):
     idx = {c: i for i, c in enumerate(_aircraft["categories"])}
     X = np.array(
         [[r[f] if f != "aircraft_type_icao" else idx[r[f]]
-          for f in LEAN_AC_FEATS] for r in rows],
+          for f in MODEL_FEATS] for r in rows],
         dtype=np.float32)
     ftypes = ["c" if f == "aircraft_type_icao" else "q"
-              for f in LEAN_AC_FEATS]
-    dm = xgb.DMatrix(X, feature_names=LEAN_AC_FEATS, feature_types=ftypes,
+              for f in MODEL_FEATS]
+    dm = xgb.DMatrix(X, feature_names=MODEL_FEATS, feature_types=ftypes,
                      enable_categorical=True)
     return _booster.predict(dm)
 
@@ -602,7 +602,7 @@ class handler(BaseHTTPRequestHandler):
                 body, code = {
                     "aircraft": _aircraft["top_types"],
                     "n_calibration_flights": _calib["n_flights"],
-                    "model": "LEAN+AC schedule-only XGBoost",
+                    "model": "Scheduling model (schedule-only XGBoost)",
                 }, 200
             elif q.get("flightno"):
                 body, code = resolve_flightno(q["flightno"]), 200

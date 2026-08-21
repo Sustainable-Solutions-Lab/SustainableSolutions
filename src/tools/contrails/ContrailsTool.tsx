@@ -71,8 +71,9 @@ type AirportRow = [string, string, string, string];
 const API = '/api/contrails';
 // bump when the API response schema changes: busts stale CDN-cached responses
 const SV = 'sv=3';
-// Chrome Web Store listing URL — set once the listing is live; null shows
-// a pending note instead of the install link
+// Chrome Web Store listing URL — flip to the staged URL once the listing
+// clears review; null shows the manual-install path instead
+// https://chromewebstore.google.com/detail/jgoiipmnojcdecidalejcadljdcjacgl
 const CWS_URL: string | null = null;
 
 function pctColor(p: number): string {

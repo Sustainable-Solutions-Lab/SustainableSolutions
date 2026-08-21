@@ -591,7 +591,10 @@ export default function ContrailsTool() {
   async function fetchFlights(o: string, d: string, t: string, flex: number) {
     setAltsBusy(true);
     try {
-        const fr = await fetch(`${API}?flights=1&origin=${o}&dest=${d}&date=${date}&flex_h=${flex}&time=${t}&${SV}`);
+        // pad the fetch by an hour: the pool filter recenters the exact
+        // window on the matched bookable departure, which can sit a few
+        // minutes off the schedule time this search is centered on
+        const fr = await fetch(`${API}?flights=1&origin=${o}&dest=${d}&date=${date}&flex_h=${Math.min(flex + 1, 72)}&time=${t}&${SV}`);
         if (fr.status === 503) setFlightsNote('Flight search not yet connected for this deployment.');
         else {
           const fb = await fr.json();
@@ -687,14 +690,16 @@ export default function ContrailsTool() {
   }, [sortMode, origPrice]);
   const pool = useMemo(() => {
     // dep_local strings are naive origin-local; parsing both sides in the
-    // browser tz keeps the difference correct
-    const base = new Date(`${date}T${time}`).getTime();
+    // browser tz keeps the difference correct. Center on the matched
+    // bookable departure (what the cards' earlier/later labels measure
+    // against) so no alternative can show a delta beyond the window.
+    const base = new Date(origMatch ? origMatch.dep_local : `${date}T${time}`).getTime();
     const win = effFlex() * 3600e3;
     return (flights ?? [])
       .filter((f) => !nonstopOnly || f.n_stops === 0)
       .filter((f) => !Number.isFinite(base) || Math.abs(new Date(f.dep_local).getTime() - base) <= win);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flights, nonstopOnly, flexH, date, time]);
+  }, [flights, nonstopOnly, flexH, date, time, origMatch]);
   // only genuinely lower-warming options count as alternatives
   const betterPool = useMemo(
     () => (result ? pool.filter((f) => f.total_kg_per_pax < result.expected_co2e_kg_per_pax - 0.5) : []),

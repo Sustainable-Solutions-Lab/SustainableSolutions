@@ -382,7 +382,7 @@ function FlightMap({
                   d={d}
                   fill="none"
                   stroke="transparent"
-                  strokeWidth={12}
+                  strokeWidth={18}
                   style={{ cursor: 'pointer' }}
                   onMouseEnter={() => onHover(a.key)}
                   onMouseLeave={() => onHover(null)}

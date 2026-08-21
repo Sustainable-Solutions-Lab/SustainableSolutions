@@ -80,9 +80,16 @@
       rows.push(li);
     });
     if (!items.length) { say('Could not parse any flight rows — the page format may have changed.'); return; }
-    var r = await fetch(API + '?batch=1&sv=6&q=' + encodeURIComponent(JSON.stringify({ air: air, f: items })));
-    var j = await r.json();
-    if (!r.ok || !j.results) { say('Contrails API error: ' + (j.error || r.status)); return; }
+    // the API scores at most 50 itineraries per call; expanded "more
+    // flights" lists can be longer, so fetch in sequential chunks
+    var j = { results: [] };
+    for (var ci = 0; ci < items.length; ci += 50) {
+      var r = await fetch(API + '?batch=1&sv=6&q=' +
+        encodeURIComponent(JSON.stringify({ air: air, f: items.slice(ci, ci + 50) })));
+      var jc = await r.json();
+      if (!r.ok || !jc.results) { say('Contrails API error: ' + (jc.error || r.status)); return; }
+      j.results = j.results.concat(jc.results);
+    }
     // Google-style inline line under their emissions text: "+x% contrail
     // warming" as a share of the CO2 Google shows, with our own info popover.
     var popover = function () {
@@ -106,13 +113,13 @@
         return !!mch && 0.299 * mch[0] + 0.587 * mch[1] + 0.114 * mch[2] < 128;
       } catch (e) { return false; }
     })();
-    var grade = function (p) {
+    var grade = function (kg) {
       if (dark) {
-        return p >= 90 ? '#ff8fa3' : p >= 75 ? '#f4757f' : p >= 50 ? '#f6a45c'
-          : p >= 25 ? '#e0c46a' : p >= 10 ? '#9fd9a2' : '#7ee0c0';
+        return kg > 900 ? '#ff8fa3' : kg > 400 ? '#f4757f' : kg > 150 ? '#f6a45c'
+          : kg > 50 ? '#e0c46a' : kg > -25 ? '#9fd9a2' : '#7ee0c0';
       }
-      return p >= 90 ? '#9E0142' : p >= 75 ? '#D53E4F' : p >= 50 ? '#E06D1F'
-        : p >= 25 ? '#B08C00' : p >= 10 ? '#5da26b' : '#2c8767';
+      return kg > 900 ? '#9E0142' : kg > 400 ? '#D53E4F' : kg > 150 ? '#E06D1F'
+        : kg > 50 ? '#B08C00' : kg > -25 ? '#5da26b' : '#2c8767';
     };
     var pillBg = function (hex) {
       var n = parseInt(hex.slice(1), 16);
@@ -173,7 +180,7 @@
         color = '#9aa0a6';
       } else {
         txt = (kg > 0 ? '+' : '') + kg + ' kg CO\u2082e contrails';
-        color = grade(res.p);
+        color = grade(res.kg_pax);
       }
       line.textContent = '';
       var span = document.createElement('span');
@@ -203,7 +210,7 @@
           return e;
         };
         pop.textContent = '';
-        var valColor = res.error ? TH.body : grade(res.p);
+        var valColor = res.error ? TH.body : grade(res.kg_pax);
         // caret pointing up at the info icon (positioned after layout below)
         var caret = mk('div', 'position:absolute;top:-6px;width:12px;height:12px;transform:rotate(45deg);box-shadow:-2px -2px 2px rgba(0,0,0,.08);background:' + TH.card + ';');
         pop.appendChild(caret);

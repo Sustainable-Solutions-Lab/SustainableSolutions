@@ -28,7 +28,7 @@ const BM_CODE = `javascript:${BM_COMPACT}`;
 
 type FlightLeg = {
   from: string; to: string; dep_local: string; carrier: string;
-  aircraft: string; percentile: number; t_co2e: number; kg_per_pax?: number;
+  aircraft: string; percentile: number; night?: number; t_co2e: number; kg_per_pax?: number;
   from_ll?: [number, number]; to_ll?: [number, number];
 };
 
@@ -49,6 +49,7 @@ type ScoreResult = {
   pax_assumed?: number;
   est_duration_h?: number;
   aircraft_comparison?: { icao: string; share: number; percentile: number }[];
+  reasons?: string[];
   error?: string;
 };
 
@@ -70,7 +71,7 @@ type AirportRow = [string, string, string, string];
 
 const API = '/api/contrails';
 // bump when the API response schema changes: busts stale CDN-cached responses
-const SV = 'sv=3';
+const SV = 'sv=4';
 // Chrome Web Store listing URL — flip to the staged URL once the listing
 // clears review; null shows the manual-install path instead
 // https://chromewebstore.google.com/detail/jgoiipmnojcdecidalejcadljdcjacgl
@@ -961,6 +962,19 @@ export default function ContrailsTool() {
               )}
             </div>
 
+            {result.reasons && result.reasons.length > 0 && (
+              <div className="mt-4">
+                <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">
+                  Why this prediction
+                </p>
+                <ul className="mt-1 max-w-[640px] list-disc pl-5 text-sm leading-snug opacity-90">
+                  {result.reasons.map((r, i) => (
+                    <li key={i} className="mt-0.5">{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {result.aircraft_comparison && result.aircraft_comparison.length > 1 && (
               <div className="mt-4">
                 <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">
@@ -1146,6 +1160,18 @@ export default function ContrailsTool() {
                           {altAc === result.aircraft ? `same aircraft (${altAc})` : `${altAc} vs your ${result.aircraft}`}
                           {f.aircraft_estimated ? '*' : ''}
                         </span>
+                        {(() => {
+                          const nights = f.legs.map((l) => l.night).filter((n): n is number => n !== undefined);
+                          if (!nights.length) return null;
+                          const altNight = Math.round(nights.reduce((a, b) => a + b, 0) / nights.length);
+                          const yourNight = Math.round(result.night_score);
+                          if (Math.abs(altNight - yourNight) < 8) return null;
+                          return (
+                            <span className="opacity-75">
+                              {altNight}% night flying vs your {yourNight}%
+                            </span>
+                          );
+                        })()}
                         {f.price_usd > 0 && (
                           <span className="opacity-75">
                             ${f.price_usd.toFixed(0)}

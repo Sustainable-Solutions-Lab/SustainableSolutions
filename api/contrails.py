@@ -207,6 +207,57 @@ def route_info(origin, dest):
             "aircraft": [{"icao": k, "share": v} for k, v in r["ac"].items()]}
 
 
+# Newer engine generations emit far less soot (nvPM), seeding fewer and
+# weaker contrails — the second-largest lever after day/night timing.
+_CLEAN_TYPES = {"B788", "B789", "B78X", "A359", "A35K", "A20N", "A21N",
+                "B38M", "B39M", "A339", "A338", "BCS1", "BCS3", "E290", "E295"}
+
+
+def _reasons(feats, aircraft, dep_utc, o_ap, d_ap):
+    """Short, feature-grounded explanations of why a flight scores where it
+    does. Ordered by importance in the model (route darkness, engine
+    generation, season, distance); phrased as tendencies, not certainties."""
+    out = []
+    ns = feats["night_score_full_0"]
+    if ns >= 70:
+        out.append(f"About {ns:.0f}% of the route is flown in darkness — "
+                   "night contrails only trap heat, while daytime contrails "
+                   "also reflect sunlight back to space")
+    elif ns >= 40:
+        out.append(f"About {ns:.0f}% of cruise is after dark, "
+                   "when contrails warm most")
+    else:
+        out.append(f"Cruise is mostly in daylight (~{100 - ns:.0f}%), "
+                   "when contrails' reflection of sunlight offsets much "
+                   "of their warming")
+    if aircraft in _CLEAN_TYPES:
+        out.append(f"The {aircraft}'s newer-generation engines emit far "
+                   "less soot, seeding fewer and weaker contrails")
+    else:
+        out.append(f"The {aircraft}'s older engine generation emits more "
+                   "soot, seeding more and thicker contrails")
+    mid_lat = abs((o_ap["lat"] + d_ap["lat"]) / 2)
+    month = dep_utc.month
+    nh = (o_ap["lat"] + d_ap["lat"]) / 2 >= 0
+    winter = month in (11, 12, 1, 2, 3) if nh else month in (5, 6, 7, 8, 9)
+    summer = month in (6, 7, 8) if nh else month in (12, 1, 2)
+    if mid_lat >= 35 and winter:
+        out.append("Cold-season air on mid-latitude routes is more often "
+                   "ice-supersaturated — prime conditions for persistent "
+                   "contrails")
+    elif mid_lat >= 35 and summer:
+        out.append("Warm-season cruise air on this route holds "
+                   "contrail-forming conditions less often")
+    km = feats["total_flight_distance_km"]
+    if km > 6000:
+        out.append(f"A very long flight (~{km:,.0f} km) spends more hours "
+                   "at contrail-forming cruise altitudes")
+    elif km < 1500:
+        out.append("A short flight spends limited time at contrail-forming "
+                   "cruise altitudes")
+    return out
+
+
 def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
     if origin not in _airports:
         return {"error": f"unknown origin airport '{origin}'"}, 400
@@ -249,6 +300,7 @@ def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
         "est_duration_h": round(
             DURATION_INTERCEPT_H
             + DURATION_SLOPE_H_PER_KM * feats["total_flight_distance_km"], 2),
+        "reasons": _reasons(feats, aircraft, dep_utc, o_ap, d_ap),
     }
     # Score every aircraft flown on this route at the same departure —
     # engine generation can move a flight across most of the percentile
@@ -367,6 +419,7 @@ def bookable_flights(origin, dest, date_s):
                 "from_ll": body["origin_ll"], "to_ll": body["dest_ll"],
                 "carrier": carrier, "aircraft": icao_ac,
                 "percentile": body["percentile"],
+                "night": round(body["night_score"]),
                 "t_co2e": body["expected_co2e_t_per_flight"],
                 "kg_per_pax": body["expected_co2e_kg_per_pax"],
             })
@@ -478,6 +531,7 @@ def batch_score(payload):
             lay = it.get("lay") or []
             cur = datetime.fromisoformat(f"{it['date']}T{it.get('time', '12:00')}")
             kg = t = worst = 0.0
+            worst_reasons = []
             acs, est_any = [], False
             for i in range(len(chain) - 1):
                 o, d = chain[i], chain[i + 1]
@@ -492,6 +546,8 @@ def batch_score(payload):
                     raise ValueError(res.get("error", "scoring failed"))
                 kg += res["expected_co2e_kg_per_pax"]
                 t += res["expected_co2e_t_per_flight"]
+                if res["percentile"] >= worst:
+                    worst_reasons = res.get("reasons", [])[:2]
                 worst = max(worst, res["percentile"])
                 acs.append(ac)
                 est_any = est_any or est
@@ -508,6 +564,7 @@ def batch_score(payload):
                 "p": round(worst, 1), "kg_pax": round(kg, 1),
                 "t_flight": round(t, 2),
                 "ac": "/".join(dict.fromkeys(acs)), "ac_estimated": est_any,
+                "why": worst_reasons,
             })
         except Exception as e:  # noqa: BLE001 — isolate per itinerary
             results.append({"error": str(e)})

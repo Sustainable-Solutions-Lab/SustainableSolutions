@@ -339,9 +339,9 @@ function FlightMap({
   const px = (lon: number) => ((lon - lonMin) / (lonMax - lonMin)) * W;
   const py = (lat: number) => ((latMax - lat) / (latMax - latMin)) * H;
   const path = (sg: [number, number][]) => sg.map((p, i) => `${i ? 'L' : 'M'}${px(p[1]).toFixed(1)},${py(p[0]).toFixed(1)}`).join(' ');
-  const pathBow = (sg: [number, number][], bow: number) => {
-    const pts2 = sg.map((p) => [px(p[1]), py(p[0])]);
-    if (!bow || pts2.length < 3) return path(sg);
+  const bowPts = (sg: [number, number][], bow: number): [number, number][] => {
+    const pts2: [number, number][] = sg.map((p) => [px(p[1]), py(p[0])]);
+    if (!bow || pts2.length < 3) return pts2;
     const n = pts2.length;
     const out: [number, number][] = [];
     for (let i = 0; i < n; i++) {
@@ -353,11 +353,51 @@ function FlightMap({
       const o = bow * Math.sin((Math.PI * i) / (n - 1));
       out.push([pts2[i][0] - (dy / L) * o, pts2[i][1] + (dx / L) * o]);
     }
-    return out.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+    return out;
+  };
+  const toPath = (pts2: [number, number][]) =>
+    pts2.map((pt, i) => `${i ? 'L' : 'M'}${pt[0].toFixed(1)},${pt[1].toFixed(1)}`).join(' ');
+  // screen-space geometry of every drawn arc, for nearest-arc picking:
+  // per-path hit strokes occlude each other on tightly bowed duplicates,
+  // so hovering resolves to whichever arc is truly closest to the pointer
+  const hitSegs: { key: string; pts: [number, number][] }[] = [];
+  for (const a of arcs) {
+    for (const part of a.parts) {
+      for (const sg of part.segs) hitSegs.push({ key: a.key, pts: bowPts(sg, part.bow) });
+    }
+  }
+  const svgRef = useRef<SVGSVGElement>(null);
+  const pick = (e: React.MouseEvent): string | null => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const r = svg.getBoundingClientRect();
+    const x = ((e.clientX - r.left) * W) / r.width;
+    const y = ((e.clientY - r.top) * H) / r.height;
+    const thr = (16 * W) / r.width;
+    let best: string | null = null;
+    let bd = thr * thr;
+    for (const seg of hitSegs) {
+      for (const pt of seg.pts) {
+        const dx = pt[0] - x;
+        const dy = pt[1] - y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < bd) { bd = d2; best = seg.key; }
+      }
+    }
+    return best;
   };
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Route map ${main.codes[0]} to ${main.codes[1]}`} style={{ width: '100%', height: 'auto' }}>
+    <svg
+      ref={svgRef}
+      viewBox={`0 0 ${W} ${H}`}
+      role="img"
+      aria-label={`Route map ${main.codes[0]} to ${main.codes[1]}`}
+      style={{ width: '100%', height: 'auto', cursor: hoverKey ? 'pointer' : 'default' }}
+      onMouseMove={(e) => { const k = pick(e); if (k !== hoverKey) onHover(k); }}
+      onMouseLeave={() => onHover(null)}
+      onClick={(e) => { const k = pick(e); onHover(k === hoverKey ? null : k); }}
+    >
       <rect x={0} y={0} width={W} height={H} fill="var(--paper-2, #f6f6f2)" />
       {land && land.map((poly, i) => (
         <path key={i} d={path(poly.map(([x, y]) => [y, x] as [number, number]))} fill="var(--paper-3, #eaeae2)" stroke="var(--rule, #d8d8ce)" strokeWidth={0.5} />
@@ -367,28 +407,18 @@ function FlightMap({
           part.segs.map((sg, j) => {
             const hovered = hoverKey === a.key;
             const dimmed = hoverKey !== null && !hovered;
-            const d = pathBow(sg, part.bow);
+            const d = toPath(bowPts(sg, part.bow));
             return (
-              <g key={`${a.key}-${pi}-${j}`}>
-                <path
-                  d={d}
-                  fill="none"
-                  stroke={a.color}
-                  strokeWidth={hovered ? a.width + 1.8 : a.width}
-                  strokeLinecap="round"
-                  opacity={dimmed ? 0.35 : 1}
-                />
-                <path
-                  d={d}
-                  fill="none"
-                  stroke="transparent"
-                  strokeWidth={18}
-                  style={{ cursor: 'pointer' }}
-                  onMouseEnter={() => onHover(a.key)}
-                  onMouseLeave={() => onHover(null)}
-                  onClick={() => onHover(hovered ? null : a.key)}
-                />
-              </g>
+              <path
+                key={`${a.key}-${pi}-${j}`}
+                d={d}
+                fill="none"
+                stroke={a.color}
+                strokeWidth={hovered ? a.width + 1.8 : a.width}
+                strokeLinecap="round"
+                opacity={dimmed ? 0.35 : 1}
+                pointerEvents="none"
+              />
             );
           }),
         ),

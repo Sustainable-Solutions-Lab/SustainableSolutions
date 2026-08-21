@@ -58,6 +58,7 @@ type FlightOption = {
   duration?: string; airline?: string; airline_logo?: string;
   total_t_co2e: number; total_kg_per_pax: number; worst_leg_percentile: number;
   aircraft_estimated: boolean; price_usd: number; currency?: string; date?: string;
+  itin_percentile?: number;
 };
 
 type RouteInfo = {
@@ -71,7 +72,7 @@ type AirportRow = [string, string, string, string];
 
 const API = '/api/contrails';
 // bump when the API response schema changes: busts stale CDN-cached responses
-const SV = 'sv=5';
+const SV = 'sv=6';
 // aircraft families with newer, lower-soot engines (mirrors the API's set)
 const CLEAN_TYPES = new Set(['B788', 'B789', 'B78X', 'A359', 'A35K', 'A20N', 'A21N',
   'B38M', 'B39M', 'A339', 'A338', 'BCS1', 'BCS3', 'E290', 'E295']);
@@ -1010,7 +1011,7 @@ export default function ContrailsTool() {
                 <FlightMap
                   main={{ from: result.origin_ll, to: result.dest_ll, codes: [result.origin, result.dest] }}
                   mainColor={pctColor(result.percentile)}
-                  alts={topAlts.map((f, i) => ({ key: `alt${i}`, legs: f.legs, color: pctColor(f.worst_leg_percentile) }))}
+                  alts={topAlts.map((f, i) => ({ key: `alt${i}`, legs: f.legs, color: pctColor(f.itin_percentile ?? f.worst_leg_percentile) }))}
                   land={land}
                   hoverKey={hoverKey}
                   onHover={setHoverKey}
@@ -1128,7 +1129,7 @@ export default function ContrailsTool() {
                       {f.airline_logo ? (
                         <img src={f.airline_logo} alt={f.airline ?? ''} width={26} height={26} loading="lazy" />
                       ) : (
-                        <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(f.worst_leg_percentile) }} />
+                        <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(f.itin_percentile ?? f.worst_leg_percentile) }} />
                       )}
                       <div className="flex min-w-[220px] flex-col">
                         <span className="font-mono text-sm font-bold">
@@ -1136,7 +1137,7 @@ export default function ContrailsTool() {
                           <span className="ml-2 font-normal opacity-70">
                             {f.legs[0].from}{f.legs.slice(1).map((l) => ` → ${l.from}`).join('')} → {f.legs[f.legs.length - 1].to}
                           </span>
-                          <span className="ml-3 font-normal" style={{ color: pctColor(f.worst_leg_percentile) }}>
+                          <span className="ml-3 font-normal" style={{ color: pctColor(f.itin_percentile ?? f.worst_leg_percentile) }}>
                             {fmtKg(f.total_kg_per_pax)}
                           </span>
                         </span>

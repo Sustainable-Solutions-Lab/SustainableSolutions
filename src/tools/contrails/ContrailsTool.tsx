@@ -849,11 +849,24 @@ export default function ContrailsTool() {
                 Get it for Chrome · Arc · Edge
               </a>
             ) : (
-              <span className="text-xs italic opacity-60">
-                Chrome Web Store listing pending review — link coming soon.
-              </span>
+              <a
+                href="/tools/gf-contrails-extension.zip"
+                className="rounded-sm border border-rule-strong bg-paper-3 px-3 py-1.5 text-sm font-bold no-underline"
+                download
+              >
+                Download extension (zip)
+              </a>
             )}
           </p>
+          {!CWS_URL && (
+            <p className="mt-2 text-xs leading-snug opacity-80">
+              Chrome Web Store listing is pending — until then: unzip the
+              download, open <code>arc://extensions</code> (or{' '}
+              <code>chrome://extensions</code>), switch on Developer mode
+              (top right), click Load unpacked, and choose the unzipped
+              folder. Badges then appear on every Google Flights search.
+            </p>
+          )}
           <details className="mt-2 text-xs opacity-80">
             <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-wider opacity-70">
               Prefer a bookmarklet?

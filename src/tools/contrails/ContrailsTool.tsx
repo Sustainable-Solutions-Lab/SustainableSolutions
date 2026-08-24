@@ -76,10 +76,9 @@ const SV = 'sv=6';
 // aircraft families with newer, lower-soot engines (mirrors the API's set)
 const CLEAN_TYPES = new Set(['B788', 'B789', 'B78X', 'A359', 'A35K', 'A20N', 'A21N',
   'B38M', 'B39M', 'A339', 'A338', 'BCS1', 'BCS3', 'E290', 'E295']);
-// Chrome Web Store listing URL — flip to the staged URL once the listing
-// clears review; null shows the manual-install path instead
-// https://chromewebstore.google.com/detail/jgoiipmnojcdecidalejcadljdcjacgl
-const CWS_URL: string | null = null;
+// Chrome Web Store listing (live as of 24 Aug 26)
+const CWS_URL: string | null =
+  'https://chromewebstore.google.com/detail/contrail-check-for-google/jgoiipmnojcdecidalejcadljdcjacgl';
 
 function pctColor(p: number): string {
   if (p >= 90) return '#9E0142';

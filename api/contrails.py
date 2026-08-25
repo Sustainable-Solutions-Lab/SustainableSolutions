@@ -475,6 +475,32 @@ def bookable_flights(origin, dest, date_s):
     return out, 200
 
 
+def resolve_live(fn, origin, dest, date_s):
+    """Flight numbers change over time; when one is missing from the
+    2019+2021 table, find it in live Duffel inventory on a known route
+    and date, and return its schedule (leg endpoints, departure time,
+    aircraft) for normal scoring. Piggybacks on the cached search."""
+    m = re.match(r"([A-Z0-9]{2})\s*0*(\d+)$", fn.upper().replace(" ", ""))
+    if not m:
+        return {"found": False}, 200
+    want = (m.group(1), int(m.group(2)))
+    body, code = bookable_flights(origin, dest, date_s)
+    if code != 200:
+        return body, code
+    for f in body.get("flights", []):
+        for leg in f["legs"]:
+            lm = re.match(r"([A-Z0-9]{2})0*(\d+)$", leg.get("carrier", ""))
+            if lm and (lm.group(1), int(lm.group(2))) == want:
+                return {"found": True, "origin": leg["from"],
+                        "dest": leg["to"],
+                        "date": leg["dep_local"][:10],
+                        "time_local": leg["dep_local"][11:16],
+                        "aircraft": leg.get("aircraft") or "",
+                        "estimated": bool(f.get("aircraft_estimated")),
+                        "source": "live"}, 200
+    return {"found": False}, 200
+
+
 def advisor_flights(origin, dest, date_s, time_s, flex_h):
     """Pool bookable itineraries within ±flex_h HOURS of the selected
     local departure, sorted by total contrail CO2e. flex_h capped at 72
@@ -606,6 +632,13 @@ class handler(BaseHTTPRequestHandler):
                 }, 200
             elif q.get("flightno"):
                 body, code = resolve_flightno(q["flightno"]), 200
+            elif q.get("resolve_live"):
+                o, d = q.get("origin", "").upper(), q.get("dest", "").upper()
+                if o not in _airports or d not in _airports:
+                    body, code = {"error": "unknown airport"}, 400
+                else:
+                    body, code = resolve_live(q.get("fn", ""), o, d,
+                                              q.get("date", ""))
             elif q.get("flights"):
                 o, d = q.get("origin", "").upper(), q.get("dest", "").upper()
                 flex_h = int(float(q.get("flex_h", "0") or 0))

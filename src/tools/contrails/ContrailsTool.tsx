@@ -985,6 +985,12 @@ export default function ContrailsTool() {
           background: linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent);
         }
         @keyframes contrail-shimmer-sweep { 100% { transform: translateX(100%); } }
+        /* native date/time picker glyphs are UA-rendered and invisible on
+           the dark theme unless the control opts into a dark color-scheme */
+        [data-theme='dark'] input[type='date'],
+        [data-theme='dark'] input[type='time'] {
+          color-scheme: dark;
+        }
       `}</style>
       <div className="p-3.5 md:p-5">
         {!result && (

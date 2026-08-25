@@ -1086,6 +1086,16 @@ export default function ContrailsTool() {
                   flagged: worst 10% of flights
                 </div>
               )}
+              {!result.flagged_top10 && result.percentile <= 25 && (
+                <div
+                  className="rounded-sm border px-2 py-1 font-mono text-[11px] uppercase tracking-wider"
+                  style={{ borderColor: '#34936f', color: '#34936f' }}
+                >
+                  {result.expected_co2e_kg_per_pax < 0
+                    ? '✓ predicted net-cooling flight'
+                    : `✓ cleaner than ${100 - Math.round(result.percentile)}% of flights`}
+                </div>
+              )}
             </div>
 
             {result.reasons && result.reasons.length > 0 && (
@@ -1191,11 +1201,14 @@ export default function ContrailsTool() {
               </p>
             )}
             {result && pool.length > 0 && betterPool.length === 0 && (
-              <p className="mt-3 max-w-[640px] rounded-sm border px-3 py-2 text-sm" style={{ borderColor: '#66C2A5' }}>
-                Good news — your chosen flight is predicted to be the
-                lowest-warming option within ±{flexH || 24} h
-                {nonstopOnly ? ' among nonstops' : ''} ({pool.length}{' '}
-                alternative{pool.length > 1 ? 's' : ''} checked).
+              <p className="mt-3 max-w-[640px] rounded-sm border px-3 py-2 text-sm" style={{ borderColor: '#34936f' }}>
+                <strong style={{ color: '#34936f' }}>
+                  ✓ Lowest expected warming in this window.
+                </strong>{' '}
+                Your chosen flight beats all {pool.length}{' '}
+                {nonstopOnly ? 'nonstop ' : ''}alternative
+                {pool.length > 1 ? 's' : ''} we checked within ±
+                {flexH || 24} h — nice pick.
               </p>
             )}
 

@@ -1062,7 +1062,7 @@ export default function ContrailsTool() {
               onMouseLeave={() => setHoverKey(null)}
             >
               {origMatch?.airline_logo ? (
-                <img src={origMatch.airline_logo} alt={origMatch.airline ?? ''} width={26} height={26} loading="lazy" />
+                <img src={origMatch.airline_logo} alt={origMatch.airline ?? ''} width={26} height={26} loading="lazy" style={{ background: '#fff', borderRadius: 4, padding: 2, boxShadow: '0 0 0 1px rgba(0,0,0,0.12)' }} />
               ) : (
                 <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(result.percentile) }} />
               )}
@@ -1161,7 +1161,7 @@ export default function ContrailsTool() {
                       onMouseLeave={() => setHoverKey(null)}
                     >
                       {f.airline_logo ? (
-                        <img src={f.airline_logo} alt={f.airline ?? ''} width={26} height={26} loading="lazy" />
+                        <img src={f.airline_logo} alt={f.airline ?? ''} width={26} height={26} loading="lazy" style={{ background: '#fff', borderRadius: 4, padding: 2, boxShadow: '0 0 0 1px rgba(0,0,0,0.12)' }} />
                       ) : (
                         <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(f.itin_percentile ?? f.worst_leg_percentile) }} />
                       )}

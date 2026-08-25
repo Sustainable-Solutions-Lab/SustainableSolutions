@@ -637,10 +637,15 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         # Never CDN-cache errors (a cached 503 once masked a fixed env
-        # var for a day) or live flight inventory; scores/meta are
-        # deterministic per-URL and cache fine.
-        if code != 200 or q.get("flights"):
+        # var for a day). Successful flight searches cache briefly at the
+        # CDN — the default UA901 query is identical for every visitor,
+        # and 15 minutes of staleness keeps Duffel call volume (and the
+        # look-to-book ratio) sane; scores/meta are deterministic and
+        # cache long.
+        if code != 200:
             self.send_header("Cache-Control", "no-store")
+        elif q.get("flights"):
+            self.send_header("Cache-Control", "public, s-maxage=900, max-age=0")
         else:
             self.send_header("Cache-Control", "public, max-age=3600")
         self.send_header("Access-Control-Allow-Origin", "*")

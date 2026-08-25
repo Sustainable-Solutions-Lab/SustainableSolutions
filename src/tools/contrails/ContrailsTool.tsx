@@ -73,6 +73,12 @@ type AirportRow = [string, string, string, string];
 const API = '/api/contrails';
 // bump when the API response schema changes: busts stale CDN-cached responses
 const SV = 'sv=6';
+
+// Shareable links: the assessment is encoded in the query string, so a
+// copied URL reproduces the exact flight for the recipient.
+const QS = typeof window !== 'undefined'
+  ? new URLSearchParams(window.location.search)
+  : new URLSearchParams();
 // aircraft families with newer, lower-soot engines (mirrors the API's set)
 const CLEAN_TYPES = new Set(['B788', 'B789', 'B78X', 'A359', 'A35K', 'A20N', 'A21N',
   'B38M', 'B39M', 'A339', 'A338', 'BCS1', 'BCS3', 'E290', 'E295']);
@@ -512,17 +518,20 @@ function FlightMap({
 }
 
 export default function ContrailsTool() {
-  const [mode, setMode] = useState<'route' | 'flightno'>('flightno');
-  const [flightNo, setFlightNo] = useState('UA 901');
-  const [origin, setOrigin] = useState('SFO');
-  const [dest, setDest] = useState('LHR');
+  const [mode, setMode] = useState<'route' | 'flightno'>(
+    QS.get('o') && !QS.get('fn') ? 'route' : 'flightno');
+  const [flightNo, setFlightNo] = useState(QS.get('fn') ?? 'UA 901');
+  const [origin, setOrigin] = useState(QS.get('o') ?? 'SFO');
+  const [dest, setDest] = useState(QS.get('d') ?? 'LHR');
   const [date, setDate] = useState(() => {
+    const q = QS.get('date');
+    if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) return q;
     const d = new Date(Date.now() + 30 * 86400e3);
     return d.toISOString().slice(0, 10);
   });
-  const [time, setTime] = useState('21:30');
-  const [aircraft, setAircraft] = useState('B789');
-  const [flexH, setFlexH] = useState('24');
+  const [time, setTime] = useState(QS.get('t') ?? '21:30');
+  const [aircraft, setAircraft] = useState(QS.get('ac') ?? 'B789');
+  const [flexH, setFlexH] = useState(QS.get('flex') ?? '24');
   const [globalTypes, setGlobalTypes] = useState<string[]>([]);
   const [airports, setAirports] = useState<AirportRow[]>([]);
   const [land, setLand] = useState<[number, number][][] | null>(null);
@@ -535,8 +544,9 @@ export default function ContrailsTool() {
   const [flightsNote, setFlightsNote] = useState<string | null>(null);
   const [altsBusy, setAltsBusy] = useState(false);
   const [sortMode, setSortMode] = useState<'warming' | 'value' | 'time'>('warming');
-  const [nonstopOnly, setNonstopOnly] = useState(true);
+  const [nonstopOnly, setNonstopOnly] = useState(QS.get('ns') ? QS.get('ns') === '1' : true);
   const [origMatch, setOrigMatch] = useState<FlightOption | null>(null);
+  const urlAcRef = useRef(Boolean(QS.get('ac')));
   const [fetchedFlex, setFetchedFlex] = useState(0); // widest window already fetched
   const [hoverKey, setHoverKey] = useState<string | null>(null);
   // Mobile controls drawer (chrome lives in ToolShell); closes itself
@@ -570,7 +580,10 @@ export default function ContrailsTool() {
       .then((info: RouteInfo) => {
         if (stale) return;
         setRoute(info);
-        if (info.known && info.aircraft.length > 0) setAircraft(info.aircraft[0].icao);
+        if (info.known && info.aircraft.length > 0 && !urlAcRef.current) {
+          setAircraft(info.aircraft[0].icao);
+        }
+        urlAcRef.current = false;
       })
       .catch(() => setRoute(null));
     return () => {
@@ -666,6 +679,16 @@ export default function ContrailsTool() {
       if (!r.ok || body.error) throw new Error(body.error ?? `HTTP ${r.status}`);
       setResult(body);
       setBusy(false);
+      // keep the address bar shareable: encode what was just assessed
+      try {
+        const share = new URLSearchParams();
+        if (mode === 'flightno') share.set('fn', flightNo.trim().toUpperCase().replace(/\s+/g, ' '));
+        else { share.set('o', o); share.set('d', d); share.set('t', t); share.set('ac', ac); }
+        share.set('date', date);
+        share.set('flex', String(effFlex()));
+        share.set('ns', nonstopOnly ? '1' : '0');
+        window.history.replaceState(null, '', `${window.location.pathname}?${share}`);
+      } catch { /* non-browser context */ }
       // alternatives in the same action (slower — separate indicator)
       await fetchFlights(o, d, t, effFlex());
     } catch (e) {

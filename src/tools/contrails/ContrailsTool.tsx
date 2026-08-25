@@ -147,6 +147,13 @@ function AirportInput({
   const boxRef = useRef<HTMLDivElement>(null);
   const matches = useMemo(() => rankMatches(text, airports), [text, airports]);
 
+  // external updates (flight-number resolution, mode switches) re-seed
+  // the field; fires only when the derived value actually changes
+  useEffect(() => {
+    setText(value);
+    setOpen(false);
+  }, [value]);
+
   useEffect(() => {
     const close = (e: MouseEvent) => {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
@@ -571,6 +578,11 @@ export default function ContrailsTool() {
     };
   }, [origin, dest, mode]);
 
+  const cityLookup = useMemo(() => {
+    const m = new Map(airports.map((a) => [a[0], a[1]]));
+    return (code: string) => m.get(code) ?? '';
+  }, [airports]);
+
   const routeTypes = useMemo(
     () => new Map((route?.aircraft ?? []).map((a) => [a.icao, a.share])),
     [route],
@@ -800,8 +812,8 @@ export default function ContrailsTool() {
           </label>
         ) : (
           <>
-            <AirportInput label="From" value={`${origin} — San Francisco`} onSelect={setOrigin} airports={airports} />
-            <AirportInput label="To" value={`${dest} — London`} onSelect={setDest} airports={airports} />
+            <AirportInput label="From" value={`${origin} — ${cityLookup(origin)}`} onSelect={setOrigin} airports={airports} />
+            <AirportInput label="To" value={`${dest} — ${cityLookup(dest)}`} onSelect={setDest} airports={airports} />
           </>
         )}
 
@@ -882,7 +894,7 @@ export default function ContrailsTool() {
         <div className="mt-3 border-t border-rule pt-3">
           <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">Companion paper</p>
           <p className="mt-1 text-xs italic leading-snug opacity-70">
-            Whiteson, Bonnemaizon, Shapiro &amp; Davis (in preparation) —
+            Davis, Whiteson, Bonnemaizon, Caldeira &amp; Shapiro (in preparation) —
             preprint link coming when the paper is submitted.
           </p>
         </div>

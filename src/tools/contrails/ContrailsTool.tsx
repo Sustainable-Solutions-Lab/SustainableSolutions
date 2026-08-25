@@ -546,6 +546,7 @@ export default function ContrailsTool() {
   const [sortMode, setSortMode] = useState<'warming' | 'value' | 'time'>('warming');
   const [nonstopOnly, setNonstopOnly] = useState(QS.get('ns') ? QS.get('ns') === '1' : true);
   const [origMatch, setOrigMatch] = useState<FlightOption | null>(null);
+  const [fnNeedsRoute, setFnNeedsRoute] = useState(false);
   const urlAcRef = useRef(Boolean(QS.get('ac')));
   const [fetchedFlex, setFetchedFlex] = useState(0); // widest window already fetched
   const [hoverKey, setHoverKey] = useState<string | null>(null);
@@ -665,13 +666,31 @@ export default function ContrailsTool() {
     try {
       let o = origin, d = dest, t = time, ac = aircraft;
       if (mode === 'flightno') {
+        const fnClean = flightNo.toUpperCase().replace(/\s/g, '');
         const rr = await fetch(`${API}?flightno=${encodeURIComponent(flightNo)}&${SV}`);
         const rb = await rr.json();
-        if (!rb.found) throw new Error(`Flight ${flightNo.toUpperCase().replace(/\s/g, '')} not found in our 2019–2021 schedules — try route mode.`);
-        o = rb.origin; d = rb.dest; t = rb.time_local;
-        if (rb.aircraft) ac = rb.aircraft;
-        setOrigin(o); setDest(d); setTime(t); if (rb.aircraft) setAircraft(rb.aircraft);
-        setResolvedLabel(`${flightNo.toUpperCase().replace(/\s/g, '')} · typical schedule from ${rb.n_observed} observed flights`);
+        if (rb.found) {
+          o = rb.origin; d = rb.dest; t = rb.time_local;
+          if (rb.aircraft) ac = rb.aircraft;
+          setOrigin(o); setDest(d); setTime(t); if (rb.aircraft) setAircraft(rb.aircraft);
+          setResolvedLabel(`${fnClean} · typical schedule from ${rb.n_observed} observed flights`);
+          setFnNeedsRoute(false);
+        } else {
+          // modern numbers missing from the 2019–21 table: look the
+          // flight up in live inventory on the selected route/date
+          const lr = await fetch(`${API}?resolve_live=1&fn=${encodeURIComponent(fnClean)}&origin=${origin}&dest=${dest}&date=${date}&${SV}`);
+          const lb = await lr.json();
+          if (lb.found) {
+            o = lb.origin; d = lb.dest; t = lb.time_local;
+            if (lb.aircraft) ac = lb.aircraft;
+            setOrigin(o); setDest(d); setTime(t); if (lb.aircraft) setAircraft(lb.aircraft);
+            setResolvedLabel(`${fnClean} · live schedule (not in our 2019–21 database${lb.aircraft ? '' : '; aircraft assumed'})`);
+            setFnNeedsRoute(false);
+          } else {
+            setFnNeedsRoute(true);
+            throw new Error(`${fnClean} isn't in our 2019–2021 schedules or in live inventory for ${origin}→${dest} on ${date}. Set its route below and Assess again.`);
+          }
+        }
       }
       const q = new URLSearchParams({ origin: o, dest: d, date, time: t, aircraft: ac });
       const r = await fetch(`${API}?${q}&${SV}`);
@@ -822,7 +841,7 @@ export default function ContrailsTool() {
           ))}
         </div>
 
-        {mode === 'flightno' ? (
+        {mode === 'flightno' && (
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Flight number</span>
             <input
@@ -833,7 +852,18 @@ export default function ContrailsTool() {
             />
             <span className="text-[11px] italic opacity-60">Route, time and aircraft filled from 2019–2021 schedules.</span>
           </label>
-        ) : (
+        )}
+        {mode === 'flightno' && fnNeedsRoute && (
+          <>
+            <p className="text-[11px] italic opacity-70">
+              Newer flight number — tell us its route and we’ll find it in
+              live schedules:
+            </p>
+            <AirportInput label="From" value={`${origin} — ${cityLookup(origin)}`} onSelect={setOrigin} airports={airports} />
+            <AirportInput label="To" value={`${dest} — ${cityLookup(dest)}`} onSelect={setDest} airports={airports} />
+          </>
+        )}
+        {mode === 'route' && (
           <>
             <AirportInput label="From" value={`${origin} — ${cityLookup(origin)}`} onSelect={setOrigin} airports={airports} />
             <AirportInput label="To" value={`${dest} — ${cityLookup(dest)}`} onSelect={setDest} airports={airports} />

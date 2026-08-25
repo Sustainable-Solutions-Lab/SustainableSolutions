@@ -699,11 +699,28 @@ export default function ContrailsTool() {
       .filter((f) => !Number.isFinite(base) || Math.abs(new Date(f.dep_local).getTime() - base) <= win);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flights, nonstopOnly, flexH, date, time, origMatch]);
-  // only genuinely lower-warming options count as alternatives
-  const betterPool = useMemo(
-    () => (result ? pool.filter((f) => f.total_kg_per_pax < result.expected_co2e_kg_per_pax - 0.5) : []),
-    [pool, result],
-  );
+  // Only genuinely lower-warming options count as alternatives.
+  // Two guards against spurious precision: (1) the improvement must
+  // exceed the model's noise scale (20 kg or 10% of the flight's own
+  // magnitude); (2) a nonstop on the same aircraft at the same clock
+  // time differs from yours only in day-of-year — a smooth annual
+  // harmonic the model cannot resolve day-to-day — so any predicted
+  // difference there is tree noise, not signal.
+  const betterPool = useMemo(() => {
+    if (!result) return [];
+    const yours = result.expected_co2e_kg_per_pax;
+    const floor = Math.max(20, 0.1 * Math.abs(yours));
+    const selMin = Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+    return pool.filter((f) => {
+      if (yours - f.total_kg_per_pax < floor) return false;
+      if (f.n_stops === 0 && f.legs[0].aircraft === result.aircraft) {
+        const m = Number(f.dep_local.slice(11, 13)) * 60 + Number(f.dep_local.slice(14, 16));
+        const clockDiff = Math.min(Math.abs(m - selMin), 1440 - Math.abs(m - selMin));
+        if (clockDiff < 45) return false;
+      }
+      return true;
+    });
+  }, [pool, result, time]);
   const topAlts = useMemo(() => {
     const list = [...betterPool];
     if (result && sortMode === 'value' && origPrice !== null) {

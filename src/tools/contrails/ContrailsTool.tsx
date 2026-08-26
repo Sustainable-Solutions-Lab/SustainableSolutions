@@ -775,6 +775,11 @@ export default function ContrailsTool() {
       return true;
     });
   }, [pool, result, time]);
+  const poolMinKg = useMemo(
+    () => (pool.length ? Math.min(...pool.map((f) => f.total_kg_per_pax)) : Infinity),
+    [pool],
+  );
+
   const topAlts = useMemo(() => {
     const list = [...betterPool];
     if (result && sortMode === 'value' && origPrice !== null) {
@@ -1275,6 +1280,14 @@ export default function ContrailsTool() {
                           <span className="ml-3 font-normal" style={{ color: pctColor(f.itin_percentile ?? f.worst_leg_percentile) }}>
                             {fmtKg(f.total_kg_per_pax)}
                           </span>
+                          {f.total_kg_per_pax <= poolMinKg + 0.5 && (
+                            <span
+                              className="ml-2 rounded-sm border px-1.5 py-0.5 align-middle font-mono text-[10px] font-normal uppercase tracking-wider"
+                              style={{ borderColor: '#34936f', color: '#34936f' }}
+                            >
+                              ✓ lowest in window
+                            </span>
+                          )}
                         </span>
                         <span className="font-mono text-xs opacity-70">
                           {f.date ?? f.dep_local.slice(0, 10)} · {f.dep_local.slice(11)}

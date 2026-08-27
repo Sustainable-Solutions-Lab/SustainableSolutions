@@ -559,7 +559,7 @@ export default function ContrailsTool() {
       .then((r) => r.json())
       .then((m) => setGlobalTypes((m.aircraft ?? []).map((a: { icao: string }) => a.icao)))
       .catch(() => setGlobalTypes(['B738', 'A320', 'B789', 'A359', 'B77W']));
-    fetch('/tools/contrails-airports.json')
+    fetch('/tools/contrails/airports.json')
       .then((r) => r.json())
       .then(setAirports)
       .catch(() => setAirports([]));
@@ -977,7 +977,7 @@ export default function ContrailsTool() {
               </a>
             ) : (
               <a
-                href="/tools/gf-contrails-extension.zip"
+                href="/tools/contrails/gf-contrails-extension.zip"
                 className="rounded-sm border border-rule-strong bg-paper-3 px-3 py-1.5 text-sm font-bold no-underline"
                 download
               >

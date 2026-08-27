@@ -15,10 +15,10 @@ Auto-badges every Google Flights result with predicted contrail warming
 ## Zips (two of them)
 
 - `extension/gf-contrails.zip` — Chrome Web Store upload (gitignored).
-- `public/tools/gf-contrails-extension.zip` — served from the site for
+- `public/tools/contrails/gf-contrails-extension.zip` — served from the site for
   manual load-unpacked installs (linked from the tool rail until the
   store listing is live). Rebuild BOTH after editing the extension:
-  `cd extension && zip -qr gf-contrails.zip gf-contrails -x "*/README.md" && zip -qr ../public/tools/gf-contrails-extension.zip gf-contrails -x "*/README.md"`
+  `cd extension && zip -qr gf-contrails.zip gf-contrails -x "*/README.md" && zip -qr ../public/tools/contrails/gf-contrails-extension.zip gf-contrails -x "*/README.md"`
 
 ## Source of truth
 

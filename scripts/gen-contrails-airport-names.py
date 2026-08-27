@@ -3,7 +3,7 @@
 IATA resolver behind the contrails batch endpoint (bookmarklet/extension).
 
 Keys are normalized airport names and cities from
-public/tools/contrails-airports.json, PLUS every token prefix of each
+public/tools/contrails/airports.json, PLUS every token prefix of each
 ("frankfurt am main" also yields "frankfurt" and "frankfurt am"), so
 Google Flights labels like "Frankfurt Airport" resolve even though our
 records say "Frankfurt am Main". Collisions go to the airport with the
@@ -19,7 +19,7 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ROWS = json.load(open(ROOT / "public/tools/contrails-airports.json"))
+ROWS = json.load(open(ROOT / "public/tools/contrails/airports.json"))
 ROUTES = json.load(open(ROOT / "api/_contrails_assets/routes.json"))
 OUT = ROOT / "api/_contrails_assets/airport_names.json"
 

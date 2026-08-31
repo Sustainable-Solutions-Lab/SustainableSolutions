@@ -103,6 +103,10 @@ export type Tool = {
   link: string | null;          // internal route or external URL
   doi: string | null;           // companion publication's DOI
   order: number;
+  // Sheet-controlled listing toggle: TRUE hides the card from /tools
+  // (page stays live at its URL), FALSE lists it, blank falls back to
+  // the code-side UNLISTED default in pages/tools/index.astro.
+  unlisted?: boolean | null;
 };
 
 export type FeaturedItem = {

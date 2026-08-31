@@ -9,12 +9,14 @@ import { resolve } from 'node:path';
 
 // Tools that exist (and have a working page at /tools/<slug>) but are NOT yet
 // listed on this index — shareable by direct URL only, and noindex on their page.
-// Remove a slug here to "publish" that tool to the index.
+// The sheet's `unlisted` column (TRUE/FALSE) overrides this set per row; a
+// blank cell falls back to the default here. So listing a default-unlisted
+// tool takes unlisted=FALSE in the sheet — no code change.
 const UNLISTED = new Set(['magnets', 'materials', 'contrails']);
 
 const sorted = (tools as Tool[])
   .slice()
-  .filter((t) => !UNLISTED.has(t.slug))
+  .filter((t) => !(t.unlisted ?? UNLISTED.has(t.slug)))
   .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
 
 const pubsByDoi = new Map<string, Publication>();

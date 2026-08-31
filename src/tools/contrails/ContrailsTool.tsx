@@ -1266,12 +1266,14 @@ export default function ContrailsTool() {
                       onClick={() => setHoverKey((k) => (k === key ? null : key))}
                       onMouseLeave={() => setHoverKey(null)}
                     >
+                      <div className="flex min-w-[240px] flex-1 flex-col">
+                        <div className="flex items-center gap-x-4">
                       {f.airline_logo ? (
                         <img src={f.airline_logo} alt={f.airline ?? ''} width={26} height={26} loading="lazy" style={{ background: '#fff', borderRadius: 4, padding: 2, boxShadow: '0 0 0 1px rgba(0,0,0,0.12)' }} />
                       ) : (
                         <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(f.itin_percentile ?? f.worst_leg_percentile) }} />
                       )}
-                      <div className="flex min-w-[220px] flex-col">
+                      <div className="flex min-w-0 flex-col">
                         <span className="font-mono text-sm font-bold">
                           {f.legs.map((l) => l.carrier).join(' · ')}
                           <span className="ml-2 font-normal opacity-70">
@@ -1282,7 +1284,7 @@ export default function ContrailsTool() {
                           </span>
                           {f.total_kg_per_pax <= poolMinKg + 0.5 && (
                             <span
-                              className="ml-2 rounded-sm border px-1.5 py-0.5 align-middle font-mono text-[10px] font-normal uppercase tracking-wider"
+                              className="ml-3 inline-block rounded-sm border px-2 py-1 align-middle font-mono text-[10px] font-normal uppercase tracking-wider"
                               style={{ borderColor: '#34936f', color: '#34936f' }}
                             >
                               ✓ lowest in window
@@ -1295,6 +1297,23 @@ export default function ContrailsTool() {
                           {altMin !== null ? ` · ${fmtMin(altMin)}` : ''}
                           {f.n_stops > 0 ? ` · ${f.n_stops} stop${f.n_stops > 1 ? 's' : ''}` : ' · nonstop'}
                         </span>
+                      </div>
+                        </div>
+                        {(() => {
+                          const nights = f.legs.map((l) => l.night).filter((n): n is number => n !== undefined);
+                          const altNight = nights.length ? Math.round(nights.reduce((a, b) => a + b, 0) / nights.length) : null;
+                          const yourNight = Math.round(result.night_score);
+                          const acUpgrade = f.legs.every((l) => CLEAN_TYPES.has(l.aircraft)) && !CLEAN_TYPES.has(result.aircraft);
+                          const parts: string[] = [];
+                          if (altNight !== null && altNight <= yourNight - 8) {
+                            parts.push(`it flies more in daylight (${altNight}% night vs your ${yourNight}%)`);
+                          }
+                          if (acUpgrade) parts.push('its newer engines seed fewer contrails');
+                          const note = parts.length
+                            ? `Cooler because ${parts.join(', and ')}.`
+                            : 'Cooler thanks to schedule differences that avoid contrail-prone conditions.';
+                          return <p className="mt-1 text-xs italic opacity-70">{note}</p>;
+                        })()}
                       </div>
                       <div className="ml-auto flex flex-col items-end gap-0.5 text-right font-mono text-[11px]">
                         <span style={{ color: '#66C2A5' }}>{dt.toFixed(0)} kg CO₂e vs yours</span>
@@ -1319,21 +1338,6 @@ export default function ContrailsTool() {
                           </span>
                         )}
                       </div>
-                      {(() => {
-                        const nights = f.legs.map((l) => l.night).filter((n): n is number => n !== undefined);
-                        const altNight = nights.length ? Math.round(nights.reduce((a, b) => a + b, 0) / nights.length) : null;
-                        const yourNight = Math.round(result.night_score);
-                        const acUpgrade = f.legs.every((l) => CLEAN_TYPES.has(l.aircraft)) && !CLEAN_TYPES.has(result.aircraft);
-                        const parts: string[] = [];
-                        if (altNight !== null && altNight <= yourNight - 8) {
-                          parts.push(`it flies more in daylight (${altNight}% night vs your ${yourNight}%)`);
-                        }
-                        if (acUpgrade) parts.push('its newer engines seed fewer contrails');
-                        const note = parts.length
-                          ? `Cooler because ${parts.join(', and ')}.`
-                          : 'Cooler thanks to schedule differences that avoid contrail-prone conditions.';
-                        return <p className="mt-1 w-full text-xs italic opacity-70">{note}</p>;
-                      })()}
                     </div>
                   );
                 })}

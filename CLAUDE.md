@@ -316,6 +316,7 @@ off-screen otherwise.
 | G      | link              | Text                                           | Internal route (`/tools/firefuels`) or external URL |
 | H      | doi               | Text                                           | DOI of the companion publication, optional. Also surfaces a "Companion tool" link on that publication's card. |
 | I      | order             | Integer                                        | Sort order on `/tools` (lower = earlier)       |
+| —      | unlisted          | Boolean (TRUE/FALSE)                           | TRUE hides the card from `/tools` while the page stays live at its URL; FALSE lists it. Blank falls back to the code default (`UNLISTED` set in `src/pages/tools/index.astro`, where contrails/magnets/materials are default-hidden). Add anywhere in the sheet — fetch-sheets reads by header name. |
 
 ### Tab: `Featured`
 

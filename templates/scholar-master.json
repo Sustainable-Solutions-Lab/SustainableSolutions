@@ -72,20 +72,20 @@
     "title": "The supply chain of CO2 emissions"
   },
   {
-    "id": "jMZTt8odoasC",
-    "title": "Monitoring global carbon emissions in 2021"
-  },
-  {
     "id": "i8eIfGGcn98C",
     "title": "Global and regional drivers of land-use emissions in 1961–2017"
   },
   {
-    "id": "lRPiJ3GhvscC",
-    "title": "China’s international trade and air pollution in the United States"
+    "id": "jMZTt8odoasC",
+    "title": "Monitoring global carbon emissions in 2021"
   },
   {
     "id": "ZJ-noXUx9mkC",
     "title": "Monitoring global carbon emissions in 2022"
+  },
+  {
+    "id": "lRPiJ3GhvscC",
+    "title": "China’s international trade and air pollution in the United States"
   },
   {
     "id": "v6PuF9mNY3oC",
@@ -108,10 +108,6 @@
     "title": "Increasing probability of mortality during Indian heat waves"
   },
   {
-    "id": "hqOjcs7Dif8C",
-    "title": "A synthesis of carbon in international trade"
-  },
-  {
     "id": "WgvcDLhf7hwC",
     "title": "Agricultural risks from changing snowmelt"
   },
@@ -120,12 +116,16 @@
     "title": "Drivers of the US CO2 emissions 1997–2013"
   },
   {
+    "id": "hqOjcs7Dif8C",
+    "title": "A synthesis of carbon in international trade"
+  },
+  {
     "id": "UebtZRa9Y70C",
     "title": "A synthesis of carbon dioxide emissions from fossil-fuel combustion"
   },
   {
     "id": "DOLguN9Lh8sC",
-    "title": "Global carbon emissions in 2023"
+    "title": "Global carbon emissions in 2023: Climate chronicles"
   },
   {
     "id": "eIKNFFVQvJAC",
@@ -172,12 +172,12 @@
     "title": "Geophysical constraints on the reliability of solar and wind power worldwide"
   },
   {
-    "id": "ON9TkA72AHEC",
-    "title": "Targeted emission reductions from global super-polluting power plant units"
-  },
-  {
     "id": "1l3MdapXzAoC",
     "title": "Record-high CO2 emissions from boreal fires in 2021"
+  },
+  {
+    "id": "ON9TkA72AHEC",
+    "title": "Targeted emission reductions from global super-polluting power plant units"
   },
   {
     "id": "CLhUwle04lcC",
@@ -216,6 +216,10 @@
     "title": "Probabilistic estimates of drought impacts on agricultural production"
   },
   {
+    "id": "2mikiJ1VBVsC",
+    "title": "Global carbon emissions and decarbonization in 2025: Climate chronicles"
+  },
+  {
     "id": "R6EwkKsDylYC",
     "title": "Decreases in global beer supply due to extreme drought and heat"
   },
@@ -224,12 +228,12 @@
     "title": "Cost-effective ecological restoration"
   },
   {
-    "id": "E2bRg1zSkIsC",
-    "title": "The COVID-19 lockdowns: a window into the Earth System"
-  },
-  {
     "id": "6ScxedgR18sC",
     "title": "Climate warming increases extreme daily wildfire growth risk in California"
+  },
+  {
+    "id": "E2bRg1zSkIsC",
+    "title": "The COVID-19 lockdowns: a window into the Earth System"
   },
   {
     "id": "d6JCS5z0ckYC",
@@ -238,10 +242,6 @@
   {
     "id": "lPDSu1ZU3VAC",
     "title": "Flexibility and intensity of global water use"
-  },
-  {
-    "id": "2mikiJ1VBVsC",
-    "title": "Global carbon emissions and decarbonization in 2025: Climate chronicles"
   },
   {
     "id": "ITz7TVZQ0sgC",
@@ -276,12 +276,12 @@
     "title": "Assessment of China's virtual air pollution transport embodied in trade by using a consumption-based emission inventory"
   },
   {
-    "id": "o0eFlWRwRSUC",
-    "title": "Large and inequitable flood risks in Los Angeles, California"
-  },
-  {
     "id": "aVq8r21TQD4C",
     "title": "Future demand for electricity generation materials under different climate mitigation scenarios"
+  },
+  {
+    "id": "o0eFlWRwRSUC",
+    "title": "Large and inequitable flood risks in Los Angeles, California"
   },
   {
     "id": "_n8fIOMweQoC",
@@ -296,16 +296,16 @@
     "title": "Atmospheric methane removal: a research agenda"
   },
   {
+    "id": "PQY3Tb_h0-cC",
+    "title": "A synergistic approach to air pollution control and carbon neutrality in China can avoid millions of premature deaths annually by 2060"
+  },
+  {
     "id": "uoeYKOKFegwC",
     "title": "Global patterns of daily CO2 emissions reductions in the first year of COVID-19"
   },
   {
     "id": "tFzHCjejgA0C",
     "title": "The Australian terrestrial carbon budget"
-  },
-  {
-    "id": "PQY3Tb_h0-cC",
-    "title": "A synergistic approach to air pollution control and carbon neutrality in China can avoid millions of premature deaths annually by 2060"
   },
   {
     "id": "kQqwFFzsCTwC",
@@ -324,6 +324,14 @@
     "title": "Role of climate goals and clean-air policies on reducing future air pollution deaths in China: a modelling study"
   },
   {
+    "id": "qOpkhvVCMvUC",
+    "title": "Building materials could store more than 16 billion tonnes of CO2 annually"
+  },
+  {
+    "id": "-qpA3cGbmHsC",
+    "title": "Net-zero emissions energy systems: What we know and do not know"
+  },
+  {
     "id": "dhpJJ7xvgBgC",
     "title": "The effect of natural gas supply on US renewable energy and CO2 emissions"
   },
@@ -332,16 +340,8 @@
     "title": "Global fossil carbon emissions rebound to near pre-COVID-19 levels"
   },
   {
-    "id": "-qpA3cGbmHsC",
-    "title": "Net-zero emissions energy systems: What we know and do not know"
-  },
-  {
     "id": "7XUxBq3GufIC",
     "title": "Global CO2 uptake by cement from 1930 to 2019"
-  },
-  {
-    "id": "qOpkhvVCMvUC",
-    "title": "Building materials could store more than 16 billion tonnes of CO2 annually"
   },
   {
     "id": "RZBefGmQYygC",
@@ -360,16 +360,24 @@
     "title": "Economic and biophysical limits to seaweed farming for climate change mitigation"
   },
   {
-    "id": "yNlG6JgpFqoC",
-    "title": "Near-real-time global gridded daily CO2 emissions"
-  },
-  {
     "id": "i6LplTXqhpIC",
     "title": "Climate change impacts on the extreme power shortage events of wind-solar supply systems worldwide during 1980–2022"
   },
   {
+    "id": "yNlG6JgpFqoC",
+    "title": "Near-real-time global gridded daily CO2 emissions"
+  },
+  {
+    "id": "2u1QkWOsl3MC",
+    "title": "Long-range PM2.5 pollution and health impacts from the 2023 Canadian wildfires"
+  },
+  {
     "id": "zaHkCSmj5XkC",
     "title": "Toward impact-based monitoring of drought and its cascading hazards"
+  },
+  {
+    "id": "k6nH7jlkaTkC",
+    "title": "Human activities now fuel two-thirds of global methane emissions"
   },
   {
     "id": "oYwriLWYh5YC",
@@ -384,16 +392,8 @@
     "title": "CH4 and N2O emissions embodied in international trade of meat"
   },
   {
-    "id": "2u1QkWOsl3MC",
-    "title": "Long-range PM2.5 pollution and health impacts from the 2023 Canadian wildfires"
-  },
-  {
-    "id": "k6nH7jlkaTkC",
-    "title": "Human activities now fuel two-thirds of global methane emissions"
-  },
-  {
-    "id": "aNch6Af-aFkC",
-    "title": "Economic carbon cycle feedbacks may offset additional warming from natural feedbacks"
+    "id": "DrOLxFoABAwC",
+    "title": "Strategies for climate-resilient global wind and solar power systems"
   },
   {
     "id": "UeHWp8X0CEIC",
@@ -404,12 +404,20 @@
     "title": "Optimizing emissions reductions from the US power sector for climate and health benefits"
   },
   {
+    "id": "aNch6Af-aFkC",
+    "title": "Economic carbon cycle feedbacks may offset additional warming from natural feedbacks"
+  },
+  {
     "id": "xckinRaLORAC",
     "title": "Plant-level real-time monitoring data reveal substantial abatement potential of air pollution and CO2 in China’s cement sector"
   },
   {
     "id": "8O4vDxvErlEC",
     "title": "Early retirement of power plants in climate mitigation scenarios"
+  },
+  {
+    "id": "n8FNryW2AHIC",
+    "title": "Globally interconnected solar-wind system addresses future electricity demands."
   },
   {
     "id": "_kc_bZDykSQC",
@@ -420,16 +428,12 @@
     "title": "Effects of atmospheric transport and trade on air pollution mortality in China"
   },
   {
-    "id": "DrOLxFoABAwC",
-    "title": "Strategies for climate-resilient global wind and solar power systems"
+    "id": "mnAcAzq93VMC",
+    "title": "Decarbonization will lead to more equitable air quality in California"
   },
   {
     "id": "qxL8FJ1GzNcC",
     "title": "Climate policy and dependence on traded carbon"
-  },
-  {
-    "id": "mnAcAzq93VMC",
-    "title": "Decarbonization will lead to more equitable air quality in California"
   },
   {
     "id": "ZZwcLRaXOV4C",
@@ -444,24 +448,20 @@
     "title": "Quantifying expert consensus against the existence of a secret, large-scale atmospheric spraying program"
   },
   {
-    "id": "n8FNryW2AHIC",
-    "title": "Globally interconnected solar-wind system addresses future electricity demands."
-  },
-  {
-    "id": "2osOgNQ5qMEC",
-    "title": "The effect of drainage reorganization on paleoaltimetry studies: An example from the Paleogene Laramide foreland"
-  },
-  {
     "id": "0qX8s2k1IRwC",
     "title": "Planning reliable wind-and solar-based electricity systems"
+  },
+  {
+    "id": "wH03y5nBhxsC",
+    "title": "Snowmelt risk telecouplings for irrigated agriculture"
   },
   {
     "id": "UEFpDhwOD2kC",
     "title": "Large global variations in the carbon dioxide removal potential of seaweed farming due to biophysical constraints"
   },
   {
-    "id": "wH03y5nBhxsC",
-    "title": "Snowmelt risk telecouplings for irrigated agriculture"
+    "id": "2osOgNQ5qMEC",
+    "title": "The effect of drainage reorganization on paleoaltimetry studies: An example from the Paleogene Laramide foreland"
   },
   {
     "id": "WGv8Og3F3KgC",
@@ -488,12 +488,12 @@
     "title": "Near-real-time global gridded daily CO2 emissions 2021"
   },
   {
-    "id": "09LM3QYkMKUC",
-    "title": "Infrastructure Shapes Differences in the Carbon Intensities of Chinese Cities"
-  },
-  {
     "id": "ZYLUaBFA95QC",
     "title": "High downward surface solar radiation conducive to ozone pollution more frequent under global warming"
+  },
+  {
+    "id": "09LM3QYkMKUC",
+    "title": "Infrastructure Shapes Differences in the Carbon Intensities of Chinese Cities"
   },
   {
     "id": "zfsRRabFVBUC",
@@ -520,6 +520,10 @@
     "title": "Climate effects of China's efforts to improve its air quality"
   },
   {
+    "id": "mu2_AnMl8iYC",
+    "title": "The global hydrogen budget"
+  },
+  {
     "id": "UKB2i6g6GNMC",
     "title": "Bending the Curve: Ten Scalable Solutions for Carbon Neutrality and Climate Stability"
   },
@@ -532,20 +536,24 @@
     "title": "Environmental justice, infrastructure provisioning, and environmental impact assessment: Evidence from the California Environmental Quality Act"
   },
   {
-    "id": "w0odbtu79TwC",
-    "title": "Rate and velocity of climate change caused by cumulative carbon emissions"
-  },
-  {
     "id": "g9YHGIZn7mcC",
     "title": "The global mismatch between equitable carbon dioxide removal liability and capacity"
   },
   {
-    "id": "mu2_AnMl8iYC",
-    "title": "The global hydrogen budget"
+    "id": "w0odbtu79TwC",
+    "title": "Rate and velocity of climate change caused by cumulative carbon emissions"
+  },
+  {
+    "id": "4uoR24qA-WYC",
+    "title": "The adaptive benefits of agricultural water markets in California"
   },
   {
     "id": "M7C5BM2v8n8C",
     "title": "Flight delays due to air pollution in China"
+  },
+  {
+    "id": "hrkNWuzUpWwC",
+    "title": "Drivers and projections of global surface temperature anomalies at the local scale"
   },
   {
     "id": "Kv9jytqXTosC",
@@ -556,14 +564,6 @@
     "title": "Food without agriculture"
   },
   {
-    "id": "hrkNWuzUpWwC",
-    "title": "Drivers and projections of global surface temperature anomalies at the local scale"
-  },
-  {
-    "id": "4uoR24qA-WYC",
-    "title": "The adaptive benefits of agricultural water markets in California"
-  },
-  {
     "id": "T_0gP6tLVL0C",
     "title": "Data and analysis toolbox for modeling the nexus of food, energy, and water"
   },
@@ -572,40 +572,28 @@
     "title": "Would firm generators facilitate or deter variable renewable energy in a carbon-free electricity system?"
   },
   {
-    "id": "oFn-K-OQSCAC",
-    "title": "Reply to Lopez et al.: Consumption-based accounting helps mitigate global air pollution"
-  },
-  {
     "id": "LzOrNEA7mwcC",
     "title": "Reliance on fossil fuels increases during extreme temperature events in the continental United States"
+  },
+  {
+    "id": "oFn-K-OQSCAC",
+    "title": "Reply to Lopez et al.: Consumption-based accounting helps mitigate global air pollution"
   },
   {
     "id": "uGrg30pLAbkC",
     "title": "Trade risks to energy security in net-zero emissions energy scenarios"
   },
   {
-    "id": "vkuYBMKU6wEC",
-    "title": "Climate effects of aerosols reduce economic inequality"
-  },
-  {
     "id": "pwA0zy_liR0C",
     "title": "Natural gas supply from Russia derived from daily pipeline flow data and potential solutions for filling a shortage of Russian supply in the European Union (EU)"
   },
   {
+    "id": "vkuYBMKU6wEC",
+    "title": "Climate effects of aerosols reduce economic inequality"
+  },
+  {
     "id": "LlXTz_FrCmAC",
     "title": "Understanding the energy consumption and greenhouse gas emissions and the implication for achieving climate change mitigation targets"
-  },
-  {
-    "id": "HAmI6pRF5skC",
-    "title": "Impact of lockdowns and winter temperatures on natural gas consumption in Europe"
-  },
-  {
-    "id": "ibZ2AwG9z6wC",
-    "title": "Environmental benefit-detriment thresholds for flow battery energy storage systems: A case study in California"
-  },
-  {
-    "id": "P-MJmu9ZMwQC",
-    "title": "Quantifying Social Inequalities in Flood Risk"
   },
   {
     "id": "l7iSsH4_Im4C",
@@ -616,16 +604,32 @@
     "title": "Unraveling climate change-induced compound low-solar-low-wind extremes in China"
   },
   {
-    "id": "BKYZGPsuSFYC",
-    "title": "International Trade Reshapes the Decoupling of Emissions from Economic Growth"
+    "id": "P-MJmu9ZMwQC",
+    "title": "Quantifying Social Inequalities in Flood Risk"
   },
   {
     "id": "UY3hNwcQ290C",
     "title": "Global mitigation efforts cannot neglect emerging emitters"
   },
   {
+    "id": "HAmI6pRF5skC",
+    "title": "Impact of lockdowns and winter temperatures on natural gas consumption in Europe"
+  },
+  {
+    "id": "ibZ2AwG9z6wC",
+    "title": "Environmental benefit-detriment thresholds for flow battery energy storage systems: A case study in California"
+  },
+  {
+    "id": "BKYZGPsuSFYC",
+    "title": "International Trade Reshapes the Decoupling of Emissions from Economic Growth"
+  },
+  {
     "id": "3WNXLiBY60kC",
     "title": "Committed Emissions of the U.S. Power Sector, 2000–2018"
+  },
+  {
+    "id": "bFuYayV9R1gC",
+    "title": "Perceptions of carbon dioxide emission reductions and future warming among climate experts"
   },
   {
     "id": "O0MA3yP7Y3UC",
@@ -644,10 +648,6 @@
     "title": "A crack in the natural-gas bridge"
   },
   {
-    "id": "bFuYayV9R1gC",
-    "title": "Perceptions of carbon dioxide emission reductions and future warming among climate experts"
-  },
-  {
     "id": "43LB_KcVqeAC",
     "title": "CarbonMonitor-Power near-real-time monitoring of global power generation on hourly to daily scales"
   },
@@ -660,12 +660,16 @@
     "title": "Dislocated interests and climate change"
   },
   {
-    "id": "_TjUWtciUekC",
-    "title": "Corrigendum to\" Assessment of China's virtual air pollution transport embodied in trade by using a consumption-based emission inventory\" published in Atmos. Chem. Phys., 15 …"
+    "id": "WTSGYGHz1bkC",
+    "title": "Opportunities and constraints of hydrogen energy storage systems"
   },
   {
     "id": "n1qY4L4uFdgC",
     "title": "Drivers of natural gas use in U.S. residential buildings"
+  },
+  {
+    "id": "_TjUWtciUekC",
+    "title": "Corrigendum to\" Assessment of China's virtual air pollution transport embodied in trade by using a consumption-based emission inventory\" published in Atmos. Chem. Phys., 15 …"
   },
   {
     "id": "5UUbrqTvKfUC",
@@ -674,10 +678,6 @@
   {
     "id": "MvIMIWP2nqIC",
     "title": "Uses and limits of national decarbonization scenarios to inform net-zero transitions"
-  },
-  {
-    "id": "WTSGYGHz1bkC",
-    "title": "Opportunities and constraints of hydrogen energy storage systems"
   },
   {
     "id": "Cy13deThEpcC",
@@ -692,24 +692,36 @@
     "title": "University of california strategies for decarbonization: replacing natural gas"
   },
   {
-    "id": "w9ZB08sdvuUC",
-    "title": "Energy Systems"
+    "id": "uQdrZ3qaPmcC",
+    "title": "The importance of multiregional accounting for corporate carbon emissions"
   },
   {
     "id": "_u2aKJ9e-CoC",
     "title": "Securing the supply of graphite for batteries"
   },
   {
+    "id": "w9ZB08sdvuUC",
+    "title": "Energy Systems"
+  },
+  {
     "id": "G887dSk7Sz8C",
     "title": "Review of cement materials carbon sink"
+  },
+  {
+    "id": "0iM-huCvmk0C",
+    "title": "Large CO2 removal potential of woody debris preservation in managed forests"
+  },
+  {
+    "id": "sfsSB7lKuh0C",
+    "title": "Predicting unpredictability"
   },
   {
     "id": "-ZoC36zw86wC",
     "title": "Executive summary of the report\" Bending the Curve: 10 scalable solutions for carbon neutrality and climate stability\""
   },
   {
-    "id": "uQdrZ3qaPmcC",
-    "title": "The importance of multiregional accounting for corporate carbon emissions"
+    "id": "CB6W3GmKGOEC",
+    "title": "Ownership of power plants stranded by climate mitigation"
   },
   {
     "id": "PuYkdpj8xa4C",
@@ -720,20 +732,16 @@
     "title": "Near-real-time and state-level monitoring of US CO2 emissions"
   },
   {
-    "id": "sfsSB7lKuh0C",
-    "title": "Predicting unpredictability"
-  },
-  {
-    "id": "0iM-huCvmk0C",
-    "title": "Large CO2 removal potential of woody debris preservation in managed forests"
+    "id": "qQc65DSaYXMC",
+    "title": "Historical trends in snowmelt used for irrigation"
   },
   {
     "id": "w5CyTnyFq80C",
     "title": "De-carbonization of global energy use during the COVID-19 pandemic"
   },
   {
-    "id": "CB6W3GmKGOEC",
-    "title": "Ownership of power plants stranded by climate mitigation"
+    "id": "2TuIPqOg0e0C",
+    "title": "The effect of land costs on the economic and sustainability performance of solar photovoltaics in China"
   },
   {
     "id": "wTekDMGr9GkC",
@@ -744,24 +752,32 @@
     "title": "Public lands fly under climate radar"
   },
   {
-    "id": "qQc65DSaYXMC",
-    "title": "Historical trends in snowmelt used for irrigation"
+    "id": "FKYJxdYMdFIC",
+    "title": "Variability of technology learning rates"
+  },
+  {
+    "id": "Gs1AF5H0x94C",
+    "title": "Harmonized Annual Averaged Traffic Data at Street Segment Level for European Cities"
   },
   {
     "id": "JTtNqH-x4gYC",
     "title": "Without a back-up plan"
   },
   {
-    "id": "2TuIPqOg0e0C",
-    "title": "The effect of land costs on the economic and sustainability performance of solar photovoltaics in China"
+    "id": "6LV2YwJzdtgC",
+    "title": "Forest carbon protocols underestimate climate-driven carbon loss risks"
+  },
+  {
+    "id": "S0RksyIsHSIC",
+    "title": "Balancing thermal power decarbonization and energy security under hydroclimatic risks"
+  },
+  {
+    "id": "qt-6tCTBDsQC",
+    "title": "Global hydroclimatic risks and strategic decommissioning pathways for thermal power units"
   },
   {
     "id": "KYgttONoxcsC",
     "title": "A near-real time daily European Power Consumption and Carbon Intensity Dataset (ECON-PowerCI)"
-  },
-  {
-    "id": "Gs1AF5H0x94C",
-    "title": "Harmonized Annual Averaged Traffic Data at Street Segment Level for European Cities"
   },
   {
     "id": "MtS25d97-7AC",
@@ -776,18 +792,6 @@
     "title": "Drivers of CO2 emissions from road transport in U.S. urban areas"
   },
   {
-    "id": "S0RksyIsHSIC",
-    "title": "Balancing thermal power decarbonization and energy security under hydroclimatic risks"
-  },
-  {
-    "id": "qt-6tCTBDsQC",
-    "title": "Global hydroclimatic risks and strategic decommissioning pathways for thermal power units"
-  },
-  {
-    "id": "FKYJxdYMdFIC",
-    "title": "Variability of technology learning rates"
-  },
-  {
     "id": "1pC5hbHeJ6IC",
     "title": "Los Angeles 100-year flood risk"
   },
@@ -798,6 +802,10 @@
   {
     "id": "_AkkBXT-jcoC",
     "title": "Greenhouse gas emissions due to beef cattle, pork and chickens in the last fifty years"
+  },
+  {
+    "id": "lL5f5cZgq8MC",
+    "title": "Estimating GHG Emissions from AI Use: Framework for Corporate-Level Measurement"
   },
   {
     "id": "KEtq3P1Vf8oC",
@@ -814,10 +822,6 @@
   {
     "id": "3wLP7v6BnpwC",
     "title": "China’s net-zero budget"
-  },
-  {
-    "id": "6LV2YwJzdtgC",
-    "title": "Forest carbon protocols underestimate climate-driven carbon loss risks"
   },
   {
     "id": "xEMdJR0kL_sC",

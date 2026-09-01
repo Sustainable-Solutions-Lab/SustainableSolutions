@@ -9278,5 +9278,21 @@
     "doi": "10.64898/2026.06.19.733404.abstract",
     "total_citations": null,
     "citations": []
+  },
+  "lL5f5cZgq8MC": {
+    "id": "lL5f5cZgq8MC",
+    "title": "Estimating GHG Emissions from AI Use: Framework for Corporate-Level Measurement",
+    "authors": "John Bistline, Shaena Ulissi, Steven J Davis, Jonathan Glidden, James Joyce, Mo Li, Jackson Mohsenin, Sangwon Suh",
+    "publication_date": "2026/8/7",
+    "journal": "arXiv preprint arXiv:2608.06733",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "Electricity demand from data centers is expected to grow from roughly 5% of U.S. consumption in 2025 to between 9% and 17% by 2030, and corporate artificial intelligence (AI) use is following a similar trajectory, spanning employee productivity assistants, direct access to large language models (LLMs), and AI features embedded in enterprise software. AI emissions today are a small share of footprints for many enterprises, but that share is unlikely to remain small for long. Without reasonable estimates, companies cannot set reduction targets or identify effective decarbonization levers as emissions grow. Companies, regulators, and auditors are asking for emissions estimates that withstand scrutiny, but no widely accepted methodology exists today. Published per-query estimates can differ by several orders of magnitude depending on what is counted, which provider is measured, and what assumptions are made about electricity use and the grid mix. This white paper proposes a standardized framework for corporate-level AI emissions accounting. The framework is designed to be defensible with current data constraints, tiered to meet companies where their data are, transparent about its assumptions, updatable as provider disclosure matures, and built for action rather than disclosure alone. Since AI emissions accounting is still nascent, it has the opportunity to design for actionability from the outset, so that measurement incentivizes responsible choices during AI's rapid buildout.",
+    "journal_link": "https://arxiv.org/abs/2608.06733",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
   }
 }

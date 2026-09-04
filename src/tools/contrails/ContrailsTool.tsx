@@ -1166,19 +1166,23 @@ export default function ContrailsTool() {
             >
               {(() => {
                 // Duffel lacks some carriers' bookable content (notably UA),
-                // so the user's own flight often has no matched itinerary and
-                // hence no logo. Fall back to Duffel's per-IATA logo CDN using
-                // the entered flight number's carrier prefix; onError hides
-                // the img (revealing nothing) if the carrier isn't hosted.
+                // so the user's flight often matches only a CODESHARE listing
+                // of the same physical flight — whose logo (EI/LH/AS...) must
+                // not replace the carrier the user actually entered. In
+                // flight-number mode the entered carrier's logo (from
+                // Duffel's per-IATA logo CDN) always wins; the matched
+                // itinerary's logo is used only in route mode or when the
+                // carriers agree. onError hides the img if the CDN lacks
+                // the carrier.
                 const fnCarrier = mode === 'flightno'
                   ? flightNo.trim().toUpperCase().replace(/\s+/g, '').slice(0, 2)
                   : '';
-                const logo = origMatch?.airline_logo
-                  || (/^[A-Z][A-Z0-9]$/.test(fnCarrier)
-                    ? `https://assets.duffel.com/img/airlines/for-light-background/full-color-logo/${fnCarrier}.svg`
-                    : null);
+                const fnLogo = /^[A-Z][A-Z0-9]$/.test(fnCarrier)
+                  ? `https://assets.duffel.com/img/airlines/for-light-background/full-color-logo/${fnCarrier}.svg`
+                  : null;
+                const logo = fnLogo ?? origMatch?.airline_logo ?? null;
                 return logo ? (
-                  <img src={logo} alt={origMatch?.airline ?? fnCarrier} width={26} height={26} loading="lazy" style={{ background: '#fff', borderRadius: 4, padding: 2, boxShadow: '0 0 0 1px rgba(0,0,0,0.12)' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  <img src={logo} alt={logo === fnLogo ? fnCarrier : origMatch?.airline ?? fnCarrier} width={26} height={26} loading="lazy" style={{ background: '#fff', borderRadius: 4, padding: 2, boxShadow: '0 0 0 1px rgba(0,0,0,0.12)' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                 ) : (
                   <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(result.percentile) }} />
                 );
@@ -1298,8 +1302,8 @@ export default function ContrailsTool() {
                           </span>
                           {f.total_kg_per_pax <= poolMinKg + 0.5 && (
                             <span
-                              className="ml-3 inline-block rounded-sm border px-3 py-1.5 align-middle font-mono text-[10px] font-normal uppercase tracking-wider"
-                              style={{ borderColor: '#34936f', color: '#34936f' }}
+                              className="ml-3 my-1 inline-block rounded-sm border align-middle font-mono text-[10px] font-normal uppercase tracking-wider leading-none"
+                              style={{ borderColor: '#34936f', color: '#34936f', padding: '7px 12px 8px' }}
                             >
                               ✓ lowest in window
                             </span>

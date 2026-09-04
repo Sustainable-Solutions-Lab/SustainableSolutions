@@ -1075,7 +1075,7 @@ export default function ContrailsTool() {
                 </div>
               </div>
               <div>
-                <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Expected contrail warming</span>
+                <span className="font-mono text-[11px] uppercase tracking-wider opacity-60">Expected contrail-only warming</span>
                 <div className="text-2xl">
                   {Math.round(result.expected_co2e_kg_per_pax)}{' '}
                   <span className="text-base opacity-70">

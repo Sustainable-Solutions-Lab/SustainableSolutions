@@ -68,19 +68,44 @@ function stripTags(s) {
 }
 
 // ── Master extraction ──────────────────────────────────────────────────────
+// The profile listing carries the CURRENT citation count for every paper, in
+// the `gsc_a_ac` cell of each row. Capturing it here means counts refresh on
+// every run from ~3 page requests, instead of depending on the per-paper
+// detail fetches — which are cached forever and rate-limited by Scholar, and
+// so had left counts frozen at whenever each paper was first seen.
 function extractMaster(html) {
-  // Each paper row has an anchor:
-  //   <a href="/citations?view_op=view_citation&hl=en&user=...&citation_for_view=USER:PAPER" class="gsc_a_at">TITLE</a>
-  const re =
-    /<a[^>]+href="[^"]*citation_for_view=[A-Za-z0-9]+:([A-Za-z0-9_-]+)[^"]*"[^>]*class="gsc_a_at"[^>]*>([^<]+)<\/a>/g
+  // Row shape:
+  //   <tr class="gsc_a_tr">
+  //     <td class="gsc_a_t"><a ... citation_for_view=USER:PAPER ... class="gsc_a_at">TITLE</a> …</td>
+  //     <td class="gsc_a_c"><a class="gsc_a_ac gs_ibl">1234</a></td>   ← blank when 0
+  //     <td class="gsc_a_y">…<span …>YEAR</span></td>
+  //   </tr>
   const out = []
   const seen = new Set()
-  let m
-  while ((m = re.exec(html)) !== null) {
-    const id = m[1]
+  for (const row of html.split(/<tr class="gsc_a_tr">/).slice(1)) {
+    const idM = row.match(
+      /<a[^>]+href="[^"]*citation_for_view=[A-Za-z0-9]+:([A-Za-z0-9_-]+)[^"]*"[^>]*class="gsc_a_at"[^>]*>([^<]+)<\/a>/,
+    )
+    if (!idM) continue
+    const id = idM[1]
     if (seen.has(id)) continue
     seen.add(id)
-    out.push({ id, title: decodeHtml(m[2]) })
+
+    // Citation count: the anchor text inside the gsc_a_ac cell. Scholar
+    // renders an empty cell for uncited papers, which we record as 0 rather
+    // than null so "uncited" is distinguishable from "not scraped".
+    const citeM = row.match(/class="[^"]*\bgsc_a_ac\b[^"]*"[^>]*>([^<]*)</)
+    const raw = citeM ? citeM[1].replace(/[^0-9]/g, '') : ''
+    const cited_by = citeM ? (raw === '' ? 0 : Number(raw)) : null
+
+    const yearM = row.match(/class="[^"]*\bgsc_a_h\b[^"]*"[^>]*>(\d{4})</)
+
+    out.push({
+      id,
+      title: decodeHtml(idM[2]),
+      cited_by,
+      year: yearM ? Number(yearM[1]) : null,
+    })
   }
   return out
 }

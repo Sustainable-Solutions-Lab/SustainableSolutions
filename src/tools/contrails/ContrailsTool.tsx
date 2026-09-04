@@ -1369,6 +1369,12 @@ export default function ContrailsTool() {
                         : ' are predicted to avoid the most warming per hour of additional travel time.'}
                   </p>
                 )}
+                <p className="text-xs italic opacity-60">
+                  Bookable results come from the Duffel flight API, which
+                  currently excludes some carriers (notably United and Delta)
+                  except where their flights appear under partner codeshares —
+                  so the lowest-warming flight in your window may not be shown.
+                </p>
               </div>
             )}
 

@@ -36,3 +36,6 @@ dist-tiles/
 dist-zips/
 dist-materials-lazy/
 extension/*.zip
+.vercel
+__pycache__/
+*.pyc

@@ -94,19 +94,34 @@ const cards = sorted.map((t) => {
 // or /public/images/ whose name starts with "cornerstone" (case-
 // insensitive) and ends in svg/png/webp/jpg. Falls back to a serif
 // title overlay when no logo is found.
+//
+// The supplied wordmark is near-black, which disappears against the dark
+// spectral bars in dark mode, so a "-dark" sibling (cream wordmark, blue
+// mark unchanged) is swapped in by CSS — same approach as the nav logo.
+// The light lookup EXCLUDES "-dark" files so the variant can't be picked
+// as the default.
 const LOGO_EXT_RE = /\.(svg|png|webp|jpe?g)$/i;
-function resolveCornerstoneLogo(): string | null {
+const isCornerstoneLogo = (f: string) =>
+  /^cornerstone/i.test(f) && LOGO_EXT_RE.test(f);
+const isDarkVariant = (f: string) => /-dark\.[a-z]+$/i.test(f);
+
+function resolveCornerstoneLogos(): { light: string | null; dark: string | null } {
   for (const folder of ['tools', 'images']) {
     const dir = resolve('public', folder);
     if (!existsSync(dir)) continue;
-    const match = readdirSync(dir).find(
-      (f) => /^cornerstone/i.test(f) && LOGO_EXT_RE.test(f),
-    );
-    if (match) return `/${folder}/${match}`;
+    const files = readdirSync(dir).filter(isCornerstoneLogo);
+    const light = files.find((f) => !isDarkVariant(f));
+    if (!light) continue;
+    const dark = files.find(isDarkVariant) ?? null;
+    return {
+      light: `/${folder}/${light}`,
+      dark: dark ? `/${folder}/${dark}` : null,
+    };
   }
-  return null;
+  return { light: null, dark: null };
 }
-const cornerstoneLogo = resolveCornerstoneLogo();
+const { light: cornerstoneLogo, dark: cornerstoneLogoDark } =
+  resolveCornerstoneLogos();
 ---
 
 <BaseLayout title="Tools">
@@ -164,17 +179,27 @@ const cornerstoneLogo = resolveCornerstoneLogo();
                       />
                     ))}
                   </svg>
-                  <div
-                    aria-hidden="true"
-                    class="absolute inset-0"
-                    style="background: color-mix(in oklab, var(--paper) 35%, transparent);"
-                  ></div>
+                  {/* Scrim over the bars so the wordmark has a calm ground.
+                      Dark mode needs a heavier veil: the bars stay saturated
+                      while the paper token goes near-black, so 35% leaves the
+                      logo fighting full-strength colour. */}
+                  <div aria-hidden="true" class="absolute inset-0 cs-scrim"></div>
                   {cornerstoneLogo ? (
-                    <img
-                      src={cornerstoneLogo}
-                      alt={t.title}
-                      class="relative block max-w-[70%] max-h-[55%]"
-                    />
+                    <>
+                      <img
+                        src={cornerstoneLogo}
+                        alt={t.title}
+                        class="relative block max-w-[70%] max-h-[55%] cs-logo-light"
+                      />
+                      {cornerstoneLogoDark && (
+                        <img
+                          src={cornerstoneLogoDark}
+                          alt=""
+                          aria-hidden="true"
+                          class="relative block max-w-[70%] max-h-[55%] cs-logo-dark"
+                        />
+                      )}
+                    </>
                   ) : (
                     <p
                       class="relative font-serif m-0"
@@ -319,3 +344,29 @@ const cornerstoneLogo = resolveCornerstoneLogo();
     )}
   </section>
 </BaseLayout>
+
+<style>
+  /* Cornerstone hero: the supplied wordmark is near-black, so light and dark
+     variants are swapped rather than filtered (a filter would also invert the
+     blue mark). Mirrors the nav logo pattern. */
+  .cs-logo-dark { display: none; }
+  .cs-scrim { background: color-mix(in oklab, var(--paper) 35%, transparent); }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .cs-logo-light { display: none; }
+    :root:not([data-theme='light']) .cs-logo-dark { display: block; }
+    :root:not([data-theme='light']) .cs-scrim {
+      background: color-mix(in oklab, var(--paper) 62%, transparent);
+    }
+  }
+  :root[data-theme='dark'] .cs-logo-light { display: none; }
+  :root[data-theme='dark'] .cs-logo-dark { display: block; }
+  :root[data-theme='dark'] .cs-scrim {
+    background: color-mix(in oklab, var(--paper) 62%, transparent);
+  }
+  :root[data-theme='light'] .cs-logo-light { display: block; }
+  :root[data-theme='light'] .cs-logo-dark { display: none; }
+  :root[data-theme='light'] .cs-scrim {
+    background: color-mix(in oklab, var(--paper) 35%, transparent);
+  }
+</style>

@@ -72,7 +72,7 @@ type AirportRow = [string, string, string, string];
 
 const API = '/api/contrails';
 // bump when the API response schema changes: busts stale CDN-cached responses
-const SV = 'sv=6';
+const SV = 'sv=7';
 
 // Shareable links: the assessment is encoded in the query string, so a
 // copied URL reproduces the exact flight for the recipient.
@@ -1164,11 +1164,25 @@ export default function ContrailsTool() {
               onClick={() => setHoverKey((k) => (k === 'main' ? null : 'main'))}
               onMouseLeave={() => setHoverKey(null)}
             >
-              {origMatch?.airline_logo ? (
-                <img src={origMatch.airline_logo} alt={origMatch.airline ?? ''} width={26} height={26} loading="lazy" style={{ background: '#fff', borderRadius: 4, padding: 2, boxShadow: '0 0 0 1px rgba(0,0,0,0.12)' }} />
-              ) : (
-                <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(result.percentile) }} />
-              )}
+              {(() => {
+                // Duffel lacks some carriers' bookable content (notably UA),
+                // so the user's own flight often has no matched itinerary and
+                // hence no logo. Fall back to Duffel's per-IATA logo CDN using
+                // the entered flight number's carrier prefix; onError hides
+                // the img (revealing nothing) if the carrier isn't hosted.
+                const fnCarrier = mode === 'flightno'
+                  ? flightNo.trim().toUpperCase().replace(/\s+/g, '').slice(0, 2)
+                  : '';
+                const logo = origMatch?.airline_logo
+                  || (/^[A-Z][A-Z0-9]$/.test(fnCarrier)
+                    ? `https://assets.duffel.com/img/airlines/for-light-background/full-color-logo/${fnCarrier}.svg`
+                    : null);
+                return logo ? (
+                  <img src={logo} alt={origMatch?.airline ?? fnCarrier} width={26} height={26} loading="lazy" style={{ background: '#fff', borderRadius: 4, padding: 2, boxShadow: '0 0 0 1px rgba(0,0,0,0.12)' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                ) : (
+                  <span className="inline-block h-3 w-3 rounded-full" style={{ background: pctColor(result.percentile) }} />
+                );
+              })()}
               <div className="flex min-w-[200px] flex-col">
                 <span className="font-mono text-sm font-bold">
                   {resolvedLabel
@@ -1284,7 +1298,7 @@ export default function ContrailsTool() {
                           </span>
                           {f.total_kg_per_pax <= poolMinKg + 0.5 && (
                             <span
-                              className="ml-3 inline-block rounded-sm border px-2 py-1 align-middle font-mono text-[10px] font-normal uppercase tracking-wider"
+                              className="ml-3 inline-block rounded-sm border px-3 py-1.5 align-middle font-mono text-[10px] font-normal uppercase tracking-wider"
                               style={{ borderColor: '#34936f', color: '#34936f' }}
                             >
                               ✓ lowest in window

@@ -105,6 +105,19 @@ def _load():
         _pax = json.load(open(pp)) if pp.exists() else {}
         ap = ASSETS / "airport_names.json"
         _airnames = json.load(open(ap)) if ap.exists() else {}
+        # The picker list ships only the 40 highest-traffic types, which
+        # omits newer models the model CAN score (A339, A35K, B78X ...).
+        # Extend it with every curated passenger type (pax_by_type) the
+        # model was trained on, appended alphabetically after the
+        # traffic-ranked head.
+        have = {t["icao"] for t in _aircraft["top_types"]}
+        cats = set(_aircraft["categories"])
+        noncommercial = {"C17"}
+        _aircraft["top_types"] += [
+            {"icao": t, "n": 0}
+            for t in sorted(_pax)
+            if t in cats and t not in have and t not in noncommercial
+        ]
 
 
 def _night_score(olon, olat, dlon, dlat, dep_utc, arr_utc):

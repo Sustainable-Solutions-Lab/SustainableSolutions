@@ -7,13 +7,37 @@
 // ~25% (DOI-only) to ~95% on the current dataset.
 
 import scholarDetails from '../../templates/scholar-details.json';
+import scholarMaster from '../../templates/scholar-master.json';
 import type { Publication } from './types';
 
 export interface ScholarDetail {
+  id?: string;
   doi?: string;
   title?: string;
   total_citations?: number;
   citations?: { year: number; count: number }[];
+}
+
+interface ScholarMasterRow {
+  id?: string;
+  title?: string;
+  cited_by?: number | null;
+  year?: number | null;
+}
+
+// Citation TOTALS come from the master profile listing, which is re-scraped in
+// full on every run (~3 requests). The per-paper detail pages are cached
+// permanently and rate-limited by Scholar, so their `total_citations` goes
+// stale the moment a paper is first seen — and is missing entirely for papers
+// whose detail fetch was throttled. Master is therefore the source of truth
+// for counts; details still supplies the per-year chart, DOI, and abstract.
+const masterById = new Map<string, ScholarMasterRow>();
+const masterByTitle = new Map<string, ScholarMasterRow>();
+for (const row of Object.values(scholarMaster as Record<string, ScholarMasterRow>)) {
+  if (!row) continue;
+  if (row.id) masterById.set(row.id, row);
+  const tk = normalizeTitle(row.title);
+  if (tk && !masterByTitle.has(tk)) masterByTitle.set(tk, row);
 }
 
 export function normalizeTitle(t: string | null | undefined): string {
@@ -44,7 +68,14 @@ export function detailFor(pub: Publication): ScholarDetail | null {
 }
 
 export function totalCitations(pub: Publication): number {
-  return detailFor(pub)?.total_citations ?? 0;
+  // Prefer the freshly-scraped master count; fall back to the cached detail
+  // figure only when the paper isn't on the profile listing.
+  const d = detailFor(pub);
+  const row =
+    (d?.id ? masterById.get(d.id) : undefined) ??
+    masterByTitle.get(normalizeTitle(pub.title));
+  if (row && typeof row.cited_by === 'number') return row.cited_by;
+  return d?.total_citations ?? 0;
 }
 
 export function citationsArray(pub: Publication): { year: number; count: number }[] | null {

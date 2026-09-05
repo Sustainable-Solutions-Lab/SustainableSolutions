@@ -170,7 +170,7 @@ const config = {
       type: 'slider',
       animate: true,
       location: 'map',
-      defaultValue: '2020',
+      defaultValue: '2024',
       options: YEARS.map((y) => ({ id: String(y), label: String(y) })),
     },
     {

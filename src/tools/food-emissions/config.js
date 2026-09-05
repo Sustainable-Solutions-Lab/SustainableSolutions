@@ -268,9 +268,14 @@ const config = {
   distributionsUrl: '/tools/food-emissions/distributions.json',
   // Vertical emissions-by-latitude marginal along the map's right edge.
   latProfileUrl: '/tools/food-emissions/lat-profiles.json',
-  // Single-scale cell renderer: every feature is a 0.25° (~28 km) cell that
-  // grows with zoom to stay contiguous.
-  scales: [{ value: 28, radiusMode: 'cell' }],
+  // Two cell tiers (crossfading at z 2.75-3.0): 0.5° aggregates carry the
+  // low zooms (~4x fewer circles per frame — the 0.25° cells are sub-pixel
+  // there anyway), 0.25° cells the rest. Radii grow with zoom to stay
+  // contiguous.
+  scales: [
+    { value: 56, maxZoom: 3.0, radiusMode: 'cell', fill: 1.4 },
+    { value: 28, minZoom: 2.99, radiusMode: 'cell' },
+  ],
 }
 
 export default config

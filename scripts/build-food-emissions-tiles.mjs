@@ -77,6 +77,7 @@ async function main() {
   const step = Math.max(1, Math.floor(raw.length / 6000));
   for (let i = 0; i < raw.length; i += step) {
     const props = JSON.parse(raw[i]).properties;
+    if (props._scale !== 28) continue; // stats ride the 0.25° tier only
     for (const [k, v] of Object.entries(props)) {
       if (k === '_scale' || k === 'm49' || k === 'ha') continue;
       if (typeof v !== 'number' || !isFinite(v) || v === 0) continue;
@@ -97,6 +98,7 @@ async function main() {
   const profiles = {};
   for (const line of raw) {
     const f = JSON.parse(line);
+    if (f.properties._scale !== 28) continue; // profiles ride the 0.25° tier only
     const lat = f.geometry.coordinates[1];
     const band = Math.min(NBANDS - 1, Math.max(0, Math.floor((LAT0 - lat) / DLAT)));
     for (const [k, v] of Object.entries(f.properties)) {

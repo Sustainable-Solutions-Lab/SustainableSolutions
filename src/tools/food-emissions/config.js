@@ -34,16 +34,24 @@
 const YEARS = Array.from({ length: 25 }, (_, i) => 2000 + i)
 
 // Sources: [id, label, 2020 domain max kt/cell]. The id is the tile prop.
+// Ordered roughly largest-first in the dropdown. The last three are
+// livestock (interim FAOSTAT-GLE model; no per-crop attribution — a
+// specific crop plus a livestock source renders an empty map).
 const SOURCES = [
-  ['fer', 'Fertilizer N₂O', 40],
-  ['man', 'Manure N₂O', 10],
-  ['res', 'Residues N₂O', 6],
+  ['ent', 'Enteric CH₄', 60],
   ['rice', 'Rice CH₄', 120],
+  ['prp', 'Pasture manure N₂O', 30],
+  ['fer', 'Fertilizer N₂O', 40],
   ['peat', 'Peatland', 150],
+  ['mms', 'Manure management CH₄+N₂O', 12],
+  ['man', 'Manure applied N₂O', 10],
+  ['res', 'Residues N₂O', 6],
   ['urea', 'Urea CO₂', 10],
   ['burn', 'Residue burning', 2],
 ]
 const SOURCE_IDS = SOURCES.map(([id]) => id)
+// Cropland sources only — these carry per-crop props (`<src>_<crop>`).
+const CROPLAND_SOURCE_IDS = ['fer', 'man', 'res', 'rice', 'peat', 'urea', 'burn']
 
 // Per-crop props exported for the top-emitting crops (exporter TOP_CROPS,
 // 81% of the global total). Prop naming: `tot_<crop>`, `<source>_<crop>`.
@@ -85,7 +93,8 @@ function makeVariable({ source, crop }) {
       id: `tot${cropSuffix}`,
       label: cropLabel ? `Total emissions — ${cropLabel}` : 'Total emissions',
       domain: { min: 0, max: crop === 'all' ? 250 : 120 },
-      yearTerms: SOURCE_IDS.map((s) => ({ prop: `${s}${cropSuffix}`, src: s })),
+      yearTerms: (crop === 'all' ? SOURCE_IDS : CROPLAND_SOURCE_IDS)
+        .map((s) => ({ prop: `${s}${cropSuffix}`, src: s })),
       description: cropLabel
         ? `All-source emissions attributed to ${cropLabel.toLowerCase()} per quarter-degree cell.`
         : 'All-source cropland-management emissions per quarter-degree cell.',
@@ -112,7 +121,7 @@ const config = {
   summary:
     'Toward spatially explicit, commodity-specific maps of greenhouse-gas emissions from land use and land management, worldwide and through time.',
   description:
-    'Where do food-system greenhouse-gas emissions come from, and how is that changing? This tool works toward a complete, spatially explicit, commodity-specific accounting of emissions from land use and land management — mapped where they happen, traced to what is grown, and followed through time. Today it covers the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid, for any year 2000–2024. Emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model. Livestock beyond cropland-applied manure and land-use-change emissions join next, through the Cornerstone jurisdictional framework.',
+    'Where do food-system greenhouse-gas emissions come from, and how is that changing? This tool works toward a complete, spatially explicit, commodity-specific accounting of emissions from land use and land management — mapped where they happen, traced to what is grown, and followed through time. Today it covers the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid, for any year 2000–2024, plus direct livestock emissions: enteric CH₄, manure-management CH₄ and N₂O, and manure deposited on pasture. Cropland emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model; livestock currently distributes FAO national series across gridded animal densities, to be upgraded with forthcoming spatially explicit livestock data. Land-use-change emissions join next, through the Cornerstone jurisdictional framework.',
 
   region: {
     // Central-Atlantic framing: North America fully in view alongside
@@ -226,7 +235,7 @@ const config = {
     enabled: true,
     defaultRadiusKm: 250,
     maxRadiusKm: 1500,
-    aggregateVariableIds: ['tot', 'fer', 'man', 'res', 'rice', 'peat', 'urea', 'burn'],
+    aggregateVariableIds: ['tot', 'ent', 'rice', 'prp', 'fer', 'peat', 'mms', 'man', 'res', 'urea', 'burn'],
     // Trend chart (stats-panel.jsx): the drawn area's 2000-2024 trajectory,
     // composed from national per-source series weighted by emissions inside
     // the circle. Fixed categorical order; adjacent-pair CVD-validated.
@@ -235,13 +244,16 @@ const config = {
       // Spectral picks (the lab's signature palette), ordered so adjacent
       // bands in the stack stay distinguishable.
       sources: [
-        { id: 'fer',  prop: 'fer',  label: 'Fertilizer', color: '#3288BD' },
-        { id: 'man',  prop: 'man',  label: 'Manure',     color: '#FDAE61' },
-        { id: 'res',  prop: 'res',  label: 'Residues',   color: '#66C2A5' },
-        { id: 'rice', prop: 'rice', label: 'Rice CH₄',   color: '#D53E4F' },
-        { id: 'peat', prop: 'peat', label: 'Peat',       color: '#5E4FA2' },
-        { id: 'urea', prop: 'urea', label: 'Urea CO₂',   color: '#ABDDA4' },
-        { id: 'burn', prop: 'burn', label: 'Burning',    color: '#9E0142' },
+        { id: 'ent',  prop: 'ent',  label: 'Enteric CH₄',  color: '#F46D43' },
+        { id: 'rice', prop: 'rice', label: 'Rice CH₄',     color: '#D53E4F' },
+        { id: 'prp',  prop: 'prp',  label: 'Pasture N₂O',  color: '#FEE08B' },
+        { id: 'fer',  prop: 'fer',  label: 'Fertilizer',   color: '#3288BD' },
+        { id: 'peat', prop: 'peat', label: 'Peat',         color: '#5E4FA2' },
+        { id: 'mms',  prop: 'mms',  label: 'Manure mgmt',  color: '#E6F598' },
+        { id: 'man',  prop: 'man',  label: 'Manure appl.', color: '#FDAE61' },
+        { id: 'res',  prop: 'res',  label: 'Residues',     color: '#66C2A5' },
+        { id: 'urea', prop: 'urea', label: 'Urea CO₂',     color: '#ABDDA4' },
+        { id: 'burn', prop: 'burn', label: 'Burning',      color: '#9E0142' },
       ],
       countryProp: 'm49',
       referenceYear: 2020,

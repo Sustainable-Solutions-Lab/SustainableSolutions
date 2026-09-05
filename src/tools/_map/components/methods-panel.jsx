@@ -122,6 +122,20 @@ function FoodEmissionsMethods() {
         Cornerstone integration.
       </p>
 
+      <h2 style={h2Style}>Livestock (provisional)</h2>
+      <p style={pStyle}>
+        Direct livestock emissions — enteric fermentation CH₄, manure
+        management CH₄ and N₂O, and N₂O from manure deposited on pasture —
+        use FAO national Tier 1 series by species and year, distributed
+        within each country according to gridded animal densities (Gridded
+        Livestock of the World). National totals match FAOSTAT exactly;
+        the within-country pattern is modeled. Manure applied to cropland
+        is counted once, on the cropland side. These layers are
+        provisional: they will be upgraded to spatially explicit,
+        production-system-resolved estimates as forthcoming global
+        livestock data become available.
+      </p>
+
       <h2 style={h2Style}>Area statistics and trends</h2>
       <p style={pStyle}>
         Statistics for a drawn circle aggregate the quarter-degree cells
@@ -136,11 +150,10 @@ function FoodEmissionsMethods() {
       <h2 style={h2Style}>Caveats</h2>
       <p style={pStyle}>
         Cells are ~28 km and should be read at landscape scale, not field
-        scale. The scope is cropland management: livestock emissions beyond
-        cropland-applied manure (enteric fermentation, manure deposited on
-        pasture) and land-use-change emissions (deforestation, grassland
-        conversion) are not yet included — both join via the Cornerstone
-        jurisdictional framework.
+        scale. Per-crop views cover cropland sources only — livestock is
+        not attributed to crops. Land-use-change emissions (deforestation,
+        grassland conversion, the peat-drainage pulse) are not yet
+        included; they join via the Cornerstone jurisdictional framework.
         Replication code and tests:{' '}
         <a
           href="https://github.com/Sustainable-Solutions-Lab/gridded-land-management"

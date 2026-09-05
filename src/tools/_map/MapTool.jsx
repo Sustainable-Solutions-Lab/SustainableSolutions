@@ -497,8 +497,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             <div
               className="absolute z-10 pointer-events-none font-mono text-ink"
               style={{
-                top: 18,
-                left: config.mapControlsSide === 'left' ? 66 : 12,
+                top: 14,
+                left: config.mapControls === false ? 14
+                  : config.mapControlsSide === 'left' ? 66 : 12,
                 textShadow: isDark
                   ? '0 1px 8px rgba(12,12,28,0.9)'
                   : '0 1px 8px rgba(248,248,232,0.9)',

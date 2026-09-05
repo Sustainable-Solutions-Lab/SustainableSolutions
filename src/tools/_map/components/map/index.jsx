@@ -318,11 +318,16 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       }
     }
 
+    // Phone-sized viewports may declare their own starting frame.
+    const isSmallViewport = typeof window !== 'undefined' && window.innerWidth < 768
+    const startCenter = (isSmallViewport && config.region.mobileCenter) || center
+    const startZoom = (isSmallViewport && config.region.mobileZoom) || initialZoom
+
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: basemapStyle(schemeRef.current),
-      center,
-      zoom: initialZoom,
+      center: startCenter,
+      zoom: startZoom,
       minZoom: config.region.minZoom ?? fallbackMinZoom,
       maxZoom: config.region.maxZoom ?? fallbackMaxZoom,
       ...(transformCameraUpdate ? { transformCameraUpdate } : {}),
@@ -571,6 +576,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
           .firemap-map-controls { top: 82px; }
         }
       `}</style>
+      {config.mapControls !== false && (
       <div className='firemap-map-controls'>
         {/* Graticule / city labels toggle (dark/light is driven by the
             site-wide nav toggle now — the in-map sun/moon button was
@@ -603,6 +609,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
           <Globe size={22} strokeWidth={1.5} />
         </button>
       </div>
+      )}
 
       {/* Static attribution — replaces MapLibre's built-in control */}
       <div style={{

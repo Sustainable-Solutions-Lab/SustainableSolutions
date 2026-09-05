@@ -47,6 +47,7 @@ const SOURCES = [
   ['man', 'Manure applied N₂O', 10],
   ['res', 'Residues N₂O', 6],
   ['urea', 'Urea CO₂', 10],
+  ['lime', 'Liming CO₂', 6],
   ['burn', 'Residue burning', 2],
 ]
 const SOURCE_IDS = SOURCES.map(([id]) => id)
@@ -121,7 +122,7 @@ const config = {
   summary:
     'Toward spatially explicit, commodity-specific maps of greenhouse-gas emissions from land use and land management, worldwide and through time.',
   description:
-    'Where do food-system greenhouse-gas emissions come from, and how is that changing? This tool works toward a complete, spatially explicit, commodity-specific accounting of emissions from land use and land management — mapped where they happen, traced to what is grown, and followed through time. Today it covers the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid, for any year 2000–2024, plus direct livestock emissions: enteric CH₄, manure-management CH₄ and N₂O, and manure deposited on pasture. Cropland emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model; livestock currently distributes FAO national series across gridded animal densities, to be upgraded with forthcoming spatially explicit livestock data. Land-use-change emissions join next, through the Cornerstone jurisdictional framework.',
+    'Where do food-system greenhouse-gas emissions come from, and how is that changing? This tool works toward a complete, spatially explicit, commodity-specific accounting of emissions from land use and land management — mapped where they happen, traced to what is grown, and followed through time. Today it covers the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid, for any year 2000–2024, plus direct livestock emissions (enteric CH₄, manure-management CH₄ and N₂O, manure deposited on pasture) and CO₂ from agricultural liming. Cropland emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model; livestock currently distributes FAO national series across gridded animal densities, to be upgraded with forthcoming spatially explicit livestock data. Land-use-change emissions join next, through the Cornerstone jurisdictional framework.',
 
   region: {
     // Central-Atlantic framing: North America fully in view alongside
@@ -243,7 +244,7 @@ const config = {
     pale: true,
     defaultRadiusKm: 250,
     maxRadiusKm: 1500,
-    aggregateVariableIds: ['tot', 'ent', 'rice', 'prp', 'fer', 'peat', 'mms', 'man', 'res', 'urea', 'burn'],
+    aggregateVariableIds: ['tot', 'ent', 'rice', 'prp', 'fer', 'peat', 'mms', 'man', 'res', 'urea', 'lime', 'burn'],
     // Trend chart (stats-panel.jsx): the drawn area's 2000-2024 trajectory,
     // composed from national per-source series weighted by emissions inside
     // the circle. Fixed categorical order; adjacent-pair CVD-validated.
@@ -261,6 +262,7 @@ const config = {
         { id: 'man',  prop: 'man',  label: 'Manure appl.', color: '#FDAE61' },
         { id: 'res',  prop: 'res',  label: 'Residues',     color: '#66C2A5' },
         { id: 'urea', prop: 'urea', label: 'Urea CO₂',     color: '#ABDDA4' },
+        { id: 'lime', prop: 'lime', label: 'Liming CO₂',   color: '#FFFFBF' },
         { id: 'burn', prop: 'burn', label: 'Burning',      color: '#9E0142' },
       ],
       countryProp: 'm49',

@@ -86,7 +86,7 @@ function FoodEmissionsMethods() {
         quarter-degree grid (reference year 2020). Draw a circle with the
         regional-data tool to see the enclosed emissions total, the source
         mix, and a 2000–2024 trend composed from national series. The
-        companion paper (<strong>DeAngelo, Davis, Seifried &amp; Steffen, in
+        companion paper (<strong>DeAngelo, Seifried, Steffen &amp; Davis, in
         preparation</strong>) extends the dataset annually and merges it with
         jurisdictional land-use-change emissions from the Cornerstone
         framework.
@@ -106,21 +106,20 @@ function FoodEmissionsMethods() {
         tolerance.
       </p>
 
-      <h2 style={h2Style}>Corrections to the published model</h2>
+      <h2 style={h2Style}>Updates to the published model</h2>
       <p style={pStyle}>
-        The replication uncovered two implementation errors in the original
-        study's production code — most importantly, the rice CH₄ scaling
-        factors for organic amendments and pre-season water regimes were
-        parameterized with the wrong means, inflating rice CH₄ by roughly a
-        fifth. This map shows the <strong>corrected</strong> model (the
-        intended IPCC 2019 parameters throughout). Drained-peatland
-        emissions additionally follow the <strong>Cornerstone steady-state
-        model</strong> — a persistent occupation emission per hectare of
-        cultivated drained peat, grounded in process-model decay curves —
-        rather than the original paper's flat climate-zone factors, whose
-        calibration mixes sites of very different drainage ages. The
-        associated land-use-change pulse at drainage joins the dataset with
-        the Cornerstone integration.
+        This map incorporates updates we developed in the course of the
+        replication, in coordination with the original authors. The rice CH₄
+        scaling factors for organic amendments and pre-season water regimes
+        are parameterized with the IPCC 2019 reference values, which lowers
+        rice CH₄ relative to the published figures by roughly a fifth.
+        Drained-peatland emissions follow the <strong>Cornerstone
+        steady-state model</strong> — a persistent occupation emission per
+        hectare of cultivated drained peat, grounded in process-model decay
+        curves — in place of flat climate-zone factors, whose calibration
+        mixes sites of very different drainage ages. The associated
+        land-use-change pulse at drainage joins the dataset with the
+        Cornerstone integration.
       </p>
 
       <h2 style={h2Style}>Area statistics and trends</h2>

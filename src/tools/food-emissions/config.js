@@ -81,7 +81,6 @@ function makeVariable({ source, crop }) {
   const shared = {
     unit: 'kt CO₂e',
     colormap: 'SpectralHotDeep',
-    extremeGlow: true,
     diverging: false,
     alphaFloor: 0.02,
     alphaPower: 0.35,
@@ -277,9 +276,13 @@ const config = {
   // low zooms (~4x fewer circles per frame — the 0.25° cells are sub-pixel
   // there anyway), 0.25° cells the rest. Radii grow with zoom to stay
   // contiguous.
+  // fill: circle diameter relative to the cell pitch — a zoom ramp. A hair
+  // under 1 at overview (heavy overlap there stacks alpha and reads
+  // over-saturated), growing past touching when zoomed in so the diagonal
+  // gaps stop washing the field out.
   scales: [
-    { value: 56, maxZoom: 3.0, radiusMode: 'cell', fill: 1.4 },
-    { value: 28, minZoom: 2.99, radiusMode: 'cell' },
+    { value: 56, maxZoom: 3.0, radiusMode: 'cell', fill: [[1, 1.1], [3, 1.25]] },
+    { value: 28, minZoom: 2.99, radiusMode: 'cell', fill: [[3, 0.9], [5, 1.05], [8, 1.35]] },
   ],
 }
 

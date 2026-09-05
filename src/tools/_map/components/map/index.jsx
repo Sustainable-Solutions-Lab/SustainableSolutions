@@ -304,13 +304,18 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       const mc = maplibregl.MercatorCoordinate
       const yTop = mc.fromLngLat({ lng: 0, lat: latN }).y
       const yBot = mc.fromLngLat({ lng: 0, lat: latS }).y
+      // North is hard (the arctic land cut must never show); the south gets
+      // slack — up to SOUTH_SLACK of the viewport height may be empty ocean
+      // below the southern cut, so Patagonia and New Zealand can clear the
+      // bottom-of-screen UI (year bar, phone browser chrome).
+      const SOUTH_SLACK = 0.25
       transformCameraUpdate = ({ center, zoom }) => {
         const h = containerRef.current?.clientHeight
         if (!h || center == null || zoom == null) return {}
         const half = h / (512 * 2 ** zoom) / 2
-        let lo = yTop + half
-        let hi = yBot - half
-        if (lo > hi) { const mid = (lo + hi) / 2; lo = mid; hi = mid }
+        const lo = yTop + half
+        let hi = yBot - half * (1 - 2 * SOUTH_SLACK)
+        if (lo > hi) hi = lo
         const cy = Math.min(hi, Math.max(lo, mc.fromLngLat({ lng: 0, lat: center.lat }).y))
         const lat = new mc(0.5, cy, 0).toLngLat().lat
         if (Math.abs(lat - center.lat) < 1e-9) return {}
@@ -360,7 +365,11 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         const applyMinZoom = () => {
           const h = map.getContainer().clientHeight
           if (!h) return
-          const bandMin = Math.log2(h / (512 * (yBot - yTop)))
+          // Matches the clamp's SOUTH_SLACK: at the floor, the band plus
+          // the allowed southern slack exactly fills the viewport, so the
+          // full latitude range (incl. Patagonia / New Zealand) is
+          // reachable above bottom-of-screen UI.
+          const bandMin = Math.log2((h * 0.75) / (512 * (yBot - yTop)))
           map.setMinZoom(Math.max(config.region?.minZoom ?? 0, bandMin))
           map.jumpTo({ center: map.getCenter() })
         }

@@ -431,13 +431,16 @@ export function addStaticLayers(map, scheme, opts = {}) {
   if (worldOverlays) {
     const landFill = scheme === 'dark' ? '#14142A' : '#F1F1DF'
     const coastColor = scheme === 'dark' ? 'rgba(248,248,232,0.25)' : 'rgba(24,24,56,0.25)'
+    // On a theme toggle the data layers may already exist (statics are re-added
+    // after setStyle) — insert land BENEATH them or it paints over the data.
+    const firstDataLayer = map.getStyle().layers?.find((l) => l.id.startsWith('just-air-cells-'))?.id
     if (!map.getLayer('world-land-fill')) {
       map.addLayer({
         id: 'world-land-fill',
         type: 'fill',
         source: 'world-land',
         paint: { 'fill-color': landFill, 'fill-opacity': 1 },
-      })
+      }, firstDataLayer)
     } else {
       map.setPaintProperty('world-land-fill', 'fill-color', landFill)
     }
@@ -447,7 +450,7 @@ export function addStaticLayers(map, scheme, opts = {}) {
         type: 'line',
         source: 'world-land',
         paint: { 'line-color': coastColor, 'line-width': 0.75 },
-      })
+      }, firstDataLayer)
     } else {
       map.setPaintProperty('world-coastline', 'line-color', coastColor)
     }

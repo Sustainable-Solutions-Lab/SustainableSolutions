@@ -4,15 +4,15 @@
  * Configuration for: Food Emissions — greenhouse-gas emissions from managing
  * the world's croplands, by source and over time.
  *
- * Companion paper: DeAngelo, Davis, Seifried & Steffen, "Mapped drivers of
+ * Companion paper: DeAngelo, Seifried, Steffen & Davis, "Mapped drivers of
  * food emissions" (in preparation) — an annual, corrected extension of
  * Cao et al. (2026, Nature Climate Change), merged with Cornerstone's
  * jurisdictional land-use-change framework.
  *
- * One canonical dataset (no variants): the corrected Cao-lineage model —
- * our bit-exact replication with the original's rice-parameter bugs fixed —
- * with drained-peatland emissions from the Cornerstone steady-state
- * occupation floor rather than the original paper's flat IPCC factors.
+ * One canonical dataset (no variants): our updated Cao-lineage model
+ * (IPCC 2019 reference rice parameters; updates coordinated with the
+ * original authors) with drained-peatland emissions from the Cornerstone
+ * steady-state occupation floor.
  *
  * Feature model (Gridded LM/pipeline/export_explorer_cells.py): 0.25-degree
  * cell centroids with per-source 2020 emissions (kt CO2e: fer man res rice
@@ -33,7 +33,7 @@ const config = {
   summary:
     'Greenhouse-gas emissions from managing the world’s croplands, by source and over time — draw an area to see its totals, mix, and trend.',
   description:
-    'Greenhouse-gas emissions from the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid. The map shows the 2020 reference year; the Change-over-time layer and the area tool’s trend chart cover 2000–2024, with annual national statistics carrying the trend. Emissions follow our corrected implementation of Cao et al. (2026), with drained-peatland emissions from the Cornerstone steady-state model. Livestock emissions beyond cropland-applied manure (enteric fermentation, manure on pasture) and land-use-change emissions are not yet included — they join through the Cornerstone jurisdictional framework.',
+    'Greenhouse-gas emissions from the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid. The map shows the 2020 reference year; the Change-over-time layer and the area tool’s trend chart cover 2000–2024, with annual national statistics carrying the trend. Emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model. Livestock emissions beyond cropland-applied manure (enteric fermentation, manure on pasture) and land-use-change emissions are not yet included — they join through the Cornerstone jurisdictional framework.',
 
   region: {
     center: [15, 18],

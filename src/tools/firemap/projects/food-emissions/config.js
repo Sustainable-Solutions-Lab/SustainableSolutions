@@ -168,9 +168,10 @@ const config = {
     },
   },
 
-  // Local build for now (gitignored); production moves to R2 like the other
-  // map tools: scripts/build-food-emissions-tiles.mjs → upload → swap URL.
-  tilesUrl: '/tools/food-emissions/food-emissions.pmtiles',
+  // Tiles on R2 like the other map tools; rebuild via
+  // scripts/build-food-emissions-tiles.mjs, upload with
+  // `rclone copy build/tiles/food-emissions/food-emissions.pmtiles r2:ssl-data/food-emissions/`.
+  tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/food-emissions.pmtiles',
   sourceLayer: 'food-emissions',
   // Single-scale circle renderer: every feature is a 0.25° (~28 km) cell.
   scales: [{ value: 28 }],

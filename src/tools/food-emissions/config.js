@@ -125,13 +125,13 @@ const config = {
     'Where do food-system greenhouse-gas emissions come from, and how is that changing? This tool works toward a complete, spatially explicit, commodity-specific accounting of emissions from land use and land management — mapped where they happen, traced to what is grown, and followed through time. Today it covers the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid, for any year 2000–2024, plus direct livestock emissions (enteric CH₄, manure-management CH₄ and N₂O, manure deposited on pasture) and CO₂ from agricultural liming. Cropland emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model; livestock currently distributes FAO national series across gridded animal densities, to be upgraded with forthcoming spatially explicit livestock data. Land-use-change emissions join next, through the Cornerstone jurisdictional framework.',
 
   region: {
-    // Central-Atlantic framing: North America fully in view alongside
-    // Africa, Europe, and most of Asia.
-    center: [-25, 22],
+    // Default load centered on Cuba: the Americas fill the frame, with
+    // Europe/Africa entering at the right edge on wide screens.
+    center: [-79.5, 21.5],
     zoom: 1.32,
-    // Phones start closer, framed on North America with northern South
-    // America entering below (the band clamp settles the latitude).
-    mobileCenter: [-92, 27],
+    // Phones start closer, still Cuba-centered: southern US above,
+    // Caribbean and northern South America below.
+    mobileCenter: [-79.5, 24],
     mobileZoom: 2.35,
     minZoom: 1.2,
     maxZoom: 8,
@@ -268,6 +268,19 @@ const config = {
       countryProp: 'm49',
       referenceYear: 2020,
     },
+  },
+
+  // ── PALE drivers choropleth (jurisdiction LMDI map) ──────────────────────
+  paleMap: {
+    tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/pale-units.pmtiles',
+    sourceLayer: 'pale-units',
+    drivers: [
+      { id: 'r_net', label: 'Net change' },
+      { id: 'r_pop', label: 'Population' },
+      { id: 'r_prodpc', label: 'Production / capita' },
+      { id: 'r_landkcal', label: 'Land / kcal' },
+      { id: 'r_eland', label: 'Emissions / land' },
+    ],
   },
 
   // Tiles on R2 like the other map tools; rebuild via

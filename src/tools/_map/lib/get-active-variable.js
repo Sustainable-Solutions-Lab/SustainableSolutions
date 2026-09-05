@@ -41,6 +41,43 @@ export function getActiveVariable(config, activeLayer, activeDimensions) {
       label: `${v.label} — ${b} to ${a}`,
     }
   }
+  // Year-scaled variables (config.yearControl + variable.yearTerms): the
+  // stored props are the reference year; other years multiply each source
+  // term by its national trajectory factor (lib/year-factors.js). Compare
+  // mode turns the variable into a diverging difference between two years.
+  // The factor table itself is attached later (use-just-air-layers) — id
+  // stays the base prop so distributions, lat profiles, filters, and area
+  // stats keep their reference-year semantics untouched.
+  const yc = config.yearControl
+  if (v?.yearTerms && yc) {
+    const dimValue = (dimId, fallback) =>
+      activeDimensions[dimId] ?? config.dimensions.find((d) => d.id === dimId)?.defaultValue ?? fallback
+    const year = Number(dimValue(yc.dimensionId, yc.referenceYear))
+    const compareOn = yc.compareDimensionId && dimValue(yc.compareDimensionId) === 'on'
+    if (compareOn) {
+      const yearB = Number(dimValue(yc.yearBDimensionId, yc.referenceYear))
+      return {
+        ...v,
+        diverging: true,
+        colormap: yc.compareColormap ?? 'SpectralR',
+        domain: { min: -(v.domain?.max ?? 1) / 4, max: (v.domain?.max ?? 1) / 4, zero: 0 },
+        alphaFloor: 0.05,
+        alphaPower: 0.5,
+        colorAnchorId: undefined,
+        scaled: { terms: v.yearTerms, year, yearB, isDiff: true },
+        label: `${v.label} — change ${yearB} to ${year}`,
+      }
+    }
+    if (year !== yc.referenceYear) {
+      return {
+        ...v,
+        // Anchor the color scale to the reference-year base prop so the
+        // animation shows change as color change, not a re-normalizing scale.
+        colorAnchorId: v.id,
+        scaled: { terms: v.yearTerms, year },
+      }
+    }
+  }
   return v
 }
 

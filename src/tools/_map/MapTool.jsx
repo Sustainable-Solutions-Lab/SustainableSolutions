@@ -11,6 +11,7 @@ import { MobileLegend } from './components/sidebar/legend.jsx'
 import { LayerTabs } from './components/sidebar/layer-tabs.jsx'
 import { DimensionControl } from './components/sidebar/dimension-control.jsx'
 import { LatProfile } from './components/map/lat-profile.jsx'
+import { YearBar } from './components/map/year-bar.jsx'
 import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
@@ -180,7 +181,10 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const mapBadgeDim = config.dimensions.find(
     (d) => d.animate && (config.layers.find((l) => l.id === state.activeLayer)?.dimensionIds ?? []).includes(d.id)
   )
-  const mapBadgeValue = mapBadgeDim
+  const compareOn = config.yearControl?.compareDimensionId
+    ? (state.activeDimensions[config.yearControl.compareDimensionId] ?? 'off') === 'on'
+    : false
+  const mapBadgeValue = mapBadgeDim && !compareOn
     ? (state.activeDimensions[mapBadgeDim.id] ?? mapBadgeDim.defaultValue)
     : null
 
@@ -211,7 +215,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
     // Generic path: projects that declare config.distributionsUrl get their
     // precomputed value sample fetched directly (built alongside the tiles).
-    if (activeVariable?.diffOf) {
+    if (activeVariable?.diffOf || activeVariable?.scaled?.isDiff) {
       // Computed difference variables have no stored distribution sample;
       // the sidebar falls back to the gradient legend.
       setStatewideValues([])
@@ -265,7 +269,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
     setStatewideValues([])
     setOpacityP95(null)
-  }, [activeVariable?.id, state.projectId, mapInstance, baseConfig]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeVariable?.id, activeVariable?.scaled?.isDiff, state.projectId, mapInstance, baseConfig]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Subscribe to the site-level theme attribute so the nav's dark/light
   // toggle drives the entire tool. The in-map moon/sun button was removed —
@@ -298,7 +302,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   // Mobile panel: show whichever dimensions the active layer declares.
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
   const mobileDimensions = config.dimensions.filter((d) =>
-    activeLayerConfig?.dimensionIds?.includes(d.id),
+    activeLayerConfig?.dimensionIds?.includes(d.id) && d.location !== 'map',
   )
 
   const wordmarkSrc = isDark ? '/logos/sdss/SDSS_brand_white.png' : '/logos/sdss/SDSS_brand.png'
@@ -325,12 +329,14 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       drawer={
         <>
 
-        <div className="mb-3">
-          <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
-            Map
-          </p>
-          <LayerTabs config={config} state={state} dispatch={dispatch} />
-        </div>
+        {config.layers.filter((l) => !l.hidden).length > 1 && (
+          <div className="mb-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+              Map
+            </p>
+            <LayerTabs config={config} state={state} dispatch={dispatch} />
+          </div>
+        )}
 
         {mobileDimensions.map((dim) => {
           const filteredDim = {
@@ -466,6 +472,11 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               variable={activeVariable}
               isDark={isDark}
             />
+          )}
+
+          {/* Always-on year control — config-gated (yearControl) */}
+          {config.yearControl && (
+            <YearBar config={config} state={state} dispatch={dispatch} isDark={isDark} />
           )}
 
           {/* Animated-dimension readout (e.g. year) — all viewports */}

@@ -119,7 +119,10 @@ function FoodEmissionsMethods() {
         curves — in place of flat climate-zone factors, whose calibration
         mixes sites of very different drainage ages. The associated
         land-use-change pulse at drainage joins the dataset with the
-        Cornerstone integration.
+        Cornerstone integration. We also extend the boundary with CO₂ from
+        agricultural liming — a source outside the original model — using
+        EDGAR national estimates (IPCC category 3.C.2) distributed across
+        each country's cropland.
       </p>
 
       <h2 style={h2Style}>Livestock (provisional)</h2>

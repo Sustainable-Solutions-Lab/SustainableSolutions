@@ -25,6 +25,19 @@ import {
   interpolateSpectral,
 } from 'd3-scale-chromatic'
 
+function spectralHotTopped(topHex) {
+  const SPLIT = 0.85
+  const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
+  const wine = hex('#9E0142')
+  const top = hex(topHex)
+  return (t) => {
+    if (t <= SPLIT) return interpolateSpectral(0.38 * (1 - t / SPLIT))
+    const u = (t - SPLIT) / (1 - SPLIT)
+    const c = wine.map((w, i) => Math.round(w + (top[i] - w) * u))
+    return `rgb(${c[0]},${c[1]},${c[2]})`
+  }
+}
+
 export const INTERPOLATORS = {
   // The lab's signature ColorBrewer Spectral (design system: default data
   // palette). SpectralR runs blue -> yellow -> red so "more" reads as hotter;
@@ -37,6 +50,12 @@ export const INTERPOLATORS = {
   // Low end starts at Spectral(0.38) — yellow-orange rather than pale
   // yellow, so low-emission cells stay visible on the cream basemap.
   SpectralHot: (t) => interpolateSpectral(0.38 * (1 - t)),
+  // SpectralHot with an extended top: the last 15% of the ramp climbs out
+  // of the wine red into a terminal accent so extreme values pop instead
+  // of saturating — Spectral's far-end purple on light paper, cream on the
+  // dark navy basemap (pair via colormap/darkColormap).
+  SpectralHotPurple: spectralHotTopped('#5E4FA2'),
+  SpectralHotCream: spectralHotTopped('#F8F8E8'),
   // Standard RdBu: t=0 → red (costs > benefits), t=1 → blue (benefits > costs)
   RdBu: interpolateRdBu,
   // Inverted RdBu: t=0 → blue, t=1 → red. Used by Just Air's diff layers where

@@ -80,7 +80,8 @@ function makeVariable({ source, crop }) {
   const cropLabel = crop === 'all' ? null : CROPS.find(([c]) => c === crop)[1]
   const shared = {
     unit: 'kt CO₂e',
-    colormap: 'SpectralHot',
+    colormap: 'SpectralHotPurple',
+    darkColormap: 'SpectralHotCream',
     diverging: false,
     alphaFloor: 0.02,
     alphaPower: 0.35,
@@ -115,7 +116,7 @@ function makeVariable({ source, crop }) {
 
 const config = {
   id: 'food-emissions',
-  mapControlsSide: 'left',
+  mapControls: false,
   eyebrow: 'INTERACTIVE MAP',
   title: 'Mapping food system emissions',
   summary:
@@ -128,6 +129,10 @@ const config = {
     // Africa, Europe, and most of Asia.
     center: [-25, 22],
     zoom: 1.32,
+    // Phones start closer, framed on North America with northern South
+    // America entering below (the band clamp settles the latitude).
+    mobileCenter: [-92, 27],
+    mobileZoom: 2.35,
     minZoom: 1.2,
     maxZoom: 8,
     // Poles truncated ~300 km beyond the highest-latitude plotted cells

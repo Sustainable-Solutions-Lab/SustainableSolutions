@@ -1,0 +1,30 @@
+---
+import ToolFrame from '../../layouts/ToolFrame.astro';
+import MapTool from '../../tools/firemap/MapTool.jsx';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+
+// Not yet in the tools sheet — page is reachable by URL but unlisted and
+// noindex until the dataset/paper are public. Add a row to the tools sheet
+// (slug: food-emissions) to list it, then drop `noindex`.
+const tool = (tools as Tool[]).find((t) => t.slug === 'food-emissions') ?? null;
+
+const repoLinks = {
+  github: 'https://github.com/Sustainable-Solutions-Lab/gridded-land-management',
+};
+---
+
+<ToolFrame
+  title={tool?.title ?? 'Food Emissions'}
+  description={tool?.summary ?? 'Global cropland greenhouse-gas emissions by source.'}
+  noindex
+  background="var(--paper-2)"
+>
+  <MapTool
+    client:only="react"
+    projectId="food-emissions"
+    companion={null}
+    repoLinks={repoLinks}
+    display={tool ? { title: tool.title, eyebrow: tool.eyebrow, summary: tool.summary } : null}
+  />
+</ToolFrame>

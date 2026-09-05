@@ -311,6 +311,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       })
       if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, schemeRef.current)
       setMapReady(true)
+      if (import.meta.env.DEV) window.__flmMap = map
       if (onMapReady) onMapReady(map)
     })
 

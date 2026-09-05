@@ -85,10 +85,11 @@ function FoodEmissionsMethods() {
         peatland CO₂, crop residues, and residue burning — for 46 crops on a
         quarter-degree grid (reference year 2020). Draw a circle with the
         regional-data tool to see the enclosed emissions total, the source
-        mix, and a 2000–2024 trend composed from national series. A
-        companion paper (Davis &amp; DeAngelo, in preparation) extends the
-        dataset annually and merges it with jurisdictional land-use-change
-        emissions.
+        mix, and a 2000–2024 trend composed from national series. The
+        companion paper (<strong>DeAngelo, Davis, Seifried &amp; Steffen, in
+        preparation</strong>) extends the dataset annually and merges it with
+        jurisdictional land-use-change emissions from the Cornerstone
+        framework.
       </p>
 
       <h2 style={h2Style}>Where the numbers come from</h2>
@@ -105,24 +106,22 @@ function FoodEmissionsMethods() {
         tolerance.
       </p>
 
-      <h2 style={h2Style}>The three variants</h2>
+      <h2 style={h2Style}>Corrections to the published model</h2>
       <p style={pStyle}>
         The replication uncovered two implementation errors in the original
         study's production code — most importantly, the rice CH₄ scaling
         factors for organic amendments and pre-season water regimes were
         parameterized with the wrong means, inflating rice CH₄ by roughly a
-        fifth. The variant toggle lets you compare:
+        fifth. This map shows the <strong>corrected</strong> model (the
+        intended IPCC 2019 parameters throughout). Drained-peatland
+        emissions additionally follow the <strong>Cornerstone steady-state
+        model</strong> — a persistent occupation emission per hectare of
+        cultivated drained peat, grounded in process-model decay curves —
+        rather than the original paper's flat climate-zone factors, whose
+        calibration mixes sites of very different drainage ages. The
+        associated land-use-change pulse at drainage joins the dataset with
+        the Cornerstone integration.
       </p>
-      <ul style={pStyle}>
-        <li><strong>Corrected</strong> (default) — the same model with the
-          intended IPCC 2019 parameters. Global total ≈ 2.32 GtCO₂e.</li>
-        <li><strong>Replication</strong> — faithful to the published
-          numbers. Global total ≈ 2.51 GtCO₂e.</li>
-        <li><strong>Merged peat</strong> — drained-peatland emissions
-          replaced by the Cornerstone two-part model (a land-use-change
-          pulse at drainage plus a persistent occupation emission),
-          shown here as the occupation floor.</li>
-      </ul>
 
       <h2 style={h2Style}>Area statistics and trends</h2>
       <p style={pStyle}>
@@ -137,10 +136,12 @@ function FoodEmissionsMethods() {
 
       <h2 style={h2Style}>Caveats</h2>
       <p style={pStyle}>
-        Reference-year 2020 snapshot on the map; cells are ~28 km and
-        should be read at landscape scale, not field scale. Land-use-change
-        emissions (deforestation, grassland conversion) are not yet
-        included — they join via the Cornerstone jurisdictional framework.
+        Cells are ~28 km and should be read at landscape scale, not field
+        scale. The scope is cropland management: livestock emissions beyond
+        cropland-applied manure (enteric fermentation, manure deposited on
+        pasture) and land-use-change emissions (deforestation, grassland
+        conversion) are not yet included — both join via the Cornerstone
+        jurisdictional framework.
         Replication code and tests:{' '}
         <a
           href="https://github.com/Sustainable-Solutions-Lab/gridded-land-management"

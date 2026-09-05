@@ -307,10 +307,43 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     mapRef.current = map
 
     map.once('load', () => {
-      // Optional soft latitude clamp (maxBounds misbehaves for full-width
-      // worlds): keeps the camera center inside [south, north] so empty
-      // polar bands stay off-screen. The land layer is clipped to match.
-      if (config.region?.centerLatRange) {
+      // Optional hard latitude edge lock (maxBounds misbehaves for
+      // full-width worlds): the visible top/bottom of the viewport can
+      // never pass [south, north] — the poles are clipped there, and
+      // dragging past the edge would reveal the cut. When the whole band
+      // fits in the viewport (world zoom on a tall phone), the band pins
+      // to the TOP edge — the northern cut sits exactly at the viewport
+      // edge (invisible) and the spare space is southern ocean at the
+      // bottom — and vertical panning locks entirely. Runs in Mercator Y
+      // so the clamp is exact at every zoom.
+      if (config.region?.latBounds) {
+        const [latS, latN] = config.region.latBounds
+        const mc = maplibregl.MercatorCoordinate
+        const yTop = mc.fromLngLat({ lng: 0, lat: latN }).y
+        const yBot = mc.fromLngLat({ lng: 0, lat: latS }).y
+        let clamping = false
+        const clampLat = () => {
+          if (clamping) return
+          const b = map.getBounds()
+          const yN = mc.fromLngLat({ lng: 0, lat: b.getNorth() }).y
+          const yS = mc.fromLngLat({ lng: 0, lat: b.getSouth() }).y
+          const half = (yS - yN) / 2
+          let cy
+          if (yS - yN >= yBot - yTop) cy = yTop + half
+          else if (yN < yTop) cy = yTop + half
+          else if (yS > yBot) cy = yBot - half
+          else return
+          if (Math.abs(cy - (yN + yS) / 2) < 1e-9) return
+          const lat = new mc(0.5, cy, 0).toLngLat().lat
+          clamping = true
+          map.setCenter([map.getCenter().lng, lat])
+          clamping = false
+        }
+        map.on('move', clampLat)
+        clampLat()
+      }
+      // Back-compat: soft center-latitude clamp.
+      else if (config.region?.centerLatRange) {
         const [latLo, latHi] = config.region.centerLatRange
         map.on('move', () => {
           const c = map.getCenter()

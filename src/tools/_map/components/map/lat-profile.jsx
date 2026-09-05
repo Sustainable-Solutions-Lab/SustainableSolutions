@@ -11,6 +11,11 @@
  * the world visible beside it. 15-degree tick labels (matching the world
  * graticule) track the camera.
  *
+ * The amplitude scale normalizes to the maximum over the VISIBLE latitude
+ * band (so the curve stays legible when zoomed into a quiet region) and
+ * eases toward that target a fraction per frame — panning, zooming, or a
+ * late-loading profile shifts the scale smoothly instead of jumping.
+ *
  * Computed difference variables (diffOf) subtract the two banked profiles —
  * profiles are additive, so the marginal stays exact.
  */
@@ -46,6 +51,9 @@ export function LatProfile({ map, config, variable, isDark }) {
   const mode = 'view'
   const [path, setPath] = useState(null)
   const rafRef = useRef(0)
+  // Displayed amplitude scale (kt per full strip width), eased toward the
+  // visible-band max. Survives re-renders; null until first data.
+  const scaleRef = useRef(null)
 
   useEffect(() => {
     const url = config.latProfileUrl
@@ -94,14 +102,29 @@ export function LatProfile({ map, config, variable, isDark }) {
     function rebuild() {
       const h = map.getContainer().clientHeight
       const steps = Math.max(60, Math.floor(h / 3))
-      const pts = []
+      const samples = []
+      let visMax = 0
       for (let i = 0; i <= steps; i++) {
         const y = (i / steps) * h
         const lat = latAtY(y, h)
         const band = Math.floor((data.lat0 - lat) / data.dlat)
         const v = band >= 0 && band < values.length ? values[band] : 0
-        pts.push([y, (v / vmax) * (WIDTH - 6)])
+        if (v > visMax) visMax = v
+        samples.push([y, v])
       }
+      // Ease the displayed scale toward the visible-band max (floored at 2%
+      // of the global max so an empty view doesn't blow up noise). First
+      // data snaps directly; afterwards ~20%/frame, and we keep animating
+      // until converged even without further map movement.
+      const target = Math.max(visMax, vmax * 0.02)
+      if (scaleRef.current == null) scaleRef.current = target
+      else scaleRef.current += (target - scaleRef.current) * 0.2
+      if (Math.abs(target - scaleRef.current) > target * 0.005) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = requestAnimationFrame(rebuild)
+      }
+      const scale = scaleRef.current
+      const pts = samples.map(([y, v]) => [y, Math.min(WIDTH - 2, (v / scale) * (WIDTH - 6))])
       let d = `M ${WIDTH} ${pts[0][0]}`
       for (const [y, w] of pts) d += ` L ${(WIDTH - w).toFixed(1)} ${y.toFixed(1)}`
       d += ` L ${WIDTH} ${pts[pts.length - 1][0]} Z`

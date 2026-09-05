@@ -11,6 +11,7 @@ import { useMultiSourceLayers } from '../../lib/use-multi-source-layers.js'
 import { useJustAirLayers } from '../../lib/use-just-air-layers.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { percentileThresholds } from '../../lib/area-stats.js'
+import { readVarValue, varValueExpr } from '../../lib/variable-value.js'
 import { SOURCE_ID, LAYER_ID, LAYER_ID_AGG, LAYER_ID_MED, LAYER_ID_COARSE, LAYER_IDS } from '../../lib/use-map-layer.js'
 
 const JUST_AIR_SOURCE_ID = 'just-air-data'
@@ -45,7 +46,7 @@ function applyJustAirFilter(map, config, variable, percentileRange, onFilterStat
       let features = []
       try { features = map.querySourceFeatures(JUST_AIR_SOURCE_ID, { sourceLayer }) } catch {}
       const totalValues = features
-        .map((f) => f.properties?.[variable.id])
+        .map((f) => readVarValue(f.properties, variable))
         .filter((v) => v != null && !isNaN(v))
       onFilterStats({
         count: totalValues.length,
@@ -72,12 +73,13 @@ function applyJustAirFilter(map, config, variable, percentileRange, onFilterStat
     return s9.length >= 100 ? s9 : allFeatures
   })()
 
-  const { low, high } = percentileThresholds(
-    sample,
-    variable.id,
-    percentileRange.low,
-    percentileRange.high,
-  )
+  const sampleValues = sample
+    .map((f) => readVarValue(f.properties, variable))
+    .filter((v) => v != null && !isNaN(v))
+    .sort((a, b) => a - b)
+  const pick = (pct) => sampleValues[Math.round((pct / 100) * (sampleValues.length - 1))]
+  const low = sampleValues.length ? pick(percentileRange.low) : -Infinity
+  const high = sampleValues.length ? pick(percentileRange.high) : Infinity
 
   for (const s of config.scales) {
     const layerId = `just-air-cells-${s.value}`
@@ -85,8 +87,8 @@ function applyJustAirFilter(map, config, variable, percentileRange, onFilterStat
     try {
       map.setFilter(layerId, ['all',
         ['==', ['coalesce', ['to-number', ['get', '_scale']], 0], s.value],
-        ['>=', ['get', variable.id], low],
-        ['<=', ['get', variable.id], high],
+        ['>=', varValueExpr(variable), low],
+        ['<=', varValueExpr(variable), high],
       ])
     } catch (err) {
       console.error('[applyJustAirFilter] setFilter', layerId, err)

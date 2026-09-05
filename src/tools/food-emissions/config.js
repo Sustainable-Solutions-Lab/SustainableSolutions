@@ -29,11 +29,11 @@ const YEARS = Array.from({ length: 25 }, (_, i) => 2000 + i)
 const config = {
   id: 'food-emissions',
   eyebrow: 'INTERACTIVE MAP',
-  title: 'Food Emissions',
+  title: 'Mapping food system emissions',
   summary:
-    'Greenhouse-gas emissions from managing the world’s croplands, by source and over time — draw an area to see its totals, mix, and trend.',
+    'Toward spatially explicit, commodity-specific maps of greenhouse-gas emissions from land use and land management, worldwide and through time.',
   description:
-    'Greenhouse-gas emissions from the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid. The map shows the 2020 reference year; the Change-over-time layer and the area tool’s trend chart cover 2000–2024, with annual national statistics carrying the trend. Emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model. Livestock emissions beyond cropland-applied manure (enteric fermentation, manure on pasture) and land-use-change emissions are not yet included — they join through the Cornerstone jurisdictional framework.',
+    'Where do food-system greenhouse-gas emissions come from, and how is that changing? This tool works toward a complete, spatially explicit, commodity-specific accounting of emissions from land use and land management — mapped where they happen, traced to what is grown, and followed through time. Today it covers the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid, for any year 2000–2024. Emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model. Livestock beyond cropland-applied manure and land-use-change emissions join next, through the Cornerstone jurisdictional framework.',
 
   region: {
     // Central-Atlantic framing: North America fully in view alongside
@@ -68,6 +68,13 @@ const config = {
       dimensionIds: ['year'],
     },
     {
+      id: 'diff',
+      label: 'Difference between years',
+      description:
+        'Change in all-source emissions per cell between any two years. Blue = decline, red = growth.',
+      dimensionIds: ['yearB', 'yearA'],
+    },
+    {
       id: 'intensity',
       label: 'Per-hectare intensity',
       description:
@@ -97,7 +104,22 @@ const config = {
       id: 'year',
       label: 'Year',
       type: 'slider',
+      animate: true,
       defaultValue: '2020',
+      options: YEARS.map((y) => ({ id: String(y), label: String(y) })),
+    },
+    {
+      id: 'yearA',
+      label: 'To year',
+      type: 'slider',
+      defaultValue: '2024',
+      options: YEARS.map((y) => ({ id: String(y), label: String(y) })),
+    },
+    {
+      id: 'yearB',
+      label: 'From year',
+      type: 'slider',
+      defaultValue: '2000',
       options: YEARS.map((y) => ({ id: String(y), label: String(y) })),
     },
   ],
@@ -152,6 +174,20 @@ const config = {
       dimensionValues: { year: String(y) },
       description: `All-source emissions per cell in ${y}; national statistics carry the trend.`,
     })),
+    {
+      id: 'ydiff',
+      label: 'Change in emissions',
+      unit: 'kt CO₂e',
+      colormap: 'SpectralR',
+      diverging: true,
+      domain: { min: -60, max: 60, zero: 0 },
+      alphaFloor: 0.05,
+      alphaPower: 0.5,
+      layer: 'diff',
+      diffOfDims: ['yearA', 'yearB'],
+      description:
+        'All-source emissions in the To year minus the From year, per quarter-degree cell.',
+    },
     {
       id: 'intn',
       label: 'Emissions intensity',

@@ -7,6 +7,8 @@
  *   - 'dropdown' → native <select>
  */
 
+import { useEffect, useRef, useState } from 'react'
+import { Play, Pause } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
 
 export function DimensionControl({ dimension, value, dispatch }) {
@@ -15,8 +17,8 @@ export function DimensionControl({ dimension, value, dispatch }) {
   }
 
   return (
-    <div className="mb-4">
-      <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+    <div className="mb-2">
+      <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-0.5 m-0">
         {dimension.label}
       </p>
 
@@ -57,7 +59,23 @@ function ToggleControl({ dimension, value, onChange }) {
 // Emits the option ID (a string, per the DimensionOption contract) — not the
 // raw number. get-active-variable matches dimensionValues with strict
 // equality, so a numeric emission here silently deselects every variable.
+// dimension.animate: true adds a play button that steps through the options
+// (wrapping) — used by the food-emissions year slider.
 function SliderControl({ dimension, value, onChange }) {
+  const [playing, setPlaying] = useState(false)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  const valueRef = useRef(value)
+  valueRef.current = value
+  useEffect(() => {
+    if (!playing) return undefined
+    const ids = dimension.options.map((o) => o.id)
+    const timer = setInterval(() => {
+      const idx = ids.indexOf(String(valueRef.current))
+      onChangeRef.current(ids[(idx + 1) % ids.length])
+    }, 700)
+    return () => clearInterval(timer)
+  }, [playing, dimension])
   const numericValue = typeof value === 'number' ? value : parseFloat(value)
   const options = dimension.options
   const min = options.length >= 2 ? parseFloat(options[0].id) : 0
@@ -76,14 +94,27 @@ function SliderControl({ dimension, value, onChange }) {
           {max}{dimension.unit ? ` ${dimension.unit}` : ''}
         </span>
       </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        value={numericValue}
-        onChange={(e) => onChange(String(+e.target.value))}
-        style={{ width: '100%', accentColor: 'var(--cardinal)' }}
-      />
+      <div className="flex items-center gap-2">
+        {dimension.animate && (
+          <button
+            type="button"
+            onClick={() => setPlaying((x) => !x)}
+            aria-label={playing ? 'Pause animation' : 'Animate through values'}
+            className="bg-transparent border-0 cursor-pointer p-0 text-ink-2 hover:text-ink"
+            style={{ lineHeight: 0, flexShrink: 0 }}
+          >
+            {playing ? <Pause size={15} strokeWidth={1.75} /> : <Play size={15} strokeWidth={1.75} />}
+          </button>
+        )}
+        <input
+          type="range"
+          min={min}
+          max={max}
+          value={numericValue}
+          onChange={(e) => { setPlaying(false); onChange(String(+e.target.value)) }}
+          style={{ width: '100%', accentColor: 'var(--cardinal)' }}
+        />
+      </div>
     </div>
   )
 }

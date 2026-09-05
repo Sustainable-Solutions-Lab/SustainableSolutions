@@ -16,16 +16,32 @@
  * @returns {import('../contracts/project-config').Variable | null}
  */
 export function getActiveVariable(config, activeLayer, activeDimensions) {
-  return (
-    config.variables.find((v) => {
-      if (v.layer !== activeLayer) return false
-      if (!v.dimensionValues) return true
+  const v =
+    config.variables.find((vv) => {
+      if (vv.layer !== activeLayer) return false
+      if (!vv.dimensionValues) return true
 
-      return Object.entries(v.dimensionValues).every(
+      return Object.entries(vv.dimensionValues).every(
         ([dimId, expected]) => activeDimensions[dimId] === expected
       )
     }) ?? null
-  )
+  // Computed difference variables: diffOfDims: [minuendDim, subtrahendDim]
+  // resolves to diffOf: [propA, propB] (props named `y<value>`), so the map
+  // renders propA − propB. Resolved here so every consumer (paint, stats,
+  // filters) sees a concrete variable.
+  if (v?.diffOfDims) {
+    const dimValue = (dimId) =>
+      activeDimensions[dimId] ??
+      config.dimensions.find((d) => d.id === dimId)?.defaultValue
+    const a = dimValue(v.diffOfDims[0])
+    const b = dimValue(v.diffOfDims[1])
+    return {
+      ...v,
+      diffOf: [`y${a}`, `y${b}`],
+      label: `${v.label} — ${b} to ${a}`,
+    }
+  }
+  return v
 }
 
 /**

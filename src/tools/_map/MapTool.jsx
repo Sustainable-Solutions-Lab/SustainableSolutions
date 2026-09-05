@@ -187,6 +187,19 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const mapBadgeValue = mapBadgeDim && !compareOn
     ? (state.activeDimensions[mapBadgeDim.id] ?? mapBadgeDim.defaultValue)
     : null
+  // Small what-is-shown label under the year readout: the selected option of
+  // every sidebar dropdown the active layer uses (e.g. "Fertilizer N₂O ·
+  // Maize (corn)"). Year-bar projects only.
+  const badgeSelectionLabel = config.yearControl
+    ? config.dimensions
+        .filter((d) =>
+          d.type === 'dropdown' &&
+          d.location !== 'map' &&
+          (config.layers.find((l) => l.id === state.activeLayer)?.dimensionIds ?? []).includes(d.id))
+        .map((d) => d.options?.find((o) => o.id === (state.activeDimensions[d.id] ?? d.defaultValue))?.label)
+        .filter(Boolean)
+        .join(' · ')
+    : ''
 
   // Populate the "statewide" value distribution for the active variable.
   // Two paths:
@@ -479,25 +492,46 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             <YearBar config={config} state={state} dispatch={dispatch} isDark={isDark} />
           )}
 
-          {/* Animated-dimension readout (e.g. year) — all viewports */}
-          {mapBadgeValue != null && (
+          {/* Animated-dimension readout (e.g. year) + what-is-shown label */}
+          {(mapBadgeValue != null || badgeSelectionLabel) && (
             <div
-              aria-live="polite"
               className="absolute z-10 pointer-events-none font-mono text-ink"
               style={{
                 top: 18,
                 left: config.mapControlsSide === 'left' ? 66 : 12,
-                fontSize: 34,
-                fontWeight: 700,
-                fontVariantNumeric: 'tabular-nums',
-                letterSpacing: '0.02em',
-                opacity: 0.85,
                 textShadow: isDark
                   ? '0 1px 8px rgba(12,12,28,0.9)'
                   : '0 1px 8px rgba(248,248,232,0.9)',
               }}
             >
-              {mapBadgeValue}
+              {mapBadgeValue != null && (
+                <div
+                  aria-live="polite"
+                  style={{
+                    fontSize: 34,
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    letterSpacing: '0.02em',
+                    lineHeight: 1.05,
+                    opacity: 0.85,
+                  }}
+                >
+                  {mapBadgeValue}
+                </div>
+              )}
+              {badgeSelectionLabel && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    opacity: 0.65,
+                    marginTop: 2,
+                  }}
+                >
+                  {badgeSelectionLabel}
+                </div>
+              )}
             </div>
           )}
 

@@ -6,13 +6,10 @@
  * config.latProfileUrl), Gaussian-smoothed so it reads as a kernel-density
  * trend rather than pinpoint spikes (config.latProfile.sigmaDeg, default 2°).
  *
- * Two modes, toggled by the small button at the strip's foot:
- *  - "globe" (default): a fixed global latitude axis spanning the data
- *    envelope, independent of the camera — the whole tropics-to-boreal story
- *    stays visible even when the map is zoomed in (or on a phone that can't
- *    zoom out far enough). Faint 30° graticule ticks for orientation.
- *  - "view": each pixel row aligns with the map latitude beside it,
- *    re-projected on every camera move.
+ * Each pixel row aligns with the map latitude beside it, re-projected on
+ * every camera move, so the marginal always describes exactly the band of
+ * the world visible beside it. 15-degree tick labels (matching the world
+ * graticule) track the camera.
  *
  * Computed difference variables (diffOf) subtract the two banked profiles —
  * profiles are additive, so the marginal stays exact.
@@ -46,7 +43,7 @@ function gaussianSmooth(values, sigmaBands) {
 
 export function LatProfile({ map, config, variable, isDark }) {
   const [data, setData] = useState(() => profileCache.get(config.latProfileUrl) ?? null)
-  const mode = 'globe'
+  const mode = 'view'
   const [path, setPath] = useState(null)
   const rafRef = useRef(0)
 
@@ -108,12 +105,19 @@ export function LatProfile({ map, config, variable, isDark }) {
       let d = `M ${WIDTH} ${pts[0][0]}`
       for (const [y, w] of pts) d += ` L ${(WIDTH - w).toFixed(1)} ${y.toFixed(1)}`
       d += ` L ${WIDTH} ${pts[pts.length - 1][0]} Z`
-      // 30-degree ticks for the fixed axis
+      // Latitude tick labels — fixed-axis 30° in globe mode, camera-tracking
+      // 15° (matching the world graticule) in view mode.
       const ticks = []
       if (mode === 'globe') {
         for (let latT = 60; latT >= -60; latT -= 30) {
           if (latT > latTop || latT < latBot) continue
           const y = ((latT - latTop) / (latBot - latTop)) * h
+          ticks.push({ y, label: latT === 0 ? '0°' : `${Math.abs(latT)}°${latT > 0 ? 'N' : 'S'}` })
+        }
+      } else {
+        for (let latT = 75; latT >= -75; latT -= 15) {
+          const y = map.project([map.getCenter().lng, latT]).y
+          if (y < 10 || y > h - 6) continue
           ticks.push({ y, label: latT === 0 ? '0°' : `${Math.abs(latT)}°${latT > 0 ? 'N' : 'S'}` })
         }
       }

@@ -42,6 +42,10 @@ const config = {
     zoom: 1.32,
     minZoom: 1.2,
     maxZoom: 8,
+    // Poles truncated ~300 km beyond the highest-latitude plotted cells
+    // (data spans -51.9 to 68.4): the land layer is clipped to [-55, 71.5]
+    // and the camera center is softly clamped.
+    centerLatRange: [-38, 52],
     useCaliforniaOverlay: false,
     useWorldOverlay: true,
   },
@@ -242,6 +246,8 @@ const config = {
   tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/food-emissions.pmtiles',
   sourceLayer: 'food-emissions',
   distributionsUrl: '/tools/food-emissions/distributions.json',
+  // Vertical emissions-by-latitude marginal along the map's right edge.
+  latProfileUrl: '/tools/food-emissions/lat-profiles.json',
   // Single-scale cell renderer: every feature is a 0.25° (~28 km) cell that
   // grows with zoom to stay contiguous.
   scales: [{ value: 28, radiusMode: 'cell' }],

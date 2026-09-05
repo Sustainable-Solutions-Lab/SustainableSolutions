@@ -299,6 +299,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       zoom: initialZoom,
       minZoom: config.region.minZoom ?? fallbackMinZoom,
       maxZoom: config.region.maxZoom ?? fallbackMaxZoom,
+
       // Disable built-in attribution — we render our own static text below
       attributionControl: false,
     })
@@ -306,6 +307,17 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     mapRef.current = map
 
     map.once('load', () => {
+      // Optional soft latitude clamp (maxBounds misbehaves for full-width
+      // worlds): keeps the camera center inside [south, north] so empty
+      // polar bands stay off-screen. The land layer is clipped to match.
+      if (config.region?.centerLatRange) {
+        const [latLo, latHi] = config.region.centerLatRange
+        map.on('move', () => {
+          const c = map.getCenter()
+          const lat = Math.max(latLo, Math.min(latHi, c.lat))
+          if (lat !== c.lat) map.setCenter([c.lng, lat])
+        })
+      }
       addStaticLayers(map, schemeRef.current, {
         californiaOverlays: config.region?.useCaliforniaOverlay !== false,
         usOverlays: config.region?.useUsOverlay === true,

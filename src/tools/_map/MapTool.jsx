@@ -10,6 +10,7 @@ import { Sidebar } from './components/sidebar/index.jsx'
 import { MobileLegend } from './components/sidebar/legend.jsx'
 import { LayerTabs } from './components/sidebar/layer-tabs.jsx'
 import { DimensionControl } from './components/sidebar/dimension-control.jsx'
+import { LatProfile } from './components/map/lat-profile.jsx'
 import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
@@ -456,6 +457,16 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           >
             <MobileLegend variable={activeVariable} allValues={statewideValues} isDark={isDark} />
           </div>
+
+          {/* Latitudinal marginal — config-gated (latProfileUrl) */}
+          {config.latProfileUrl && (
+            <LatProfile
+              map={mapInstance}
+              config={config}
+              variable={activeVariable}
+              isDark={isDark}
+            />
+          )}
 
           {/* Animated-dimension readout (e.g. year) — all viewports */}
           {mapBadgeValue != null && (

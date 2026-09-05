@@ -89,6 +89,30 @@ async function main() {
     JSON.stringify(sample),
   );
   console.log(`  distributions.json: ${keys.size} variables`);
+
+  // Latitudinal profiles: per-variable sums in 0.25-degree latitude bands,
+  // for the map's right-edge marginal chart. Full pass (not sampled).
+  console.log('Building latitude profiles…');
+  const LAT0 = 90, DLAT = 0.25, NBANDS = Math.round(180 / DLAT);
+  const profiles = {};
+  for (const line of raw) {
+    const f = JSON.parse(line);
+    const lat = f.geometry.coordinates[1];
+    const band = Math.min(NBANDS - 1, Math.max(0, Math.floor((LAT0 - lat) / DLAT)));
+    for (const [k, v] of Object.entries(f.properties)) {
+      if (k === '_scale' || k === 'm49' || k === 'ha' || k === 'intn') continue;
+      if (typeof v !== 'number' || !isFinite(v)) continue;
+      (profiles[k] ??= new Array(NBANDS).fill(0))[band] += v;
+    }
+  }
+  for (const k of Object.keys(profiles)) {
+    profiles[k] = profiles[k].map((v) => Math.round(v * 10) / 10);
+  }
+  await fs.writeFile(
+    resolve(PUBLIC_DIR, 'lat-profiles.json'),
+    JSON.stringify({ lat0: LAT0, dlat: DLAT, profiles }),
+  );
+  console.log(`  lat-profiles.json: ${Object.keys(profiles).length} variables`);
   console.log(`\nLocal dev copy → public/tools/food-emissions/ (gitignored).`);
   console.log('For production: upload build/tiles/food-emissions/food-emissions.pmtiles ' +
     'to R2 and swap tilesUrl in the project config.');

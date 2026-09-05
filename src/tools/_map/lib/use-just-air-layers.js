@@ -21,6 +21,7 @@
 
 import { useEffect, useRef } from 'react'
 import { buildColorScale, INTERPOLATORS } from './colormap.js'
+import { readVarValue, varValueExpr, varHasExpr } from './variable-value.js'
 import { getActiveVariable } from './get-active-variable.js'
 
 // Tiling-exact base radius for a 1 km cell — the natural Mercator-derived
@@ -104,7 +105,9 @@ export const DEFAULT_TUNING = {
 function buildCellRadiusExpr(scaleEntry, tuning) {
   const scaleKm = scaleEntry.value ?? 28
   const mul = tuning?.radiusScale ?? 1
-  const k = ((scaleKm * 512) / (2 * 40075.016)) * 1.15 * mul
+  // 0.95: circles nearly touch but never overlap (overlap caused
+  // z-fighting flicker when zoomed far in).
+  const k = ((scaleKm * 512) / (2 * 40075.016)) * 0.95 * mul
   // MapLibre only allows ['zoom'] at the top of a step/interpolate expression,
   // so the low-zoom clamp is baked into per-integer-zoom stops instead of a
   // wrapping ['max'].
@@ -295,13 +298,17 @@ export function useJustAirLayers(map, config, state, tuning) {
     function enforceOverlayOrder() {
       // World-land overlays must sit beneath the data no matter which
       // styledata handler won the re-add race after a theme toggle.
-      const firstCells = (config.scales ?? [])
-        .map((sc) => `just-air-cells-${sc.value}`)
-        .find((id) => map.getLayer(id))
-      if (!firstCells) return
+      // IMPORTANT: only move when actually out of order — moveLayer always
+      // dirties the style, and doing it on every idle event creates a
+      // permanent repaint loop (visible as map "flashing").
+      const layers = map.getStyle().layers ?? []
+      const order = layers.map((l) => l.id)
+      const firstCellsIdx = order.findIndex((id) => id.startsWith('just-air-cells-'))
+      if (firstCellsIdx < 0) return
       for (const id of ['world-coastline', 'world-land-fill']) {
-        if (map.getLayer(id)) {
-          try { map.moveLayer(id, firstCells) } catch { /* ordering only */ }
+        const idx = order.indexOf(id)
+        if (idx > firstCellsIdx) {
+          try { map.moveLayer(id, order[firstCellsIdx]) } catch { /* ordering only */ }
         }
       }
     }
@@ -349,7 +356,7 @@ export function useJustAirLayers(map, config, state, tuning) {
         const features = map.querySourceFeatures(SOURCE_ID, { sourceLayer })
         if (features.length >= 30) {
           const values = features
-            .map((f) => f.properties?.[v.id])
+            .map((f) => readVarValue(f.properties, v))
             .filter((x) => x != null && !isNaN(x))
           if (values.length >= 30) {
             const zero = v.domain?.zero ?? v.domain?.min ?? 0
@@ -516,10 +523,10 @@ function buildColorExpr(rawVariable, isDark, colorRange, tuning) {
   // around the color expression below so they render fully transparent
   // instead of falling back to MapLibre's default black.
   function gated(expr) {
-    return ['case', ['has', variable.id], expr, 'rgba(0,0,0,0)']
+    return ['case', varHasExpr(variable), expr, 'rgba(0,0,0,0)']
   }
 
-  const expr = ['interpolate', ['linear'], ['get', variable.id]]
+  const expr = ['interpolate', ['linear'], varValueExpr(variable)]
   const steps = 24
 
   if (variable.diverging) {

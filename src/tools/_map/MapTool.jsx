@@ -178,6 +178,13 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
     // Generic path: projects that declare config.distributionsUrl get their
     // precomputed value sample fetched directly (built alongside the tiles).
+    if (activeVariable?.diffOf) {
+      // Computed difference variables have no stored distribution sample;
+      // the sidebar falls back to the gradient legend.
+      setStatewideValues([])
+      setOpacityP95(null)
+      return
+    }
     if (config.distributionsUrl) {
       let cancelled = false
       fetch(config.distributionsUrl)

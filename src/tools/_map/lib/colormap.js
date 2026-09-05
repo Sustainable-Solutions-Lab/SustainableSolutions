@@ -34,7 +34,9 @@ export const INTERPOLATORS = {
   // The hot half of Spectral (pale yellow -> orange -> dark red): sequential
   // magnitude without the blue fog a full-range Spectral gives skewed data;
   // blues stay reserved for the categorical/trend palette.
-  SpectralHot: (t) => interpolateSpectral(0.5 * (1 - t)),
+  // Low end starts at Spectral(0.38) — yellow-orange rather than pale
+  // yellow, so low-emission cells stay visible on the cream basemap.
+  SpectralHot: (t) => interpolateSpectral(0.38 * (1 - t)),
   // Standard RdBu: t=0 → red (costs > benefits), t=1 → blue (benefits > costs)
   RdBu: interpolateRdBu,
   // Inverted RdBu: t=0 → blue, t=1 → red. Used by Just Air's diff layers where

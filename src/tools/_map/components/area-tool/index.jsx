@@ -13,6 +13,7 @@
  * Circle style: solid line, white in dark mode / dark gray in light mode.
  */
 
+import { readVarValue } from '../../lib/variable-value.js'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Actions } from '../../contracts/events.js'
 import {
@@ -264,7 +265,7 @@ export function AreaTool({ map, config, state, dispatch }) {
     )
     const activeVarValues = activeVar
       ? filtered
-          .map((f) => f.properties?.[activeVar.id])
+          .map((f) => readVarValue(f.properties, activeVar))
           .filter((v) => {
             if (v == null) return false
             // Keep string values for categorical variables; filter NaN for numeric
@@ -335,7 +336,7 @@ export function AreaTool({ map, config, state, dispatch }) {
     const activeVar = getActiveVariable(config, state.activeLayer, state.activeDimensions)
     const activeVarValues = activeVar
       ? filtered
-          .map((f) => f.properties?.[activeVar.id])
+          .map((f) => readVarValue(f.properties, activeVar))
           .filter((v) => v != null && (activeVar.type === 'categorical' ? true : !isNaN(v)))
       : []
     const equityRecords = filtered

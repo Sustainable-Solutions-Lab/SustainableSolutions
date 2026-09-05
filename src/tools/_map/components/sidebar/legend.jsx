@@ -90,13 +90,14 @@ function ContinuousLegend({ variable, allValues = [], isDark = true }) {
   const { min, max } = effectiveDomain
 
   let gradient
-  if (variable.diverging) {
+  const hasAnchors = variable.solidColor != null || variable.solidColorNegative != null
+  if (variable.diverging && hasAnchors) {
+    // Binary-anchor diverging (Just-Air diff layers): two solid hues fading
+    // to transparent at the zero crossing.
     const zeroVal = variable.domain?.zero ?? 0
     const negRange = Math.max(zeroVal - min, 0.001)
     const posRange = Math.max(max - zeroVal, 0.001)
     const totalRange = negRange + posRange
-    // Zero sits at fraction (zero - min)/(max - min) from the left
-    // (now the min side).
     const zeroPct = (negRange / totalRange * 100).toFixed(1)
 
     const blue = isDark ? '#4393c3' : '#2166ac'
@@ -108,6 +109,17 @@ function ContinuousLegend({ variable, allValues = [], isDark = true }) {
       rgba(${redRgb},0) ${zeroPct}%,
       rgba(${blueRgb},0) ${zeroPct}%,
       ${blue} 100%)`
+  } else if (variable.diverging) {
+    // Continuous diverging colormap: render the variable's actual colormap
+    // (matching the map paint) with alpha fading to 0 at the zero crossing.
+    const zeroVal = variable.domain?.zero ?? 0
+    const stops = buildLegendStops({ ...variable, domain: effectiveDomain }, 30)
+    const maxDev = Math.max(Math.abs(min - zeroVal), Math.abs(max - zeroVal), 1e-9)
+    const parts = stops.map((stop, i) => {
+      const alpha = 0.1 + 0.9 * Math.min(1, Math.abs(stop.value - zeroVal) / maxDev)
+      return `${withAlpha(stop.color, alpha)} ${((i / (stops.length - 1)) * 100).toFixed(1)}%`
+    })
+    gradient = `linear-gradient(to right, ${parts.join(', ')})`
   } else {
     let cm = variable.colormap
     if (cm === 'RdBuBlue') cm = isDark ? 'RdBuBlueDark' : 'RdBuBlueLight'

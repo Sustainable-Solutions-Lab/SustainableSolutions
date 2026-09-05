@@ -28,7 +28,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
       style={{ width: 280, minWidth: 280 }}
     >
       {/* Header — eyebrow + project title (matches the lab's page-title pattern) */}
-      <div className="px-3 pt-3 pb-2 shrink-0">
+      <div className="px-3 pt-3 pb-1.5 shrink-0">
         {config.eyebrow && (
           <p
             className="m-0"
@@ -63,8 +63,8 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         )}
 
         {companion && (
-          <div className="mb-4">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 m-0 mb-1">
+          <div className="mb-2.5">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 m-0 mb-0.5">
               Companion paper
             </p>
             {companion.url ? (
@@ -154,7 +154,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             distribution chart is suppressed — i.e. for categorical variables
             or projects that turn the percentile filter off — so the user
             isn't presented with both. */}
-        {config.percentileFilter?.enabled && activeVariable && activeVariable.type !== 'categorical' ? (
+        {config.percentileFilter?.enabled && activeVariable && activeVariable.type !== 'categorical' && allValues.length > 0 ? (
           <DistributionChart
             variable={activeVariable}
             allValues={allValues}

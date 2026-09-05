@@ -106,9 +106,11 @@ export const DEFAULT_TUNING = {
 function buildCellRadiusExpr(scaleEntry, tuning) {
   const scaleKm = scaleEntry.value ?? 28
   const mul = tuning?.radiusScale ?? 1
-  // 0.95: circles nearly touch but never overlap (overlap caused
-  // z-fighting flicker when zoomed far in).
-  const k = ((scaleKm * 512) / (2 * 40075.016)) * 0.95 * mul
+  // fill 0.95: circles nearly touch but never overlap (overlap caused
+  // z-fighting flicker when zoomed far in). Coarse low-zoom tiers can set
+  // a larger scaleEntry.fill so circles overlap into a continuous field
+  // instead of a stipple of dots.
+  const k = ((scaleKm * 512) / (2 * 40075.016)) * (scaleEntry.fill ?? 0.95) * mul
   // MapLibre only allows ['zoom'] at the top of a step/interpolate expression,
   // so the low-zoom clamp is baked into per-integer-zoom stops instead of a
   // wrapping ['max'].
@@ -637,14 +639,20 @@ function buildZoomFade(s) {
   const fade = 0.25
   const minZ = s.minZoom ?? 0
   const maxZ = s.maxZoom
+  // A band starting at (or near) z0 has no fade-in ramp — emitting one
+  // would produce two stops at zoom 0, which MapLibre rejects as
+  // non-ascending, silently killing the whole layer.
   if (maxZ == null) {
-    // A band with no lower edge is fully visible at every zoom. (Emitting the
-    // ramp with minZ = 0 would produce two stops at zoom 0, which MapLibre
-    // rejects as non-ascending — killing the whole layer.)
     if (minZ <= fade) return 1
     return ['interpolate', ['linear'], ['zoom'],
       Math.max(0, minZ - fade), 0,
       minZ,                     1,
+    ]
+  }
+  if (minZ <= fade) {
+    return ['interpolate', ['linear'], ['zoom'],
+      Math.max(minZ, maxZ - fade), 1,
+      maxZ,                        0,
     ]
   }
   return ['interpolate', ['linear'], ['zoom'],

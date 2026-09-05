@@ -307,20 +307,17 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     mapRef.current = map
 
     map.once('load', () => {
-      // Optional soft latitude LIMIT (maxBounds misbehaves for full-width
-      // worlds): the poles are clipped at [south, north], and the camera is
-      // corrected only when the viewport would show more than a small
-      // budget of empty space past either cut (BLANK_FRACTION of the
-      // viewport height). Inside the allowed range gestures are untouched —
-      // the original soft-clamp feel — and at the limit the drag
-      // rubber-bands instead of walling. Works at every zoom: zoomed out
-      // (band shorter than viewport) the unavoidable blank distributes
-      // between top and bottom but neither side may exceed the budget;
-      // zoomed in it allows a slight overscroll peek past the cut.
-      // Mercator Y so the limit is exact at every zoom.
+      // Optional latitude LIMIT (maxBounds misbehaves for full-width
+      // worlds): the poles are clipped at [south, north], and the truncated
+      // edge must NEVER be visible — not at the limit, not on load. Two
+      // pieces: (1) a dynamic minimum zoom so the clipped band always fills
+      // the viewport height (you cannot zoom out far enough to see past the
+      // cut; recomputed on resize); (2) an exact Mercator-Y clamp on the
+      // viewport edges, corrected only when exceeded, so gestures inside
+      // the band keep the original free-pan feel and the limit rubber-bands
+      // instead of walling.
       if (config.region?.latBounds) {
         const [latS, latN] = config.region.latBounds
-        const BLANK_FRACTION = 0.10
         const mc = maplibregl.MercatorCoordinate
         const yTop = mc.fromLngLat({ lng: 0, lat: latN }).y
         const yBot = mc.fromLngLat({ lng: 0, lat: latS }).y
@@ -330,15 +327,23 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
           const yS = mc.fromLngLat({ lng: 0, lat: b.getSouth() }).y
           const half = (yS - yN) / 2
           const cy = (yN + yS) / 2
-          const slack = 1 - 2 * BLANK_FRACTION
-          let lo = yTop + half * slack   // north budget (y grows southward)
-          let hi = yBot - half * slack   // south budget
-          if (lo > hi) { const t = lo; lo = hi; hi = t }
+          let lo = yTop + half   // north-edge constraint (y grows southward)
+          let hi = yBot - half   // south-edge constraint
+          if (lo > hi) { const mid = (lo + hi) / 2; lo = mid; hi = mid }
           const clamped = Math.min(hi, Math.max(lo, cy))
           if (Math.abs(clamped - cy) < 1e-9) return
           const lat = new mc(0.5, clamped, 0).toLngLat().lat
           map.setCenter([map.getCenter().lng, lat])
         }
+        const applyMinZoom = () => {
+          const h = map.getContainer().clientHeight
+          if (!h) return
+          const bandMin = Math.log2(h / (512 * (yBot - yTop)))
+          map.setMinZoom(Math.max(config.region?.minZoom ?? 0, bandMin))
+          clampLat()
+        }
+        applyMinZoom()
+        map.on('resize', applyMinZoom)
         map.on('move', clampLat)
       }
       // Back-compat: soft center-latitude clamp.

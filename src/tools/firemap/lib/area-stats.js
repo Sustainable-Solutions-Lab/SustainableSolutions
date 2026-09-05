@@ -159,3 +159,28 @@ export function percentileThresholds(features, variableId, lowPct, highPct) {
     high: values[idx(highPct)],
   }
 }
+
+/**
+ * Per-country sums of the trend source properties for the features inside a
+ * drawn area. Config-gated (config.areaTool.trend); used by the StatsPanel
+ * trend chart to compose an area trajectory from national time series.
+ *
+ * @param {Array}  features    - filtered GeoJSON features
+ * @param {Object} trendConfig - config.areaTool.trend ({ sources, countryProp })
+ * @returns {Object.<string, Object.<string, number>>} { [countryId]: { [prop]: sum } }
+ */
+export function computeTrendWeights(features, trendConfig) {
+  const weights = {}
+  const countryProp = trendConfig.countryProp
+  for (const f of features) {
+    const p = f.properties
+    if (!p || p[countryProp] == null) continue
+    const c = String(p[countryProp])
+    const w = (weights[c] ??= {})
+    for (const src of trendConfig.sources) {
+      const v = p[src.prop]
+      if (v != null && isFinite(v)) w[src.prop] = (w[src.prop] ?? 0) + Number(v)
+    }
+  }
+  return weights
+}

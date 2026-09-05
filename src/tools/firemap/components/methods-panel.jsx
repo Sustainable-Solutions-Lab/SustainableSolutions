@@ -65,10 +65,92 @@ export function MethodsPanel({ config, isDark, onClose }) {
         <section className="prose prose-sm" style={{ color: 'var(--ink)' }}>
           {config.id === 'just-air'
             ? <JustAirMethods />
-            : <FuelTreatmentMethods />}
+            : config.id === 'food-emissions'
+              ? <FoodEmissionsMethods />
+              : <FuelTreatmentMethods />}
         </section>
       </div>
     </div>
+  )
+}
+
+
+function FoodEmissionsMethods() {
+  return (
+    <>
+      <h2 style={h2Style}>About this map</h2>
+      <p style={pStyle}>
+        This map shows greenhouse-gas emissions from global cropland
+        management — fertilizer and manure N₂O, rice paddy CH₄, drained
+        peatland CO₂, crop residues, and residue burning — for 46 crops on a
+        quarter-degree grid (reference year 2020). Draw a circle with the
+        regional-data tool to see the enclosed emissions total, the source
+        mix, and a 2000–2024 trend composed from national series. The
+        companion paper (<strong>DeAngelo, Davis, Seifried &amp; Steffen, in
+        preparation</strong>) extends the dataset annually and merges it with
+        jurisdictional land-use-change emissions from the Cornerstone
+        framework.
+      </p>
+
+      <h2 style={h2Style}>Where the numbers come from</h2>
+      <p style={pStyle}>
+        Emissions follow the model of <strong>Cao et al., <em>Spatially
+        explicit global assessment of cropland greenhouse gas emissions
+        circa 2020</em>, Nature Climate Change (2026)</strong>, which applies
+        IPCC 2019 Refinement methods to crop-specific gridded inputs (SPAM
+        harvested areas, IFA fertilizer rates, gridded livestock, RiceAtlas
+        seasons, hybrid peatland maps). We reimplemented the model
+        independently and validated it module-by-module against the
+        published grids: the deterministic pathways reproduce the original
+        bit-for-bit, and the Monte Carlo pathways match within sampling
+        tolerance.
+      </p>
+
+      <h2 style={h2Style}>Corrections to the published model</h2>
+      <p style={pStyle}>
+        The replication uncovered two implementation errors in the original
+        study's production code — most importantly, the rice CH₄ scaling
+        factors for organic amendments and pre-season water regimes were
+        parameterized with the wrong means, inflating rice CH₄ by roughly a
+        fifth. This map shows the <strong>corrected</strong> model (the
+        intended IPCC 2019 parameters throughout). Drained-peatland
+        emissions additionally follow the <strong>Cornerstone steady-state
+        model</strong> — a persistent occupation emission per hectare of
+        cultivated drained peat, grounded in process-model decay curves —
+        rather than the original paper's flat climate-zone factors, whose
+        calibration mixes sites of very different drainage ages. The
+        associated land-use-change pulse at drainage joins the dataset with
+        the Cornerstone integration.
+      </p>
+
+      <h2 style={h2Style}>Area statistics and trends</h2>
+      <p style={pStyle}>
+        Statistics for a drawn circle aggregate the quarter-degree cells
+        whose centers fall inside it. The trend chart composes each
+        country's national per-source series (2000–2024, from our annual
+        extension driven by FAOSTAT activity data) weighted by that
+        country's emissions inside the circle — exact for areas that
+        contain whole countries, and a proportional approximation
+        otherwise.
+      </p>
+
+      <h2 style={h2Style}>Caveats</h2>
+      <p style={pStyle}>
+        Cells are ~28 km and should be read at landscape scale, not field
+        scale. The scope is cropland management: livestock emissions beyond
+        cropland-applied manure (enteric fermentation, manure deposited on
+        pasture) and land-use-change emissions (deforestation, grassland
+        conversion) are not yet included — both join via the Cornerstone
+        jurisdictional framework.
+        Replication code and tests:{' '}
+        <a
+          href="https://github.com/Sustainable-Solutions-Lab/gridded-land-management"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={linkStyle}
+        >gridded-land-management</a>.
+      </p>
+    </>
   )
 }
 

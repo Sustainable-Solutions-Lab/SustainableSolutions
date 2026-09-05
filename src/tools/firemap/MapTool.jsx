@@ -176,6 +176,21 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       }
     }
 
+    // Generic path: projects that declare config.distributionsUrl get their
+    // precomputed value sample fetched directly (built alongside the tiles).
+    if (config.distributionsUrl) {
+      let cancelled = false
+      fetch(config.distributionsUrl)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (cancelled || !data) return
+          const vals = Array.isArray(data[varId]) ? data[varId] : []
+          applyDist(vals)
+        })
+        .catch(() => {})
+      return () => { cancelled = true }
+    }
+
     if (state.projectId === 'fuel-treatment') {
       fetch('/geo/fuel-treatment.geojson')
         .then((r) => r.json())
@@ -406,6 +421,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           {/* Regional data stats panel — desktop only */}
           <div className="hidden md:block">
             <StatsPanel
+              config={config}
               drawnCircle={state.drawnCircle}
               drawnPolygon={state.drawnPolygon}
               aggregateStats={state.aggregateStats}

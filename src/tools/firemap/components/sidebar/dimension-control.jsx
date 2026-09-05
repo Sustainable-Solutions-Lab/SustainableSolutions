@@ -54,6 +54,9 @@ function ToggleControl({ dimension, value, onChange }) {
   )
 }
 
+// Emits the option ID (a string, per the DimensionOption contract) — not the
+// raw number. get-active-variable matches dimensionValues with strict
+// equality, so a numeric emission here silently deselects every variable.
 function SliderControl({ dimension, value, onChange }) {
   const numericValue = typeof value === 'number' ? value : parseFloat(value)
   const options = dimension.options
@@ -78,7 +81,7 @@ function SliderControl({ dimension, value, onChange }) {
         min={min}
         max={max}
         value={numericValue}
-        onChange={(e) => onChange(+e.target.value)}
+        onChange={(e) => onChange(String(+e.target.value))}
         style={{ width: '100%', accentColor: 'var(--cardinal)' }}
       />
     </div>

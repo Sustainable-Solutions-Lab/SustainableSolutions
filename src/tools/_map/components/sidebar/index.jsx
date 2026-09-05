@@ -18,9 +18,10 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
   const activeDimensionIds = activeLayerConfig?.dimensionIds ?? []
-  const visibleDimensions = config.dimensions.filter((d) =>
-    activeDimensionIds.includes(d.id)
+  const visibleDimensions = config.dimensions.filter(
+    (d) => activeDimensionIds.includes(d.id) && d.location !== 'map'
   )
+  const multiLayer = config.layers.filter((l) => !l.hidden).length > 1
 
   return (
     <aside
@@ -123,13 +124,16 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           </div>
         )}
 
-        {/* MAP section header — matches publications-page filter labels */}
-        <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
-          Map
-        </p>
-
-        {/* Layer tabs */}
-        <LayerTabs config={config} state={state} dispatch={dispatch} />
+        {/* MAP section header — matches publications-page filter labels.
+            Single-layer projects skip the layer select entirely. */}
+        {multiLayer && (
+          <>
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+              Map
+            </p>
+            <LayerTabs config={config} state={state} dispatch={dispatch} />
+          </>
+        )}
 
         {/* Dimension controls */}
         {visibleDimensions.map((dim) => {

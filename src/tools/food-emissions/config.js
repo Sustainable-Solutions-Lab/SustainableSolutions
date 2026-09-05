@@ -2,7 +2,7 @@
  * projects/food-emissions/config.js
  *
  * Configuration for: Food Emissions — greenhouse-gas emissions from managing
- * the world's croplands, by source and over time.
+ * the world's croplands, by source, crop, and over time.
  *
  * Companion paper: DeAngelo, Seifried, Steffen & Davis, "Mapped drivers of
  * food emissions" (in preparation) — an annual, corrected extension of
@@ -16,22 +16,37 @@
  *
  * Feature model (Gridded LM/pipeline/export_explorer_cells.py): 0.25-degree
  * cell centroids with per-source 2020 emissions (kt CO2e: fer man res rice
- * peat urea burn), the all-source total (tot), per-hectare intensity (intn,
- * masked where cropland <1000 ha), annual totals y2000..y2024 (each source
- * riding its country's national trajectory from the annual extension), plus
- * cropland ha and the m49 country code that keys the trend series. The top
- * twelve emitting crops also carry per-crop props (`tot_<crop>`,
- * `<source>_<crop>`), driving the Crop dropdown on the Total and By-source
- * layers.
+ * peat urea burn), the all-source total (tot), per-crop props for the top
+ * twelve emitting crops (`tot_<crop>`, `<source>_<crop>`), plus cropland ha
+ * and the m49 country code.
+ *
+ * UI model: ONE map. Source and Crop dropdowns pick what is shown; the
+ * always-visible year bar at the bottom of the map picks when. Stored props
+ * are the 2020 reference; other years multiply each source term by its
+ * country's national trajectory (config.yearControl + national-trends.json,
+ * computed in the paint expression — see _map/lib/year-factors.js). Compare
+ * mode (checkbox in the year bar) shows the difference between two years on
+ * a diverging palette.
  *
  * @type {import('../_map/contracts/project-config').ProjectConfig}
  */
 
 const YEARS = Array.from({ length: 25 }, (_, i) => 2000 + i)
 
-// Per-crop props exported for the top-emitting crops (exporter TOP_CROPS).
-// Prop naming: `tot_<crop>` and `<source>_<crop>`; 'all' maps to the
-// aggregate props (tot, fer, ...).
+// Sources: [id, label, 2020 domain max kt/cell]. The id is the tile prop.
+const SOURCES = [
+  ['fer', 'Fertilizer N₂O', 40],
+  ['man', 'Manure N₂O', 10],
+  ['res', 'Residues N₂O', 6],
+  ['rice', 'Rice CH₄', 120],
+  ['peat', 'Peatland', 150],
+  ['urea', 'Urea CO₂', 10],
+  ['burn', 'Residue burning', 2],
+]
+const SOURCE_IDS = SOURCES.map(([id]) => id)
+
+// Per-crop props exported for the top-emitting crops (exporter TOP_CROPS,
+// 81% of the global total). Prop naming: `tot_<crop>`, `<source>_<crop>`.
 const CROPS = [
   ['rice', 'Rice'],
   ['whea', 'Wheat'],
@@ -46,6 +61,48 @@ const CROPS = [
   ['pota', 'Potato'],
   ['sorg', 'Sorghum'],
 ]
+
+// One variable per source × crop cell of the selection grid. `yearTerms`
+// lists the reference-year props (with their source for factor lookup) that
+// sum to the variable — the year bar scales each term by its national
+// trajectory, so every combination animates and compares without per-year
+// tile props.
+function makeVariable({ source, crop }) {
+  const cropSuffix = crop === 'all' ? '' : `_${crop}`
+  const cropLabel = crop === 'all' ? null : CROPS.find(([c]) => c === crop)[1]
+  const shared = {
+    unit: 'kt CO₂e',
+    colormap: 'SpectralHot',
+    diverging: false,
+    alphaFloor: 0.02,
+    alphaPower: 0.35,
+    layer: 'map',
+    dimensionValues: { source, crop },
+  }
+  if (source === 'all') {
+    return {
+      ...shared,
+      id: `tot${cropSuffix}`,
+      label: cropLabel ? `Total emissions — ${cropLabel}` : 'Total emissions',
+      domain: { min: 0, max: crop === 'all' ? 250 : 120 },
+      yearTerms: SOURCE_IDS.map((s) => ({ prop: `${s}${cropSuffix}`, src: s })),
+      description: cropLabel
+        ? `All-source emissions attributed to ${cropLabel.toLowerCase()} per quarter-degree cell.`
+        : 'All-source cropland-management emissions per quarter-degree cell.',
+    }
+  }
+  const [, srcLabel, srcMax] = SOURCES.find(([s]) => s === source)
+  return {
+    ...shared,
+    id: `${source}${cropSuffix}`,
+    label: cropLabel ? `${srcLabel} — ${cropLabel}` : srcLabel,
+    domain: { min: 0, max: crop === 'all' ? srcMax : Math.max(1, srcMax / 2) },
+    yearTerms: [{ prop: `${source}${cropSuffix}`, src: source }],
+    description: cropLabel
+      ? `${srcLabel} emissions attributed to ${cropLabel.toLowerCase()} per quarter-degree cell.`
+      : `${srcLabel} emissions per quarter-degree cell.`,
+  }
+}
 
 const config = {
   id: 'food-emissions',
@@ -72,59 +129,29 @@ const config = {
     useWorldOverlay: true,
   },
 
-  // ── Layers (sidebar tabs) ────────────────────────────────────────────────
+  // ── Layers ───────────────────────────────────────────────────────────────
+  // A single map: what is shown = Source × Crop dropdowns; when = year bar.
   layers: [
     {
-      id: 'total',
-      label: 'Total emissions',
-      description: 'All-source emissions per quarter-degree cell, 2020 — all crops or a single crop.',
-      dimensionIds: ['crop'],
-    },
-    {
-      id: 'source',
-      label: 'By source',
-      description:
-        'Emissions from a single source per cell, 2020 — all crops or a single crop (e.g. fertilizer N\u2082O from maize only).',
-      dimensionIds: ['source', 'crop'],
-    },
-    {
-      id: 'years',
-      label: 'Change over time',
-      description:
-        'All-source emissions per cell for any year 2000–2024. Cell patterns follow national statistics; drag the slider to watch the evolution.',
-      dimensionIds: ['year'],
-    },
-    {
-      id: 'diff',
-      label: 'Difference between years',
-      description:
-        'Change in all-source emissions per cell between any two years. Blue = decline, red = growth.',
-      dimensionIds: ['yearB', 'yearA'],
-    },
-    {
-      id: 'intensity',
-      label: 'Per-hectare intensity',
-      description:
-        'All-source emissions per hectare of cropland, 2020. Drained peatland dominates the extremes.',
-      dimensionIds: [],
+      id: 'map',
+      label: 'Emissions',
+      description: 'Cropland-management emissions per quarter-degree cell.',
+      dimensionIds: ['source', 'crop', 'year', 'yearB', 'compare'],
     },
   ],
 
   // ── Dimensions ───────────────────────────────────────────────────────────
+  // `location: 'map'` keeps a dimension out of the sidebar — the year bar
+  // at the bottom of the map renders it instead.
   dimensions: [
     {
       id: 'source',
       label: 'Source',
       type: 'dropdown',
-      defaultValue: 'rice',
+      defaultValue: 'all',
       options: [
-        { id: 'fer', label: 'Fertilizer N₂O' },
-        { id: 'man', label: 'Manure N₂O' },
-        { id: 'res', label: 'Residues N₂O' },
-        { id: 'rice', label: 'Rice CH₄' },
-        { id: 'peat', label: 'Peatland' },
-        { id: 'urea', label: 'Urea CO₂' },
-        { id: 'burn', label: 'Residue burning' },
+        { id: 'all', label: 'All sources' },
+        ...SOURCES.map(([id, label]) => ({ id, label })),
       ],
     },
     {
@@ -142,135 +169,49 @@ const config = {
       label: 'Year',
       type: 'slider',
       animate: true,
+      location: 'map',
       defaultValue: '2020',
-      options: YEARS.map((y) => ({ id: String(y), label: String(y) })),
-    },
-    {
-      id: 'yearA',
-      label: 'To year',
-      type: 'slider',
-      defaultValue: '2024',
       options: YEARS.map((y) => ({ id: String(y), label: String(y) })),
     },
     {
       id: 'yearB',
       label: 'From year',
       type: 'slider',
+      location: 'map',
       defaultValue: '2000',
       options: YEARS.map((y) => ({ id: String(y), label: String(y) })),
     },
+    {
+      id: 'compare',
+      label: 'Compare years',
+      type: 'toggle',
+      location: 'map',
+      defaultValue: 'off',
+      options: [
+        { id: 'off', label: 'Off' },
+        { id: 'on', label: 'On' },
+      ],
+    },
   ],
+
+  // ── Year scaling (the year bar + national trajectory factors) ────────────
+  yearControl: {
+    dimensionId: 'year',
+    yearBDimensionId: 'yearB',
+    compareDimensionId: 'compare',
+    referenceYear: 2020,
+    trendsUrl: '/tools/food-emissions/national-trends.json',
+    compareColormap: 'SpectralR',
+  },
 
   // ── Variables ────────────────────────────────────────────────────────────
   variables: [
-    {
-      id: 'tot',
-      label: 'Total emissions',
-      unit: 'kt CO₂e',
-      colormap: 'SpectralHot',
-      diverging: false,
-      domain: { min: 0, max: 250 },
-      alphaFloor: 0.02,
-      alphaPower: 0.35,
-      layer: 'total',
-      dimensionValues: { crop: 'all' },
-      description: 'All-source cropland-management emissions per quarter-degree cell, 2020.',
-    },
-    ...CROPS.map(([crop, cropLabel]) => ({
-      id: `tot_${crop}`,
-      label: `Total emissions — ${cropLabel}`,
-      unit: 'kt CO\u2082e',
-      colormap: 'SpectralHot',
-      diverging: false,
-      domain: { min: 0, max: 120 },
-      alphaFloor: 0.02,
-      alphaPower: 0.35,
-      layer: 'total',
-      dimensionValues: { crop },
-      description: `All-source emissions attributed to ${cropLabel.toLowerCase()} per quarter-degree cell, 2020.`,
-    })),
-    // By-source layer (kt per cell, 2020).
-    ...[
-      ['fer', 'Fertilizer N₂O', 40],
-      ['man', 'Manure N₂O', 10],
-      ['res', 'Residues N₂O', 6],
-      ['rice', 'Rice CH₄', 120],
-      ['peat', 'Peatland', 150],
-      ['urea', 'Urea CO₂', 10],
-      ['burn', 'Residue burning', 2],
-    ].flatMap(([id, label, max]) => [
-      {
-        id,
-        label,
-        unit: 'kt CO₂e',
-        colormap: 'SpectralHot',
-        diverging: false,
-        domain: { min: 0, max },
-        alphaFloor: 0.02,
-        alphaPower: 0.35,
-        layer: 'source',
-        dimensionValues: { source: id, crop: 'all' },
-        description: `${label} emissions per quarter-degree cell, 2020.`,
-      },
-      ...CROPS.map(([crop, cropLabel]) => ({
-        id: `${id}_${crop}`,
-        label: `${label} — ${cropLabel}`,
-        unit: 'kt CO₂e',
-        colormap: 'SpectralHot',
-        diverging: false,
-        domain: { min: 0, max: Math.max(1, max / 2) },
-        alphaFloor: 0.02,
-        alphaPower: 0.35,
-        layer: 'source',
-        dimensionValues: { source: id, crop },
-        description: `${label} emissions attributed to ${cropLabel.toLowerCase()} per quarter-degree cell, 2020.`,
-      })),
+    makeVariable({ source: 'all', crop: 'all' }),
+    ...CROPS.map(([crop]) => makeVariable({ source: 'all', crop })),
+    ...SOURCES.flatMap(([source]) => [
+      makeVariable({ source, crop: 'all' }),
+      ...CROPS.map(([crop]) => makeVariable({ source, crop })),
     ]),
-    // Change-over-time layer: one variable per year, same scale as Total.
-    ...YEARS.map((y) => ({
-      id: `y${y}`,
-      label: `Total emissions — ${y}`,
-      unit: 'kt CO₂e',
-      colormap: 'SpectralHot',
-      diverging: false,
-      domain: { min: 0, max: 250 },
-      alphaFloor: 0.02,
-      alphaPower: 0.35,
-      layer: 'years',
-      dimensionValues: { year: String(y) },
-      // One fixed scale for the whole animation (anchored to the end year):
-      // otherwise each frame re-normalizes to its own p99 and change is
-      // absorbed by the shifting scale.
-      colorAnchorId: `y${YEARS[YEARS.length - 1]}`,
-      description: `All-source emissions per cell in ${y}; national statistics carry the trend.`,
-    })),
-    {
-      id: 'ydiff',
-      label: 'Change in emissions',
-      unit: 'kt CO₂e',
-      colormap: 'SpectralR',
-      diverging: true,
-      domain: { min: -60, max: 60, zero: 0 },
-      alphaFloor: 0.05,
-      alphaPower: 0.5,
-      layer: 'diff',
-      diffOfDims: ['yearA', 'yearB'],
-      description:
-        'All-source emissions in the To year minus the From year, per quarter-degree cell.',
-    },
-    {
-      id: 'intn',
-      label: 'Emissions intensity',
-      unit: 't CO₂e/ha',
-      colormap: 'SpectralHot',
-      diverging: false,
-      domain: { min: 0, max: 6 },
-      alphaFloor: 0.02,
-      alphaPower: 0.3,
-      layer: 'intensity',
-      description:
-        'All-source emissions per hectare of harvested cropland; extremes are drained-peatland cells.',
-    },
   ],
 
   percentileFilter: {

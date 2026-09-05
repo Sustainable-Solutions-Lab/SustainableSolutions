@@ -23,6 +23,7 @@ import { useEffect, useRef } from 'react'
 import { buildColorScale, INTERPOLATORS } from './colormap.js'
 import { readVarValue, varValueExpr, varHasExpr } from './variable-value.js'
 import { getActiveVariable } from './get-active-variable.js'
+import { useYearFactors } from './year-factors.js'
 
 // Tiling-exact base radius for a 1 km cell — the natural Mercator-derived
 // pixel size of a 1 km × 1 km cell, scaled by FILL_FACTOR so cells visibly
@@ -168,7 +169,13 @@ export function useJustAirLayers(map, config, state, tuning) {
   const tilesUrl = config.tilesUrl
   const sourceLayer = config.sourceLayer ?? config.id
 
-  const variable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
+  // Year-scaled variables need the national factor table attached before
+  // paint; until it loads they fall back to the reference-year base prop.
+  const yearFactors = useYearFactors(config)
+  const resolved = getActiveVariable(config, state.activeLayer, state.activeDimensions)
+  const variable = resolved?.scaled && yearFactors
+    ? { ...resolved, scaled: { ...resolved.scaled, factors: yearFactors } }
+    : resolved
   const variableRef = useRef(variable)
   variableRef.current = variable
   const isDarkRef = useRef(state.colorScheme === 'dark')
@@ -359,7 +366,9 @@ export function useJustAirLayers(map, config, state, tuning) {
           // distribution (e.g. every animation year anchored to y2024), so
           // frame-to-frame change shows as color change instead of being
           // absorbed by a re-normalizing scale.
-          const rangeVar = v.colorAnchorId ? { ...v, id: v.colorAnchorId, diffOf: undefined } : v
+          const rangeVar = v.colorAnchorId
+            ? { ...v, id: v.colorAnchorId, diffOf: undefined, scaled: undefined }
+            : v
           const values = features
             .map((f) => readVarValue(f.properties, rangeVar))
             .filter((x) => x != null && !isNaN(x))
@@ -392,7 +401,7 @@ export function useJustAirLayers(map, config, state, tuning) {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme])
+  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme, yearFactors])
 
   // ── Paint repaint when only the tuning sliders move ───────────────────
   // Re-emits circle-color / circle-radius using the EXISTING colorRange,

@@ -22,9 +22,19 @@ import {
   interpolateBuPu,
   interpolateInferno,
   interpolateMagma,
+  interpolateSpectral,
 } from 'd3-scale-chromatic'
 
 export const INTERPOLATORS = {
+  // The lab's signature ColorBrewer Spectral (design system: default data
+  // palette). SpectralR runs blue -> yellow -> red so "more" reads as hotter;
+  // used sequentially by the food-emissions layers.
+  Spectral: interpolateSpectral,
+  SpectralR: (t) => interpolateSpectral(1 - t),
+  // The hot half of Spectral (pale yellow -> orange -> dark red): sequential
+  // magnitude without the blue fog a full-range Spectral gives skewed data;
+  // blues stay reserved for the categorical/trend palette.
+  SpectralHot: (t) => interpolateSpectral(0.5 * (1 - t)),
   // Standard RdBu: t=0 → red (costs > benefits), t=1 → blue (benefits > costs)
   RdBu: interpolateRdBu,
   // Inverted RdBu: t=0 → blue, t=1 → red. Used by Just Air's diff layers where

@@ -292,6 +292,22 @@ export function useJustAirLayers(map, config, state, tuning) {
     }
     function onIdle() { computeColorRange() }
 
+    function enforceOverlayOrder() {
+      // World-land overlays must sit beneath the data no matter which
+      // styledata handler won the re-add race after a theme toggle.
+      const firstCells = (config.scales ?? [])
+        .map((sc) => `just-air-cells-${sc.value}`)
+        .find((id) => map.getLayer(id))
+      if (!firstCells) return
+      for (const id of ['world-coastline', 'world-land-fill']) {
+        if (map.getLayer(id)) {
+          try { map.moveLayer(id, firstCells) } catch { /* ordering only */ }
+        }
+      }
+    }
+    map.on('styledata', enforceOverlayOrder)
+    map.on('idle', enforceOverlayOrder)
+
     map.on('styledata', addLayers)
     map.on('sourcedata', onSourceData)
     map.on('idle', onIdle)
@@ -301,6 +317,8 @@ export function useJustAirLayers(map, config, state, tuning) {
 
     return () => {
       map.off('styledata', addLayers)
+      map.off('styledata', enforceOverlayOrder)
+      map.off('idle', enforceOverlayOrder)
       map.off('sourcedata', onSourceData)
       map.off('idle', onIdle)
       for (const s of scales) {

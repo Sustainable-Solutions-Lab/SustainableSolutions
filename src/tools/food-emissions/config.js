@@ -19,15 +19,37 @@
  * peat urea burn), the all-source total (tot), per-hectare intensity (intn,
  * masked where cropland <1000 ha), annual totals y2000..y2024 (each source
  * riding its country's national trajectory from the annual extension), plus
- * cropland ha and the m49 country code that keys the trend series.
+ * cropland ha and the m49 country code that keys the trend series. The top
+ * twelve emitting crops also carry per-crop props (`tot_<crop>`,
+ * `<source>_<crop>`), driving the Crop dropdown on the Total and By-source
+ * layers.
  *
  * @type {import('../_map/contracts/project-config').ProjectConfig}
  */
 
 const YEARS = Array.from({ length: 25 }, (_, i) => 2000 + i)
 
+// Per-crop props exported for the top-emitting crops (exporter TOP_CROPS).
+// Prop naming: `tot_<crop>` and `<source>_<crop>`; 'all' maps to the
+// aggregate props (tot, fer, ...).
+const CROPS = [
+  ['rice', 'Rice'],
+  ['whea', 'Wheat'],
+  ['maiz', 'Maize (corn)'],
+  ['soyb', 'Soybean'],
+  ['oilp', 'Oil palm'],
+  ['sugc', 'Sugarcane'],
+  ['cott', 'Cotton'],
+  ['grou', 'Groundnut'],
+  ['barl', 'Barley'],
+  ['rape', 'Rapeseed'],
+  ['pota', 'Potato'],
+  ['sorg', 'Sorghum'],
+]
+
 const config = {
   id: 'food-emissions',
+  mapControlsSide: 'left',
   eyebrow: 'INTERACTIVE MAP',
   title: 'Mapping food system emissions',
   summary:
@@ -55,14 +77,15 @@ const config = {
     {
       id: 'total',
       label: 'Total emissions',
-      description: 'All-source emissions per quarter-degree cell, 2020.',
-      dimensionIds: [],
+      description: 'All-source emissions per quarter-degree cell, 2020 — all crops or a single crop.',
+      dimensionIds: ['crop'],
     },
     {
       id: 'source',
       label: 'By source',
-      description: 'Emissions from a single source per cell, 2020.',
-      dimensionIds: ['source'],
+      description:
+        'Emissions from a single source per cell, 2020 — all crops or a single crop (e.g. fertilizer N\u2082O from maize only).',
+      dimensionIds: ['source', 'crop'],
     },
     {
       id: 'years',
@@ -105,6 +128,16 @@ const config = {
       ],
     },
     {
+      id: 'crop',
+      label: 'Crop',
+      type: 'dropdown',
+      defaultValue: 'all',
+      options: [
+        { id: 'all', label: 'All crops' },
+        ...CROPS.map(([id, label]) => ({ id, label })),
+      ],
+    },
+    {
       id: 'year',
       label: 'Year',
       type: 'slider',
@@ -140,8 +173,22 @@ const config = {
       alphaFloor: 0.02,
       alphaPower: 0.35,
       layer: 'total',
+      dimensionValues: { crop: 'all' },
       description: 'All-source cropland-management emissions per quarter-degree cell, 2020.',
     },
+    ...CROPS.map(([crop, cropLabel]) => ({
+      id: `tot_${crop}`,
+      label: `Total emissions — ${cropLabel}`,
+      unit: 'kt CO\u2082e',
+      colormap: 'SpectralHot',
+      diverging: false,
+      domain: { min: 0, max: 120 },
+      alphaFloor: 0.02,
+      alphaPower: 0.35,
+      layer: 'total',
+      dimensionValues: { crop },
+      description: `All-source emissions attributed to ${cropLabel.toLowerCase()} per quarter-degree cell, 2020.`,
+    })),
     // By-source layer (kt per cell, 2020).
     ...[
       ['fer', 'Fertilizer N₂O', 40],
@@ -151,19 +198,34 @@ const config = {
       ['peat', 'Peatland', 150],
       ['urea', 'Urea CO₂', 10],
       ['burn', 'Residue burning', 2],
-    ].map(([id, label, max]) => ({
-      id,
-      label,
-      unit: 'kt CO₂e',
-      colormap: 'SpectralHot',
-      diverging: false,
-      domain: { min: 0, max },
-      alphaFloor: 0.02,
-      alphaPower: 0.35,
-      layer: 'source',
-      dimensionValues: { source: id },
-      description: `${label} emissions per quarter-degree cell, 2020.`,
-    })),
+    ].flatMap(([id, label, max]) => [
+      {
+        id,
+        label,
+        unit: 'kt CO₂e',
+        colormap: 'SpectralHot',
+        diverging: false,
+        domain: { min: 0, max },
+        alphaFloor: 0.02,
+        alphaPower: 0.35,
+        layer: 'source',
+        dimensionValues: { source: id, crop: 'all' },
+        description: `${label} emissions per quarter-degree cell, 2020.`,
+      },
+      ...CROPS.map(([crop, cropLabel]) => ({
+        id: `${id}_${crop}`,
+        label: `${label} — ${cropLabel}`,
+        unit: 'kt CO₂e',
+        colormap: 'SpectralHot',
+        diverging: false,
+        domain: { min: 0, max: Math.max(1, max / 2) },
+        alphaFloor: 0.02,
+        alphaPower: 0.35,
+        layer: 'source',
+        dimensionValues: { source: id, crop },
+        description: `${label} emissions attributed to ${cropLabel.toLowerCase()} per quarter-degree cell, 2020.`,
+      })),
+    ]),
     // Change-over-time layer: one variable per year, same scale as Total.
     ...YEARS.map((y) => ({
       id: `y${y}`,

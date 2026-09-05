@@ -175,7 +175,7 @@ export function buildGraticule(opts = {}) {
     features.push({
       type: 'Feature',
       geometry: { type: 'LineString', coordinates: [[minLon, lat], [maxLon, lat]] },
-      properties: { label: `${lat}°N`, type: 'lat' },
+      properties: { label: lat === 0 ? '0°' : `${Math.abs(lat)}°${lat > 0 ? 'N' : 'S'}`, type: 'lat' },
     })
   }
   const firstLon = Math.ceil(minLon / lonStep) * lonStep
@@ -183,7 +183,7 @@ export function buildGraticule(opts = {}) {
     features.push({
       type: 'Feature',
       geometry: { type: 'LineString', coordinates: [[lon, minLat], [lon, maxLat]] },
-      properties: { label: `${Math.abs(lon)}°W`, type: 'lon' },
+      properties: { label: lon === 0 ? '0°' : `${Math.abs(lon)}°${lon < 0 ? 'W' : 'E'}`, type: 'lon' },
     })
   }
   return { type: 'FeatureCollection', features }
@@ -458,11 +458,14 @@ export function addStaticLayers(map, scheme, opts = {}) {
 
   // ── 3. Graticule ──────────────────────────────────────────────────────────
 
-  // CONUS-wide projects get a 5°-spaced graticule across the lower 48;
-  // CA-only projects keep the 2°-spaced California-extent default.
-  const graticuleData = usOverlays
-    ? buildGraticule({ latStep: 5, lonStep: 5, bounds: [-125, 24, -66, 50] })
-    : buildGraticule()
+  // World projects get a 15°-spaced global graticule; CONUS-wide projects a
+  // 5°-spaced one across the lower 48; CA-only projects keep the 2°-spaced
+  // California-extent default.
+  const graticuleData = worldOverlays
+    ? buildGraticule({ latStep: 15, lonStep: 15, bounds: [-180, -60, 180, 75] })
+    : usOverlays
+      ? buildGraticule({ latStep: 5, lonStep: 5, bounds: [-125, 24, -66, 50] })
+      : buildGraticule()
   if (!map.getSource('graticule')) {
     map.addSource('graticule', {
       type: 'geojson',

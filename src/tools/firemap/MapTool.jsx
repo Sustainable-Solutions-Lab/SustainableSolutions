@@ -406,6 +406,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           {/* Regional data stats panel — desktop only */}
           <div className="hidden md:block">
             <StatsPanel
+              config={config}
               drawnCircle={state.drawnCircle}
               drawnPolygon={state.drawnPolygon}
               aggregateStats={state.aggregateStats}

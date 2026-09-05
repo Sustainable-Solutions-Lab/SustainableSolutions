@@ -20,6 +20,7 @@ import {
   featuresWithinCircle,
   featuresWithinPolygon,
   computeAggregateStats,
+  computeTrendWeights,
 } from '../../lib/area-stats.js'
 import { LAYER_IDS } from '../../lib/use-map-layer.js'
 import { justAirLayerIds } from '../../lib/use-just-air-layers.js'
@@ -250,6 +251,9 @@ export function AreaTool({ map, config, state, dispatch }) {
 
     // Stats for preset aggregate variables
     const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)
+    if (config.areaTool.trend) {
+      stats.trendWeights = computeTrendWeights(filtered, config.areaTool.trend)
+    }
 
     // Also collect raw values for the active variable (for the histogram in StatsPanel)
     const currentState = stateRef.current
@@ -325,6 +329,9 @@ export function AreaTool({ map, config, state, dispatch }) {
     const features = map.queryRenderedFeatures(bbox, { layers: activeLayers })
     const filtered = featuresWithinPolygon(features, geometry)
     const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)
+    if (config.areaTool.trend) {
+      stats.trendWeights = computeTrendWeights(filtered, config.areaTool.trend)
+    }
     const activeVar = getActiveVariable(config, state.activeLayer, state.activeDimensions)
     const activeVarValues = activeVar
       ? filtered

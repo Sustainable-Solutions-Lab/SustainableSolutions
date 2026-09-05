@@ -39,3 +39,6 @@ extension/*.zip
 .vercel
 __pycache__/
 *.pyc
+
+# food-emissions local dev tiles (production copy lives on R2)
+public/tools/food-emissions/*.pmtiles

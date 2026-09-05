@@ -19,6 +19,7 @@ import { X } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
 import { buildColorScale, getEquityPalette } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
+import { TrendChart } from './trend-chart.jsx'
 
 const POS_COLOR = '#4393c3'
 const NEG_COLOR = '#d6604d'
@@ -489,7 +490,7 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
-export function StatsPanel({ drawnCircle, drawnPolygon, aggregateStats, areaToolActive, activeVariable, isDark, dispatch }) {
+export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, areaToolActive, activeVariable, isDark, dispatch }) {
   // Show whenever either a circle or a ZIP polygon is active.
   if (!drawnCircle && !drawnPolygon) return null
 
@@ -633,6 +634,17 @@ export function StatsPanel({ drawnCircle, drawnPolygon, aggregateStats, areaTool
           unit={activeVariable?.unit ?? ''}
           isDark={isDark}
           variable={activeVariable}
+        />
+      )}
+
+      {/* Trend chart — config-gated (config.areaTool.trend): composes the
+          area's multi-year trajectory from national per-source series,
+          weighted by emissions inside the circle. Used by food-emissions. */}
+      {config?.areaTool?.trend && aggregateStats?.trendWeights && (
+        <TrendChart
+          trendConfig={config.areaTool.trend}
+          trendWeights={aggregateStats.trendWeights}
+          isDark={isDark}
         />
       )}
 

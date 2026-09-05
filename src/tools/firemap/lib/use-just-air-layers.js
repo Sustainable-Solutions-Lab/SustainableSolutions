@@ -58,6 +58,12 @@ import { getActiveVariable } from './get-active-variable.js'
 // each city tier hidden outside its band, so the city values in
 // out-of-band stops only need to be non-negative — they never paint.
 const NATIONAL_RADIUS_STOPS = [
+  // Global low-zoom tier (world-extent projects like Food Emissions render
+  // quarter-degree cells from z ~1.2; CONUS projects clamp at z 3 and never
+  // hit these stops).
+  [1.2,  1.30,  3,   0,    0   ],
+  [2.0,  1.70,  3,   0,    0   ],
+  [2.6,  2.20,  4,   0,    0   ],
   // 36 km supercells — z 3.0–3.8
   [3.0,  2.70,  4,   0,    0   ],
   [3.2,  2.80,  4,   0,    0   ],
@@ -88,6 +94,33 @@ export const DEFAULT_TUNING = {
   // 0 (or null) means "use the per-zoom default cap from RADIUS_STOPS."
   // Set to a positive number via the dev panel to globally override.
   maxRadiusPx: 0,
+}
+
+// Cell-true radius for grid projects (scale entry { radiusMode: 'cell' }):
+// the circle grows exponentially with zoom so a _scale-km cell stays
+// contiguous with its neighbors instead of spreading apart. k is half the
+// cell edge in px at z0 (512px world tiles), padded 15% so circles just
+// touch; clamped so cells never vanish at low zoom.
+function buildCellRadiusExpr(scaleEntry, tuning) {
+  const scaleKm = scaleEntry.value ?? 28
+  const mul = tuning?.radiusScale ?? 1
+  const k = ((scaleKm * 512) / (2 * 40075.016)) * 1.15 * mul
+  // MapLibre only allows ['zoom'] at the top of a step/interpolate expression,
+  // so the low-zoom clamp is baked into per-integer-zoom stops instead of a
+  // wrapping ['max'].
+  const expr = ['interpolate', ['exponential', 2], ['zoom']]
+  for (let z = 0; z <= 12; z++) expr.push(z, Math.max(1.25, k * 2 ** z))
+  return expr
+}
+
+
+// Resolve the radius expression for a per-scale layer id ("<id>-cells-<value>").
+function radiusExprForLayer(layerId, config, tuning) {
+  const m = /-cells-(\d+)$/.exec(layerId)
+  const scaleEntry = m ? (config.scales ?? []).find((s) => String(s.value) === m[1]) : null
+  return scaleEntry?.radiusMode === 'cell'
+    ? buildCellRadiusExpr(scaleEntry, tuning)
+    : buildRadiusExpr(tuning)
 }
 
 function buildRadiusExpr(tuning) {
@@ -232,7 +265,7 @@ export function useJustAirLayers(map, config, state, tuning) {
             minzoom: s.minZoom ?? 0,
             filter: ['==', ['coalesce', ['to-number', ['get', '_scale']], 0], s.value],
             paint: {
-              'circle-radius':       buildRadiusExpr(tuningRef.current),
+              'circle-radius':       s.radiusMode === 'cell' ? buildCellRadiusExpr(s, tuningRef.current) : buildRadiusExpr(tuningRef.current),
               'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current),
               'circle-opacity':      buildOpacityExpr(variableRef.current, s),
               'circle-stroke-width': 0,
@@ -323,7 +356,7 @@ export function useJustAirLayers(map, config, state, tuning) {
       try {
         map.setPaintProperty(layerId, 'circle-color',   buildColorExpr(variableRef.current, isDarkRef.current, recomputed, tuningRef.current))
         map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current, s))
-        map.setPaintProperty(layerId, 'circle-radius',  buildRadiusExpr(tuningRef.current))
+        map.setPaintProperty(layerId, 'circle-radius',  radiusExprForLayer(layerId, config, tuningRef.current))
       } catch (err) {
         console.error('[useJustAirLayers] setPaintProperty', layerId, err)
       }
@@ -343,7 +376,7 @@ export function useJustAirLayers(map, config, state, tuning) {
       if (!map.getLayer(layerId)) continue
       try {
         map.setPaintProperty(layerId, 'circle-color',  buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current))
-        map.setPaintProperty(layerId, 'circle-radius', buildRadiusExpr(tuningRef.current))
+        map.setPaintProperty(layerId, 'circle-radius', radiusExprForLayer(layerId, config, tuningRef.current))
       } catch (err) {
         console.error('[useJustAirLayers] setPaintProperty (tuning)', layerId, err)
       }
@@ -566,6 +599,10 @@ function buildZoomFade(s) {
   const minZ = s.minZoom ?? 0
   const maxZ = s.maxZoom
   if (maxZ == null) {
+    // A band with no lower edge is fully visible at every zoom. (Emitting the
+    // ramp with minZ = 0 would produce two stops at zoom 0, which MapLibre
+    // rejects as non-ascending — killing the whole layer.)
+    if (minZ <= fade) return 1
     return ['interpolate', ['linear'], ['zoom'],
       Math.max(0, minZ - fade), 0,
       minZ,                     1,

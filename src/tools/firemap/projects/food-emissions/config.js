@@ -40,14 +40,15 @@ const config = {
     minZoom: 1.2,
     maxZoom: 8,
     useCaliforniaOverlay: false,
+    useWorldOverlay: true,
   },
 
   // ── Layers (sidebar tabs) ────────────────────────────────────────────────
   layers: [
     {
       id: 'total',
-      label: 'Total intensity',
-      description: 'All-source emissions per hectare of cropland, 2020.',
+      label: 'Total emissions',
+      description: 'All-source emissions per quarter-degree cell, 2020.',
       dimensionIds: ['variant'],
     },
     {
@@ -55,6 +56,12 @@ const config = {
       label: 'By source',
       description: 'Emissions from a single source per cell, 2020 (corrected variant).',
       dimensionIds: ['source'],
+    },
+    {
+      id: 'intensity',
+      label: 'Per-hectare intensity',
+      description: 'All-source emissions per hectare of cropland, 2020. Drained peatland dominates the extremes.',
+      dimensionIds: ['variant'],
     },
   ],
 
@@ -90,24 +97,43 @@ const config = {
 
   // ── Variables ────────────────────────────────────────────────────────────
   variables: [
-    // Total-intensity layer: one variable per dataset variant.
+    // Total-emissions layer: one variable per dataset variant (kt per cell).
     ...[
-      ['int_cor', 'cor', 'Total emissions intensity — corrected'],
-      ['int_rep', 'rep', 'Total emissions intensity — replication'],
-      ['int_mrg', 'mrg', 'Total emissions intensity — merged peat'],
+      ['tot_cor', 'cor', 'Total emissions — corrected'],
+      ['tot_rep', 'rep', 'Total emissions — replication'],
+      ['tot_mrg', 'mrg', 'Total emissions — merged peat'],
+    ].map(([id, variant, label]) => ({
+      id,
+      label,
+      unit: 'kt CO₂e',
+      colormap: 'YlOrRd',
+      diverging: false,
+      domain: { min: 0, max: 250 },
+      alphaFloor: 0.35,
+      alphaPower: 0.5,
+      layer: 'total',
+      dimensionValues: { variant },
+      description:
+        'All-source cropland emissions per quarter-degree cell, 2020.',
+    })),
+    // Per-hectare intensity layer (cells with >=1000 ha cropland).
+    ...[
+      ['int_cor', 'cor', 'Emissions intensity — corrected'],
+      ['int_rep', 'rep', 'Emissions intensity — replication'],
+      ['int_mrg', 'mrg', 'Emissions intensity — merged peat'],
     ].map(([id, variant, label]) => ({
       id,
       label,
       unit: 't CO₂e/ha',
       colormap: 'YlOrRd',
       diverging: false,
-      domain: { min: 0, max: 8 },
-      alphaFloor: 0.25,
-      alphaPower: 0.5,
-      layer: 'total',
+      domain: { min: 0, max: 6 },
+      alphaFloor: 0.8,
+      alphaPower: 0.25,
+      layer: 'intensity',
       dimensionValues: { variant },
       description:
-        'All-source cropland emissions per hectare of harvested area, 2020.',
+        'All-source emissions per hectare of harvested cropland; extremes are drained-peatland cells.',
     })),
     // By-source layer: absolute kt per cell (corrected variant).
     ...[

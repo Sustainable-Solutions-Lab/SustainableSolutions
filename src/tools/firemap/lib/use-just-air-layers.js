@@ -58,6 +58,12 @@ import { getActiveVariable } from './get-active-variable.js'
 // each city tier hidden outside its band, so the city values in
 // out-of-band stops only need to be non-negative — they never paint.
 const NATIONAL_RADIUS_STOPS = [
+  // Global low-zoom tier (world-extent projects like Food Emissions render
+  // quarter-degree cells from z ~1.2; CONUS projects clamp at z 3 and never
+  // hit these stops).
+  [1.2,  1.30,  3,   0,    0   ],
+  [2.0,  1.70,  3,   0,    0   ],
+  [2.6,  2.20,  4,   0,    0   ],
   // 36 km supercells — z 3.0–3.8
   [3.0,  2.70,  4,   0,    0   ],
   [3.2,  2.80,  4,   0,    0   ],
@@ -566,6 +572,10 @@ function buildZoomFade(s) {
   const minZ = s.minZoom ?? 0
   const maxZ = s.maxZoom
   if (maxZ == null) {
+    // A band with no lower edge is fully visible at every zoom. (Emitting the
+    // ramp with minZ = 0 would produce two stops at zoom 0, which MapLibre
+    // rejects as non-ascending — killing the whole layer.)
+    if (minZ <= fade) return 1
     return ['interpolate', ['linear'], ['zoom'],
       Math.max(0, minZ - fade), 0,
       minZ,                     1,

@@ -123,8 +123,9 @@ const config = {
     maxZoom: 8,
     // Poles truncated ~300 km beyond the highest-latitude plotted cells
     // (data spans -51.9 to 68.4): the land layer is clipped to [-55, 71.5]
-    // and the camera center is softly clamped.
-    centerLatRange: [-38, 52],
+    // and the viewport edges are hard-locked to the same band, so dragging
+    // can never reveal the cut.
+    latBounds: [-55, 71.5],
     useCaliforniaOverlay: false,
     useWorldOverlay: true,
   },

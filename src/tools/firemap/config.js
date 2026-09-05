@@ -6,7 +6,7 @@
  * Variable ids must match exact column names in the source CSV (and synthetic data).
  * Domain values are calibrated to the synthetic dataset; update after inspecting real data.
  *
- * @type {import('../../contracts/project-config').ProjectConfig}
+ * @type {import('../_map/contracts/project-config').ProjectConfig}
  */
 const config = {
   id: 'fuel-treatment',

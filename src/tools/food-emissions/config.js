@@ -21,7 +21,7 @@
  * riding its country's national trajectory from the annual extension), plus
  * cropland ha and the m49 country code that keys the trend series.
  *
- * @type {import('../../contracts/project-config').ProjectConfig}
+ * @type {import('../_map/contracts/project-config').ProjectConfig}
  */
 
 const YEARS = Array.from({ length: 25 }, (_, i) => 2000 + i)

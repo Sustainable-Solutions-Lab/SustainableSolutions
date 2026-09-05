@@ -145,6 +145,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
               dimension={filteredDim}
               value={state.activeDimensions[dim.id] ?? dim.defaultValue}
               dispatch={dispatch}
+              animatingDimension={state.animatingDimension}
             />
           )
         })}

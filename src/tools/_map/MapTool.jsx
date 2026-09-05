@@ -1,4 +1,4 @@
-import { useReducer, useState, useEffect, useMemo } from 'react'
+import { useReducer, useState, useEffect, useMemo, useRef } from 'react'
 import ToolShell from '../_shell/ToolShell'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -21,6 +21,8 @@ import { DEFAULT_TUNING } from './lib/use-just-air-layers.js'
 
 function reducer(state, action) {
   switch (action.type) {
+    case Actions.SET_ANIMATING:
+      return { ...state, animatingDimension: action.dimensionId ?? null }
     case Actions.SET_PROJECT:
       return { ...state, projectId: action.projectId }
     case Actions.SET_LAYER:
@@ -150,6 +152,36 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   }, [baseConfig, displayTitle, displayEyebrow, displaySummary])
   const isDark = state.colorScheme === 'dark'
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
+
+  // ── Dimension animation ────────────────────────────────────────────────
+  // Lives at tool level (not in the slider component) so it keeps running —
+  // and keeps looping — when the mobile controls drawer closes and unmounts
+  // the rail. Toggled via Actions.SET_ANIMATING from the slider's play button.
+  const animDim = state.animatingDimension
+    ? config.dimensions.find((d) => d.id === state.animatingDimension)
+    : null
+  const animValueRef = useRef(null)
+  animValueRef.current = animDim ? (state.activeDimensions[animDim.id] ?? animDim.defaultValue) : null
+  useEffect(() => {
+    if (!animDim) return undefined
+    const ids = animDim.options.map((o) => o.id)
+    const timer = setInterval(() => {
+      const idx = ids.indexOf(String(animValueRef.current))
+      dispatch({ type: Actions.SET_DIMENSION, dimensionId: animDim.id, value: ids[(idx + 1) % ids.length] })
+    }, 700)
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animDim?.id])
+
+  // Prominent on-map readout of the animated/animatable dimension's current
+  // value (e.g. the year) — the sidebar is hidden on mobile while the map
+  // animates, so the value must live on the map itself.
+  const mapBadgeDim = config.dimensions.find(
+    (d) => d.animate && (config.layers.find((l) => l.id === state.activeLayer)?.dimensionIds ?? []).includes(d.id)
+  )
+  const mapBadgeValue = mapBadgeDim
+    ? (state.activeDimensions[mapBadgeDim.id] ?? mapBadgeDim.defaultValue)
+    : null
 
   // Populate the "statewide" value distribution for the active variable.
   // Two paths:
@@ -424,6 +456,28 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           >
             <MobileLegend variable={activeVariable} allValues={statewideValues} isDark={isDark} />
           </div>
+
+          {/* Animated-dimension readout (e.g. year) — all viewports */}
+          {mapBadgeValue != null && (
+            <div
+              aria-live="polite"
+              className="absolute z-10 pointer-events-none font-mono text-ink"
+              style={{
+                top: 12,
+                left: 12,
+                fontSize: 34,
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+                letterSpacing: '0.02em',
+                opacity: 0.85,
+                textShadow: isDark
+                  ? '0 1px 8px rgba(12,12,28,0.9)'
+                  : '0 1px 8px rgba(248,248,232,0.9)',
+              }}
+            >
+              {mapBadgeValue}
+            </div>
+          )}
 
           {/* Regional data stats panel — desktop only */}
           <div className="hidden md:block">

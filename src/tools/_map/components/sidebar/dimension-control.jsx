@@ -7,13 +7,18 @@
  *   - 'dropdown' → native <select>
  */
 
-import { useEffect, useRef, useState } from 'react'
 import { Play, Pause } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
 
-export function DimensionControl({ dimension, value, dispatch }) {
+export function DimensionControl({ dimension, value, dispatch, animatingDimension }) {
   function handleChange(newValue) {
     dispatch({ type: Actions.SET_DIMENSION, dimensionId: dimension.id, value: newValue })
+  }
+  function handleTogglePlay() {
+    dispatch({
+      type: Actions.SET_ANIMATING,
+      dimensionId: animatingDimension === dimension.id ? null : dimension.id,
+    })
   }
 
   return (
@@ -26,7 +31,13 @@ export function DimensionControl({ dimension, value, dispatch }) {
         <ToggleControl dimension={dimension} value={value} onChange={handleChange} />
       )}
       {dimension.type === 'slider' && (
-        <SliderControl dimension={dimension} value={value} onChange={handleChange} />
+        <SliderControl
+          dimension={dimension}
+          value={value}
+          onChange={handleChange}
+          playing={animatingDimension === dimension.id}
+          onTogglePlay={handleTogglePlay}
+        />
       )}
       {dimension.type === 'dropdown' && (
         <DropdownControl dimension={dimension} value={value} onChange={handleChange} />
@@ -61,21 +72,7 @@ function ToggleControl({ dimension, value, onChange }) {
 // equality, so a numeric emission here silently deselects every variable.
 // dimension.animate: true adds a play button that steps through the options
 // (wrapping) — used by the food-emissions year slider.
-function SliderControl({ dimension, value, onChange }) {
-  const [playing, setPlaying] = useState(false)
-  const onChangeRef = useRef(onChange)
-  onChangeRef.current = onChange
-  const valueRef = useRef(value)
-  valueRef.current = value
-  useEffect(() => {
-    if (!playing) return undefined
-    const ids = dimension.options.map((o) => o.id)
-    const timer = setInterval(() => {
-      const idx = ids.indexOf(String(valueRef.current))
-      onChangeRef.current(ids[(idx + 1) % ids.length])
-    }, 700)
-    return () => clearInterval(timer)
-  }, [playing, dimension])
+function SliderControl({ dimension, value, onChange, playing, onTogglePlay }) {
   const numericValue = typeof value === 'number' ? value : parseFloat(value)
   const options = dimension.options
   const min = options.length >= 2 ? parseFloat(options[0].id) : 0
@@ -98,7 +95,7 @@ function SliderControl({ dimension, value, onChange }) {
         {dimension.animate && (
           <button
             type="button"
-            onClick={() => setPlaying((x) => !x)}
+            onClick={onTogglePlay}
             aria-label={playing ? 'Pause animation' : 'Animate through values'}
             className="bg-transparent border-0 cursor-pointer p-0 text-ink-2 hover:text-ink"
             style={{ lineHeight: 0, flexShrink: 0 }}
@@ -111,7 +108,7 @@ function SliderControl({ dimension, value, onChange }) {
           min={min}
           max={max}
           value={numericValue}
-          onChange={(e) => { setPlaying(false); onChange(String(+e.target.value)) }}
+          onChange={(e) => { if (playing) onTogglePlay(); onChange(String(+e.target.value)) }}
           style={{ width: '100%', accentColor: 'var(--cardinal)' }}
         />
       </div>

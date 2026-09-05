@@ -77,15 +77,28 @@ export function LatProfile({ map, config, variable, isDark }) {
   }, [map, data, variable?.id, variable?.diffOf?.[0], variable?.diffOf?.[1]])
 
   if (!path) return null
-  const fill = isDark ? 'rgba(248,248,232,0.20)' : 'rgba(24,24,56,0.16)'
-  const edge = isDark ? 'rgba(248,248,232,0.45)' : 'rgba(24,24,56,0.40)'
+  const fill = isDark ? 'rgba(248,248,232,0.28)' : 'rgba(24,24,56,0.22)'
+  const edge = isDark ? 'rgba(248,248,232,0.55)' : 'rgba(24,24,56,0.50)'
+  // Wash the map out beneath the strip (gradient to the paper color) so the
+  // profile reads against a calm ground; pan the map to see what's under it.
+  const paper = isDark ? '12,12,28' : '248,248,232'
   return (
     <div
       aria-hidden="true"
       className="absolute pointer-events-none"
-      style={{ top: 0, right: 0, bottom: 0, width: WIDTH, zIndex: 5 }}
+      style={{ top: 0, right: 0, bottom: 0, width: WIDTH + 64, zIndex: 5 }}
     >
-      <svg width={WIDTH} height={path.h} style={{ display: 'block' }}>
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `linear-gradient(to right, rgba(${paper},0) 0%, rgba(${paper},0.55) ${64}px, rgba(${paper},0.92) 100%)`,
+        }}
+      />
+      <svg
+        width={WIDTH}
+        height={path.h}
+        style={{ display: 'block', position: 'absolute', top: 0, right: 0 }}
+      >
         <path d={path.d} fill={fill} stroke={edge} strokeWidth={1} />
       </svg>
       <span

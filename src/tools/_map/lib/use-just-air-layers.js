@@ -106,16 +106,31 @@ export const DEFAULT_TUNING = {
 function buildCellRadiusExpr(scaleEntry, tuning) {
   const scaleKm = scaleEntry.value ?? 28
   const mul = tuning?.radiusScale ?? 1
-  // fill 0.95: circles nearly touch but never overlap (overlap caused
-  // z-fighting flicker when zoomed far in). Coarse low-zoom tiers can set
-  // a larger scaleEntry.fill so circles overlap into a continuous field
-  // instead of a stipple of dots.
-  const k = ((scaleKm * 512) / (2 * 40075.016)) * (scaleEntry.fill ?? 0.95) * mul
+  // fill: circle diameter relative to the cell pitch. Default 0.95 =
+  // nearly touching. A scalar applies at every zoom; an array of
+  // [zoom, fill] stops is interpolated linearly (clamped at the ends) so
+  // a tier can run slightly-spaced at overview (heavy overlap stacks
+  // alpha and over-saturates) and overlapping when zoomed in (diagonal
+  // gaps otherwise wash the field out).
+  const fillAt = (z) => {
+    const f = scaleEntry.fill
+    if (!Array.isArray(f)) return f ?? 0.95
+    if (z <= f[0][0]) return f[0][1]
+    for (let i = 1; i < f.length; i++) {
+      if (z <= f[i][0]) {
+        const [z0, v0] = f[i - 1]
+        const [z1, v1] = f[i]
+        return v0 + ((z - z0) / (z1 - z0)) * (v1 - v0)
+      }
+    }
+    return f[f.length - 1][1]
+  }
+  const kBase = ((scaleKm * 512) / (2 * 40075.016)) * mul
   // MapLibre only allows ['zoom'] at the top of a step/interpolate expression,
   // so the low-zoom clamp is baked into per-integer-zoom stops instead of a
   // wrapping ['max'].
   const expr = ['interpolate', ['exponential', 2], ['zoom']]
-  for (let z = 0; z <= 12; z++) expr.push(z, Math.max(1.25, k * 2 ** z))
+  for (let z = 0; z <= 12; z++) expr.push(z, Math.max(1.25, kBase * fillAt(z) * 2 ** z))
   return expr
 }
 

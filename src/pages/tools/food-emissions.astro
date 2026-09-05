@@ -12,6 +12,13 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'food-emissions') ?? null;
 const repoLinks = {
   github: 'https://github.com/Sustainable-Solutions-Lab/gridded-land-management',
 };
+
+const companion = {
+  title: 'Mapped drivers of food emissions',
+  journal: 'DeAngelo, Davis, Seifried & Steffen — in preparation',
+  year: 2026,
+  url: null,
+};
 ---
 
 <ToolFrame
@@ -23,7 +30,7 @@ const repoLinks = {
   <MapTool
     client:only="react"
     projectId="food-emissions"
-    companion={null}
+    companion={companion}
     repoLinks={repoLinks}
     display={tool ? { title: tool.title, eyebrow: tool.eyebrow, summary: tool.summary } : null}
   />

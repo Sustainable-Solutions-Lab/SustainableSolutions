@@ -67,6 +67,28 @@ async function main() {
   console.log(`  ${basename(pmt)} ${(stat.size / 1024 / 1024).toFixed(1)} MB`);
 
   copyFileSync(pmt, resolve(PUBLIC_DIR, 'food-emissions.pmtiles'));
+
+  // Distributions: a value sample per numeric variable, consumed by the
+  // sidebar distribution chart / colorbar (config.distributionsUrl).
+  console.log('Sampling distributions…');
+  const raw = (await fs.readFile(src, 'utf8')).split('\n').filter(Boolean);
+  const keys = new Set();
+  const sample = {};
+  const step = Math.max(1, Math.floor(raw.length / 6000));
+  for (let i = 0; i < raw.length; i += step) {
+    const props = JSON.parse(raw[i]).properties;
+    for (const [k, v] of Object.entries(props)) {
+      if (k === '_scale' || k === 'm49' || k === 'ha') continue;
+      if (typeof v !== 'number' || !isFinite(v) || v === 0) continue;
+      keys.add(k);
+      (sample[k] ??= []).push(v);
+    }
+  }
+  await fs.writeFile(
+    resolve(PUBLIC_DIR, 'distributions.json'),
+    JSON.stringify(sample),
+  );
+  console.log(`  distributions.json: ${keys.size} variables`);
   console.log(`\nLocal dev copy → public/tools/food-emissions/ (gitignored).`);
   console.log('For production: upload build/tiles/food-emissions/food-emissions.pmtiles ' +
     'to R2 and swap tilesUrl in the project config.');

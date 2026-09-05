@@ -80,7 +80,8 @@ function makeVariable({ source, crop }) {
   const cropLabel = crop === 'all' ? null : CROPS.find(([c]) => c === crop)[1]
   const shared = {
     unit: 'kt CO₂e',
-    colormap: 'SpectralHot',
+    colormap: 'SpectralHotDeep',
+    extremeGlow: true,
     diverging: false,
     alphaFloor: 0.02,
     alphaPower: 0.35,

@@ -51,6 +51,7 @@ export const Actions = {
   SET_PROJECT:         'SET_PROJECT',
   SET_LAYER:           'SET_LAYER',          // replaces SET_VARIABLE — sets activeLayer
   SET_DIMENSION:       'SET_DIMENSION',
+  SET_ANIMATING:       'SET_ANIMATING',   // { dimensionId: string | null }
   SELECT_CELL:         'SELECT_CELL',
   DESELECT_CELL:       'DESELECT_CELL',
   SET_DRAWN_CIRCLE:    'SET_DRAWN_CIRCLE',   // { circle: DrawnCircle | null }
@@ -70,6 +71,7 @@ export const Actions = {
 export const initialState = {
   projectId: 'fuel-treatment',
   activeLayer: 'net_benefits',
+  animatingDimension: null,
   activeDimensions: {
     treatment: 'min',       // default: lowest-cost treatment
     climate: 'current',

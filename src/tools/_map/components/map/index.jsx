@@ -292,6 +292,32 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     const fallbackMinZoom = isMobile ? 4.8 : 5.3
     const fallbackMaxZoom = 9
     const initialZoom = config.region.zoom ?? (isMobile ? 4.8 : 5)
+    // Latitude limit (region.latBounds): clamp the camera INSIDE MapLibre's
+    // camera pipeline via transformCameraUpdate — the update is modified
+    // before it applies, so there is no post-hoc setCenter correction to
+    // fight gestures (the on-'move' version made dragging jerky at the
+    // limit and stalled zoom-about-cursor). The dynamic minimum zoom that
+    // keeps the band filling the viewport lives in the load handler below.
+    let transformCameraUpdate
+    if (config.region?.latBounds) {
+      const [latS, latN] = config.region.latBounds
+      const mc = maplibregl.MercatorCoordinate
+      const yTop = mc.fromLngLat({ lng: 0, lat: latN }).y
+      const yBot = mc.fromLngLat({ lng: 0, lat: latS }).y
+      transformCameraUpdate = ({ center, zoom }) => {
+        const h = containerRef.current?.clientHeight
+        if (!h || center == null || zoom == null) return {}
+        const half = h / (512 * 2 ** zoom) / 2
+        let lo = yTop + half
+        let hi = yBot - half
+        if (lo > hi) { const mid = (lo + hi) / 2; lo = mid; hi = mid }
+        const cy = Math.min(hi, Math.max(lo, mc.fromLngLat({ lng: 0, lat: center.lat }).y))
+        const lat = new mc(0.5, cy, 0).toLngLat().lat
+        if (Math.abs(lat - center.lat) < 1e-9) return {}
+        return { center: { lng: center.lng, lat } }
+      }
+    }
+
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: basemapStyle(schemeRef.current),
@@ -299,6 +325,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       zoom: initialZoom,
       minZoom: config.region.minZoom ?? fallbackMinZoom,
       maxZoom: config.region.maxZoom ?? fallbackMaxZoom,
+      ...(transformCameraUpdate ? { transformCameraUpdate } : {}),
 
       // Disable built-in attribution — we render our own static text below
       attributionControl: false,
@@ -306,45 +333,34 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
 
     mapRef.current = map
 
+    // Data tools read north-up: rotation/pitch gestures only break the
+    // latitude clamp (bounds under bearing) and disorient the graticule.
+    if (config.region?.latBounds) {
+      map.dragRotate.disable()
+      map.touchZoomRotate.disableRotation()
+      map.touchPitch.disable()
+      map.keyboard?.disableRotation?.()
+    }
+
     map.once('load', () => {
-      // Optional latitude LIMIT (maxBounds misbehaves for full-width
-      // worlds): the poles are clipped at [south, north], and the truncated
-      // edge must NEVER be visible — not at the limit, not on load. Two
-      // pieces: (1) a dynamic minimum zoom so the clipped band always fills
-      // the viewport height (you cannot zoom out far enough to see past the
-      // cut; recomputed on resize); (2) an exact Mercator-Y clamp on the
-      // viewport edges, corrected only when exceeded, so gestures inside
-      // the band keep the original free-pan feel and the limit rubber-bands
-      // instead of walling.
+      // Dynamic minimum zoom companion to transformCameraUpdate (above):
+      // the clipped band must always at least fill the viewport height, so
+      // no zoom level can reveal past the polar cut. Recomputed on resize;
+      // the jumpTo routes the (possibly raised) camera through the clamp.
       if (config.region?.latBounds) {
         const [latS, latN] = config.region.latBounds
         const mc = maplibregl.MercatorCoordinate
         const yTop = mc.fromLngLat({ lng: 0, lat: latN }).y
         const yBot = mc.fromLngLat({ lng: 0, lat: latS }).y
-        const clampLat = () => {
-          const b = map.getBounds()
-          const yN = mc.fromLngLat({ lng: 0, lat: b.getNorth() }).y
-          const yS = mc.fromLngLat({ lng: 0, lat: b.getSouth() }).y
-          const half = (yS - yN) / 2
-          const cy = (yN + yS) / 2
-          let lo = yTop + half   // north-edge constraint (y grows southward)
-          let hi = yBot - half   // south-edge constraint
-          if (lo > hi) { const mid = (lo + hi) / 2; lo = mid; hi = mid }
-          const clamped = Math.min(hi, Math.max(lo, cy))
-          if (Math.abs(clamped - cy) < 1e-9) return
-          const lat = new mc(0.5, clamped, 0).toLngLat().lat
-          map.setCenter([map.getCenter().lng, lat])
-        }
         const applyMinZoom = () => {
           const h = map.getContainer().clientHeight
           if (!h) return
           const bandMin = Math.log2(h / (512 * (yBot - yTop)))
           map.setMinZoom(Math.max(config.region?.minZoom ?? 0, bandMin))
-          clampLat()
+          map.jumpTo({ center: map.getCenter() })
         }
         applyMinZoom()
         map.on('resize', applyMinZoom)
-        map.on('move', clampLat)
       }
       // Back-compat: soft center-latitude clamp.
       else if (config.region?.centerLatRange) {

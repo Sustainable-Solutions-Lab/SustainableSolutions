@@ -19,7 +19,6 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Globe, Rows3 } from 'lucide-react'
 
 const WIDTH = 54
 const FADE = 64
@@ -47,7 +46,7 @@ function gaussianSmooth(values, sigmaBands) {
 
 export function LatProfile({ map, config, variable, isDark }) {
   const [data, setData] = useState(() => profileCache.get(config.latProfileUrl) ?? null)
-  const [mode, setMode] = useState('globe')
+  const mode = 'globe'
   const [path, setPath] = useState(null)
   const rafRef = useRef(0)
 
@@ -188,19 +187,6 @@ export function LatProfile({ map, config, variable, isDark }) {
       >
         EMISSIONS BY LATITUDE
       </span>
-      <button
-        type="button"
-        onClick={() => setMode((m) => (m === 'globe' ? 'view' : 'globe'))}
-        aria-label={
-          mode === 'globe'
-            ? 'Latitude profile: fixed global axis (tap to track the map view)'
-            : 'Latitude profile: tracking map view (tap for fixed global axis)'
-        }
-        className="absolute pointer-events-auto bg-transparent border-0 cursor-pointer"
-        style={{ bottom: 34, right: 18, color: edge, lineHeight: 0, padding: 4 }}
-      >
-        {mode === 'globe' ? <Globe size={14} strokeWidth={1.75} /> : <Rows3 size={14} strokeWidth={1.75} />}
-      </button>
     </div>
   )
 }

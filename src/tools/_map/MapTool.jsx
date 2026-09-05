@@ -474,8 +474,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               aria-live="polite"
               className="absolute z-10 pointer-events-none font-mono text-ink"
               style={{
-                top: 12,
-                left: 12,
+                top: 18,
+                left: config.mapControlsSide === 'left' ? 66 : 12,
                 fontSize: 34,
                 fontWeight: 700,
                 fontVariantNumeric: 'tabular-nums',

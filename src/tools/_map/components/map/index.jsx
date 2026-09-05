@@ -507,7 +507,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         .firemap-map-controls {
           position: absolute;
           top: 18px;
-          right: 10px;
+          ${config.mapControlsSide === 'left' ? 'left: 10px;' : 'right: 10px;'}
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -524,7 +524,11 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
             removed for consistency with the rest of the site). */}
         <button
           onClick={handleGraticuleToggle}
-          title={graticuleVisible ? 'Hide city labels' : 'Show city labels'}
+          title={
+            config.region?.useWorldOverlay
+              ? (graticuleVisible ? 'Hide latitude/longitude lines' : 'Show latitude/longitude lines')
+              : (graticuleVisible ? 'Hide city labels' : 'Show city labels')
+          }
           style={{
             width: 48,
             height: 48,
@@ -541,7 +545,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
             userSelect: 'none',
           }}
           aria-pressed={graticuleVisible}
-          aria-label='Toggle city labels'
+          aria-label={config.region?.useWorldOverlay ? 'Toggle latitude/longitude lines' : 'Toggle city labels'}
         >
           <Globe size={22} strokeWidth={1.5} />
         </button>

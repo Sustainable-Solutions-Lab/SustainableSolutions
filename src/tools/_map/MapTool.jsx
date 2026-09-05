@@ -466,7 +466,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           <div
             className="block md:hidden absolute z-10"
             style={{
-              bottom: 55,
+              // Clear of the year bar pinned at the bottom of the map (two
+              // rows tall in compare mode).
+              bottom: 104,
               right: 10,
               width: 160,
               background: isDark ? 'rgba(12, 12, 28, 0.92)' : 'rgba(248, 248, 232, 0.92)',
@@ -523,11 +525,12 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               {badgeSelectionLabel && (
                 <div
                   style={{
-                    fontSize: 11,
+                    fontSize: 13,
+                    fontWeight: 700,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
-                    opacity: 0.65,
-                    marginTop: 2,
+                    opacity: 0.85,
+                    marginTop: 3,
                   }}
                 >
                   {badgeSelectionLabel}

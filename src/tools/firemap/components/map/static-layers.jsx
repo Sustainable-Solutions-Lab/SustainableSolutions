@@ -205,6 +205,10 @@ export function addStaticLayers(map, scheme, opts = {}) {
   // /geo/us-states.geojson and renders state boundaries as a single thin line
   // layer; the outermost segments collectively form the CONUS coastline.
   const usOverlays = opts.usOverlays === true
+  // World land overlay for global projects (e.g. Food Emissions). Opt-in
+  // (defaults false). Natural Earth 110m land polygons: subtle fill + coastline
+  // so the flat basemap reads as a world map without labels or tile requests.
+  const worldOverlays = opts.worldOverlays === true
   const borderColor =
     scheme === 'dark' ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.28)'
   const stateBorderColor =
@@ -415,6 +419,38 @@ export function addStaticLayers(map, scheme, opts = {}) {
   } else if (usOverlays && map.getLayer('us-community-labels')) {
     map.setPaintProperty('us-community-labels', 'text-color', usCommunityTextColor)
     map.setPaintProperty('us-community-labels', 'text-halo-color', usCommunityHaloColor)
+  }
+
+  // ── 2e. World land (global projects) ─────────────────────────────────────
+  if (worldOverlays && !map.getSource('world-land')) {
+    map.addSource('world-land', {
+      type: 'geojson',
+      data: '/tools/food-emissions/ne110m-land.json',
+    })
+  }
+  if (worldOverlays) {
+    const landFill = scheme === 'dark' ? '#14142A' : '#F1F1DF'
+    const coastColor = scheme === 'dark' ? 'rgba(248,248,232,0.25)' : 'rgba(24,24,56,0.25)'
+    if (!map.getLayer('world-land-fill')) {
+      map.addLayer({
+        id: 'world-land-fill',
+        type: 'fill',
+        source: 'world-land',
+        paint: { 'fill-color': landFill, 'fill-opacity': 1 },
+      })
+    } else {
+      map.setPaintProperty('world-land-fill', 'fill-color', landFill)
+    }
+    if (!map.getLayer('world-coastline')) {
+      map.addLayer({
+        id: 'world-coastline',
+        type: 'line',
+        source: 'world-land',
+        paint: { 'line-color': coastColor, 'line-width': 0.75 },
+      })
+    } else {
+      map.setPaintProperty('world-coastline', 'line-color', coastColor)
+    }
   }
 
   // ── 3. Graticule ──────────────────────────────────────────────────────────

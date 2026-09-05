@@ -355,8 +355,13 @@ export function useJustAirLayers(map, config, state, tuning) {
       if (v && v.type !== 'categorical') {
         const features = map.querySourceFeatures(SOURCE_ID, { sourceLayer })
         if (features.length >= 30) {
+          // colorAnchorId: pin the color scale to another property's
+          // distribution (e.g. every animation year anchored to y2024), so
+          // frame-to-frame change shows as color change instead of being
+          // absorbed by a re-normalizing scale.
+          const rangeVar = v.colorAnchorId ? { ...v, id: v.colorAnchorId, diffOf: undefined } : v
           const values = features
-            .map((f) => readVarValue(f.properties, v))
+            .map((f) => readVarValue(f.properties, rangeVar))
             .filter((x) => x != null && !isNaN(x))
           if (values.length >= 30) {
             const zero = v.domain?.zero ?? v.domain?.min ?? 0

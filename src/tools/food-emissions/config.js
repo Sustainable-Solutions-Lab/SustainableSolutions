@@ -176,6 +176,10 @@ const config = {
       alphaPower: 0.35,
       layer: 'years',
       dimensionValues: { year: String(y) },
+      // One fixed scale for the whole animation (anchored to the end year):
+      // otherwise each frame re-normalizes to its own p99 and change is
+      // absorbed by the shifting scale.
+      colorAnchorId: `y${YEARS[YEARS.length - 1]}`,
       description: `All-source emissions per cell in ${y}; national statistics carry the trend.`,
     })),
     {

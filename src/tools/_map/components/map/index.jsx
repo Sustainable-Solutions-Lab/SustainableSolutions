@@ -308,7 +308,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       // slack — up to SOUTH_SLACK of the viewport height may be empty ocean
       // below the southern cut, so Patagonia and New Zealand can clear the
       // bottom-of-screen UI (year bar, phone browser chrome).
-      const SOUTH_SLACK = 0.25
+      const SOUTH_SLACK = 0.40
       transformCameraUpdate = ({ center, zoom }) => {
         const h = containerRef.current?.clientHeight
         if (!h || center == null || zoom == null) return {}
@@ -369,7 +369,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
           // the allowed southern slack exactly fills the viewport, so the
           // full latitude range (incl. Patagonia / New Zealand) is
           // reachable above bottom-of-screen UI.
-          const bandMin = Math.log2((h * 0.75) / (512 * (yBot - yTop)))
+          const bandMin = Math.log2((h * 0.6) / (512 * (yBot - yTop)))
           map.setMinZoom(Math.max(config.region?.minZoom ?? 0, bandMin))
           map.jumpTo({ center: map.getCenter() })
         }

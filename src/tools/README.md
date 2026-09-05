@@ -6,9 +6,12 @@ Three kinds of thing live here. Each tool is mounted by a page at
 | Folder | Kind | What it is |
 |--------|------|------------|
 | `_engine/` | **engine** | Reusable, config-driven data-explorer engine (charts / store / ui / data loader). Not a tool by itself. |
+| `_map/` | **engine** | Reusable, config-driven MapLibre/PMTiles map engine (components / lib / contracts / `MapTool.jsx` / `registry.js`). Not a tool by itself. Grew inside the original Firemap project and was extracted 2026-09; every map tool is a sibling leaf that registers a config here. |
+| `firemap/` | **config** | Thin config that drives `_map` — Firefuels (fuel-treatment cost/benefit). |
+| `just-air/` | **config** | Thin config that drives `_map` — Just Air (net-zero air quality / mortality). |
+| `food-emissions/` | **config** | Thin config that drives `_map` — Food Emissions (global cropland-management GHGs). |
 | `materials/` | **config** | Thin config that drives `_engine` — global material flows (Busch et al.). The broad "materials explorer." Future `calue/` (land-use emissions) is added the same way. |
 | `magnets/` | **bespoke** | Standalone US rare-earth-magnet supply-chain explorer (its own components + `scenarios.json` from the rare-magnets-cem model). Does not use `_engine`. |
-| `firemap/` | **bespoke** | Standalone MapLibre/PMTiles map (Firefuels, Just-Air). Does not use `_engine`. |
 | `contrails/` | **bespoke** | Booking-time contrail predictor (SVG great-circle map + Duffel flight search via `api/contrails.py`). Does not use `_engine`. |
 | `_shell/` | **shell** | `ToolShell.tsx` — the standard chrome every full-viewport tool wraps itself in. Not a tool by itself. |
 

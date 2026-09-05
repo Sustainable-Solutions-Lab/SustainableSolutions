@@ -3,7 +3,7 @@ import ToolShell from '../_shell/ToolShell'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { Actions, initialState } from './contracts/events.js'
-import { projects } from './projects/index.js'
+import { projects } from './registry.js'
 import { getActiveVariable } from './lib/get-active-variable.js'
 import { Map } from './components/map/index.jsx'
 import { Sidebar } from './components/sidebar/index.jsx'

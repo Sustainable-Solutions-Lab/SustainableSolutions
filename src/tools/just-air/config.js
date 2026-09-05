@@ -15,7 +15,7 @@
  * rendered as outlined rectangles on the low-zoom national view to mark
  * where the high-resolution data lives.
  *
- * @type {import('../../contracts/project-config').ProjectConfig}
+ * @type {import('../_map/contracts/project-config').ProjectConfig}
  */
 const config = {
   id: 'just-air',

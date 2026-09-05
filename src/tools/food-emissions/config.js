@@ -237,6 +237,10 @@ const config = {
   // ── Area tool ────────────────────────────────────────────────────────────
   areaTool: {
     enabled: true,
+    // PALE drivers panel (Hong et al. 2021 identity): LMDI decomposition
+    // of the drawn region's 2000-2023 emissions change into population,
+    // production per capita, land per kcal, and emissions per land.
+    pale: true,
     defaultRadiusKm: 250,
     maxRadiusKm: 1500,
     aggregateVariableIds: ['tot', 'ent', 'rice', 'prp', 'fer', 'peat', 'mms', 'man', 'res', 'urea', 'burn'],

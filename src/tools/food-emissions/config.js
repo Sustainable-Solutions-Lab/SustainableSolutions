@@ -166,11 +166,11 @@ const config = {
     },
     {
       id: 'crop',
-      label: 'Crop',
+      label: 'Commodity',
       type: 'dropdown',
       defaultValue: 'all',
       options: [
-        { id: 'all', label: 'All crops' },
+        { id: 'all', label: 'All commodities' },
         ...CROPS.map(([id, label]) => ({ id, label })),
       ],
     },

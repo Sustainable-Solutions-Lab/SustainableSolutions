@@ -152,6 +152,28 @@ function buildRadiusExpr(tuning) {
 
 const SOURCE_ID = 'just-air-data'
 
+// Fraction of the color range where the "extreme tier" begins — the same
+// split where SpectralHotDeep leaves the wine red (colormap.js).
+const EXTREME_SPLIT = 0.85
+
+// Subtle glow on extreme cells in dark mode (variable.extremeGlow): a
+// lighter stroke ring so the near-black top of SpectralHotDeep doesn't
+// sink into the navy basemap. Off in light mode, for diverging variables,
+// and until the data-derived color range is known.
+function buildStrokeExprs(variable, isDark, colorRange) {
+  const off = { width: 0, color: 'rgba(0,0,0,0)' }
+  if (!variable || !isDark || variable.diverging || !variable.extremeGlow) return off
+  const maxPos = colorRange?.maxPosDev
+  if (!maxPos || maxPos <= 0) return off
+  const zero = variable.domain?.zero ?? variable.domain?.min ?? 0
+  const thresh = zero + EXTREME_SPLIT * maxPos
+  const val = ['coalesce', ['to-number', varValueExpr(variable)], -1e15]
+  return {
+    width: ['case', ['>=', val, thresh], 0.7, 0],
+    color: 'rgba(248,248,232,0.5)',
+  }
+}
+
 export function justAirLayerIds(config) {
   return (config.scales ?? []).map((s) => `just-air-cells-${s.value}`)
 }
@@ -240,6 +262,9 @@ export function useJustAirLayers(map, config, state, tuning) {
         try {
           map.setPaintProperty(layerId, 'circle-color',
             buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current))
+          const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, colorRangeRef.current)
+          map.setPaintProperty(layerId, 'circle-stroke-width', stroke.width)
+          map.setPaintProperty(layerId, 'circle-stroke-color', stroke.color)
         } catch (_) { /* ignore */ }
       }
     }
@@ -276,13 +301,17 @@ export function useJustAirLayers(map, config, state, tuning) {
             'source-layer': sourceLayer,
             minzoom: s.minZoom ?? 0,
             filter: ['==', ['coalesce', ['to-number', ['get', '_scale']], 0], s.value],
-            paint: {
-              'circle-radius':       s.radiusMode === 'cell' ? buildCellRadiusExpr(s, tuningRef.current) : buildRadiusExpr(tuningRef.current),
-              'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current),
-              'circle-opacity':      buildOpacityExpr(variableRef.current, s),
-              'circle-stroke-width': 0,
-              'circle-blur':         0,
-            },
+            paint: (() => {
+              const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, colorRangeRef.current)
+              return {
+                'circle-radius':       s.radiusMode === 'cell' ? buildCellRadiusExpr(s, tuningRef.current) : buildRadiusExpr(tuningRef.current),
+                'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current),
+                'circle-opacity':      buildOpacityExpr(variableRef.current, s),
+                'circle-stroke-width': stroke.width,
+                'circle-stroke-color': stroke.color,
+                'circle-blur':         0,
+              }
+            })(),
           }
           if (s.maxZoom != null) layerSpec.maxzoom = s.maxZoom
           map.addLayer(layerSpec, beforeId)
@@ -398,6 +427,9 @@ export function useJustAirLayers(map, config, state, tuning) {
         map.setPaintProperty(layerId, 'circle-color',   buildColorExpr(variableRef.current, isDarkRef.current, recomputed, tuningRef.current))
         map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current, s))
         map.setPaintProperty(layerId, 'circle-radius',  radiusExprForLayer(layerId, config, tuningRef.current))
+        const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, recomputed)
+        map.setPaintProperty(layerId, 'circle-stroke-width', stroke.width)
+        map.setPaintProperty(layerId, 'circle-stroke-color', stroke.color)
       } catch (err) {
         console.error('[useJustAirLayers] setPaintProperty', layerId, err)
       }

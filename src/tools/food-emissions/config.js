@@ -302,6 +302,12 @@ const config = {
     },
   },
 
+  // ── Regional map view: admin-1 x biome unit choropleth ──────────────────
+  regionalView: {
+    tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/unit-values.pmtiles',
+    sourceLayer: 'unit-values',
+  },
+
   // ── PALE drivers choropleth (jurisdiction LMDI map) ──────────────────────
   paleMap: {
     tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/pale-units.pmtiles',

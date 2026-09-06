@@ -13,6 +13,9 @@ import { DimensionControl } from './components/sidebar/dimension-control.jsx'
 import { LatProfile } from './components/map/lat-profile.jsx'
 import { YearBar } from './components/map/year-bar.jsx'
 import { PaleLayer } from './components/map/pale-layer.jsx'
+import { RegionalLayer } from './components/map/regional-layer.jsx'
+import { RegionStats } from './components/map/region-stats.jsx'
+import { useYearFactors } from './lib/year-factors.js'
 import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
@@ -26,6 +29,13 @@ function reducer(state, action) {
   switch (action.type) {
     case Actions.SET_ANIMATING:
       return { ...state, animatingDimension: action.dimensionId ?? null }
+    case Actions.SET_MAP_VIEW:
+      return { ...state, mapView: action.view,
+               selectedUnit: action.view === 'regional' ? state.selectedUnit : null }
+    case Actions.SET_ANALYSIS:
+      return { ...state, analysis: action.analysis ?? null }
+    case Actions.SELECT_UNIT:
+      return { ...state, selectedUnit: action.unit ?? null }
     case Actions.SET_PROJECT:
       return { ...state, projectId: action.projectId }
     case Actions.SET_LAYER:
@@ -129,7 +139,12 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const [mapInstance, setMapInstance] = useState(null)
   // PALE-drivers choropleth mode (config.paleMap): replaces the cell
   // circles with jurisdiction polygons colored by one LMDI term.
-  const [paleActive, setPaleActive] = useState(false)
+  // Analysis overlays (PALE) work over either map view — only analyses
+  // that require regional statistics (population, production) are
+  // region-bound, and those live inside the PALE decomposition itself.
+  const paleActive = state.analysis === 'pale'
+  const setPaleActive = (on) =>
+    dispatch({ type: Actions.SET_ANALYSIS, analysis: on ? 'pale' : null })
   const [paleDriver, setPaleDriver] = useState('r_net')
   const [filterStats, setFilterStats] = useState({ count: null, mean: null, median: null, totalCount: null, allValues: [] })
   const [statewideValues, setStatewideValues] = useState([])
@@ -158,7 +173,11 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     }
   }, [baseConfig, displayTitle, displayEyebrow, displaySummary])
   const isDark = state.colorScheme === 'dark'
-  const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
+  const rawActiveVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
+  const toolYearFactors = useYearFactors(config)
+  const activeVariable = rawActiveVariable?.scaled && toolYearFactors
+    ? { ...rawActiveVariable, scaled: { ...rawActiveVariable.scaled, factors: toolYearFactors } }
+    : rawActiveVariable
 
   // ── Dimension animation ────────────────────────────────────────────────
   // Lives at tool level (not in the slider component) so it keeps running —
@@ -377,6 +396,47 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           )
         })}
 
+        {/* Map view + percentile presets — mobile */}
+        {config.regionalView && (
+          <div className="mb-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+              Map view
+            </p>
+            <div className="flex gap-4">
+              {[['gridded', 'Gridded'], ['regional', 'Regional']].map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => dispatch({ type: Actions.SET_MAP_VIEW, view: v })}
+                  className={[
+                    'bg-transparent border-0 cursor-pointer p-0 font-sans text-[12px] uppercase tracking-[0.12em]',
+                    (state.mapView ?? 'gridded') === v ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+                  ].join(' ')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {config.percentileFilter?.enabled && (
+          <div className="mb-2 flex items-center gap-3">
+            {[[0, 'All'], [75, 'Top 25%'], [90, 'Top 10%'], [95, 'Top 5%']].map(([low, label]) => (
+              <button
+                key={low}
+                type="button"
+                onClick={() => dispatch({ type: Actions.SET_PERCENTILE, low, high: 100 })}
+                className={[
+                  'bg-transparent border-0 cursor-pointer p-0 font-sans text-[11px]',
+                  (state.percentileRange?.low ?? 0) === low ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+                ].join(' ')}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* PALE drivers map — mobile access (config.paleMap) */}
         {config.paleMap && (
           <div className="mt-4 pt-3 border-t border-rule">
@@ -539,7 +599,28 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             <YearBar config={config} state={state} dispatch={dispatch} isDark={isDark} />
           )}
 
-          {/* PALE-drivers choropleth — config-gated (paleMap) */}
+          {/* Regional map view — config-gated (regionalView) */}
+          {config.regionalView && (
+            <RegionalLayer
+              map={mapInstance}
+              config={config}
+              state={state}
+              dispatch={dispatch}
+              isDark={isDark}
+              suppressed={paleActive}
+            />
+          )}
+          {config.regionalView && (
+            <RegionStats
+              map={mapInstance}
+              state={state}
+              dispatch={dispatch}
+              activeVariable={activeVariable}
+              isDark={isDark}
+            />
+          )}
+
+          {/* PALE-drivers choropleth — config-gated (paleMap); regional-only */}
           {config.paleMap && (
             <PaleLayer
               map={mapInstance}

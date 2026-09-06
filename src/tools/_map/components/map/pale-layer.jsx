@@ -19,7 +19,6 @@ import { useEffect, useRef, useState } from 'react'
 const SRC = 'pale-units'
 const FILL = 'pale-units-fill'
 const LINE = 'pale-units-line'
-const CELL_PREFIX = 'just-air-cells-'
 const RANGE = 50 // % of 2000 emissions at which the ramp saturates
 
 function fillExpr(driver, isDark) {
@@ -45,16 +44,6 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
 
   useEffect(() => {
     if (!map || !config.paleMap) return undefined
-
-    function setCellsVisible(visible) {
-      const style = map.getStyle?.()
-      if (!style) return
-      for (const l of style.layers ?? []) {
-        if (l.id.startsWith(CELL_PREFIX)) {
-          try { map.setLayoutProperty(l.id, 'visibility', visible ? 'visible' : 'none') } catch {}
-        }
-      }
-    }
 
     function ensureLayers() {
       // NOTE: no isStyleLoaded() gate — with the pmtiles protocol it never
@@ -86,7 +75,6 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
       const vis = activeRef.current ? 'visible' : 'none'
       map.setLayoutProperty(FILL, 'visibility', vis)
       map.setLayoutProperty(LINE, 'visibility', vis)
-      setCellsVisible(!activeRef.current)
       } catch { /* style not ready yet — the styledata/idle retries cover it */ }
     }
 
@@ -115,7 +103,6 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
       map.off('click', onMove)
       map.off('mouseout', onLeave)
       if (!map.getStyle?.()) return  // map already removed
-      setCellsVisible(true)
       try { for (const id of [FILL, LINE]) { if (map.getLayer(id)) map.removeLayer(id) } } catch {}
       try { if (map.getSource(SRC)) map.removeSource(SRC) } catch {}
     }

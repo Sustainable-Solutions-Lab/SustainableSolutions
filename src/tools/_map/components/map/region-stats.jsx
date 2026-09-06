@@ -1,0 +1,106 @@
+/**
+ * components/map/region-stats.jsx
+ *
+ * Statistics panel for a selected admin-1 x biome unit (Regional view):
+ * the active variable's total and per-area intensity for the unit, plus a
+ * mini distribution of the unit's underlying 0.25-degree cell values —
+ * queried live from the cell tiles via the `u` (unit id) prop.
+ */
+
+import { useMemo } from 'react'
+import { Actions } from '../../contracts/events.js'
+import { readVarValue } from '../../lib/variable-value.js'
+
+const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
+
+function MiniDist({ values, isDark }) {
+  if (!values || values.length < 5) return null
+  const W = 216
+  const H = 44
+  const BINS = 36
+  const max = Math.max(...values)
+  if (!(max > 0)) return null
+  const bins = new Array(BINS).fill(0)
+  for (const v of values) {
+    bins[Math.min(BINS - 1, Math.floor((v / max) * BINS))] += 1
+  }
+  const bmax = Math.max(...bins)
+  const bar = isDark ? 'rgba(248,248,232,0.55)' : 'rgba(24,24,56,0.5)'
+  const muted = isDark ? 'rgba(248,248,232,0.45)' : 'rgba(24,24,56,0.45)'
+  return (
+    <div style={{ marginTop: 6 }}>
+      <svg width={W} height={H} style={{ display: 'block' }}>
+        {bins.map((b, i) => (
+          <rect key={i} x={(i * W) / BINS} width={W / BINS - 1}
+            y={H - (b / bmax) * (H - 4)} height={(b / bmax) * (H - 4)} fill={bar} />
+        ))}
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: FONT_MONO, fontSize: 8, color: muted }}>
+        <span>0</span>
+        <span>{values.length} cells · max {max < 10 ? max.toFixed(2) : Math.round(max)} kt</span>
+      </div>
+    </div>
+  )
+}
+
+export function RegionStats({ map, state, dispatch, activeVariable, isDark }) {
+  const unit = state.selectedUnit
+  const cellValues = useMemo(() => {
+    if (!map || !unit || !activeVariable) return []
+    try {
+      const feats = map.querySourceFeatures('just-air-data', { sourceLayer: 'food-emissions' })
+      const out = []
+      const seen = new Set()
+      for (const f of feats) {
+        const p = f.properties
+        if (!p || p.u !== unit.id || p._scale !== 28) continue
+        const k = `${f.geometry?.coordinates?.[0]},${f.geometry?.coordinates?.[1]}`
+        if (seen.has(k)) continue
+        seen.add(k)
+        const v = readVarValue(p, activeVariable)
+        if (v != null && isFinite(v) && v > 0) out.push(v)
+      }
+      return out
+    } catch { return [] }
+  }, [map, unit?.id, activeVariable])
+
+  if (!unit || state.mapView !== 'regional') return null
+  const p = unit.props
+  const total = activeVariable ? readVarValue(p, activeVariable) : null
+  const intens = total != null && p.area_km2 ? (total * 1000) / p.area_km2 : null
+  const text = isDark ? 'rgba(248,248,232,0.9)' : 'rgba(24,24,56,0.9)'
+  const muted = isDark ? 'rgba(248,248,232,0.5)' : 'rgba(24,24,56,0.5)'
+
+  return (
+    <div style={{
+      position: 'absolute', left: 12, bottom: 96, zIndex: 15, width: 240,
+      background: isDark ? 'rgba(12,12,28,0.94)' : 'rgba(248,248,232,0.96)',
+      border: `1px solid ${isDark ? 'rgba(248,248,232,0.2)' : 'rgba(24,24,56,0.2)'}`,
+      borderRadius: 4, padding: '10px 12px',
+      fontFamily: FONT_MONO, color: text,
+    }}>
+      <button
+        type="button"
+        onClick={() => dispatch({ type: Actions.SELECT_UNIT, unit: null })}
+        aria-label="Close region statistics"
+        style={{ position: 'absolute', top: 6, right: 8, background: 'transparent',
+                 border: 'none', color: muted, cursor: 'pointer', fontSize: 13, padding: 2 }}
+      >×</button>
+      <div style={{ fontSize: 11, fontWeight: 700, paddingRight: 14 }}>{p.name}</div>
+      <div style={{ fontSize: 9, color: muted, marginBottom: 6 }}>
+        {p.country} · {Number(p.area_km2 ?? 0).toLocaleString()} km²
+        {p.ha ? ` · ${Math.round(p.ha / 1000).toLocaleString()} kha cropland` : ''}
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 700 }}>
+        {total != null ? `${Math.round(total).toLocaleString()} kt CO₂e` : '—'}
+      </div>
+      <div style={{ fontSize: 9, color: muted }}>
+        {intens != null ? `${intens < 10 ? intens.toFixed(1) : Math.round(intens).toLocaleString()} t CO₂e / km²` : ''}
+      </div>
+      <MiniDist values={cellValues} isDark={isDark} />
+      <div style={{ fontSize: 8, color: muted, marginTop: 4, lineHeight: 1.4 }}>
+        distribution of the unit's quarter-degree cells (loaded areas)
+      </div>
+    </div>
+  )
+}

@@ -217,6 +217,8 @@ export function useJustAirLayers(map, config, state, tuning) {
     : resolved
   const variableRef = useRef(variable)
   variableRef.current = variable
+  const hiddenRef = useRef(false)
+  hiddenRef.current = state.mapView === 'regional' || state.analysis === 'pale'
   const isDarkRef = useRef(state.colorScheme === 'dark')
   isDarkRef.current = state.colorScheme === 'dark'
   const tuningRef = useRef(t)
@@ -321,7 +323,7 @@ export function useJustAirLayers(map, config, state, tuning) {
               return {
                 'circle-radius':       s.radiusMode === 'cell' ? buildCellRadiusExpr(s, tuningRef.current) : buildRadiusExpr(tuningRef.current),
                 'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current),
-                'circle-opacity':      buildOpacityExpr(variableRef.current, s),
+                'circle-opacity':      buildOpacityExpr(variableRef.current, s, hiddenRef.current),
                 'circle-stroke-width': stroke.width,
                 'circle-stroke-color': stroke.color,
                 'circle-blur':         0,
@@ -412,7 +414,7 @@ export function useJustAirLayers(map, config, state, tuning) {
   // every wiggle also reshuffled the color rescale.
   useEffect(() => {
     if (!map || !scales) return
-    if (!map.isStyleLoaded()) return
+    if (!map.getStyle?.()) return  // NOT isStyleLoaded() — unreliable with pmtiles
     colorRangeRef.current = null
     colorRangeLockedRef.current = false
     let recomputed = null
@@ -453,7 +455,7 @@ export function useJustAirLayers(map, config, state, tuning) {
       if (!map.getLayer(layerId)) continue
       try {
         map.setPaintProperty(layerId, 'circle-color',   buildColorExpr(variableRef.current, isDarkRef.current, recomputed, tuningRef.current))
-        map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current, s))
+        map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current, s, hiddenRef.current))
         map.setPaintProperty(layerId, 'circle-radius',  radiusExprForLayer(layerId, config, tuningRef.current))
         const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, recomputed)
         map.setPaintProperty(layerId, 'circle-stroke-width', stroke.width)
@@ -463,7 +465,7 @@ export function useJustAirLayers(map, config, state, tuning) {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme, yearFactors])
+  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme, yearFactors, state.mapView, state.analysis])
 
   // ── Paint repaint when only the tuning sliders move ───────────────────
   // Re-emits circle-color / circle-radius using the EXISTING colorRange,
@@ -471,7 +473,7 @@ export function useJustAirLayers(map, config, state, tuning) {
   // radius adjustment with no hidden side-effects on the color rescale.
   useEffect(() => {
     if (!map || !scales) return
-    if (!map.isStyleLoaded()) return
+    if (!map.getStyle?.()) return
     for (const s of scales) {
       const layerId = `just-air-cells-${s.value}`
       if (!map.getLayer(layerId)) continue
@@ -691,7 +693,11 @@ function hexToRgb(hex) {
 // (the user reported visible "disappear / reappear" pops at the band
 // transitions). The value-magnitude fade is embedded in the color alpha
 // (see buildColorExpr).
-function buildOpacityExpr(_variable, scaleEntry) {
+function buildOpacityExpr(_variable, scaleEntry, hidden = false) {
+  // Regional map view hides the cells but keeps them queryable (opacity 0
+  // still loads tiles; visibility 'none' would not) — the region stats
+  // panel reads within-unit cell values from this source.
+  if (hidden) return 0
   return buildZoomFade(scaleEntry)
 }
 

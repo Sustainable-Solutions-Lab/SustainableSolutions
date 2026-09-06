@@ -267,9 +267,8 @@ export function AreaTool({ map, config, state, dispatch }) {
     // cropland source and kt of production per crop inside the region, so
     // the panel can report kg CO2e per kg of commodity and export a CSV.
     if (config.areaTool.ef) {
-      const { crops, sources } = config.areaTool.ef
       const cropSums = {}
-      for (const c of crops) {
+      for (const { id: c, sources } of config.areaTool.ef.entries) {
         const rec = { p: 0 }
         for (const src of sources) rec[src] = 0
         for (const f of filtered) {
@@ -365,9 +364,8 @@ export function AreaTool({ map, config, state, dispatch }) {
     // cropland source and kt of production per crop inside the region, so
     // the panel can report kg CO2e per kg of commodity and export a CSV.
     if (config.areaTool.ef) {
-      const { crops, sources } = config.areaTool.ef
       const cropSums = {}
-      for (const c of crops) {
+      for (const { id: c, sources } of config.areaTool.ef.entries) {
         const rec = { p: 0 }
         for (const src of sources) rec[src] = 0
         for (const f of filtered) {

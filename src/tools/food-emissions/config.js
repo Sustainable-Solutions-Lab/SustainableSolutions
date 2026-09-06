@@ -56,6 +56,21 @@ const CROPLAND_SOURCE_IDS = ['fer', 'man', 'res', 'rice', 'peat', 'urea', 'burn'
 
 // Per-crop props exported for the top-emitting crops (exporter TOP_CROPS,
 // 81% of the global total). Prop naming: `tot_<crop>`, `<source>_<crop>`.
+// Livestock commodity groups (pipeline COMMODITY_GROUPS): emissions from
+// the group's enteric / manure-management / pasture pathways; production =
+// the group's primary products (milk, carcass meat, eggs).
+const LIVESTOCK_COMMODITIES = [
+  ['dcat', 'Milk (dairy cattle)'],
+  ['bcat', 'Beef cattle'],
+  ['buff', 'Buffalo'],
+  ['shee', 'Sheep'],
+  ['goat', 'Goats'],
+  ['pigs', 'Pigs'],
+  ['poul', 'Poultry & eggs'],
+  ['olvs', 'Other livestock'],
+]
+const LIVESTOCK_SOURCE_IDS = ['ent', 'mms', 'prp']
+
 const CROPS = [
   ['rice', 'Rice'],
   ['whea', 'Wheat'],
@@ -78,7 +93,9 @@ const CROPS = [
 // tile props.
 function makeVariable({ source, crop }) {
   const cropSuffix = crop === 'all' ? '' : `_${crop}`
-  const cropLabel = crop === 'all' ? null : CROPS.find(([c]) => c === crop)[1]
+  const lv = LIVESTOCK_COMMODITIES.find(([c]) => c === crop)
+  const cropLabel = crop === 'all' ? null : (lv ? lv[1] : CROPS.find(([c]) => c === crop)[1])
+  const isLivestock = Boolean(lv)
   const shared = {
     unit: 'kt CO₂e',
     colormap: 'SpectralHotDeep',
@@ -89,12 +106,14 @@ function makeVariable({ source, crop }) {
     dimensionValues: { source, crop },
   }
   if (source === 'all') {
+    const termSources = crop === 'all' ? SOURCE_IDS
+      : isLivestock ? LIVESTOCK_SOURCE_IDS : CROPLAND_SOURCE_IDS
     return {
       ...shared,
       id: `tot${cropSuffix}`,
       label: cropLabel ? `Total emissions — ${cropLabel}` : 'Total emissions',
-      domain: { min: 0, max: crop === 'all' ? 250 : 120 },
-      yearTerms: (crop === 'all' ? SOURCE_IDS : CROPLAND_SOURCE_IDS)
+      domain: { min: 0, max: crop === 'all' ? 250 : isLivestock ? 60 : 120 },
+      yearTerms: termSources
         .map((s) => ({ prop: `${s}${cropSuffix}`, src: s })),
       description: cropLabel
         ? `All-source emissions attributed to ${cropLabel.toLowerCase()} per quarter-degree cell.`
@@ -177,6 +196,7 @@ const config = {
       options: [
         { id: 'all', label: 'All commodities' },
         ...CROPS.map(([id, label]) => ({ id, label })),
+        ...LIVESTOCK_COMMODITIES.map(([id, label]) => ({ id, label })),
       ],
     },
     {
@@ -223,9 +243,11 @@ const config = {
   variables: [
     makeVariable({ source: 'all', crop: 'all' }),
     ...CROPS.map(([crop]) => makeVariable({ source: 'all', crop })),
+    ...LIVESTOCK_COMMODITIES.map(([crop]) => makeVariable({ source: 'all', crop })),
     ...SOURCES.flatMap(([source]) => [
       makeVariable({ source, crop: 'all' }),
       ...CROPS.map(([crop]) => makeVariable({ source, crop })),
+      ...LIVESTOCK_COMMODITIES.map(([crop]) => makeVariable({ source, crop })),
     ]),
   ],
 
@@ -248,8 +270,10 @@ const config = {
     // Region emission factors: per-crop production props (p_<crop>) and
     // cropland-source props summed inside the circle -> kg CO2e per kg.
     ef: {
-      crops: CROPS.map(([id]) => id),
-      sources: CROPLAND_SOURCE_IDS,
+      entries: [
+        ...CROPS.map(([id]) => ({ id, sources: CROPLAND_SOURCE_IDS })),
+        ...LIVESTOCK_COMMODITIES.map(([id]) => ({ id, sources: LIVESTOCK_SOURCE_IDS })),
+      ],
     },
     // Trend chart (stats-panel.jsx): the drawn area's 2000-2024 trajectory,
     // composed from national per-source series weighted by emissions inside

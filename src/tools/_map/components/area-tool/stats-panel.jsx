@@ -496,30 +496,34 @@ function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
   const muted = isDark ? 'rgba(248,248,232,0.5)' : 'rgba(24,24,56,0.5)'
   const text = isDark ? 'rgba(248,248,232,0.9)' : 'rgba(24,24,56,0.9)'
 
-  const ef = (rec, src) => {
-    if (!rec || !(rec.p > 0)) return null
+  const entryOf = (c) => efConfig.entries.find((en) => en.id === c)
+  const ef = (rec, c, src) => {
+    const entry = entryOf(c)
+    if (!rec || !entry || !(rec.p > 0)) return null
     const e = src === 'all'
-      ? efConfig.sources.reduce((t, sId) => t + (rec[sId] ?? 0), 0)
+      ? entry.sources.reduce((t, sId) => t + (rec[sId] ?? 0), 0)
       : rec[src]
     if (e == null) return null
     return e / rec.p // kt per kt = kg per kg
   }
 
   function downloadCsv() {
-    const header = ['crop', 'production_kt', ...efConfig.sources.map((sId) => `${sId}_kt`),
-      ...efConfig.sources.map((sId) => `ef_${sId}_kgCO2e_per_kg`), 'ef_total_kgCO2e_per_kg']
+    const allSources = [...new Set(efConfig.entries.flatMap((en) => en.sources))]
+    const header = ['commodity', 'production_kt', ...allSources.map((sId) => `${sId}_kt`),
+      ...allSources.map((sId) => `ef_${sId}_kgCO2e_per_kg`), 'ef_total_kgCO2e_per_kg']
     const lines = [header.join(',')]
-    for (const c of efConfig.crops) {
+    for (const { id: c, sources } of efConfig.entries) {
       const rec = cropSums[c]
       if (!rec || !(rec.p > 0)) continue
-      const efs = efConfig.sources.map((sId) => {
-        const v = ef(rec, sId)
-        return v == null ? '' : v.toFixed(4)
-      })
       lines.push([
         c, rec.p.toFixed(1),
-        ...efConfig.sources.map((sId) => (rec[sId] ?? 0).toFixed(2)),
-        ...efs, (ef(rec, 'all') ?? 0).toFixed(4),
+        ...allSources.map((sId) => (sources.includes(sId) ? (rec[sId] ?? 0).toFixed(2) : '')),
+        ...allSources.map((sId) => {
+          if (!sources.includes(sId)) return ''
+          const v = ef(rec, c, sId)
+          return v == null ? '' : v.toFixed(4)
+        }),
+        (ef(rec, c, 'all') ?? 0).toFixed(4),
       ].join(','))
     }
     const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/csv' })
@@ -530,10 +534,11 @@ function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
     URL.revokeObjectURL(a.href)
   }
 
-  const isCroplandSrc = source && source !== 'all' && efConfig.sources.includes(source)
-  const rec = crop && crop !== 'all' ? cropSums[crop] : null
+  const entry = crop && crop !== 'all' ? entryOf(crop) : null
+  const isEntrySrc = source && source !== 'all' && entry?.sources.includes(source)
+  const rec = entry ? cropSums[crop] : null
   const headline = rec && rec.p > 0
-    ? ef(rec, isCroplandSrc ? source : 'all')
+    ? ef(rec, crop, isEntrySrc ? source : 'all')
     : null
 
   return (
@@ -548,7 +553,7 @@ function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
         <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: text, marginBottom: 2 }}>
           {headline.toFixed(3)} kg CO₂e / kg
           <span style={{ color: muted, fontSize: 9, marginLeft: 6 }}>
-            {isCroplandSrc ? `${source} · ${crop}` : `all cropland sources · ${crop}`}
+            {isEntrySrc ? `${source} · ${crop}` : `all attributed sources · ${crop}`}
           </span>
         </div>
       ) : (

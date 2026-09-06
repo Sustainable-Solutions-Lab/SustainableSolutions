@@ -136,7 +136,9 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
         map.addLayer({ id: FILL, type: 'fill', source: SRC, 'source-layer': sl,
                        paint: { 'fill-color': 'rgba(0,0,0,0)' } })
         map.addLayer({ id: LINE, type: 'line', source: SRC, 'source-layer': sl,
-                       paint: { 'line-color': isDark ? 'rgba(248,248,232,0.18)' : 'rgba(24,24,56,0.15)', 'line-width': 0.4 } })
+                       // Whisper-weight: biome subdivisions sit far below the
+                       // national/admin-1 reference lines.
+                       paint: { 'line-color': isDark ? 'rgba(248,248,232,0.10)' : 'rgba(24,24,56,0.08)', 'line-width': 0.3 } })
         map.addLayer({ id: SEL, type: 'line', source: SRC, 'source-layer': sl,
                        filter: ['==', ['get', 'unit_id'], -1],
                        paint: { 'line-color': isDark ? '#F8F8E8' : '#181838', 'line-width': 2 } })

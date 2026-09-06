@@ -389,6 +389,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         californiaOverlays: config.region?.useCaliforniaOverlay !== false,
         usOverlays: config.region?.useUsOverlay === true,
         worldOverlays: config.region?.useWorldOverlay === true,
+        boundariesUrl: config.region?.boundariesUrl,
       })
       if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, schemeRef.current)
       setMapReady(true)

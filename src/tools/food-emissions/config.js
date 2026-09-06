@@ -161,6 +161,8 @@ const config = {
     latBounds: [-55, 71.5],
     useCaliforniaOverlay: false,
     useWorldOverlay: true,
+    // Subtle national + admin-1 reference lines (Natural Earth 10m).
+    boundariesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/boundaries.pmtiles',
   },
 
   // ── Layers ───────────────────────────────────────────────────────────────

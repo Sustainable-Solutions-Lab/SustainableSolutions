@@ -377,6 +377,42 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           )
         })}
 
+        {/* PALE drivers map — mobile access (config.paleMap) */}
+        {config.paleMap && (
+          <div className="mt-4 pt-3 border-t border-rule">
+            <button
+              type="button"
+              onClick={() => setPaleActive(!paleActive)}
+              className={[
+                'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mb-1',
+                'font-sans text-[12px] uppercase tracking-[0.12em]',
+                paleActive ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+              ].join(' ')}
+            >
+              PALE Drivers Map
+            </button>
+            {paleActive && (
+              <>
+                <select
+                  value={paleDriver}
+                  onChange={(e) => setPaleDriver(e.target.value)}
+                  className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
+                  style={{ borderRadius: 'var(--radius-sm)' }}
+                >
+                  {(config.paleMap.drivers ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>{d.label}</option>
+                  ))}
+                </select>
+                <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                  Blue pushed emissions down, red up (% of 2000 emissions,
+                  2000–2023). Tap a region on the map for its full
+                  decomposition.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
         {/* City inequality picker — only meaningful for PM / mortality
             under one of the CDR scenarios (the equity bins are computed
             against those metrics specifically). Replaces the older

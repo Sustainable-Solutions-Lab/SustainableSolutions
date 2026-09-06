@@ -456,6 +456,35 @@ export function addStaticLayers(map, scheme, opts = {}) {
     }
   }
 
+  // ── 2c. National + admin-1 boundary lines (world projects, opt-in) ──────
+  // Subtle reference lines from Natural Earth 10m, tiled to PMTiles
+  // (opts.boundariesUrl). Kept above the data layers by the render hook's
+  // enforceOverlayOrder so they read over the cells and choropleths.
+  if (worldOverlays && opts.boundariesUrl) {
+    const adm0Color = scheme === 'dark' ? 'rgba(248,248,232,0.22)' : 'rgba(24,24,56,0.22)'
+    const adm1Color = scheme === 'dark' ? 'rgba(248,248,232,0.11)' : 'rgba(24,24,56,0.11)'
+    if (!map.getSource('boundaries')) {
+      map.addSource('boundaries', { type: 'vector', url: `pmtiles://${opts.boundariesUrl}` })
+    }
+    if (!map.getLayer('adm1-lines')) {
+      map.addLayer({
+        id: 'adm1-lines', type: 'line', source: 'boundaries', 'source-layer': 'adm1',
+        minzoom: 2.5,
+        paint: { 'line-color': adm1Color, 'line-width': 0.5 },
+      })
+    } else {
+      map.setPaintProperty('adm1-lines', 'line-color', adm1Color)
+    }
+    if (!map.getLayer('adm0-lines')) {
+      map.addLayer({
+        id: 'adm0-lines', type: 'line', source: 'boundaries', 'source-layer': 'adm0',
+        paint: { 'line-color': adm0Color, 'line-width': 0.7 },
+      })
+    } else {
+      map.setPaintProperty('adm0-lines', 'line-color', adm0Color)
+    }
+  }
+
   // ── 3. Graticule ──────────────────────────────────────────────────────────
 
   // World projects get a 15°-spaced global graticule; CONUS-wide projects a

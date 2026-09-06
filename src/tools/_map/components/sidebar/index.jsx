@@ -213,20 +213,17 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             production factors only exist for regions. */}
         {config.paleMap && setPaleActive && (
           <>
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0 mt-2">
-              Analysis
-            </p>
             <button
               type="button"
               onClick={() => setPaleActive(!paleActive)}
               className={[
-                'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mb-1',
+                'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-2 mb-1',
                 'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
                 'transition-colors hover:text-ink',
                 paleActive ? 'font-bold text-ink underline' : 'font-normal text-ink-3',
               ].join(' ')}
             >
-              PALE Drivers Map
+              Analysis
             </button>
             {paleActive && (
               <div className="mb-2">

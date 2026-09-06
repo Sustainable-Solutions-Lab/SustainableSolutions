@@ -449,7 +449,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                 paleActive ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
               ].join(' ')}
             >
-              PALE Drivers Map
+              Analysis
             </button>
             {paleActive && (
               <>

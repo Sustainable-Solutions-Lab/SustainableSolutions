@@ -66,9 +66,11 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
         map.addLayer({
           id: LINE, type: 'line', source: SRC,
           'source-layer': config.paleMap.sourceLayer ?? SRC,
+          // Whisper-weight: unit (biome) subdivisions must read well below
+          // the national/admin-1 reference lines drawn above the fills.
           paint: {
-            'line-color': isDark ? 'rgba(248,248,232,0.25)' : 'rgba(24,24,56,0.2)',
-            'line-width': 0.4,
+            'line-color': isDark ? 'rgba(248,248,232,0.10)' : 'rgba(24,24,56,0.08)',
+            'line-width': 0.3,
           },
         }, beforeId)
       }

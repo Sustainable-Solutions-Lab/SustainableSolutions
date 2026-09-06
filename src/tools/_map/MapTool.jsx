@@ -12,6 +12,7 @@ import { LayerTabs } from './components/sidebar/layer-tabs.jsx'
 import { DimensionControl } from './components/sidebar/dimension-control.jsx'
 import { LatProfile } from './components/map/lat-profile.jsx'
 import { YearBar } from './components/map/year-bar.jsx'
+import { PaleLayer } from './components/map/pale-layer.jsx'
 import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
@@ -126,6 +127,10 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     return () => { cancelled = true }
   }, [])
   const [mapInstance, setMapInstance] = useState(null)
+  // PALE-drivers choropleth mode (config.paleMap): replaces the cell
+  // circles with jurisdiction polygons colored by one LMDI term.
+  const [paleActive, setPaleActive] = useState(false)
+  const [paleDriver, setPaleDriver] = useState('r_net')
   const [filterStats, setFilterStats] = useState({ count: null, mean: null, median: null, totalCount: null, allValues: [] })
   const [statewideValues, setStatewideValues] = useState([])
   const [opacityP95, setOpacityP95] = useState(null)
@@ -337,6 +342,10 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           allValues={statewideValues}
           companion={companion}
           repoLinks={repoLinks}
+          paleActive={paleActive}
+          setPaleActive={setPaleActive}
+          paleDriver={paleDriver}
+          setPaleDriver={setPaleDriver}
         />
       }
       drawer={
@@ -490,8 +499,19 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           )}
 
           {/* Always-on year control — config-gated (yearControl) */}
-          {config.yearControl && (
+          {config.yearControl && !paleActive && (
             <YearBar config={config} state={state} dispatch={dispatch} isDark={isDark} />
+          )}
+
+          {/* PALE-drivers choropleth — config-gated (paleMap) */}
+          {config.paleMap && (
+            <PaleLayer
+              map={mapInstance}
+              config={config}
+              active={paleActive}
+              driver={paleDriver}
+              isDark={isDark}
+            />
           )}
 
           {/* Animated-dimension readout (e.g. year) + what-is-shown label */}

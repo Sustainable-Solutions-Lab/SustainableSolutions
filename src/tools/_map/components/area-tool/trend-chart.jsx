@@ -47,11 +47,20 @@ const H = 92
 const PAD_L = 30
 const PAD_B = 14
 
-export function TrendChart({ trendConfig, trendWeights, isDark }) {
+export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId = null }) {
   const trends = useNationalTrends(trendConfig?.url)
+  // A specific source selected in the sidebar narrows the stack to that
+  // source's own trajectory; 'all' (or an id not in the list) shows the
+  // full stack.
+  const effConfig = useMemo(() => {
+    if (!activeSourceId || activeSourceId === 'all') return trendConfig
+    const one = trendConfig.sources.filter((s) => s.id === activeSourceId)
+    return one.length ? { ...trendConfig, sources: one } : trendConfig
+  }, [trendConfig, activeSourceId])
 
   const composed = useMemo(() => {
     if (!trends || !trendWeights) return null
+    const trendConfig = effConfig
     const { years, countries } = trends
     const refIdx = years.indexOf(trendConfig.referenceYear ?? years[years.length - 1])
     const bySource = trendConfig.sources.map(() => years.map(() => 0))
@@ -70,7 +79,7 @@ export function TrendChart({ trendConfig, trendWeights, isDark }) {
       })
     }
     return any ? { years, bySource } : null
-  }, [trends, trendWeights, trendConfig])
+  }, [trends, trendWeights, effConfig])
 
   if (!trendConfig) return null
   // Quietly absent while loading or when the series file isn't deployed —
@@ -92,7 +101,7 @@ export function TrendChart({ trendConfig, trendWeights, isDark }) {
     top.forEach((v, yi) => { d += ` L ${x(yi)} ${y(v)}` })
     for (let yi = years.length - 1; yi >= 0; yi--) d += ` L ${x(yi)} ${y(base[yi])}`
     paths.push(
-      <path key={k} d={`${d} Z`} fill={trendConfig.sources[k].color ?? '#888'}
+      <path key={k} d={`${d} Z`} fill={effConfig.sources[k].color ?? '#888'}
         stroke={isDark ? '#14142A' : '#F8F8E8'} strokeWidth={0.75} />
     )
     base = top
@@ -121,7 +130,7 @@ export function TrendChart({ trendConfig, trendWeights, isDark }) {
           style={{ fontFamily: FONT_MONO, fontSize: 8, fill: axisColor }}>{years[years.length - 1]}</text>
       </svg>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px', marginTop: 4 }}>
-        {trendConfig.sources.map((s, k) => (
+        {effConfig.sources.map((s, k) => (
           <span key={s.id} style={{
             fontFamily: FONT_MONO, fontSize: 9, opacity: 0.8,
             display: 'inline-flex', alignItems: 'center', gap: 4,

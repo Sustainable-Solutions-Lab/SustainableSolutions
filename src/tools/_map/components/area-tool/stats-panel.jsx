@@ -490,6 +490,90 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
+function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
+  const crop = activeVariable?.dimensionValues?.crop
+  const source = activeVariable?.dimensionValues?.source
+  const muted = isDark ? 'rgba(248,248,232,0.5)' : 'rgba(24,24,56,0.5)'
+  const text = isDark ? 'rgba(248,248,232,0.9)' : 'rgba(24,24,56,0.9)'
+
+  const ef = (rec, src) => {
+    if (!rec || !(rec.p > 0)) return null
+    const e = src === 'all'
+      ? efConfig.sources.reduce((t, sId) => t + (rec[sId] ?? 0), 0)
+      : rec[src]
+    if (e == null) return null
+    return e / rec.p // kt per kt = kg per kg
+  }
+
+  function downloadCsv() {
+    const header = ['crop', 'production_kt', ...efConfig.sources.map((sId) => `${sId}_kt`),
+      ...efConfig.sources.map((sId) => `ef_${sId}_kgCO2e_per_kg`), 'ef_total_kgCO2e_per_kg']
+    const lines = [header.join(',')]
+    for (const c of efConfig.crops) {
+      const rec = cropSums[c]
+      if (!rec || !(rec.p > 0)) continue
+      const efs = efConfig.sources.map((sId) => {
+        const v = ef(rec, sId)
+        return v == null ? '' : v.toFixed(4)
+      })
+      lines.push([
+        c, rec.p.toFixed(1),
+        ...efConfig.sources.map((sId) => (rec[sId] ?? 0).toFixed(2)),
+        ...efs, (ef(rec, 'all') ?? 0).toFixed(4),
+      ].join(','))
+    }
+    const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/csv' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = 'food-emissions-region-ef-2020.csv'
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  const isCroplandSrc = source && source !== 'all' && efConfig.sources.includes(source)
+  const rec = crop && crop !== 'all' ? cropSums[crop] : null
+  const headline = rec && rec.p > 0
+    ? ef(rec, isCroplandSrc ? source : 'all')
+    : null
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{
+        fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.08em',
+        textTransform: 'uppercase', color: muted, marginBottom: 3,
+      }}>
+        Emission factors · 2020
+      </div>
+      {headline != null ? (
+        <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: text, marginBottom: 2 }}>
+          {headline.toFixed(3)} kg CO₂e / kg
+          <span style={{ color: muted, fontSize: 9, marginLeft: 6 }}>
+            {isCroplandSrc ? `${source} · ${crop}` : `all cropland sources · ${crop}`}
+          </span>
+        </div>
+      ) : (
+        <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: muted, marginBottom: 2 }}>
+          {crop && crop !== 'all'
+            ? 'no production of this commodity in the region'
+            : 'pick a commodity for a headline factor'}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={downloadCsv}
+        style={{
+          fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.08em',
+          textTransform: 'uppercase', color: text, background: 'transparent',
+          border: `1px solid ${muted}`, borderRadius: 3, padding: '3px 8px',
+          cursor: 'pointer',
+        }}
+      >
+        Download region EFs (CSV)
+      </button>
+    </div>
+  )
+}
+
 export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, areaToolActive, activeVariable, isDark, dispatch }) {
   // Show whenever either a circle or a ZIP polygon is active.
   if (!drawnCircle && !drawnPolygon) return null
@@ -644,6 +728,19 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
         <TrendChart
           trendConfig={config.areaTool.trend}
           trendWeights={aggregateStats.trendWeights}
+          isDark={isDark}
+          activeSourceId={activeVariable?.dimensionValues?.source ?? null}
+        />
+      )}
+
+      {/* Emission factors — config-gated (config.areaTool.ef): kg CO2e per
+          kg of commodity for the region, per crop x cropland source, with a
+          CSV download. */}
+      {config?.areaTool?.ef && aggregateStats?.cropSums && (
+        <EfSection
+          efConfig={config.areaTool.ef}
+          cropSums={aggregateStats.cropSums}
+          activeVariable={activeVariable}
           isDark={isDark}
         />
       )}

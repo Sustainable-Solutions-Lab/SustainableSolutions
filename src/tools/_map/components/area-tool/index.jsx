@@ -248,12 +248,39 @@ export function AreaTool({ map, config, state, dispatch }) {
     ]
     const activeLayers = dataLayerIds(config).filter((id) => map.getLayer(id))
     const features = map.queryRenderedFeatures(bbox, { layers: activeLayers })
-    const filtered = featuresWithinCircle(features, lat, lng, radiusKm)
+    let filtered = featuresWithinCircle(features, lat, lng, radiusKm)
+    // Multi-tier cell projects render two resolutions in the crossfade zoom
+    // band — keep one tier or every sum double-counts. Prefer the fine tier.
+    if (config.scales && config.scales.length > 1) {
+      const fineScale = Math.min(...config.scales.map((sc) => sc.value))
+      const fine = filtered.filter((f) => f.properties?._scale === fineScale)
+      if (fine.length > 0) filtered = fine
+    }
 
     // Stats for preset aggregate variables
     const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)
     if (config.areaTool.trend) {
       stats.trendWeights = computeTrendWeights(filtered, config.areaTool.trend)
+    }
+
+    // Per-crop emission-factor sums (config.areaTool.ef): kt of each
+    // cropland source and kt of production per crop inside the region, so
+    // the panel can report kg CO2e per kg of commodity and export a CSV.
+    if (config.areaTool.ef) {
+      const { crops, sources } = config.areaTool.ef
+      const cropSums = {}
+      for (const c of crops) {
+        const rec = { p: 0 }
+        for (const src of sources) rec[src] = 0
+        for (const f of filtered) {
+          const pr = f.properties
+          if (!pr) continue
+          rec.p += Number(pr[`p_${c}`] ?? 0)
+          for (const src of sources) rec[src] += Number(pr[`${src}_${c}`] ?? 0)
+        }
+        cropSums[c] = rec
+      }
+      stats.cropSums = cropSums
     }
 
     // Also collect raw values for the active variable (for the histogram in StatsPanel)
@@ -332,6 +359,26 @@ export function AreaTool({ map, config, state, dispatch }) {
     const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)
     if (config.areaTool.trend) {
       stats.trendWeights = computeTrendWeights(filtered, config.areaTool.trend)
+    }
+
+    // Per-crop emission-factor sums (config.areaTool.ef): kt of each
+    // cropland source and kt of production per crop inside the region, so
+    // the panel can report kg CO2e per kg of commodity and export a CSV.
+    if (config.areaTool.ef) {
+      const { crops, sources } = config.areaTool.ef
+      const cropSums = {}
+      for (const c of crops) {
+        const rec = { p: 0 }
+        for (const src of sources) rec[src] = 0
+        for (const f of filtered) {
+          const pr = f.properties
+          if (!pr) continue
+          rec.p += Number(pr[`p_${c}`] ?? 0)
+          for (const src of sources) rec[src] += Number(pr[`${src}_${c}`] ?? 0)
+        }
+        cropSums[c] = rec
+      }
+      stats.cropSums = cropSums
     }
     const activeVar = getActiveVariable(config, state.activeLayer, state.activeDimensions)
     const activeVarValues = activeVar

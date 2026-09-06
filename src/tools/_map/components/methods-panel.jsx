@@ -157,6 +157,13 @@ function FoodEmissionsMethods() {
         not attributed to crops. Land-use-change emissions (deforestation,
         grassland conversion, the peat-drainage pulse) are not yet
         included; they join via the Cornerstone jurisdictional framework.
+        Emission factors (kg CO₂e per kg of commodity, 2020, by cropland
+        source):{' '}
+        <a href="/tools/food-emissions/ef_country_2020.csv" style={linkStyle} download>
+          country CSV</a>{' · '}
+        <a href="/tools/food-emissions/ef_admin1_2020.csv" style={linkStyle} download>
+          admin-1 CSV</a>; regional factors for any drawn circle download
+        from the Region Focus panel.
         Replication code and tests:{' '}
         <a
           href="https://github.com/Sustainable-Solutions-Lab/gridded-land-management"

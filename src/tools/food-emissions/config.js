@@ -245,6 +245,12 @@ const config = {
     defaultRadiusKm: 250,
     maxRadiusKm: 1500,
     aggregateVariableIds: ['tot', 'ent', 'rice', 'prp', 'fer', 'peat', 'mms', 'man', 'res', 'urea', 'lime', 'burn'],
+    // Region emission factors: per-crop production props (p_<crop>) and
+    // cropland-source props summed inside the circle -> kg CO2e per kg.
+    ef: {
+      crops: CROPS.map(([id]) => id),
+      sources: CROPLAND_SOURCE_IDS,
+    },
     // Trend chart (stats-panel.jsx): the drawn area's 2000-2024 trajectory,
     // composed from national per-source series weighted by emissions inside
     // the circle. Fixed categorical order; adjacent-pair CVD-validated.

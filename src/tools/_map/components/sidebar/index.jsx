@@ -14,7 +14,7 @@ import { Legend } from './legend.jsx'
 import { DistributionChart } from './distribution-chart.jsx'
 import { ZipInput } from './zip-input.jsx'
 
-export function Sidebar({ config, state, dispatch, allValues = [], companion = null, repoLinks = null }) {
+export function Sidebar({ config, state, dispatch, allValues = [], companion = null, repoLinks = null, paleActive = false, setPaleActive = null, paleDriver = 'r_net', setPaleDriver = null }) {
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
   const activeDimensionIds = activeLayerConfig?.dimensionIds ?? []
@@ -173,6 +173,55 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             allValues={allValues}
             isDark={state.colorScheme === 'dark'}
           />
+        )}
+
+        {/* PALE-drivers map — config-gated (config.paleMap): jurisdiction
+            choropleth of the LMDI decomposition, replacing the cells. */}
+        {config.paleMap && setPaleActive && (
+          <>
+            <button
+              type="button"
+              onClick={() => setPaleActive(!paleActive)}
+              className={[
+                'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-2 mb-1',
+                'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
+                'transition-colors hover:text-ink',
+                paleActive ? 'font-bold text-ink underline' : 'font-normal text-ink-3',
+              ].join(' ')}
+            >
+              PALE Drivers Map
+            </button>
+            {paleActive && (
+              <div className="mb-2">
+                <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+                  Driver · % of 2000 emissions
+                </p>
+                <select
+                  value={paleDriver}
+                  onChange={(e) => setPaleDriver?.(e.target.value)}
+                  className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
+                  style={{ borderRadius: 'var(--radius-sm)' }}
+                >
+                  {(config.paleMap.drivers ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>{d.label}</option>
+                  ))}
+                </select>
+                <div style={{ marginTop: 6 }}>
+                  <div style={{
+                    height: 8, borderRadius: 2,
+                    background: 'linear-gradient(to right, rgba(50,136,189,0.9), rgba(102,194,165,0.6), rgba(128,128,128,0.15), rgba(253,174,97,0.6), rgba(213,62,79,0.9))',
+                  }} />
+                  <div className="flex justify-between font-mono text-ink-3" style={{ fontSize: 9 }}>
+                    <span>−50%</span><span>0</span><span>+50%</span>
+                  </div>
+                </div>
+                <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                  LMDI terms of each admin-1 × biome unit's 2000–2023 change.
+                  Blue pushed emissions down; red pushed them up.
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Regional Data + Read Methods — styled like the people-page filter

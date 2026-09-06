@@ -175,15 +175,52 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           />
         )}
 
-        {/* PALE-drivers map — config-gated (config.paleMap): jurisdiction
-            choropleth of the LMDI decomposition, replacing the cells. */}
+        {/* MAP VIEW — gridded cells vs regional (admin-1 x biome) averages */}
+        {config.regionalView && (
+          <div className="mt-2 mb-2">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+              Map view
+            </p>
+            <div className="flex gap-4">
+              {[['gridded', 'Gridded'], ['regional', 'Regional']].map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => dispatch({ type: Actions.SET_MAP_VIEW, view: v })}
+                  className={[
+                    'bg-transparent border-0 cursor-pointer p-0',
+                    'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
+                    'transition-colors hover:text-ink',
+                    (state.mapView ?? 'gridded') === v
+                      ? 'font-bold text-ink underline'
+                      : 'font-normal text-ink-3',
+                  ].join(' ')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {state.mapView === 'regional' && (
+              <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                Units are admin-1 × biome; color is per-km² intensity of the
+                selection above. Click a unit for its statistics.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ANALYSIS — regional decompositions (PALE); population and
+            production factors only exist for regions. */}
         {config.paleMap && setPaleActive && (
           <>
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0 mt-2">
+              Analysis
+            </p>
             <button
               type="button"
               onClick={() => setPaleActive(!paleActive)}
               className={[
-                'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-2 mb-1',
+                'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mb-1',
                 'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
                 'transition-colors hover:text-ink',
                 paleActive ? 'font-bold text-ink underline' : 'font-normal text-ink-3',
@@ -222,6 +259,33 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
               </div>
             )}
           </>
+        )}
+
+        {/* Percentile presets — mask everything below the chosen value
+            percentile (cells via the tile filter, regional units via the
+            regional layer). */}
+        {config.percentileFilter?.enabled && (
+          <div className="mt-1 mb-1 flex items-center gap-3">
+            <span className="font-mono text-ink-3" style={{ fontSize: 9, letterSpacing: '0.08em' }}>
+              SHOW
+            </span>
+            {[[0, 'All'], [75, 'Top 25%'], [90, 'Top 10%'], [95, 'Top 5%']].map(([low, label]) => (
+              <button
+                key={low}
+                type="button"
+                onClick={() => dispatch({ type: Actions.SET_PERCENTILE, low, high: 100 })}
+                className={[
+                  'bg-transparent border-0 cursor-pointer p-0 font-sans text-[11px]',
+                  'underline-offset-[3px] transition-colors hover:text-ink',
+                  (state.percentileRange?.low ?? 0) === low && (state.percentileRange?.high ?? 100) === 100
+                    ? 'font-bold text-ink underline'
+                    : 'font-normal text-ink-3',
+                ].join(' ')}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         )}
 
         {/* Regional Data + Read Methods — styled like the people-page filter

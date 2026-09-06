@@ -102,11 +102,13 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
     map.on('styledata', ensureLayers)
     map.on('idle', ensureLayers)
     map.on('mousemove', onMove)
+    map.on('click', onMove)  // touch devices: tap to inspect
     map.on('mouseout', onLeave)
     return () => {
       map.off('styledata', ensureLayers)
       map.off('idle', ensureLayers)
       map.off('mousemove', onMove)
+      map.off('click', onMove)
       map.off('mouseout', onLeave)
       if (!map.getStyle?.()) return  // map already removed
       setCellsVisible(true)

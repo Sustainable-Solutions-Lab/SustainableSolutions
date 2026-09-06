@@ -364,6 +364,19 @@ export function useJustAirLayers(map, config, state, tuning) {
           try { map.moveLayer(id, order[firstCellsIdx]) } catch { /* ordering only */ }
         }
       }
+      // Boundary reference lines ride ABOVE the data (cells + any
+      // choropleth). moveLayer only when actually below — same
+      // repaint-loop caution as the land overlay above.
+      const lastDataIdx = Math.max(
+        ...order.map((id, i) =>
+          id.startsWith('just-air-cells-') || id.startsWith('pale-units-') ? i : -1),
+      )
+      for (const id of ['adm1-lines', 'adm0-lines']) {
+        const idx = order.indexOf(id)
+        if (idx >= 0 && idx < lastDataIdx) {
+          try { map.moveLayer(id) } catch { /* ordering only */ }
+        }
+      }
     }
     map.on('styledata', enforceOverlayOrder)
     map.on('idle', enforceOverlayOrder)

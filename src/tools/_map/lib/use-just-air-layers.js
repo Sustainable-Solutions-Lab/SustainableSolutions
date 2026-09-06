@@ -287,7 +287,11 @@ export function useJustAirLayers(map, config, state, tuning) {
     }
 
     function addLayers() {
-      if (!map.isStyleLoaded()) return
+      // getStyle-gate, NOT isStyleLoaded(): during a theme swap the flag
+      // can stay false through every styledata event (worse now that
+      // several layer groups churn the style), leaving the cells gone
+      // until reload. addLayer/addSource failures are caught per-call.
+      if (!map.getStyle?.()) return
       if (!map.getSource(SOURCE_ID)) {
         map.addSource(SOURCE_ID, {
           type: 'vector',
@@ -304,11 +308,12 @@ export function useJustAirLayers(map, config, state, tuning) {
                      : map.getLayer('ca-border')        ? 'ca-border'
                      : undefined
 
+      // No-op when everything already exists — remove/re-add on every
+      // styledata/idle would keep the style permanently dirty.
+      if (scales.every((s) => map.getLayer(`just-air-cells-${s.value}`))) return
       for (const s of scales) {
         const layerId = `just-air-cells-${s.value}`
-        // Always replace any existing layer with the same id so a stale
-        // minzoom/maxzoom from a prior HMR run (where React kept the
-        // useEffect cleanup from firing) doesn't shadow the current config.
+        // Replace a stale partial set (e.g. HMR leftovers).
         if (map.getLayer(layerId)) map.removeLayer(layerId)
         try {
           const layerSpec = {
@@ -384,6 +389,7 @@ export function useJustAirLayers(map, config, state, tuning) {
     map.on('idle', enforceOverlayOrder)
 
     map.on('styledata', addLayers)
+    map.on('idle', addLayers)
     map.on('sourcedata', onSourceData)
     map.on('idle', onIdle)
     if (map.isStyleLoaded()) addLayers()
@@ -392,6 +398,7 @@ export function useJustAirLayers(map, config, state, tuning) {
 
     return () => {
       map.off('styledata', addLayers)
+      map.off('idle', addLayers)
       map.off('styledata', enforceOverlayOrder)
       map.off('idle', enforceOverlayOrder)
       map.off('sourcedata', onSourceData)

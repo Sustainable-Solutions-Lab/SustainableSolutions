@@ -140,7 +140,7 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
                        // national/admin-1 reference lines.
                        paint: { 'line-color': isDark ? 'rgba(248,248,232,0.10)' : 'rgba(24,24,56,0.08)', 'line-width': 0.3 } })
         map.addLayer({ id: SEL, type: 'line', source: SRC, 'source-layer': sl,
-                       filter: ['==', ['get', 'unit_id'], -1],
+                       filter: ['==', ['get', 'unit_id'], refs.current.selectedId ?? -1],
                        paint: { 'line-color': isDark ? '#F8F8E8' : '#181838', 'line-width': 2 } })
         paint()
       } catch {}
@@ -209,24 +209,24 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
     try { map.setFilter(SEL, ['==', ['get', 'unit_id'], state.selectedUnit?.id ?? -1]) } catch {}
   }, [map, state.selectedUnit])
 
+  // Slim hover tip: identification only — the numbers and distribution
+  // live in the click-opened statistics panel (no duplication).
   if (!active || !tip || !variable) return null
-  const val = readVarValue(tip.p, variable)
-  const intens = val != null ? (val * 1000) / Math.max(1, tip.p.area_km2 || 1) : null
+  if (state.selectedUnit?.id === tip.p.unit_id) return null
   return (
     <div style={{
       position: 'absolute', left: tip.x + 12, top: tip.y + 12, zIndex: 20,
       pointerEvents: 'none', background: isDark ? 'rgba(12,12,28,0.94)' : 'rgba(248,248,232,0.96)',
       border: `1px solid ${isDark ? 'rgba(248,248,232,0.2)' : 'rgba(24,24,56,0.2)'}`,
-      borderRadius: 4, padding: '6px 9px',
+      borderRadius: 4, padding: '4px 8px',
       fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10,
       color: isDark ? '#F8F8E8' : '#181838',
     }}>
-      <div style={{ fontWeight: 700 }}>{tip.p.name} · {tip.p.country}</div>
-      <div style={{ opacity: 0.75, marginTop: 2 }}>
-        {val != null ? `${Math.round(val).toLocaleString()} kt CO₂e` : '—'}
-        {intens != null ? ` · ${intens < 10 ? intens.toFixed(1) : Math.round(intens)} t/km²` : ''}
-      </div>
-      <div style={{ opacity: 0.5, marginTop: 2 }}>click for statistics</div>
+      <span style={{ fontWeight: 700 }}>{tip.p.name}</span>
+      <span style={{ opacity: 0.6 }}> · {tip.p.country}</span>
+      {!state.selectedUnit && (
+        <span style={{ opacity: 0.5 }}> — click for statistics</span>
+      )}
     </div>
   )
 }

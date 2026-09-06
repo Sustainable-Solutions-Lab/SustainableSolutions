@@ -87,9 +87,15 @@ function FoodEmissionsMethods() {
         regional-data tool to see the enclosed emissions total, the source
         mix, and a 2000–2024 trend composed from national series. The
         companion paper (<strong>DeAngelo, Seifried, Steffen &amp; Davis, in
-        preparation</strong>) extends the dataset annually and merges it with
-        jurisdictional land-use-change emissions from the Cornerstone
-        framework.
+        preparation</strong>) will extend the dataset annually and merge it
+        with jurisdictional land-use-change emissions being developed by
+        the{' '}
+        <a
+          href="https://cornerstonedata.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={linkStyle}
+        >Cornerstone Open Sustainability Data Initiative</a>.
       </p>
 
       <h2 style={h2Style}>Where the numbers come from</h2>

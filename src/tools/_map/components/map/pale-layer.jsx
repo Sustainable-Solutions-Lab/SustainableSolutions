@@ -92,7 +92,11 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
 
     function onMove(e) {
       if (!activeRef.current || !map.getLayer(FILL)) return
-      const f = map.queryRenderedFeatures(e.point, { layers: [FILL] })[0]
+      // Small pixel buffer so imprecise taps on simplified low-zoom
+      // polygons still land.
+      const pad = 6
+      const bbox = [[e.point.x - pad, e.point.y - pad], [e.point.x + pad, e.point.y + pad]]
+      const f = map.queryRenderedFeatures(bbox, { layers: [FILL] })[0]
       if (!f) { setTip(null); return }
       setTip({ x: e.point.x, y: e.point.y, p: f.properties })
     }
@@ -125,12 +129,14 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
   }, [map, driver, isDark])
 
   if (!active) return null
+  // Inspection shows each PALE factor's own percentage change since 2000 —
+  // more readable than the LMDI contributions that drive the fill colors.
   const rows = tip ? [
-    ['Net change', tip.p.r_net],
-    ['Population', tip.p.r_pop],
-    ['Prod / capita', tip.p.r_prodpc],
-    ['Land / kcal', tip.p.r_landkcal],
-    ['Emissions / land', tip.p.r_eland],
+    ['Emissions', tip.p.f_net ?? tip.p.r_net],
+    ['Population', tip.p.f_pop ?? tip.p.r_pop],
+    ['Prod / capita', tip.p.f_prodpc ?? tip.p.r_prodpc],
+    ['Land / kcal', tip.p.f_landkcal ?? tip.p.r_landkcal],
+    ['Emissions / land', tip.p.f_eland ?? tip.p.r_eland],
   ] : []
   return tip ? (
     <div
@@ -151,12 +157,12 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
       {rows.map(([label, v]) => (
         <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
           <span style={{ opacity: 0.7 }}>{label}</span>
-          <span style={{ fontWeight: label === 'Net change' ? 700 : 400 }}>
+          <span style={{ fontWeight: label === 'Emissions' ? 700 : 400 }}>
             {v == null ? '—' : `${v > 0 ? '+' : ''}${v}%`}
           </span>
         </div>
       ))}
-      <div style={{ opacity: 0.5, marginTop: 4 }}>% of 2000 emissions, 2000–2023</div>
+      <div style={{ opacity: 0.5, marginTop: 4 }}>factor change since 2000 (to 2023)</div>
     </div>
   ) : null
 }

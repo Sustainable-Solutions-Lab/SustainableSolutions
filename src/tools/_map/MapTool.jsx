@@ -396,8 +396,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                 <select
                   value={paleDriver}
                   onChange={(e) => setPaleDriver(e.target.value)}
-                  className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
-                  style={{ borderRadius: 'var(--radius-sm)' }}
+                  className="w-full bg-paper-2 text-ink border border-rule px-2 py-1.5 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
+                  style={{ borderRadius: 'var(--radius-sm)', margin: '8px 0 10px' }}
                 >
                   {(config.paleMap.drivers ?? []).map((d) => (
                     <option key={d.id} value={d.id}>{d.label}</option>

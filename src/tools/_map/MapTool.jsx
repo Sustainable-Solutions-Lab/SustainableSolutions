@@ -151,7 +151,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const setPaleActive = (on) => {
     if (on) {
       // Coming back from a dominance map: restore a driver this menu owns.
-      const owned = [...(config.paleMap?.drivers ?? []), ...(config.paleMap?.levels ?? [])]
+      const owned = config.paleMap?.drivers ?? []
       if (!owned.some((d) => d.id === state.analysisDriver)) {
         dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: owned[0]?.id ?? 'r_net' })
       }
@@ -201,7 +201,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const activeVariable = activeLevel ? makeLevelVariable(activeLevel) : attachedVariable
   // Change drivers render the LMDI unit polygons; level and dominance
   // drivers repaint the active view (cells or units).
-  const analysisIsChange = paleActive &&
+  // A driver shows its LMDI change polygons only when it is NOT being
+  // rendered as a gridded level (activeLevel decides that per map view).
+  const analysisIsChange = paleActive && !activeLevel &&
     (config.paleMap?.drivers ?? []).some((d) => d.id === paleDriver)
   // Paint expression for the gridded analysis overlay, plus a key that
   // changes exactly when the layers must be rebuilt.
@@ -485,7 +487,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
         {config.paleMap?.categorical && (
           <div className="mb-2 flex items-center gap-3">
-            <span className="font-mono text-ink-3" style={{ fontSize: 9, letterSpacing: '0.08em' }}>TOP</span>
+            <span className="font-mono" style={{ fontSize: 9, letterSpacing: '0.08em', visibility: 'hidden' }}>SHOW</span>
             {config.paleMap.categorical.map((c) => {
               const on = state.analysis === 'dominance' && state.analysisDriver === c.id
               return (
@@ -527,14 +529,18 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               <>
                 <select
                   value={paleDriver}
-                  onChange={(e) => setPaleDriver(e.target.value)}
+                  onChange={(e) => {
+                    const id = e.target.value
+                    setPaleDriver(id)
+                    const d = (config.paleMap?.drivers ?? []).find((x) => x.id === id)
+                    if (d?.regionalOnly && state.mapView !== 'regional') {
+                      dispatch({ type: Actions.SET_MAP_VIEW, view: 'regional' })
+                    }
+                  }}
                   className="w-full bg-paper-2 text-ink border border-rule px-2 py-1.5 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
                   style={{ borderRadius: 'var(--radius-sm)', margin: '8px 0 10px' }}
                 >
                   {(config.paleMap.drivers ?? []).map((d) => (
-                    <option key={d.id} value={d.id}>{d.label}</option>
-                  ))}
-                  {(config.paleMap.levels ?? []).map((d) => (
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
                 </select>

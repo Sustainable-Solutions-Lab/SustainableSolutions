@@ -23,7 +23,8 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
     (d) => activeDimensionIds.includes(d.id) && d.location !== 'map'
   )
   const multiLayer = config.layers.filter((l) => !l.hidden).length > 1
-  const isLevelDriver = (config.paleMap?.levels ?? []).some((l) => l.id === paleDriver)
+  const isLevelDriver = state.mapView !== 'regional' &&
+    (config.paleMap?.drivers ?? []).some((d) => d.id === paleDriver && d.level)
 
   return (
     <aside
@@ -230,25 +231,31 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             {paleActive && (
               <div className="mb-2">
                 <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
-                  {isLevelDriver ? 'Intensity level' : 'Driver · % of 2000 emissions'}
+                  {isLevelDriver ? 'Level · 2020' : 'Driver · % of 2000 emissions'}
                 </p>
                 <select
                   value={paleDriver}
-                  onChange={(e) => setPaleDriver?.(e.target.value)}
+                  onChange={(e) => {
+                    const id = e.target.value
+                    setPaleDriver?.(id)
+                    // Population and production have no per-cell series —
+                    // those drivers only exist on the regional units.
+                    const d = (config.paleMap?.drivers ?? []).find((x) => x.id === id)
+                    if (d?.regionalOnly && state.mapView !== 'regional') {
+                      dispatch({ type: Actions.SET_MAP_VIEW, view: 'regional' })
+                    }
+                  }}
                   className="w-full bg-paper-2 text-ink border border-rule px-2 py-1.5 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
                   style={{ borderRadius: 'var(--radius-sm)', margin: '6px 0 10px' }}
                 >
                   {(config.paleMap.drivers ?? []).map((d) => (
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
-                  {(config.paleMap.levels ?? []).map((d) => (
-                    <option key={d.id} value={d.id}>{d.label}</option>
-                  ))}
                 </select>
                 {isLevelDriver ? (
                   <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                    2020 intensity of each {state.mapView === 'regional' ? 'unit' : 'cell'};
-                    darker is higher.
+                    2020 level in each cell; darker is higher. Switch to the
+                    regional view for this term's contribution to change.
                   </p>
                 ) : (
                   <>
@@ -305,8 +312,10 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         {config.paleMap?.categorical && (
           <>
             <div className="mb-1 flex items-center gap-3">
-              <span className="font-mono text-ink-3" style={{ fontSize: 9, letterSpacing: '0.08em' }}>
-                TOP
+              {/* Spacer keeps these aligned under the SHOW row's options —
+                  the labels already read 'Top …', like the percentiles. */}
+              <span className="font-mono" style={{ fontSize: 9, letterSpacing: '0.08em', visibility: 'hidden' }}>
+                SHOW
               </span>
               {config.paleMap.categorical.map((c) => {
                 const on = state.analysis === 'dominance' && state.analysisDriver === c.id

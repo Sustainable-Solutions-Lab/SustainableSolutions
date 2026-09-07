@@ -230,9 +230,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             {paleActive && (
               <div className="mb-2">
                 <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
-                  {analysisEntries.length > 0 ? 'Dominance'
-                    : isLevelDriver ? 'Intensity level'
-                    : 'Driver · % of 2000 emissions'}
+                  {isLevelDriver ? 'Intensity level' : 'Driver · % of 2000 emissions'}
                 </p>
                 <select
                   value={paleDriver}
@@ -246,28 +244,8 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                   {(config.paleMap.levels ?? []).map((d) => (
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
-                  {(config.paleMap.categorical ?? []).map((d) => (
-                    <option key={d.id} value={d.id}>{d.label}</option>
-                  ))}
                 </select>
-                {analysisEntries.length > 0 ? (
-                  <>
-                    <div className="flex flex-wrap" style={{ gap: '2px 10px', marginTop: 2 }}>
-                      {categoricalLegend(analysisEntries).map((e) => (
-                        <span key={e.color} className="font-mono text-ink-2 inline-flex items-center"
-                          style={{ fontSize: 9, gap: 4 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: 2, background: e.color,
-                            display: 'inline-block', flexShrink: 0 }} />
-                          {e.label}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                      Largest contributor in each {state.mapView === 'regional' ? 'unit' : 'cell'},
-                      2020 shares. Click for the full breakdown.
-                    </p>
-                  </>
-                ) : isLevelDriver ? (
+                {isLevelDriver ? (
                   <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
                     2020 intensity of each {state.mapView === 'regional' ? 'unit' : 'cell'};
                     darker is higher.
@@ -319,6 +297,58 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
               </button>
             ))}
           </div>
+        )}
+
+        {/* Dominance shortcuts — which source / commodity leads in each
+            place. Sits with the SHOW presets because it is a way of
+            looking at the same map, not a separate analysis. */}
+        {config.paleMap?.categorical && (
+          <>
+            <div className="mb-1 flex items-center gap-3">
+              <span className="font-mono text-ink-3" style={{ fontSize: 9, letterSpacing: '0.08em' }}>
+                TOP
+              </span>
+              {config.paleMap.categorical.map((c) => {
+                const on = state.analysis === 'dominance' && state.analysisDriver === c.id
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      if (on) { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
+                      dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: c.id })
+                      dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
+                    }}
+                    className={[
+                      'bg-transparent border-0 cursor-pointer p-0 font-sans text-[11px]',
+                      'underline-offset-[3px] transition-colors hover:text-ink',
+                      on ? 'font-bold text-ink underline' : 'font-normal text-ink-3',
+                    ].join(' ')}
+                  >
+                    {c.shortLabel ?? c.label}
+                  </button>
+                )
+              })}
+            </div>
+            {state.analysis === 'dominance' && analysisEntries.length > 0 && (
+              <div className="mb-2">
+                <div className="flex flex-wrap" style={{ gap: '2px 10px' }}>
+                  {categoricalLegend(analysisEntries).map((e) => (
+                    <span key={e.color} className="font-mono text-ink-2 inline-flex items-center"
+                      style={{ fontSize: 9, gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: e.color,
+                        display: 'inline-block', flexShrink: 0 }} />
+                      {e.label}
+                    </span>
+                  ))}
+                </div>
+                <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                  Largest contributor in each {state.mapView === 'regional' ? 'unit' : 'cell'},
+                  2020 shares. Click for the full breakdown.
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Regional Data + Read Methods — styled like the people-page filter

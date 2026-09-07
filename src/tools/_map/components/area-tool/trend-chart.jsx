@@ -212,7 +212,7 @@ export function PaleChart({ trendConfig, trendWeights, isDark }) {
     const dE = E[yT] - E[y0]
     const lm = Math.abs(Math.log(E[yT] / E[y0])) < 1e-9 ? E[y0] : dE / Math.log(E[yT] / E[y0])
     const bars = [
-      { label: 'Population', v: lm * Math.log(fT[0] / f0[0]) },
+      { label: 'Population, persons', v: lm * Math.log(fT[0] / f0[0]) },
       { label: 'Prod, kcal/cap', v: lm * Math.log(fT[1] / f0[1]) },
       { label: 'Land, ha/kcal', v: lm * Math.log(fT[2] / f0[2]) },
       { label: 'Emissions, kg/ha', v: lm * Math.log(fT[3] / f0[3]) },

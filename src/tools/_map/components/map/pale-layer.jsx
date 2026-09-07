@@ -154,7 +154,7 @@ export function PaleLayer({ map, config, active, driver, isDark, dispatch = null
   // more readable than the LMDI contributions that drive the fill colors.
   const rows = tip ? [
     ['Emissions (kg CO₂e)', tip.p.f_net ?? tip.p.r_net],
-    ['Population', tip.p.f_pop ?? tip.p.r_pop],
+    ['Population (persons)', tip.p.f_pop ?? tip.p.r_pop],
     ['Production (kcal/capita)', tip.p.f_prodpc ?? tip.p.r_prodpc],
     ['Land intensity (ha/kcal)', tip.p.f_landkcal ?? tip.p.r_landkcal],
     ['Emissions intensity (kg CO₂e/ha)', tip.p.f_eland ?? tip.p.r_eland],

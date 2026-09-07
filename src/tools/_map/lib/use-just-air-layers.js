@@ -221,7 +221,9 @@ export function useJustAirLayers(map, config, state, tuning) {
   const variableRef = useRef(variable)
   variableRef.current = variable
   const hiddenRef = useRef(false)
-  hiddenRef.current = state.mapView === 'regional' || state.analysis === 'pale'
+  // Any analysis overlay (change polygons, level ratios, dominance) draws
+  // its own layers — the base value cells step aside.
+  hiddenRef.current = state.mapView === 'regional' || state.analysis != null
   const isDarkRef = useRef(state.colorScheme === 'dark')
   isDarkRef.current = state.colorScheme === 'dark'
   const tuningRef = useRef(t)

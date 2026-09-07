@@ -20,7 +20,7 @@
  */
 
 export function categoricalFor(config, state) {
-  if (state.analysis !== 'pale') return null
+  if (state.analysis !== 'dominance') return null
   return (config.paleMap?.categorical ?? []).find((c) => c.id === state.analysisDriver) ?? null
 }
 

@@ -10,6 +10,7 @@
 import { useMemo } from 'react'
 import { Actions } from '../../contracts/events.js'
 import { readVarValue } from '../../lib/variable-value.js'
+import { PaleSeriesChart } from '../area-tool/trend-chart.jsx'
 
 const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
 
@@ -43,8 +44,22 @@ function MiniDist({ values, isDark }) {
   )
 }
 
-export function RegionStats({ map, state, dispatch, activeVariable, isDark }) {
+export function RegionStats({ map, state, dispatch, activeVariable, isDark, config = null }) {
   const unit = state.selectedUnit
+  // Unit-as-region weights for the PALE factor series: the unit's own
+  // reference-year source sums under its country.
+  const unitWeights = useMemo(() => {
+    if (!unit?.props || !config?.areaTool?.trend) return null
+    const w = {}
+    const rec = {}
+    for (const src of config.areaTool.trend.sources) {
+      const v = Number(unit.props[src.prop] ?? 0)
+      if (v > 0) rec[src.prop] = v
+    }
+    if (Object.keys(rec).length === 0) return null
+    w[String(unit.props.m49 ?? 0)] = rec
+    return w
+  }, [unit, config])
   const cellValues = useMemo(() => {
     if (!map || !unit || !activeVariable) return []
     try {
@@ -92,15 +107,25 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark }) {
         {p.ha ? ` · ${Math.round(p.ha / 1000).toLocaleString()} kha cropland` : ''}
       </div>
       <div style={{ fontSize: 13, fontWeight: 700 }}>
-        {total != null ? `${Math.round(total).toLocaleString()} kt CO₂e` : '—'}
+        {total != null
+          ? activeVariable?.rawRead
+            ? `${total < 10 ? total.toFixed(2) : Math.round(total).toLocaleString()} ${activeVariable.unit ?? ''}`
+            : `${Math.round(total).toLocaleString()} kt CO₂e`
+          : '—'}
       </div>
       <div style={{ fontSize: 9, color: muted }}>
-        {intens != null ? `${intens < 10 ? intens.toFixed(1) : Math.round(intens).toLocaleString()} t CO₂e / km²` : ''}
+        {!activeVariable?.rawRead && intens != null
+          ? `${intens < 10 ? intens.toFixed(1) : Math.round(intens).toLocaleString()} t CO₂e / km²` : ''}
       </div>
-      <MiniDist values={cellValues} isDark={isDark} />
-      <div style={{ fontSize: 8, color: muted, marginTop: 4, lineHeight: 1.4 }}>
-        distribution of the unit's quarter-degree cells (loaded areas)
-      </div>
+      {unitWeights && config?.areaTool?.trend ? (
+        <PaleSeriesChart
+          trendConfig={config.areaTool.trend}
+          trendWeights={unitWeights}
+          isDark={isDark}
+        />
+      ) : (
+        <MiniDist values={cellValues} isDark={isDark} />
+      )}
     </div>
   )
 }

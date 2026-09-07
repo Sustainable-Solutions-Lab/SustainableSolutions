@@ -19,7 +19,7 @@ import { X } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
 import { buildColorScale, getEquityPalette } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
-import { TrendChart, PaleChart } from './trend-chart.jsx'
+import { TrendChart, PaleChart, PaleSeriesChart } from './trend-chart.jsx'
 
 const POS_COLOR = '#4393c3'
 const NEG_COLOR = '#d6604d'
@@ -679,7 +679,13 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
         <StackedBar values={activeVarValues} variable={activeVariable} isDark={isDark} />
       )}
       {hasData && !isCategorical && (
-        <MiniHistogram values={activeVarValues} variable={activeVariable} isDark={isDark} />
+        (config?.areaTool?.trend && aggregateStats?.trendWeights
+          ? <PaleSeriesChart
+              trendConfig={config.areaTool.trend}
+              trendWeights={aggregateStats.trendWeights}
+              isDark={isDark}
+            />
+          : <MiniHistogram values={activeVarValues} variable={activeVariable} isDark={isDark} />)
       )}
 
       {/* Stats row — mean / median legend + area, sits right under the

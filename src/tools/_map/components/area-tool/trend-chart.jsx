@@ -213,9 +213,9 @@ export function PaleChart({ trendConfig, trendWeights, isDark }) {
     const lm = Math.abs(Math.log(E[yT] / E[y0])) < 1e-9 ? E[y0] : dE / Math.log(E[yT] / E[y0])
     const bars = [
       { label: 'Population', v: lm * Math.log(fT[0] / f0[0]) },
-      { label: 'Prod / capita', v: lm * Math.log(fT[1] / f0[1]) },
-      { label: 'Land / kcal', v: lm * Math.log(fT[2] / f0[2]) },
-      { label: 'Emissions / land', v: lm * Math.log(fT[3] / f0[3]) },
+      { label: 'Prod, kcal/cap', v: lm * Math.log(fT[1] / f0[1]) },
+      { label: 'Land, ha/kcal', v: lm * Math.log(fT[2] / f0[2]) },
+      { label: 'Emissions, kg/ha', v: lm * Math.log(fT[3] / f0[3]) },
     ]
     return { bars, dE, span: `${years[y0]}\u2013${years[yT]}` }
   }, [trends, trendWeights, trendConfig])
@@ -266,6 +266,111 @@ export function PaleChart({ trendConfig, trendWeights, isDark }) {
       })}
       <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: muted, marginTop: 3, lineHeight: 1.4 }}>
         log-mean decomposition; production in kcal (provisional factors)
+      </div>
+    </div>
+  )
+}
+
+
+/**
+ * PALE factor time series for a region or unit: each factor indexed to
+ * 1.0 in 2000 — Population, Production/capita, Land/kcal, Emissions/land,
+ * plus net Emissions (ink) — composed from national series scaled by the
+ * region's share of each country's reference-year emissions (same
+ * convention as the trend chart and LMDI bars).
+ */
+const SERIES_STYLE = [
+  { key: 'E', label: 'Emissions', color: null, width: 1.6 },       // ink
+  { key: 'P', label: 'Population', color: '#3288BD', width: 1 },
+  { key: 'G', label: 'Prod/cap', color: '#66C2A5', width: 1 },
+  { key: 'L', label: 'Land/kcal', color: '#FDAE61', width: 1 },
+  { key: 'I', label: 'Emis/land', color: '#D53E4F', width: 1 },
+]
+
+export function PaleSeriesChart({ trendConfig, trendWeights, isDark }) {
+  const trends = useNationalTrends(trendConfig?.url)
+  const series = useMemo(() => {
+    if (!trends || !trendWeights) return null
+    const { years, countries } = trends
+    const refIdx = years.indexOf(trendConfig.referenceYear ?? years[years.length - 1])
+    const yT = years.indexOf(2023) >= 0 ? years.indexOf(2023) : years.length - 1
+    const n = yT + 1
+    const E = new Array(n).fill(0), P = new Array(n).fill(0)
+    const PROD = new Array(n).fill(0), LAND = new Array(n).fill(0)
+    for (const [cid, sums] of Object.entries(trendWeights)) {
+      const nat = countries[cid]
+      if (!nat) continue
+      let inRegion = 0, natRef = 0
+      for (const src of trendConfig.sources) {
+        inRegion += sums[src.prop] ?? 0
+        natRef += nat[src.prop]?.[refIdx] ?? 0
+      }
+      if (!(natRef > 0) || !(inRegion > 0)) continue
+      const share = Math.min(1, inRegion / natRef)
+      for (let i = 0; i < n; i++) {
+        for (const src of trendConfig.sources) {
+          const sSeries = nat[src.prop]
+          const ref = sSeries?.[refIdx]
+          if (sSeries && ref > 0) E[i] += (sums[src.prop] ?? 0) * (sSeries[i] / ref)
+        }
+        P[i] += share * (nat.pop?.[i] ?? 0)
+        PROD[i] += share * (nat.prod?.[i] ?? 0)
+        LAND[i] += share * (nat.land?.[i] ?? 0)
+      }
+    }
+    const ok = (i) => E[i] > 0 && P[i] > 0 && PROD[i] > 0 && LAND[i] > 0
+    if (!ok(0) || !ok(n - 1)) return null
+    const idx = (arr) => arr.map((v) => v / arr[0])
+    return {
+      years: trends.years.slice(0, n),
+      E: idx(E), P: idx(P),
+      G: idx(E.map((_, i) => PROD[i] / P[i])),
+      L: idx(E.map((_, i) => LAND[i] / PROD[i])),
+      I: idx(E.map((_, i) => E[i] / LAND[i])),
+    }
+  }, [trends, trendWeights, trendConfig])
+
+  if (!series) return null
+  const W2 = 220, H2 = 100, PADL = 26, PADB = 12
+  const all = [...series.E, ...series.P, ...series.G, ...series.L, ...series.I]
+  const ymin = Math.min(...all) * 0.98
+  const ymax = Math.max(...all) * 1.02
+  const nY = series.years.length
+  const x = (i) => PADL + ((W2 - PADL - 2) * i) / (nY - 1)
+  const y = (v) => 2 + (H2 - PADB - 2) * (1 - (v - ymin) / (ymax - ymin))
+  const ink = isDark ? 'rgba(248,248,232,0.95)' : 'rgba(24,24,56,0.95)'
+  const muted = isDark ? 'rgba(248,248,232,0.45)' : 'rgba(24,24,56,0.45)'
+  const path = (arr) => arr.map((v, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.08em', color: muted, marginBottom: 3 }}>
+        PALE FACTORS · 2000 = 1.0
+      </div>
+      <svg width={W2} height={H2} style={{ display: 'block' }} role="img"
+        aria-label="PALE factors indexed to 1.0 in 2000">
+        <line x1={PADL} x2={W2 - 2} y1={y(1)} y2={y(1)} stroke={muted} strokeWidth={0.6} strokeDasharray="3,3" />
+        {SERIES_STYLE.map(({ key, color, width }) => (
+          <path key={key} d={path(series[key])} fill="none"
+            stroke={color ?? ink} strokeWidth={width} />
+        ))}
+        <text x={PADL - 3} y={y(1) + 3} textAnchor="end"
+          style={{ fontFamily: FONT_MONO, fontSize: 8, fill: muted }}>1.0</text>
+        <text x={PADL - 3} y={y(ymax) + 7} textAnchor="end"
+          style={{ fontFamily: FONT_MONO, fontSize: 8, fill: muted }}>{ymax.toFixed(1)}</text>
+        <text x={x(0)} y={H2 - 2} style={{ fontFamily: FONT_MONO, fontSize: 8, fill: muted }}>2000</text>
+        <text x={x(nY - 1)} y={H2 - 2} textAnchor="end" style={{ fontFamily: FONT_MONO, fontSize: 8, fill: muted }}>
+          {series.years[nY - 1]}
+        </text>
+      </svg>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 8px', marginTop: 2 }}>
+        {SERIES_STYLE.map(({ key, label, color }) => (
+          <span key={key} style={{ fontFamily: FONT_MONO, fontSize: 8, color: muted,
+            display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ width: 8, height: 2, display: 'inline-block', background: color ?? ink }} />
+            {label}
+          </span>
+        ))}
       </div>
     </div>
   )

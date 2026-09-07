@@ -23,6 +23,7 @@ import { factorFor, factorPairs } from './year-factors.js'
 /** JS-side read from a properties object. */
 export function readVarValue(props, variable) {
   if (!props || !variable) return undefined
+  if (variable.rawRead) return variable.rawRead(props)
   if (variable.scaled?.factors) {
     const { terms, year, yearB, factors } = variable.scaled
     const m49 = props.m49
@@ -49,6 +50,7 @@ export function readVarValue(props, variable) {
 
 /** MapLibre expression producing the variable's value. */
 export function varValueExpr(variable) {
+  if (variable.rawExpr) return variable.rawExpr
   if (variable.scaled?.factors) {
     const { terms, year, yearB, factors } = variable.scaled
     const at = (y) => {
@@ -73,6 +75,7 @@ export function varValueExpr(variable) {
 
 /** MapLibre expression: does the feature carry the variable at all? */
 export function varHasExpr(variable) {
+  if (variable.rawHas) return variable.rawHas
   // Scaled variables gate on the base (reference-year) prop: a cell with no
   // reference-year value for this source × crop has nothing to scale.
   if (variable.scaled) return ['has', variable.id]

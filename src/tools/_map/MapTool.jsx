@@ -14,8 +14,10 @@ import { LatProfile } from './components/map/lat-profile.jsx'
 import { YearBar } from './components/map/year-bar.jsx'
 import { PaleLayer } from './components/map/pale-layer.jsx'
 import { RegionalLayer } from './components/map/regional-layer.jsx'
+import { LevelLayer } from './components/map/level-layer.jsx'
 import { RegionStats } from './components/map/region-stats.jsx'
 import { useYearFactors } from './lib/year-factors.js'
+import { levelFor, makeLevelVariable } from './lib/analysis-levels.js'
 import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
@@ -34,6 +36,8 @@ function reducer(state, action) {
                selectedUnit: action.view === 'regional' ? state.selectedUnit : null }
     case Actions.SET_ANALYSIS:
       return { ...state, analysis: action.analysis ?? null }
+    case Actions.SET_ANALYSIS_DRIVER:
+      return { ...state, analysisDriver: action.driver }
     case Actions.SELECT_UNIT:
       return { ...state, selectedUnit: action.unit ?? null }
     case Actions.SET_PROJECT:
@@ -145,7 +149,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const paleActive = state.analysis === 'pale'
   const setPaleActive = (on) =>
     dispatch({ type: Actions.SET_ANALYSIS, analysis: on ? 'pale' : null })
-  const [paleDriver, setPaleDriver] = useState('r_net')
+  const paleDriver = state.analysisDriver
+  const setPaleDriver = (d) => dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: d })
   const [filterStats, setFilterStats] = useState({ count: null, mean: null, median: null, totalCount: null, allValues: [] })
   const [statewideValues, setStatewideValues] = useState([])
   const [opacityP95, setOpacityP95] = useState(null)
@@ -175,9 +180,15 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const isDark = state.colorScheme === 'dark'
   const rawActiveVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const toolYearFactors = useYearFactors(config)
-  const activeVariable = rawActiveVariable?.scaled && toolYearFactors
+  const attachedVariable = rawActiveVariable?.scaled && toolYearFactors
     ? { ...rawActiveVariable, scaled: { ...rawActiveVariable.scaled, factors: toolYearFactors } }
     : rawActiveVariable
+  const activeLevel = levelFor(config, state)
+  const activeVariable = activeLevel ? makeLevelVariable(activeLevel) : attachedVariable
+  // Change drivers render the LMDI unit polygons; level drivers repaint
+  // the active view (cells or units) with a per-area intensity ratio.
+  const analysisIsChange = paleActive &&
+    (config.paleMap?.drivers ?? []).some((d) => d.id === paleDriver)
 
   // ── Dimension animation ────────────────────────────────────────────────
   // Lives at tool level (not in the slider component) so it keeps running —
@@ -462,6 +473,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                   {(config.paleMap.drivers ?? []).map((d) => (
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
+                  {(config.paleMap.levels ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>{d.label}</option>
+                  ))}
                 </select>
                 <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
                   Blue pushed emissions down, red up (% of 2000 emissions,
@@ -607,7 +621,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               state={state}
               dispatch={dispatch}
               isDark={isDark}
-              suppressed={paleActive}
+              suppressed={analysisIsChange}
             />
           )}
           {config.regionalView && (
@@ -617,6 +631,17 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               dispatch={dispatch}
               activeVariable={activeVariable}
               isDark={isDark}
+              config={config}
+            />
+          )}
+
+          {/* Gridded level analysis — dedicated cell layers */}
+          {config.paleMap?.levels && state.mapView === 'gridded' && (
+            <LevelLayer
+              map={mapInstance}
+              config={config}
+              level={activeLevel}
+              isDark={isDark}
             />
           )}
 
@@ -625,9 +650,11 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             <PaleLayer
               map={mapInstance}
               config={config}
-              active={paleActive}
+              active={analysisIsChange}
               driver={paleDriver}
               isDark={isDark}
+              dispatch={dispatch}
+              selectedId={state.selectedUnit?.id ?? null}
             />
           )}
 

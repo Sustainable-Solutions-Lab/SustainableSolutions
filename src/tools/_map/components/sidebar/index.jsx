@@ -239,6 +239,9 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                   {(config.paleMap.drivers ?? []).map((d) => (
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
+                  {(config.paleMap.levels ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>{d.label}</option>
+                  ))}
                 </select>
                 <div style={{ marginTop: 6 }}>
                   <div style={{

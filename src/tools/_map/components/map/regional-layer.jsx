@@ -22,6 +22,7 @@ import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { useYearFactors } from '../../lib/year-factors.js'
 import { varValueExpr, varHasExpr, readVarValue } from '../../lib/variable-value.js'
 import { INTERPOLATORS } from '../../lib/colormap.js'
+import { levelFor, makeLevelVariable, levelColorExpr } from '../../lib/analysis-levels.js'
 
 const SRC = 'unit-values'
 const FILL = 'unit-values-fill'
@@ -38,23 +39,28 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
   const active = state.mapView === 'regional' && !suppressed
   const yearFactors = useYearFactors(config)
   const resolved = getActiveVariable(config, state.activeLayer, state.activeDimensions)
-  const variable = useMemo(() => (
-    resolved?.scaled && yearFactors
+  const lvl = levelFor(config, state)
+  const variable = useMemo(() => {
+    if (lvl) return makeLevelVariable(lvl)
+    return resolved?.scaled && yearFactors
       ? { ...resolved, scaled: { ...resolved.scaled, factors: yearFactors } }
       : resolved
-  ), [resolved, yearFactors])
+  }, [resolved, yearFactors, lvl])
 
   const [tip, setTip] = useState(null)
   const refs = useRef({})
   // Merge (never replace): the mount effect attaches .ensure/.repaint and a
   // wholesale assignment on re-render would clobber them.
+  if (active) refs.current.everActive = true
   Object.assign(refs.current, { active, variable, isDark,
     percentileRange: state.percentileRange,
     selectedId: state.selectedUnit?.id ?? null, dispatch })
 
-  // Intensity expression: value (kt, year-scaled) per km2 -> t/km2.
+  // Fill metric: level analyses ARE ratios already; the standard view
+  // divides the (year-scaled) total by unit area -> t/km2.
   const intensityExpr = useMemo(() => {
     if (!variable) return 0
+    if (variable.rawExpr) return variable.rawExpr
     return ['/', ['*', ['to-number', varValueExpr(variable)], 1000],
             ['max', 1, ['to-number', ['get', 'area_km2']]]]
   }, [variable])
@@ -67,9 +73,14 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
     function paint() {
       const { variable: v, isDark: dark, percentileRange } = refs.current
       if (!map.getStyle?.() || !map.getLayer(FILL) || !v) return
+      if (v.rawExpr) {
+        try { map.setPaintProperty(FILL, 'fill-color', levelColorExpr(v, dark)) } catch {}
+        try { map.setFilter(FILL, null) } catch {}
+        return
+      }
       const interp = INTERPOLATORS[dark && v.darkColormap ? v.darkColormap : (v.colormap ?? 'SpectralHot')]
         ?? INTERPOLATORS.SpectralHot
-      const max = rangeRef.p95 ?? 20
+      const max = v.colorMax ?? rangeRef.p95 ?? 20
       const expr = ['interpolate', ['linear'], intensityExpr]
       const steps = 18
       for (let i = 0; i <= steps; i++) {
@@ -107,6 +118,7 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
         const vals = feats
           .map((f) => {
             const val = readVarValue(f.properties, v)
+            if (v.rawRead) return val
             const a = f.properties.area_km2 || 1
             return val != null ? (val * 1000) / Math.max(1, a) : null
           })
@@ -127,7 +139,7 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
       // layers already exist — re-setting layout/paint on every idle
       // keeps the style permanently dirty and tile loads never finish.
       if (map.getLayer(FILL)) return
-      if (!refs.current.active) return
+      if (!(refs.current.active || refs.current.everActive)) return
       try {
         if (!map.getSource(SRC)) {
           map.addSource(SRC, { type: 'vector', url: `pmtiles://${config.regionalView.tilesUrl}` })
@@ -171,6 +183,9 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
     ensure()
     map.on('styledata', ensure)
     map.on('idle', ensure)
+    // If the map is already idle at activation no event may fire — retry.
+    const retry = setInterval(ensure, 400)
+    const stopRetry = setTimeout(() => clearInterval(retry), 4000)
     map.on('idle', computeRange)
     map.on('mousemove', onMove)
     map.on('click', onClick)
@@ -179,6 +194,8 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
     refs.current.repaint = () => { rangeRef.p95 = null; rangeRef.locked = false; computeRange(); paint() }
     refs.current.ensure = ensure
     return () => {
+      clearInterval(retry)
+      clearTimeout(stopRetry)
       map.off('styledata', ensure)
       map.off('idle', ensure)
       map.off('idle', computeRange)

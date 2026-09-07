@@ -182,6 +182,31 @@ function FoodEmissionsMethods() {
         otherwise.
       </p>
 
+      <h2 style={h2Style}>Feed</h2>
+      <p style={pStyle}>
+        Choosing <em>Crops grown for feed</em> shows the share of cropland
+        emissions grown to feed animals, on the land where the crop grows.
+        For each country and crop, FAO Food Balance Sheets give the quantity
+        used as feed against domestic supply; that ratio is applied to the
+        crop's gridded emissions. Oilseeds count a share of processing as
+        well, since they are crushed before the cake is fed — taking
+        reported feed alone would put US soy at 2.5%. About 7% of the
+        emissions on this map are attributable to feed.
+      </p>
+      <p style={pStyle}>
+        The downloadable factors add a feed column for each livestock
+        commodity, splitting a country's feed pool across animal groups in
+        proportion to concentrate demand (production times a feed-conversion
+        ratio). The effect is largest where it should be: US poultry rises
+        from 0.14 to 0.65 kg CO₂e per kg and pigs from 2.1 to 2.9, while
+        beef moves from 13.0 to 13.7 because its emissions are dominated by
+        enteric fermentation rather than feed. Two caveats: feed is located
+        where it is grown, so exported feed stays with the exporting
+        country rather than the herd that eats it, and the split between
+        animal groups uses literature feed-conversion ratios rather than a
+        calibrated feed-basket model.
+      </p>
+
       <h2 style={h2Style}>Drivers of change</h2>
       <p style={pStyle}>
         The Analysis views decompose change over time with the identity used
@@ -197,6 +222,12 @@ function FoodEmissionsMethods() {
         We evaluate the four terms for every admin-1 × biome unit and split
         the 2000–2023 change between them with a log-mean Divisia (LMDI)
         decomposition, so the contributions sum exactly to the net change.
+        The same decomposition runs on the gridded cells, where population
+        has no per-cell series: the identity drops it and works with total
+        production instead, giving three terms. There, production and
+        agricultural land follow national trajectories, so those two terms
+        vary between countries but not within them, while the emissions
+        term and the net change carry the within-country detail.
         Population is genuinely gridded (HYDE 3.3 annual population), as is
         the 2020 emissions pattern; production and agricultural land are
         national series apportioned to units by their share of national
@@ -311,6 +342,31 @@ function FuelTreatmentMethods() {
         the cost of treatment exceeds the expected damages avoided.
       </p>
 
+      <h2 style={h2Style}>Feed</h2>
+      <p style={pStyle}>
+        Choosing <em>Crops grown for feed</em> shows the share of cropland
+        emissions grown to feed animals, on the land where the crop grows.
+        For each country and crop, FAO Food Balance Sheets give the quantity
+        used as feed against domestic supply; that ratio is applied to the
+        crop's gridded emissions. Oilseeds count a share of processing as
+        well, since they are crushed before the cake is fed — taking
+        reported feed alone would put US soy at 2.5%. About 7% of the
+        emissions on this map are attributable to feed.
+      </p>
+      <p style={pStyle}>
+        The downloadable factors add a feed column for each livestock
+        commodity, splitting a country's feed pool across animal groups in
+        proportion to concentrate demand (production times a feed-conversion
+        ratio). The effect is largest where it should be: US poultry rises
+        from 0.14 to 0.65 kg CO₂e per kg and pigs from 2.1 to 2.9, while
+        beef moves from 13.0 to 13.7 because its emissions are dominated by
+        enteric fermentation rather than feed. Two caveats: feed is located
+        where it is grown, so exported feed stays with the exporting
+        country rather than the herd that eats it, and the split between
+        animal groups uses literature feed-conversion ratios rather than a
+        calibrated feed-basket model.
+      </p>
+
       <h2 style={h2Style}>Drivers of change</h2>
       <p style={pStyle}>
         The Analysis views decompose change over time with the identity used
@@ -326,6 +382,12 @@ function FuelTreatmentMethods() {
         We evaluate the four terms for every admin-1 × biome unit and split
         the 2000–2023 change between them with a log-mean Divisia (LMDI)
         decomposition, so the contributions sum exactly to the net change.
+        The same decomposition runs on the gridded cells, where population
+        has no per-cell series: the identity drops it and works with total
+        production instead, giving three terms. There, production and
+        agricultural land follow national trajectories, so those two terms
+        vary between countries but not within them, while the emissions
+        term and the net change carry the within-country detail.
         Population is genuinely gridded (HYDE 3.3 annual population), as is
         the 2020 emissions pattern; production and agricultural land are
         national series apportioned to units by their share of national

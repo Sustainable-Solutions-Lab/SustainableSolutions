@@ -267,13 +267,17 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                   style={{ borderRadius: 'var(--radius-sm)', margin: '6px 0 10px' }}
                 >
                   {(config.paleMap.drivers ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {(state.mapView !== 'regional' && d.griddedLabel) || d.label}
+                    </option>
+                  ))}
+                  {(config.paleMap.levels ?? []).map((d) => (
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
                 </select>
                 {isLevelDriver ? (
                   <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                    2020 level in each cell; darker is higher. Switch to the
-                    regional view for this term's contribution to change.
+                    2020 level in each cell; darker is higher.
                   </p>
                 ) : (
                   <>
@@ -287,8 +291,9 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                       </div>
                     </div>
                     <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                      LMDI terms of each admin-1 × biome unit's 2000–2023 change.
-                      Blue pushed emissions down; red pushed them up.
+                      {state.mapView === 'regional'
+                        ? "LMDI terms of each admin-1 × biome unit's 2000–2023 change. Blue pushed emissions down; red pushed them up."
+                        : "LMDI terms of each cell's 2000–2023 change (no population term on the grid; production and land follow national trajectories). Blue pushed emissions down; red pushed them up."}
                     </p>
                   </>
                 )}

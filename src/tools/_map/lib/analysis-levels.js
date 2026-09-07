@@ -16,8 +16,7 @@
  */
 export function levelFor(config, state) {
   if (state.analysis !== 'pale' || state.mapView === 'regional') return null
-  const driver = (config.paleMap?.drivers ?? []).find((d) => d.id === state.analysisDriver)
-  return driver?.level ? { id: driver.id, label: driver.label, ...driver.level } : null
+  return (config.paleMap?.levels ?? []).find((l) => l.id === state.analysisDriver) ?? null
 }
 
 export function makeLevelVariable(lvl) {

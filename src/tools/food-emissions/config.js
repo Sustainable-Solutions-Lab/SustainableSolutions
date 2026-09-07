@@ -199,6 +199,7 @@ const config = {
         { id: 'all', label: 'All commodities' },
         ...CROPS.map(([id, label]) => ({ id, label })),
         ...LIVESTOCK_COMMODITIES.map(([id, label]) => ({ id, label })),
+        { id: 'feed', label: 'Crops grown for feed' },
       ],
     },
     {
@@ -243,6 +244,26 @@ const config = {
 
   // ── Variables ────────────────────────────────────────────────────────────
   variables: [
+    // Feed attribution: the share of cropland emissions grown to feed
+    // animals, on the land where the crop grows. A subset of the cropland
+    // sources rather than an addend, so it is a commodity-style filter and
+    // is only offered with All sources. Year scaling rides the fertilizer
+    // trajectory as a proxy for the cropland mix behind it.
+    {
+      id: 'feed',
+      label: 'Crops grown for feed',
+      unit: 'kt CO₂e',
+      colormap: 'SpectralHotDeep',
+      diverging: false,
+      domain: { min: 0, max: 60 },
+      alphaFloor: 0.02,
+      alphaPower: 0.35,
+      layer: 'map',
+      dimensionValues: { source: 'all', crop: 'feed' },
+      yearTerms: [{ prop: 'feed', src: 'fer' }],
+      description:
+        'Cropland emissions attributable to animal feed, located where the feed is grown.',
+    },
     makeVariable({ source: 'all', crop: 'all' }),
     ...CROPS.map(([crop]) => makeVariable({ source: 'all', crop })),
     ...LIVESTOCK_COMMODITIES.map(([crop]) => makeVariable({ source: 'all', crop })),
@@ -318,22 +339,35 @@ const config = {
     // only the intensity terms have a meaning, shown as their 2020 level
     // (driver.level). regionalOnly drivers switch the view when picked.
     drivers: [
-      { id: 'r_net', label: 'Net change, kg CO₂e', regionalOnly: true },
+      { id: 'r_net', label: 'Net change, kg CO₂e', cellTerm: 'net' },
       { id: 'r_pop', label: 'Population, persons', regionalOnly: true },
-      { id: 'r_prodpc', label: 'Production, kcal/capita', regionalOnly: true },
-      { id: 'r_landkcal', label: 'Land intensity, ha/kcal',
+      // On the cells the identity has no population term, so per-capita
+      // production collapses to total production (lib/analysis-cell-change).
+      { id: 'r_prodpc', label: 'Production, kcal/capita',
+        griddedLabel: 'Production, kcal', cellTerm: 'prod' },
+      { id: 'r_landkcal', label: 'Land intensity, ha/kcal', cellTerm: 'landprod',
         // Ramp caps near the 90th percentile of the cell distribution
         // (median 94, p90 272 ha/Gkcal) so the map shows structure rather
         // than saturating.
         level: { num: 'ha', den: 'pkcal', mul: 1, unit: 'ha/Gkcal',
                  colorMax: 300, denMin: 1 } },
-      { id: 'r_eland', label: 'Emissions intensity, kg CO₂e/ha',
+      { id: 'r_eland', label: 'Emissions intensity, kg CO₂e/ha', cellTerm: 'eland',
         // Median 4.4 t/ha, p90 30 t/ha across cells with >100 ha cropland.
         level: { num: 'tot', den: 'ha', mul: 1e6, unit: 'kg CO₂e/ha',
                  colorMax: 20000, denMin: 100 } },
     ],
     // Snapshot intensity maps — repaint the active view (gridded cells or
     // regional units) with a stored-prop ratio. tot kt -> kg via 1e6.
+    // Snapshot intensity maps, offered alongside the change decomposition.
+    levels: [
+      { id: 'lvl_eint', label: 'Emissions intensity — 2020 level',
+        num: 'tot', den: 'ha', mul: 1e6, unit: 'kg CO₂e/ha',
+        colorMax: 20000, denMin: 100 },
+      { id: 'lvl_lint', label: 'Land intensity — 2020 level',
+        num: 'ha', den: 'pkcal', mul: 1, unit: 'ha/Gkcal',
+        colorMax: 300, denMin: 1 },
+    ],
+
     // Dominance maps: which source / commodity leads in each cell or unit.
     // Candidate sets follow the sidebar selection (see lib/analysis-categorical).
     categorical: [

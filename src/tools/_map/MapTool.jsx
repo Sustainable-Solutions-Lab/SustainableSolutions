@@ -19,6 +19,7 @@ import { RegionStats } from './components/map/region-stats.jsx'
 import { useYearFactors } from './lib/year-factors.js'
 import { levelFor, makeLevelVariable, levelColorExpr } from './lib/analysis-levels.js'
 import { categoricalFor, categoricalEntries, categoricalColorExpr, categoricalOpacityExpr } from './lib/analysis-categorical.js'
+import { cellTermFor, cellChangeExpr, cellChangeColorExpr, cellChangeMagnitudeExpr } from './lib/analysis-cell-change.js'
 import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
@@ -203,7 +204,11 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   // drivers repaint the active view (cells or units).
   // A driver shows its LMDI change polygons only when it is NOT being
   // rendered as a gridded level (activeLevel decides that per map view).
-  const analysisIsChange = paleActive && !activeLevel &&
+  // The change decomposition also runs on the cells, minus population.
+  const cellTerm = cellTermFor(config, state)
+  const cellChangeTerms = cellTerm ? (attachedVariable?.yearTerms ?? null) : null
+  // Change polygons only when the cells are not carrying the change map.
+  const analysisIsChange = paleActive && !activeLevel && !cellTerm &&
     (config.paleMap?.drivers ?? []).some((d) => d.id === paleDriver)
   // Paint expression for the gridded analysis overlay, plus a key that
   // changes exactly when the layers must be rebuilt.
@@ -212,17 +217,32 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     if (activeCategorical && categoricalEntryList.length) {
       return categoricalColorExpr(categoricalEntryList, 5e-4)
     }
+    if (cellTerm && cellChangeTerms && toolYearFactors) {
+      return cellChangeColorExpr(
+        cellChangeExpr({ terms: cellChangeTerms, factors: toolYearFactors,
+                         trends: toolYearFactors, term: cellTerm }),
+        50, isDark)
+    }
     return null
-  }, [activeLevel, activeCategorical, categoricalEntryList, isDark])
+  }, [activeLevel, activeCategorical, categoricalEntryList, isDark, cellTerm, cellChangeTerms, toolYearFactors])
   // Cell-scale magnitude ramp (kt CO2e per 0.25-degree cell).
-  const analysisCellOpacity = useMemo(() => (
-    activeCategorical && categoricalEntryList.length
-      ? categoricalOpacityExpr(categoricalEntryList,
-          [[0, 0.06], [1, 0.3], [8, 0.6], [40, 0.85], [150, 1]])
-      : null
-  ), [activeCategorical, categoricalEntryList])
+  const analysisCellOpacity = useMemo(() => {
+    const stops = [[0, 0.06], [1, 0.3], [8, 0.6], [40, 0.85], [150, 1]]
+    if (activeCategorical && categoricalEntryList.length) {
+      return categoricalOpacityExpr(categoricalEntryList, stops)
+    }
+    if (cellTerm && cellChangeTerms && toolYearFactors) {
+      // Weight by the cell's own start-year emissions so a percentage map
+      // does not shout from cells with nothing in them.
+      const mag = cellChangeMagnitudeExpr({ terms: cellChangeTerms, factors: toolYearFactors })
+      const expr = ['interpolate', ['linear'], mag]
+      for (const [v, a] of stops) expr.push(v, a)
+      return expr
+    }
+    return null
+  }, [activeCategorical, categoricalEntryList, cellTerm, cellChangeTerms, toolYearFactors])
   const analysisPaintKey = [
-    paleDriver, isDark ? 'd' : 'l',
+    paleDriver, isDark ? 'd' : 'l', state.mapView, toolYearFactors ? 'f' : '-',
     state.activeDimensions?.source, state.activeDimensions?.crop,
   ].join('|')
 
@@ -275,9 +295,12 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             return (config.paleMap?.categorical ?? []).find((c) => c.id === state.analysisDriver)?.shortLabel
           }
           if (state.analysis === 'pale') {
+            const lvl = (config.paleMap?.levels ?? []).find((x) => x.id === state.analysisDriver)
+            if (lvl) return lvl.label            // already says "2020 level"
             const d = (config.paleMap?.drivers ?? []).find((x) => x.id === state.analysisDriver)
             if (!d) return null
-            return state.mapView === 'regional' ? `${d.label} — change` : `${d.label} — 2020`
+            const label = (state.mapView !== 'regional' && d.griddedLabel) || d.label
+            return `${label} — change`
           }
           const low = state.percentileRange?.low ?? 0
           return low > 0 ? `Top ${100 - low}%` : null
@@ -558,6 +581,11 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                   style={{ borderRadius: 'var(--radius-sm)', margin: '8px 0 10px' }}
                 >
                   {(config.paleMap.drivers ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {(state.mapView !== 'regional' && d.griddedLabel) || d.label}
+                    </option>
+                  ))}
+                  {(config.paleMap.levels ?? []).map((d) => (
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
                 </select>

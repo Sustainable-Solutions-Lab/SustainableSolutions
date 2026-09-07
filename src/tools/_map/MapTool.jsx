@@ -148,8 +148,16 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   // that require regional statistics (population, production) are
   // region-bound, and those live inside the PALE decomposition itself.
   const paleActive = state.analysis === 'pale'
-  const setPaleActive = (on) =>
+  const setPaleActive = (on) => {
+    if (on) {
+      // Coming back from a dominance map: restore a driver this menu owns.
+      const owned = [...(config.paleMap?.drivers ?? []), ...(config.paleMap?.levels ?? [])]
+      if (!owned.some((d) => d.id === state.analysisDriver)) {
+        dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: owned[0]?.id ?? 'r_net' })
+      }
+    }
     dispatch({ type: Actions.SET_ANALYSIS, analysis: on ? 'pale' : null })
+  }
   const paleDriver = state.analysisDriver
   const setPaleDriver = (d) => dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: d })
   const [filterStats, setFilterStats] = useState({ count: null, mean: null, median: null, totalCount: null, allValues: [] })
@@ -475,6 +483,32 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           </div>
         )}
 
+        {config.paleMap?.categorical && (
+          <div className="mb-2 flex items-center gap-3">
+            <span className="font-mono text-ink-3" style={{ fontSize: 9, letterSpacing: '0.08em' }}>TOP</span>
+            {config.paleMap.categorical.map((c) => {
+              const on = state.analysis === 'dominance' && state.analysisDriver === c.id
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    if (on) { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
+                    dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: c.id })
+                    dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
+                  }}
+                  className={[
+                    'bg-transparent border-0 cursor-pointer p-0 font-sans text-[11px]',
+                    on ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+                  ].join(' ')}
+                >
+                  {c.shortLabel ?? c.label}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
         {/* PALE drivers map — mobile access (config.paleMap) */}
         {config.paleMap && (
           <div className="mt-4 pt-3 border-t border-rule">
@@ -501,9 +535,6 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
                   {(config.paleMap.levels ?? []).map((d) => (
-                    <option key={d.id} value={d.id}>{d.label}</option>
-                  ))}
-                  {(config.paleMap.categorical ?? []).map((d) => (
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
                 </select>

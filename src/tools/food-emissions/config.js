@@ -314,7 +314,7 @@ const config = {
     sourceLayer: 'pale-units',
     drivers: [
       { id: 'r_net', label: 'Net change, kg CO₂e' },
-      { id: 'r_pop', label: 'Population' },
+      { id: 'r_pop', label: 'Population, persons' },
       { id: 'r_prodpc', label: 'Production, kcal/capita' },
       { id: 'r_landkcal', label: 'Land intensity, ha/kcal' },
       { id: 'r_eland', label: 'Emissions intensity, kg CO₂e/ha' },
@@ -324,8 +324,8 @@ const config = {
     // Dominance maps: which source / commodity leads in each cell or unit.
     // Candidate sets follow the sidebar selection (see lib/analysis-categorical).
     categorical: [
-      { id: 'dom_source', kind: 'source', label: 'Dominant source' },
-      { id: 'dom_commodity', kind: 'commodity', label: 'Dominant commodity' },
+      { id: 'dom_source', kind: 'source', label: 'Dominant source', shortLabel: 'Source' },
+      { id: 'dom_commodity', kind: 'commodity', label: 'Dominant commodity', shortLabel: 'Commodity' },
     ],
     // Labels + categorical colors for the dominance maps. Sources reuse the
     // area-trend palette; commodities name the thirteen largest and grey the

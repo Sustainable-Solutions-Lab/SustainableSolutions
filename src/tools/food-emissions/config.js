@@ -312,20 +312,33 @@ const config = {
   paleMap: {
     tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/pale-units.pmtiles',
     sourceLayer: 'pale-units',
+    // A driver renders per its map view: on the regional units it is that
+    // term's LMDI contribution to the 2000-2023 change; on the gridded
+    // cells — where population and production have no per-cell series —
+    // only the intensity terms have a meaning, shown as their 2020 level
+    // (driver.level). regionalOnly drivers switch the view when picked.
     drivers: [
-      { id: 'r_net', label: 'Net change, kg CO₂e' },
-      { id: 'r_pop', label: 'Population, persons' },
-      { id: 'r_prodpc', label: 'Production, kcal/capita' },
-      { id: 'r_landkcal', label: 'Land intensity, ha/kcal' },
-      { id: 'r_eland', label: 'Emissions intensity, kg CO₂e/ha' },
+      { id: 'r_net', label: 'Net change, kg CO₂e', regionalOnly: true },
+      { id: 'r_pop', label: 'Population, persons', regionalOnly: true },
+      { id: 'r_prodpc', label: 'Production, kcal/capita', regionalOnly: true },
+      { id: 'r_landkcal', label: 'Land intensity, ha/kcal',
+        // Ramp caps near the 90th percentile of the cell distribution
+        // (median 94, p90 272 ha/Gkcal) so the map shows structure rather
+        // than saturating.
+        level: { num: 'ha', den: 'pkcal', mul: 1, unit: 'ha/Gkcal',
+                 colorMax: 300, denMin: 1 } },
+      { id: 'r_eland', label: 'Emissions intensity, kg CO₂e/ha',
+        // Median 4.4 t/ha, p90 30 t/ha across cells with >100 ha cropland.
+        level: { num: 'tot', den: 'ha', mul: 1e6, unit: 'kg CO₂e/ha',
+                 colorMax: 20000, denMin: 100 } },
     ],
     // Snapshot intensity maps — repaint the active view (gridded cells or
     // regional units) with a stored-prop ratio. tot kt -> kg via 1e6.
     // Dominance maps: which source / commodity leads in each cell or unit.
     // Candidate sets follow the sidebar selection (see lib/analysis-categorical).
     categorical: [
-      { id: 'dom_source', kind: 'source', label: 'Dominant source', shortLabel: 'Source' },
-      { id: 'dom_commodity', kind: 'commodity', label: 'Dominant commodity', shortLabel: 'Commodity' },
+      { id: 'dom_source', kind: 'source', label: 'Dominant source', shortLabel: 'Top source' },
+      { id: 'dom_commodity', kind: 'commodity', label: 'Dominant commodity', shortLabel: 'Top commodity' },
     ],
     // Labels + categorical colors for the dominance maps. Sources reuse the
     // area-trend palette; commodities name the thirteen largest and grey the
@@ -367,15 +380,6 @@ const config = {
         { id: 'sorg', label: 'Sorghum',       color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
       ],
     },
-    // colorMax pins the ramp: ratio distributions have extreme-outlier
-    // tails (cells with near-zero denominators) that poison a data-derived
-    // p99 and push everything else under the alpha floor.
-    levels: [
-      { id: 'lvl_eint', label: 'Emissions intensity — 2020 level (kg CO₂e/ha)',
-        num: 'tot', den: 'ha', mul: 1e6, unit: 'kg CO₂e/ha', colorMax: 2500, denMin: 100 },
-      { id: 'lvl_lint', label: 'Land intensity — 2020 level (ha/Gkcal)',
-        num: 'ha', den: 'pkcal', mul: 1, unit: 'ha/Gkcal', colorMax: 1.0, denMin: 1 },
-    ],
   },
 
   // Tiles on R2 like the other map tools; rebuild via

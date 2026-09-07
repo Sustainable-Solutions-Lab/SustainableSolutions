@@ -80,12 +80,15 @@ function FoodEmissionsMethods() {
     <>
       <h2 style={h2Style}>About this map</h2>
       <p style={pStyle}>
-        This map shows greenhouse-gas emissions from global cropland
+        This map shows greenhouse-gas emissions from global food
+        production on a quarter-degree grid (reference year 2020): cropland
         management — fertilizer and manure N₂O, rice paddy CH₄, drained
-        peatland CO₂, crop residues, and residue burning — for 46 crops on a
-        quarter-degree grid (reference year 2020). Draw a circle with the
-        regional-data tool to see the enclosed emissions total, the source
-        mix, and a 2000–2024 trend composed from national series. The
+        peatland CO₂, crop residues, residue burning, urea and liming CO₂ —
+        for 46 crops, together with direct livestock emissions from enteric
+        fermentation, manure management, and manure on pasture. Draw a
+        circle, or switch to the regional view and click a jurisdiction, to
+        see the enclosed total, the source and commodity mix, and a
+        2000–2024 trend composed from national series. The
         companion paper (<strong>DeAngelo, Seifried, Steffen &amp; Davis, in
         preparation</strong>) will extend the dataset annually and merge it
         with jurisdictional land-use-change emissions being developed by
@@ -133,16 +136,39 @@ function FoodEmissionsMethods() {
 
       <h2 style={h2Style}>Livestock (provisional)</h2>
       <p style={pStyle}>
-        Direct livestock emissions — enteric fermentation CH₄, manure
-        management CH₄ and N₂O, and N₂O from manure deposited on pasture —
-        use FAO national Tier 1 series by species and year, distributed
-        within each country according to gridded animal densities (Gridded
-        Livestock of the World). National totals match FAOSTAT exactly;
-        the within-country pattern is modeled. Manure applied to cropland
-        is counted once, on the cropland side. These layers are
-        provisional: they will be upgraded to spatially explicit,
-        production-system-resolved estimates as forthcoming global
-        livestock data become available.
+        The reference for global livestock emissions is <strong>Herrero et
+        al., <em>Biomass use, production, feed efficiencies, and greenhouse
+        gas emissions from global livestock systems</em>, PNAS
+        (2013)</strong>, which resolves enteric fermentation and manure
+        emissions by species, production system, and region for a period
+        centered on 2000. Two things have to change for that framework to
+        sit alongside the cropland maps here: it has to run annually rather
+        than as one snapshot, and it has to resolve individual animal
+        commodities rather than species aggregates.
+      </p>
+      <p style={pStyle}>
+        This version takes an interim route to both. Enteric fermentation
+        CH₄, manure-management CH₄ and N₂O, and N₂O from manure deposited on
+        pasture are taken from FAO's national Tier 1 series by species and
+        year, then distributed within each country by gridded animal
+        densities (Gridded Livestock of the World, interpolated between
+        census years). National totals therefore match FAOSTAT exactly for
+        every year 2000–2023, and each species group carries its own
+        primary product — raw milk, carcass meat, eggs — so emissions per
+        kilogram can be reported per commodity. What it does not yet carry
+        is Herrero's Tier 2 detail: feed baskets, digestibility, and
+        manure-management shares that vary by production system. An update
+        of the Herrero assessment to circa 2020 is in preparation by its
+        original authors; when those grids are available they replace the
+        intensity layer used here, leaving the annual and commodity
+        structure intact.
+      </p>
+      <p style={pStyle}>
+        Manure applied to cropland is counted once, on the cropland side.
+        Livestock factors are direct emissions only — the emissions of
+        growing feed stay with the feed crop, so animal and crop figures
+        can be added without double counting, but a livestock emission
+        factor here is not a full life-cycle footprint.
       </p>
 
       <h2 style={h2Style}>Area statistics and trends</h2>
@@ -156,13 +182,43 @@ function FoodEmissionsMethods() {
         otherwise.
       </p>
 
+      <h2 style={h2Style}>Drivers of change</h2>
+      <p style={pStyle}>
+        The Analysis views decompose change over time with the identity used
+        by <strong>Hong et al., <em>Global and regional drivers of land-use
+        emissions in 1961–2017</em>, Nature (2021)</strong>: emissions are
+        the product of population, production per person, land used per unit
+        of production, and emissions per unit of land. Written that way, a
+        region's change separates into how many people it feeds, how much
+        each of them consumes, how efficiently land delivers that
+        production, and how much each hectare emits.
+      </p>
+      <p style={pStyle}>
+        We evaluate the four terms for every admin-1 × biome unit and split
+        the 2000–2023 change between them with a log-mean Divisia (LMDI)
+        decomposition, so the contributions sum exactly to the net change.
+        Population is genuinely gridded (HYDE 3.3 annual population), as is
+        the 2020 emissions pattern; production and agricultural land are
+        national series apportioned to units by their share of national
+        emissions, so those two terms are proportional attributions rather
+        than independent subnational observations. Production is measured
+        in calories, using per-commodity factors checked against FAO Food
+        Balance Sheets. Where Hong et al. worked at the national scale and
+        over six decades, the aim here is to carry the same decomposition
+        to subnational units on spatially explicit data — the analysis the
+        companion paper develops.
+      </p>
+
       <h2 style={h2Style}>Caveats</h2>
       <p style={pStyle}>
         Cells are ~28 km and should be read at landscape scale, not field
-        scale. Per-crop views cover cropland sources only — livestock is
-        not attributed to crops. Land-use-change emissions (deforestation,
-        grassland conversion, the peat-drainage pulse) are not yet
-        included; they join via the Cornerstone jurisdictional framework.
+        scale. Commodity views cover the twelve largest crops and eight
+        livestock groups; the remaining crops appear only in the all-
+        commodity totals. Dominance maps rank contributors on 2020 values
+        rather than the displayed year. Land-use-change emissions
+        (deforestation, grassland conversion, the peat-drainage pulse) are
+        not yet included; they join via the Cornerstone jurisdictional
+        framework.
         Emission factors (kg CO₂e per kg of commodity, 2020, by cropland
         source):{' '}
         <a href="/tools/food-emissions/ef_country_2020.csv" style={linkStyle} download>
@@ -253,6 +309,33 @@ function FuelTreatmentMethods() {
         (blue) indicate locations where treatment is cost-effective at
         today's prices; negative values (red) indicate locations where
         the cost of treatment exceeds the expected damages avoided.
+      </p>
+
+      <h2 style={h2Style}>Drivers of change</h2>
+      <p style={pStyle}>
+        The Analysis views decompose change over time with the identity used
+        by <strong>Hong et al., <em>Global and regional drivers of land-use
+        emissions in 1961–2017</em>, Nature (2021)</strong>: emissions are
+        the product of population, production per person, land used per unit
+        of production, and emissions per unit of land. Written that way, a
+        region's change separates into how many people it feeds, how much
+        each of them consumes, how efficiently land delivers that
+        production, and how much each hectare emits.
+      </p>
+      <p style={pStyle}>
+        We evaluate the four terms for every admin-1 × biome unit and split
+        the 2000–2023 change between them with a log-mean Divisia (LMDI)
+        decomposition, so the contributions sum exactly to the net change.
+        Population is genuinely gridded (HYDE 3.3 annual population), as is
+        the 2020 emissions pattern; production and agricultural land are
+        national series apportioned to units by their share of national
+        emissions, so those two terms are proportional attributions rather
+        than independent subnational observations. Production is measured
+        in calories, using per-commodity factors checked against FAO Food
+        Balance Sheets. Where Hong et al. worked at the national scale and
+        over six decades, the aim here is to carry the same decomposition
+        to subnational units on spatially explicit data — the analysis the
+        companion paper develops.
       </p>
 
       <h2 style={h2Style}>Caveats</h2>
@@ -381,7 +464,9 @@ const h2Style = {
 const pStyle = {
   fontSize: '15px',
   lineHeight: 1.55,
-  margin: 0,
+  // Sections can run to several paragraphs; the h2's own top margin still
+  // separates sections cleanly with this in place.
+  margin: '0 0 12px',
   color: 'var(--ink)',
 }
 

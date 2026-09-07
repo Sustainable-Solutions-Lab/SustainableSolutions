@@ -14,10 +14,11 @@ import { LatProfile } from './components/map/lat-profile.jsx'
 import { YearBar } from './components/map/year-bar.jsx'
 import { PaleLayer } from './components/map/pale-layer.jsx'
 import { RegionalLayer } from './components/map/regional-layer.jsx'
-import { LevelLayer } from './components/map/level-layer.jsx'
+import { AnalysisCellLayer } from './components/map/level-layer.jsx'
 import { RegionStats } from './components/map/region-stats.jsx'
 import { useYearFactors } from './lib/year-factors.js'
-import { levelFor, makeLevelVariable } from './lib/analysis-levels.js'
+import { levelFor, makeLevelVariable, levelColorExpr } from './lib/analysis-levels.js'
+import { categoricalFor, categoricalEntries, categoricalColorExpr, categoricalOpacityExpr } from './lib/analysis-categorical.js'
 import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
@@ -184,11 +185,36 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     ? { ...rawActiveVariable, scaled: { ...rawActiveVariable.scaled, factors: toolYearFactors } }
     : rawActiveVariable
   const activeLevel = levelFor(config, state)
+  const activeCategorical = categoricalFor(config, state)
+  const categoricalEntryList = useMemo(
+    () => (activeCategorical ? categoricalEntries(activeCategorical, config, state) : []),
+    [activeCategorical, config, state.activeDimensions],
+  )
   const activeVariable = activeLevel ? makeLevelVariable(activeLevel) : attachedVariable
-  // Change drivers render the LMDI unit polygons; level drivers repaint
-  // the active view (cells or units) with a per-area intensity ratio.
+  // Change drivers render the LMDI unit polygons; level and dominance
+  // drivers repaint the active view (cells or units).
   const analysisIsChange = paleActive &&
     (config.paleMap?.drivers ?? []).some((d) => d.id === paleDriver)
+  // Paint expression for the gridded analysis overlay, plus a key that
+  // changes exactly when the layers must be rebuilt.
+  const analysisCellColor = useMemo(() => {
+    if (activeLevel) return levelColorExpr(makeLevelVariable(activeLevel), isDark)
+    if (activeCategorical && categoricalEntryList.length) {
+      return categoricalColorExpr(categoricalEntryList, 5e-4)
+    }
+    return null
+  }, [activeLevel, activeCategorical, categoricalEntryList, isDark])
+  // Cell-scale magnitude ramp (kt CO2e per 0.25-degree cell).
+  const analysisCellOpacity = useMemo(() => (
+    activeCategorical && categoricalEntryList.length
+      ? categoricalOpacityExpr(categoricalEntryList,
+          [[0, 0.06], [1, 0.3], [8, 0.6], [40, 0.85], [150, 1]])
+      : null
+  ), [activeCategorical, categoricalEntryList])
+  const analysisPaintKey = [
+    paleDriver, isDark ? 'd' : 'l',
+    state.activeDimensions?.source, state.activeDimensions?.crop,
+  ].join('|')
 
   // ── Dimension animation ────────────────────────────────────────────────
   // Lives at tool level (not in the slider component) so it keeps running —
@@ -376,6 +402,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           setPaleActive={setPaleActive}
           paleDriver={paleDriver}
           setPaleDriver={setPaleDriver}
+          analysisEntries={categoricalEntryList}
         />
       }
       drawer={
@@ -474,6 +501,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
                   {(config.paleMap.levels ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>{d.label}</option>
+                  ))}
+                  {(config.paleMap.categorical ?? []).map((d) => (
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
                 </select>
@@ -635,13 +665,14 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             />
           )}
 
-          {/* Gridded level analysis — dedicated cell layers */}
-          {config.paleMap?.levels && state.mapView === 'gridded' && (
-            <LevelLayer
+          {/* Gridded analysis overlay (level or dominance) */}
+          {state.mapView === 'gridded' && analysisCellColor && (
+            <AnalysisCellLayer
               map={mapInstance}
               config={config}
-              level={activeLevel}
-              isDark={isDark}
+              colorExpr={analysisCellColor}
+              opacityExpr={analysisCellOpacity}
+              paintKey={analysisPaintKey}
             />
           )}
 

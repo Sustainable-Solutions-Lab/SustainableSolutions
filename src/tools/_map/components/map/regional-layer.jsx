@@ -23,6 +23,7 @@ import { useYearFactors } from '../../lib/year-factors.js'
 import { varValueExpr, varHasExpr, readVarValue } from '../../lib/variable-value.js'
 import { INTERPOLATORS } from '../../lib/colormap.js'
 import { levelFor, makeLevelVariable, levelColorExpr } from '../../lib/analysis-levels.js'
+import { categoricalFor, categoricalEntries, categoricalColorExpr, categoricalOpacityExpr, composition } from '../../lib/analysis-categorical.js'
 
 const SRC = 'unit-values'
 const FILL = 'unit-values-fill'
@@ -40,6 +41,11 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
   const yearFactors = useYearFactors(config)
   const resolved = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const lvl = levelFor(config, state)
+  const cat = categoricalFor(config, state)
+  const catEntries = useMemo(
+    () => (cat ? categoricalEntries(cat, config, state) : []),
+    [cat, config, state.activeDimensions],
+  )
   const variable = useMemo(() => {
     if (lvl) return makeLevelVariable(lvl)
     return resolved?.scaled && yearFactors
@@ -52,7 +58,7 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
   // Merge (never replace): the mount effect attaches .ensure/.repaint and a
   // wholesale assignment on re-render would clobber them.
   if (active) refs.current.everActive = true
-  Object.assign(refs.current, { active, variable, isDark,
+  Object.assign(refs.current, { active, variable, isDark, catEntries,
     percentileRange: state.percentileRange,
     selectedId: state.selectedUnit?.id ?? null, dispatch })
 
@@ -73,6 +79,17 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
     function paint() {
       const { variable: v, isDark: dark, percentileRange } = refs.current
       if (!map.getStyle?.() || !map.getLayer(FILL) || !v) return
+      if (refs.current.catEntries?.length) {
+        const ents = refs.current.catEntries
+        try {
+          map.setPaintProperty(FILL, 'fill-color', categoricalColorExpr(ents, 5e-4))
+          map.setPaintProperty(FILL, 'fill-opacity', categoricalOpacityExpr(ents,
+            [[0, 0.1], [200, 0.45], [2000, 0.72], [12000, 0.9]]))
+        } catch {}
+        try { map.setFilter(FILL, null) } catch {}
+        return
+      }
+      try { map.setPaintProperty(FILL, 'fill-opacity', 1) } catch {}
       if (v.rawExpr) {
         try { map.setPaintProperty(FILL, 'fill-color', levelColorExpr(v, dark)) } catch {}
         try { map.setFilter(FILL, null) } catch {}
@@ -218,7 +235,7 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
     try { for (const id of [FILL, LINE, SEL]) map.setLayoutProperty(id, 'visibility', vis) } catch {}
     if (active) refs.current.repaint?.()
     if (!active) setTip(null)
-  }, [map, active, variable, isDark, state.percentileRange, suppressed])
+  }, [map, active, variable, isDark, state.percentileRange, suppressed, catEntries])
 
   // selection outline
   useEffect(() => {
@@ -241,6 +258,17 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
     }}>
       <span style={{ fontWeight: 700 }}>{tip.p.name}</span>
       <span style={{ opacity: 0.6 }}> · {tip.p.country}</span>
+      {catEntries.length > 0 && (() => {
+        const top = composition(tip.p, catEntries)[0]
+        return top ? (
+          <div style={{ marginTop: 2 }}>
+            <span style={{ width: 7, height: 7, borderRadius: 2, background: top.color,
+              display: 'inline-block', marginRight: 4 }} />
+            {top.label}
+            <span style={{ opacity: 0.6 }}> · {Math.round(top.share * 100)}%</span>
+          </div>
+        ) : null
+      })()}
       {!state.selectedUnit && (
         <span style={{ opacity: 0.5 }}> — click for statistics</span>
       )}

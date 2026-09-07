@@ -282,6 +282,26 @@ export function AreaTool({ map, config, state, dispatch }) {
       stats.cropSums = cropSums
     }
 
+    // Composition sums: every dominance-taxonomy prop inside the region, so
+    // the panel can name the largest source and commodity.
+    const tax = config.paleMap?.taxonomy
+    if (tax) {
+      const props = [
+        ...tax.sources.map((x) => x.id),
+        ...tax.commodities.map((x) => `tot_${x.id}`),
+      ]
+      const sums = {}
+      for (const f of filtered) {
+        const pr = f.properties
+        if (!pr) continue
+        for (const k of props) {
+          const v = Number(pr[k] ?? 0)
+          if (v) sums[k] = (sums[k] ?? 0) + v
+        }
+      }
+      stats.compositionSums = sums
+    }
+
     // Also collect raw values for the active variable (for the histogram in StatsPanel)
     const currentState = stateRef.current
     const activeVar = getActiveVariable(
@@ -377,6 +397,26 @@ export function AreaTool({ map, config, state, dispatch }) {
         cropSums[c] = rec
       }
       stats.cropSums = cropSums
+    }
+
+    // Composition sums: every dominance-taxonomy prop inside the region, so
+    // the panel can name the largest source and commodity.
+    const tax = config.paleMap?.taxonomy
+    if (tax) {
+      const props = [
+        ...tax.sources.map((x) => x.id),
+        ...tax.commodities.map((x) => `tot_${x.id}`),
+      ]
+      const sums = {}
+      for (const f of filtered) {
+        const pr = f.properties
+        if (!pr) continue
+        for (const k of props) {
+          const v = Number(pr[k] ?? 0)
+          if (v) sums[k] = (sums[k] ?? 0) + v
+        }
+      }
+      stats.compositionSums = sums
     }
     const activeVar = getActiveVariable(config, state.activeLayer, state.activeDimensions)
     const activeVarValues = activeVar

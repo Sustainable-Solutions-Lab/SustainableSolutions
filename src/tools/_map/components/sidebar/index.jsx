@@ -23,6 +23,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
     (d) => activeDimensionIds.includes(d.id) && d.location !== 'map'
   )
   const multiLayer = config.layers.filter((l) => !l.hidden).length > 1
+  const isDominance = state.analysis === 'dominance'
   const isLevelDriver = state.mapView !== 'regional' &&
     (config.paleMap?.drivers ?? []).some((d) => d.id === paleDriver && d.level)
 
@@ -162,7 +163,24 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             distribution chart is suppressed — i.e. for categorical variables
             or projects that turn the percentile filter off — so the user
             isn't presented with both. */}
-        {config.percentileFilter?.enabled && activeVariable && activeVariable.type !== 'categorical' && allValues.length > 0 ? (
+        {isDominance && analysisEntries.length > 0 ? (
+          <div className="mb-2">
+            <div className="flex flex-wrap" style={{ gap: '2px 10px' }}>
+              {categoricalLegend(analysisEntries).map((e) => (
+                <span key={e.color} className="font-mono text-ink-2 inline-flex items-center"
+                  style={{ fontSize: 9, gap: 4 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: e.color,
+                    display: 'inline-block', flexShrink: 0 }} />
+                  {e.label}
+                </span>
+              ))}
+            </div>
+            <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+              Largest contributor in each {state.mapView === 'regional' ? 'unit' : 'cell'};
+              shade shows how much it emits. Click for the full breakdown.
+            </p>
+          </div>
+        ) : config.percentileFilter?.enabled && activeVariable && activeVariable.type !== 'categorical' && allValues.length > 0 ? (
           <DistributionChart
             variable={activeVariable}
             allValues={allValues}
@@ -291,11 +309,15 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
               <button
                 key={low}
                 type="button"
-                onClick={() => dispatch({ type: Actions.SET_PERCENTILE, low, high: 100 })}
+                onClick={() => {
+                  // One "top" at a time: a percentile clears a dominance view.
+                  if (isDominance) dispatch({ type: Actions.SET_ANALYSIS, analysis: null })
+                  dispatch({ type: Actions.SET_PERCENTILE, low, high: 100 })
+                }}
                 className={[
                   'bg-transparent border-0 cursor-pointer p-0 font-sans text-[11px]',
                   'underline-offset-[3px] transition-colors hover:text-ink',
-                  (state.percentileRange?.low ?? 0) === low && (state.percentileRange?.high ?? 100) === 100
+                  !isDominance && (state.percentileRange?.low ?? 0) === low && (state.percentileRange?.high ?? 100) === 100
                     ? 'font-bold text-ink underline'
                     : 'font-normal text-ink-3',
                 ].join(' ')}
@@ -325,6 +347,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                     type="button"
                     onClick={() => {
                       if (on) { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
+                      dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
                       dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: c.id })
                       dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
                     }}
@@ -339,24 +362,6 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                 )
               })}
             </div>
-            {state.analysis === 'dominance' && analysisEntries.length > 0 && (
-              <div className="mb-2">
-                <div className="flex flex-wrap" style={{ gap: '2px 10px' }}>
-                  {categoricalLegend(analysisEntries).map((e) => (
-                    <span key={e.color} className="font-mono text-ink-2 inline-flex items-center"
-                      style={{ fontSize: 9, gap: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: e.color,
-                        display: 'inline-block', flexShrink: 0 }} />
-                      {e.label}
-                    </span>
-                  ))}
-                </div>
-                <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                  Largest contributor in each {state.mapView === 'regional' ? 'unit' : 'cell'},
-                  2020 shares. Click for the full breakdown.
-                </p>
-              </div>
-            )}
           </>
         )}
 

@@ -262,14 +262,27 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   // every sidebar dropdown the active layer uses (e.g. "Fertilizer N₂O ·
   // Maize (corn)"). Year-bar projects only.
   const badgeSelectionLabel = config.yearControl
-    ? config.dimensions
-        .filter((d) =>
-          d.type === 'dropdown' &&
-          d.location !== 'map' &&
-          (config.layers.find((l) => l.id === state.activeLayer)?.dimensionIds ?? []).includes(d.id))
-        .map((d) => d.options?.find((o) => o.id === (state.activeDimensions[d.id] ?? d.defaultValue))?.label)
-        .filter(Boolean)
-        .join(' · ')
+    ? [
+        ...config.dimensions
+          .filter((d) =>
+            d.type === 'dropdown' &&
+            d.location !== 'map' &&
+            (config.layers.find((l) => l.id === state.activeLayer)?.dimensionIds ?? []).includes(d.id))
+          .map((d) => d.options?.find((o) => o.id === (state.activeDimensions[d.id] ?? d.defaultValue))?.label),
+        // What the colors mean right now, when it isn't just the total.
+        (() => {
+          if (state.analysis === 'dominance') {
+            return (config.paleMap?.categorical ?? []).find((c) => c.id === state.analysisDriver)?.shortLabel
+          }
+          if (state.analysis === 'pale') {
+            const d = (config.paleMap?.drivers ?? []).find((x) => x.id === state.analysisDriver)
+            if (!d) return null
+            return state.mapView === 'regional' ? `${d.label} — change` : `${d.label} — 2020`
+          }
+          const low = state.percentileRange?.low ?? 0
+          return low > 0 ? `Top ${100 - low}%` : null
+        })(),
+      ].filter(Boolean).join(' · ')
     : ''
 
   // Populate the "statewide" value distribution for the active variable.
@@ -473,10 +486,13 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               <button
                 key={low}
                 type="button"
-                onClick={() => dispatch({ type: Actions.SET_PERCENTILE, low, high: 100 })}
+                onClick={() => {
+                  if (state.analysis === 'dominance') dispatch({ type: Actions.SET_ANALYSIS, analysis: null })
+                  dispatch({ type: Actions.SET_PERCENTILE, low, high: 100 })
+                }}
                 className={[
                   'bg-transparent border-0 cursor-pointer p-0 font-sans text-[11px]',
-                  (state.percentileRange?.low ?? 0) === low ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+                  state.analysis !== 'dominance' && (state.percentileRange?.low ?? 0) === low ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
                 ].join(' ')}
               >
                 {label}
@@ -496,6 +512,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                   type="button"
                   onClick={() => {
                     if (on) { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
+                    dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
                     dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: c.id })
                     dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
                   }}

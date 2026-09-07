@@ -15,10 +15,12 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { Actions } from '../../contracts/events.js'
 
 const SRC = 'pale-units'
 const FILL = 'pale-units-fill'
 const LINE = 'pale-units-line'
+const SEL = 'pale-units-selected'
 const RANGE = 50 // % of 2000 emissions at which the ramp saturates
 
 function fillExpr(driver, isDark) {
@@ -37,10 +39,12 @@ function fillExpr(driver, isDark) {
   ]
 }
 
-export function PaleLayer({ map, config, active, driver, isDark }) {
+export function PaleLayer({ map, config, active, driver, isDark, dispatch = null, selectedId = null }) {
   const [tip, setTip] = useState(null)
   const activeRef = useRef(active)
   activeRef.current = active
+  const stateRef = useRef({})
+  Object.assign(stateRef.current, { dispatch, selectedId })
 
   useEffect(() => {
     if (!map || !config.paleMap) return undefined
@@ -74,9 +78,18 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
           },
         }, beforeId)
       }
+      if (!map.getLayer(SEL)) {
+        map.addLayer({
+          id: SEL, type: 'line', source: SRC,
+          'source-layer': config.paleMap.sourceLayer ?? SRC,
+          filter: ['==', ['get', 'unit_id'], stateRef.current.selectedId ?? -1],
+          paint: { 'line-color': isDark ? '#F8F8E8' : '#181838', 'line-width': 2 },
+        }, beforeId)
+      }
       const vis = activeRef.current ? 'visible' : 'none'
       map.setLayoutProperty(FILL, 'visibility', vis)
       map.setLayoutProperty(LINE, 'visibility', vis)
+      map.setLayoutProperty(SEL, 'visibility', vis)
       } catch { /* style not ready yet — the styledata/idle retries cover it */ }
     }
 
@@ -91,21 +104,34 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
       setTip({ x: e.point.x, y: e.point.y, p: f.properties })
     }
     function onLeave() { setTip(null) }
+    function onClick(e) {
+      if (!activeRef.current || !map.getLayer(FILL) || !stateRef.current.dispatch) return
+      const pad = 6
+      const f = map.queryRenderedFeatures(
+        [[e.point.x - pad, e.point.y - pad], [e.point.x + pad, e.point.y + pad]],
+        { layers: [FILL] })[0]
+      stateRef.current.dispatch({
+        type: Actions.SELECT_UNIT,
+        unit: f ? { id: f.properties.unit_id, props: f.properties } : null,
+      })
+    }
 
     ensureLayers()
     map.on('styledata', ensureLayers)
     map.on('idle', ensureLayers)
     map.on('mousemove', onMove)
     map.on('click', onMove)  // touch devices: tap to inspect
+    map.on('click', onClick)  // outline the tapped unit
     map.on('mouseout', onLeave)
     return () => {
       map.off('styledata', ensureLayers)
       map.off('idle', ensureLayers)
       map.off('mousemove', onMove)
       map.off('click', onMove)
+      map.off('click', onClick)
       map.off('mouseout', onLeave)
       if (!map.getStyle?.()) return  // map already removed
-      try { for (const id of [FILL, LINE]) { if (map.getLayer(id)) map.removeLayer(id) } } catch {}
+      try { for (const id of [FILL, LINE, SEL]) { if (map.getLayer(id)) map.removeLayer(id) } } catch {}
       try { if (map.getSource(SRC)) map.removeSource(SRC) } catch {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,15 +143,21 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
     try { map.setPaintProperty(FILL, 'fill-color', fillExpr(driver, isDark)) } catch {}
   }, [map, driver, isDark])
 
+  // Selection outline
+  useEffect(() => {
+    if (!map?.getStyle?.() || !map.getLayer?.(SEL)) return
+    try { map.setFilter(SEL, ['==', ['get', 'unit_id'], selectedId ?? -1]) } catch {}
+  }, [map, selectedId])
+
   if (!active) return null
   // Inspection shows each PALE factor's own percentage change since 2000 —
   // more readable than the LMDI contributions that drive the fill colors.
   const rows = tip ? [
-    ['Emissions', tip.p.f_net ?? tip.p.r_net],
+    ['Emissions (kg CO₂e)', tip.p.f_net ?? tip.p.r_net],
     ['Population', tip.p.f_pop ?? tip.p.r_pop],
-    ['Prod / capita', tip.p.f_prodpc ?? tip.p.r_prodpc],
-    ['Land / kcal', tip.p.f_landkcal ?? tip.p.r_landkcal],
-    ['Emissions / land', tip.p.f_eland ?? tip.p.r_eland],
+    ['Production (kcal/capita)', tip.p.f_prodpc ?? tip.p.r_prodpc],
+    ['Land intensity (ha/kcal)', tip.p.f_landkcal ?? tip.p.r_landkcal],
+    ['Emissions intensity (kg CO₂e/ha)', tip.p.f_eland ?? tip.p.r_eland],
   ] : []
   return tip ? (
     <div
@@ -146,7 +178,7 @@ export function PaleLayer({ map, config, active, driver, isDark }) {
       {rows.map(([label, v]) => (
         <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
           <span style={{ opacity: 0.7 }}>{label}</span>
-          <span style={{ fontWeight: label === 'Emissions' ? 700 : 400 }}>
+          <span style={{ fontWeight: label.startsWith('Emissions (') ? 700 : 400 }}>
             {v == null ? '—' : `${v > 0 ? '+' : ''}${v}%`}
           </span>
         </div>

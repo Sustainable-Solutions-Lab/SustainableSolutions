@@ -54,6 +54,7 @@ export const Actions = {
   SET_ANIMATING:       'SET_ANIMATING',   // { dimensionId: string | null }
   SET_MAP_VIEW:        'SET_MAP_VIEW',    // { view: 'gridded' | 'regional' }
   SET_ANALYSIS:        'SET_ANALYSIS',    // { analysis: 'pale' | null }
+  SET_ANALYSIS_DRIVER: 'SET_ANALYSIS_DRIVER', // { driver: string }
   SELECT_UNIT:         'SELECT_UNIT',     // { unit: {id, props} | null }
   SELECT_CELL:         'SELECT_CELL',
   DESELECT_CELL:       'DESELECT_CELL',
@@ -77,6 +78,7 @@ export const initialState = {
   animatingDimension: null,
   mapView: 'gridded',
   analysis: null,
+  analysisDriver: 'r_net',
   selectedUnit: null,
   activeDimensions: {
     treatment: 'min',       // default: lowest-cost treatment

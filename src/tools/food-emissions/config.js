@@ -313,11 +313,22 @@ const config = {
     tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/pale-units.pmtiles',
     sourceLayer: 'pale-units',
     drivers: [
-      { id: 'r_net', label: 'Net change' },
+      { id: 'r_net', label: 'Net change, kg CO₂e' },
       { id: 'r_pop', label: 'Population' },
-      { id: 'r_prodpc', label: 'Production / capita' },
-      { id: 'r_landkcal', label: 'Land / kcal' },
-      { id: 'r_eland', label: 'Emissions / land' },
+      { id: 'r_prodpc', label: 'Production, kcal/capita' },
+      { id: 'r_landkcal', label: 'Land intensity, ha/kcal' },
+      { id: 'r_eland', label: 'Emissions intensity, kg CO₂e/ha' },
+    ],
+    // Snapshot intensity maps — repaint the active view (gridded cells or
+    // regional units) with a stored-prop ratio. tot kt -> kg via 1e6.
+    // colorMax pins the ramp: ratio distributions have extreme-outlier
+    // tails (cells with near-zero denominators) that poison a data-derived
+    // p99 and push everything else under the alpha floor.
+    levels: [
+      { id: 'lvl_eint', label: 'Emissions intensity — 2020 level (kg CO₂e/ha)',
+        num: 'tot', den: 'ha', mul: 1e6, unit: 'kg CO₂e/ha', colorMax: 2500, denMin: 100 },
+      { id: 'lvl_lint', label: 'Land intensity — 2020 level (ha/Gkcal)',
+        num: 'ha', den: 'pkcal', mul: 1, unit: 'ha/Gkcal', colorMax: 1.0, denMin: 1 },
     ],
   },
 

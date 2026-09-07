@@ -24,6 +24,7 @@ import { buildColorScale, INTERPOLATORS } from './colormap.js'
 import { readVarValue, varValueExpr, varHasExpr } from './variable-value.js'
 import { getActiveVariable } from './get-active-variable.js'
 import { useYearFactors } from './year-factors.js'
+import { levelFor } from './analysis-levels.js'
 
 // Tiling-exact base radius for a 1 km cell — the natural Mercator-derived
 // pixel size of a 1 km × 1 km cell, scaled by FILL_FACTOR so cells visibly
@@ -103,7 +104,7 @@ export const DEFAULT_TUNING = {
 // contiguous with its neighbors instead of spreading apart. k is half the
 // cell edge in px at z0 (512px world tiles), padded 15% so circles just
 // touch; clamped so cells never vanish at low zoom.
-function buildCellRadiusExpr(scaleEntry, tuning) {
+export function buildCellRadiusExpr(scaleEntry, tuning) {
   const scaleKm = scaleEntry.value ?? 28
   const mul = tuning?.radiusScale ?? 1
   // fill: circle diameter relative to the cell pitch. Default 0.95 =
@@ -212,9 +213,11 @@ export function useJustAirLayers(map, config, state, tuning) {
   // paint; until it loads they fall back to the reference-year base prop.
   const yearFactors = useYearFactors(config)
   const resolved = getActiveVariable(config, state.activeLayer, state.activeDimensions)
-  const variable = resolved?.scaled && yearFactors
+  const attached = resolved?.scaled && yearFactors
     ? { ...resolved, scaled: { ...resolved.scaled, factors: yearFactors } }
     : resolved
+  const lvl = levelFor(config, state)  // used only for the hidden flag deps
+  const variable = attached
   const variableRef = useRef(variable)
   variableRef.current = variable
   const hiddenRef = useRef(false)
@@ -457,22 +460,31 @@ export function useJustAirLayers(map, config, state, tuning) {
         }
       }
     } catch (_) { /* ignore */ }
-    for (const s of scales) {
-      const layerId = `just-air-cells-${s.value}`
-      if (!map.getLayer(layerId)) continue
-      try {
-        map.setPaintProperty(layerId, 'circle-color',   buildColorExpr(variableRef.current, isDarkRef.current, recomputed, tuningRef.current))
-        map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current, s, hiddenRef.current))
-        map.setPaintProperty(layerId, 'circle-radius',  radiusExprForLayer(layerId, config, tuningRef.current))
-        const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, recomputed)
-        map.setPaintProperty(layerId, 'circle-stroke-width', stroke.width)
-        map.setPaintProperty(layerId, 'circle-stroke-color', stroke.color)
-      } catch (err) {
-        console.error('[useJustAirLayers] setPaintProperty', layerId, err)
+    function applyPaints() {
+      for (const s of scales) {
+        const layerId = `just-air-cells-${s.value}`
+        if (!map.getLayer(layerId)) continue
+        try {
+          map.setPaintProperty(layerId, 'circle-color', buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current))
+          map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current, s, hiddenRef.current))
+          map.setPaintProperty(layerId, 'circle-radius',  radiusExprForLayer(layerId, config, tuningRef.current))
+          const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, colorRangeRef.current)
+          map.setPaintProperty(layerId, 'circle-stroke-width', stroke.width)
+          map.setPaintProperty(layerId, 'circle-stroke-color', stroke.color)
+        } catch (err) {
+          console.error('[useJustAirLayers] setPaintProperty', layerId, err)
+        }
       }
     }
+    applyPaints()
+    // A paint batch applied during rapid state churn can be dropped
+    // silently (observed: layer renders nothing until ANY later
+    // setPaintProperty pokes it — triggerRepaint does not recover it).
+    // Re-apply once after the dust settles.
+    const settle = setTimeout(applyPaints, 300)
+    return () => clearTimeout(settle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme, yearFactors, state.mapView, state.analysis])
+  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme, yearFactors, state.mapView, state.analysis, state.analysisDriver])
 
   // ── Paint repaint when only the tuning sliders move ───────────────────
   // Re-emits circle-color / circle-radius using the EXISTING colorRange,
@@ -708,7 +720,7 @@ function buildOpacityExpr(_variable, scaleEntry, hidden = false) {
   return buildZoomFade(scaleEntry)
 }
 
-function buildZoomFade(s) {
+export function buildZoomFade(s) {
   const fade = 0.25
   const minZ = s.minZoom ?? 0
   const maxZ = s.maxZoom

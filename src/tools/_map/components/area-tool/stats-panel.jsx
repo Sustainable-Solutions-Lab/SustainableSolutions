@@ -20,6 +20,7 @@ import { Actions } from '../../contracts/events.js'
 import { buildColorScale, getEquityPalette } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
 import { TrendChart, PaleChart, PaleSeriesChart } from './trend-chart.jsx'
+import { Composition } from '../map/region-stats.jsx'
 
 const POS_COLOR = '#4393c3'
 const NEG_COLOR = '#d6604d'
@@ -741,6 +742,15 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
           trendWeights={aggregateStats.trendWeights}
           isDark={isDark}
           activeSourceId={activeVariable?.dimensionValues?.source ?? null}
+        />
+      )}
+
+      {/* Largest source / commodity inside the circle */}
+      {aggregateStats?.compositionSums && (
+        <Composition
+          props={aggregateStats.compositionSums}
+          taxonomy={config?.paleMap?.taxonomy}
+          isDark={isDark}
         />
       )}
 

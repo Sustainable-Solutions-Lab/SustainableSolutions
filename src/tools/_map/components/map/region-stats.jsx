@@ -10,6 +10,7 @@
 import { useMemo } from 'react'
 import { Actions } from '../../contracts/events.js'
 import { readVarValue } from '../../lib/variable-value.js'
+import { composition } from '../../lib/analysis-categorical.js'
 import { PaleSeriesChart } from '../area-tool/trend-chart.jsx'
 
 const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
@@ -40,6 +41,44 @@ function MiniDist({ values, isDark }) {
         <span>0</span>
         <span>{values.length} cells · max {max < 10 ? max.toFixed(2) : Math.round(max)} kt</span>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Top contributors by source and by commodity — the numbers behind the
+ * dominance maps. Shares are of the region's 2020 total for that axis.
+ */
+export function Composition({ props, taxonomy, isDark, max = 3 }) {
+  if (!props || !taxonomy) return null
+  const axes = [
+    ['Sources', taxonomy.sources.map((s) => ({ ...s, prop: s.id }))],
+    ['Commodities', taxonomy.commodities.map((c) => ({ ...c, prop: `tot_${c.id}` }))],
+  ]
+  const muted = isDark ? 'rgba(248,248,232,0.5)' : 'rgba(24,24,56,0.5)'
+  const text = isDark ? 'rgba(248,248,232,0.9)' : 'rgba(24,24,56,0.9)'
+  const rendered = axes
+    .map(([title, entries]) => [title, composition(props, entries).slice(0, max)])
+    .filter(([, rows]) => rows.length > 0)
+  if (rendered.length === 0) return null
+  return (
+    <div style={{ marginTop: 7 }}>
+      {rendered.map(([title, rows]) => (
+        <div key={title} style={{ marginBottom: 4 }}>
+          <div style={{ fontSize: 8, letterSpacing: '0.08em', color: muted, marginBottom: 1 }}>
+            TOP {title.toUpperCase()}
+          </div>
+          {rows.map((r) => (
+            <div key={r.prop} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9 }}>
+              <span style={{ width: 7, height: 7, borderRadius: 2, background: r.color, flexShrink: 0 }} />
+              <span style={{ color: text, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {r.label}
+              </span>
+              <span style={{ color: muted, flexShrink: 0 }}>{Math.round(r.share * 100)}%</span>
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   )
 }
@@ -117,6 +156,7 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
         {!activeVariable?.rawRead && intens != null
           ? `${intens < 10 ? intens.toFixed(1) : Math.round(intens).toLocaleString()} t CO₂e / km²` : ''}
       </div>
+      <Composition props={p} taxonomy={config?.paleMap?.taxonomy} isDark={isDark} />
       {unitWeights && config?.areaTool?.trend ? (
         <PaleSeriesChart
           trendConfig={config.areaTool.trend}

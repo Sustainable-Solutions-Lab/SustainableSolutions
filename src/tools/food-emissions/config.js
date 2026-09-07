@@ -321,6 +321,52 @@ const config = {
     ],
     // Snapshot intensity maps — repaint the active view (gridded cells or
     // regional units) with a stored-prop ratio. tot kt -> kg via 1e6.
+    // Dominance maps: which source / commodity leads in each cell or unit.
+    // Candidate sets follow the sidebar selection (see lib/analysis-categorical).
+    categorical: [
+      { id: 'dom_source', kind: 'source', label: 'Dominant source' },
+      { id: 'dom_commodity', kind: 'commodity', label: 'Dominant commodity' },
+    ],
+    // Labels + categorical colors for the dominance maps. Sources reuse the
+    // area-trend palette; commodities name the thirteen largest and grey the
+    // long tail (the popup still names the exact winner).
+    taxonomy: {
+      sources: [
+        { id: 'ent',  label: 'Enteric CH₄',    color: '#F46D43' },
+        { id: 'rice', label: 'Rice CH₄',       color: '#D53E4F' },
+        { id: 'prp',  label: 'Pasture N₂O',    color: '#FEE08B' },
+        { id: 'fer',  label: 'Fertilizer N₂O', color: '#3288BD' },
+        { id: 'peat', label: 'Peatland',       color: '#5E4FA2' },
+        { id: 'mms',  label: 'Manure mgmt',    color: '#E6F598' },
+        { id: 'man',  label: 'Manure applied', color: '#FDAE61' },
+        { id: 'res',  label: 'Residues N₂O',   color: '#66C2A5' },
+        { id: 'urea', label: 'Urea CO₂',       color: '#ABDDA4' },
+        { id: 'lime', label: 'Liming CO₂',     color: '#78C8D8' },
+        { id: 'burn', label: 'Residue burning', color: '#9E0142' },
+      ],
+      commodities: [
+        { id: 'bcat', label: 'Beef cattle',   color: '#9E0142', sources: LIVESTOCK_SOURCE_IDS },
+        { id: 'dcat', label: 'Milk',          color: '#D53E4F', sources: LIVESTOCK_SOURCE_IDS },
+        { id: 'buff', label: 'Buffalo',       color: '#F46D43', sources: LIVESTOCK_SOURCE_IDS },
+        { id: 'shee', label: 'Sheep',         color: '#FDAE61', sources: LIVESTOCK_SOURCE_IDS },
+        { id: 'goat', label: 'Goats',         color: '#FEE08B', sources: LIVESTOCK_SOURCE_IDS },
+        { id: 'pigs', label: 'Pigs',          color: '#E87828', sources: LIVESTOCK_SOURCE_IDS },
+        { id: 'poul', label: 'Poultry & eggs', color: '#FFFFBF', sources: LIVESTOCK_SOURCE_IDS },
+        { id: 'olvs', label: 'Other livestock', color: '#9A9AAE', legendLabel: 'Other crops', sources: LIVESTOCK_SOURCE_IDS },
+        { id: 'rice', label: 'Rice',          color: '#3288BD', sources: CROPLAND_SOURCE_IDS },
+        { id: 'whea', label: 'Wheat',         color: '#66C2A5', sources: CROPLAND_SOURCE_IDS },
+        { id: 'maiz', label: 'Maize',         color: '#ABDDA4', sources: CROPLAND_SOURCE_IDS },
+        { id: 'soyb', label: 'Soybean',       color: '#48A848', sources: CROPLAND_SOURCE_IDS },
+        { id: 'oilp', label: 'Oil palm',      color: '#5E4FA2', sources: CROPLAND_SOURCE_IDS },
+        { id: 'sugc', label: 'Sugarcane',     color: '#78C8D8', sources: CROPLAND_SOURCE_IDS },
+        { id: 'cott', label: 'Cotton',        color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+        { id: 'grou', label: 'Groundnut',     color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+        { id: 'barl', label: 'Barley',        color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+        { id: 'rape', label: 'Rapeseed',      color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+        { id: 'pota', label: 'Potato',        color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+        { id: 'sorg', label: 'Sorghum',       color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+      ],
+    },
     // colorMax pins the ramp: ratio distributions have extreme-outlier
     // tails (cells with near-zero denominators) that poison a data-derived
     // p99 and push everything else under the alpha floor.

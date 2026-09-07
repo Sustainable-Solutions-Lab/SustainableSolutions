@@ -720,6 +720,38 @@ function buildOpacityExpr(_variable, scaleEntry, hidden = false) {
   return buildZoomFade(scaleEntry)
 }
 
+/**
+ * Zoom fade whose full-opacity value is `peak` — an expression, not just 1.
+ * MapLibre requires ['zoom'] to sit at the TOP of a property expression, so
+ * a data-driven magnitude ramp cannot be multiplied onto a zoom fade; it has
+ * to ride as the fade's output value. (Nesting the zoom interpolate inside
+ * ['*'] makes addLayer throw and the layer never appears.)
+ */
+export function buildZoomFadeScaled(s, peak) {
+  const fade = 0.25
+  const minZ = s.minZoom ?? 0
+  const maxZ = s.maxZoom
+  if (maxZ == null) {
+    if (minZ <= fade) return peak
+    return ['interpolate', ['linear'], ['zoom'],
+      Math.max(0, minZ - fade), 0,
+      minZ,                     peak,
+    ]
+  }
+  if (minZ <= fade) {
+    return ['interpolate', ['linear'], ['zoom'],
+      Math.max(minZ, maxZ - fade), peak,
+      maxZ,                        0,
+    ]
+  }
+  return ['interpolate', ['linear'], ['zoom'],
+    Math.max(0, minZ - fade), 0,
+    minZ,                     peak,
+    Math.max(minZ + 0.0001, maxZ - fade), peak,
+    maxZ,                     0,
+  ]
+}
+
 export function buildZoomFade(s) {
   const fade = 0.25
   const minZ = s.minZoom ?? 0

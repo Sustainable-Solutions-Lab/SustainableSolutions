@@ -13,8 +13,9 @@ import { DimensionControl } from './dimension-control.jsx'
 import { Legend } from './legend.jsx'
 import { DistributionChart } from './distribution-chart.jsx'
 import { ZipInput } from './zip-input.jsx'
+import { categoricalLegend } from '../../lib/analysis-categorical.js'
 
-export function Sidebar({ config, state, dispatch, allValues = [], companion = null, repoLinks = null, paleActive = false, setPaleActive = null, paleDriver = 'r_net', setPaleDriver = null }) {
+export function Sidebar({ config, state, dispatch, allValues = [], companion = null, repoLinks = null, paleActive = false, setPaleActive = null, paleDriver = 'r_net', setPaleDriver = null, analysisEntries = [] }) {
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
   const activeDimensionIds = activeLayerConfig?.dimensionIds ?? []
@@ -22,6 +23,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
     (d) => activeDimensionIds.includes(d.id) && d.location !== 'map'
   )
   const multiLayer = config.layers.filter((l) => !l.hidden).length > 1
+  const isLevelDriver = (config.paleMap?.levels ?? []).some((l) => l.id === paleDriver)
 
   return (
     <aside
@@ -228,7 +230,9 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             {paleActive && (
               <div className="mb-2">
                 <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
-                  Driver · % of 2000 emissions
+                  {analysisEntries.length > 0 ? 'Dominance'
+                    : isLevelDriver ? 'Intensity level'
+                    : 'Driver · % of 2000 emissions'}
                 </p>
                 <select
                   value={paleDriver}
@@ -242,20 +246,49 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                   {(config.paleMap.levels ?? []).map((d) => (
                     <option key={d.id} value={d.id}>{d.label}</option>
                   ))}
+                  {(config.paleMap.categorical ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>{d.label}</option>
+                  ))}
                 </select>
-                <div style={{ marginTop: 6 }}>
-                  <div style={{
-                    height: 8, borderRadius: 2,
-                    background: 'linear-gradient(to right, rgba(50,136,189,0.9), rgba(102,194,165,0.6), rgba(128,128,128,0.15), rgba(253,174,97,0.6), rgba(213,62,79,0.9))',
-                  }} />
-                  <div className="flex justify-between font-mono text-ink-3" style={{ fontSize: 9 }}>
-                    <span>−50%</span><span>0</span><span>+50%</span>
-                  </div>
-                </div>
-                <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                  LMDI terms of each admin-1 × biome unit's 2000–2023 change.
-                  Blue pushed emissions down; red pushed them up.
-                </p>
+                {analysisEntries.length > 0 ? (
+                  <>
+                    <div className="flex flex-wrap" style={{ gap: '2px 10px', marginTop: 2 }}>
+                      {categoricalLegend(analysisEntries).map((e) => (
+                        <span key={e.color} className="font-mono text-ink-2 inline-flex items-center"
+                          style={{ fontSize: 9, gap: 4 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 2, background: e.color,
+                            display: 'inline-block', flexShrink: 0 }} />
+                          {e.label}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                      Largest contributor in each {state.mapView === 'regional' ? 'unit' : 'cell'},
+                      2020 shares. Click for the full breakdown.
+                    </p>
+                  </>
+                ) : isLevelDriver ? (
+                  <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                    2020 intensity of each {state.mapView === 'regional' ? 'unit' : 'cell'};
+                    darker is higher.
+                  </p>
+                ) : (
+                  <>
+                    <div style={{ marginTop: 6 }}>
+                      <div style={{
+                        height: 8, borderRadius: 2,
+                        background: 'linear-gradient(to right, rgba(50,136,189,0.9), rgba(102,194,165,0.6), rgba(128,128,128,0.15), rgba(253,174,97,0.6), rgba(213,62,79,0.9))',
+                      }} />
+                      <div className="flex justify-between font-mono text-ink-3" style={{ fontSize: 9 }}>
+                        <span>−50%</span><span>0</span><span>+50%</span>
+                      </div>
+                    </div>
+                    <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                      LMDI terms of each admin-1 × biome unit's 2000–2023 change.
+                      Blue pushed emissions down; red pushed them up.
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </>

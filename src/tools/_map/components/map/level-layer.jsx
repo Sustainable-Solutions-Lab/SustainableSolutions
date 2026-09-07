@@ -1,27 +1,26 @@
 /**
  * components/map/level-layer.jsx
  *
- * Gridded LEVEL analysis (config.paleMap.levels): dedicated circle layers
- * over the cell source painted by a stored-prop intensity ratio (e.g.
- * kg CO2e per cropland ha). Layers are REMOVED AND RECREATED whenever the
- * driver, theme, or activation changes — repainting existing layers
- * mid-tile-load leaves stale unevaluated tiles (observed as tile-boundary
+ * Gridded analysis overlay: dedicated circle layers over the cell source
+ * painted by a caller-supplied color expression — an intensity ratio
+ * (config.paleMap.levels) or a dominance category
+ * (config.paleMap.categorical). Layers are REMOVED AND RECREATED whenever
+ * that expression changes — repainting existing layers mid-tile-load
+ * leaves stale unevaluated tiles (observed as tile-boundary
  * checkerboards), while freshly created layers always lay out every tile
  * with the paint they were born with.
  */
 
 import { useEffect } from 'react'
-import { makeLevelVariable, levelColorExpr } from '../../lib/analysis-levels.js'
-import { buildCellRadiusExpr, buildZoomFade } from '../../lib/use-just-air-layers.js'
+import { buildCellRadiusExpr, buildZoomFade, buildZoomFadeScaled } from '../../lib/use-just-air-layers.js'
 
 const PREFIX = 'level-cells-'
 
-export function LevelLayer({ map, config, level, isDark }) {
+export function AnalysisCellLayer({ map, config, colorExpr, opacityExpr = null, paintKey }) {
   useEffect(() => {
     if (!map || !config.scales) return undefined
-    if (!level) return undefined
-    const variable = makeLevelVariable(level)
-    const color = levelColorExpr(variable, isDark)
+    if (!colorExpr) return undefined
+    const color = colorExpr
 
     function create() {
       if (!map.getStyle?.()) return
@@ -37,7 +36,9 @@ export function LevelLayer({ map, config, level, isDark }) {
             paint: {
               'circle-radius': buildCellRadiusExpr(s, null),
               'circle-color': color,
-              'circle-opacity': buildZoomFade(s),
+              'circle-opacity': opacityExpr
+                ? buildZoomFadeScaled(s, opacityExpr)
+                : buildZoomFade(s),
               'circle-stroke-width': 0,
             },
           }
@@ -67,6 +68,7 @@ export function LevelLayer({ map, config, level, isDark }) {
         }
       } catch {}
     }
-  }, [map, config, level?.id, isDark, level])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, config, paintKey])
   return null
 }

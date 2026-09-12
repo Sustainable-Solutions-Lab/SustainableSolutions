@@ -523,7 +523,6 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
         {config.paleMap?.categorical && (
           <div className="mb-2 flex items-center gap-3">
-            <span className="font-mono" style={{ fontSize: 9, letterSpacing: '0.08em', visibility: 'hidden' }}>SHOW</span>
             {config.paleMap.categorical.map((c) => {
               const on = state.analysis === 'dominance' && state.analysisDriver === c.id
               return (
@@ -687,10 +686,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           <div
             className="block md:hidden absolute z-10"
             style={{
-              // Clear of the year bar pinned at the bottom of the map (two
-              // rows tall in compare mode).
-              bottom: 104,
-              right: 10,
+              // Just above the year bar pinned at the bottom of the map.
+              bottom: 62,
+              right: 8,
               width: 160,
               background: isDark ? 'rgba(12, 12, 28, 0.92)' : 'rgba(248, 248, 232, 0.92)',
               borderRadius: 4,

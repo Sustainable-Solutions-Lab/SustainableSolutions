@@ -333,39 +333,27 @@ const config = {
   paleMap: {
     tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/pale-units.pmtiles',
     sourceLayer: 'pale-units',
-    // A driver renders per its map view: on the regional units it is that
-    // term's LMDI contribution to the 2000-2023 change; on the gridded
-    // cells — where population and production have no per-cell series —
-    // only the intensity terms have a meaning, shown as their 2020 level
-    // (driver.level). regionalOnly drivers switch the view when picked.
+    // Analysis is a single view: the net change in emissions, 2000-2023.
+    // Gridded, that is each cell's own change; regional, each unit's — and
+    // selecting a region breaks it into contributions. The per-term LMDI
+    // props (r_pop, r_prodpc, ...) still ride the unit tiles for those
+    // breakdowns; they are simply no longer separate map choices.
     drivers: [
-      { id: 'r_net', label: 'Net change, kg CO₂e', cellTerm: 'net' },
-      { id: 'r_pop', label: 'Population, persons', regionalOnly: true },
-      // On the cells the identity has no population term, so per-capita
-      // production collapses to total production (lib/analysis-cell-change).
-      { id: 'r_prodpc', label: 'Production, kcal/capita',
-        griddedLabel: 'Production, kcal', cellTerm: 'prod' },
-      { id: 'r_landkcal', label: 'Land intensity, ha/kcal', cellTerm: 'landprod',
-        // Ramp caps near the 90th percentile of the cell distribution
-        // (median 94, p90 272 ha/Gkcal) so the map shows structure rather
-        // than saturating.
-        level: { num: 'ha', den: 'pkcal', mul: 1, unit: 'ha/Gkcal',
-                 colorMax: 300, denMin: 1 } },
-      { id: 'r_eland', label: 'Emissions intensity, kg CO₂e/ha', cellTerm: 'eland',
-        // Median 4.4 t/ha, p90 30 t/ha across cells with >100 ha cropland.
-        level: { num: 'tot', den: 'ha', mul: 1e6, unit: 'kg CO₂e/ha',
-                 colorMax: 20000, denMin: 100 } },
+      { id: 'r_net', label: 'Net change in emissions', cellTerm: 'net' },
     ],
-    // Snapshot intensity maps — repaint the active view (gridded cells or
-    // regional units) with a stored-prop ratio. tot kt -> kg via 1e6.
-    // Snapshot intensity maps, offered alongside the change decomposition.
-    levels: [
-      { id: 'lvl_eint', label: 'Emissions intensity — 2020 level',
-        num: 'tot', den: 'ha', mul: 1e6, unit: 'kg CO₂e/ha',
-        colorMax: 20000, denMin: 100 },
-      { id: 'lvl_lint', label: 'Land intensity — 2020 level',
-        num: 'ha', den: 'pkcal', mul: 1, unit: 'ha/Gkcal',
-        colorMax: 300, denMin: 1 },
+
+    // Analysis overlays render from the 0.25-degree tier at EVERY zoom, so
+    // a cell keeps its colour as you zoom. (Falling back to the 0.5-degree
+    // tier at low zoom changes the statistic: the winner of an aggregated
+    // cell is not the winner of its parts, and 7% of emissions sit where
+    // the two disagree — which reads as the map flickering.) Density is
+    // thinned by magnitude at low zoom instead; the cells dropped are the
+    // faint ones the alpha ramp was already hiding.
+    cellBandProp: 'tot',
+    cellBands: [
+      { maxZoom: 2.6, minValue: 10 },
+      { minZoom: 2.6, maxZoom: 3.6, minValue: 2 },
+      { minZoom: 3.6 },
     ],
 
     // Dominance maps: which source / commodity leads in each cell or unit.

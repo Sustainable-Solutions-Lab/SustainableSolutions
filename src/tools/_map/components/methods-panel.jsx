@@ -228,7 +228,7 @@ function FoodEmissionsMethods() {
         agricultural land follow national trajectories, so those two terms
         vary between countries but not within them, while the emissions
         term and the net change carry the within-country detail.
-        Population is genuinely gridded (HYDE 3.3 annual population), as is
+        Population is gridded (HYDE 3.3 annual population), as is
         the 2020 emissions pattern; production and agricultural land are
         national series apportioned to units by their share of national
         emissions, so those two terms are proportional attributions rather
@@ -388,7 +388,7 @@ function FuelTreatmentMethods() {
         agricultural land follow national trajectories, so those two terms
         vary between countries but not within them, while the emissions
         term and the net change carry the within-country detail.
-        Population is genuinely gridded (HYDE 3.3 annual population), as is
+        Population is gridded (HYDE 3.3 annual population), as is
         the 2020 emissions pattern; production and agricultural land are
         national series apportioned to units by their share of national
         emissions, so those two terms are proportional attributions rather

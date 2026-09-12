@@ -18,7 +18,7 @@ import { AnalysisCellLayer } from './components/map/level-layer.jsx'
 import { RegionStats } from './components/map/region-stats.jsx'
 import { useYearFactors } from './lib/year-factors.js'
 import { levelFor, makeLevelVariable, levelColorExpr } from './lib/analysis-levels.js'
-import { categoricalFor, categoricalEntries, categoricalColorExpr, categoricalOpacityExpr } from './lib/analysis-categorical.js'
+import { categoricalFor, categoricalEntries, categoricalColorExpr, categoricalOpacityExpr, categoricalLegend } from './lib/analysis-categorical.js'
 import { cellTermFor, cellChangeExpr, cellChangeColorExpr, cellChangeMagnitudeExpr } from './lib/analysis-cell-change.js'
 import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
@@ -297,14 +297,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           if (state.analysis === 'dominance') {
             return (config.paleMap?.categorical ?? []).find((c) => c.id === state.analysisDriver)?.shortLabel
           }
-          if (state.analysis === 'pale') {
-            const lvl = (config.paleMap?.levels ?? []).find((x) => x.id === state.analysisDriver)
-            if (lvl) return lvl.label            // already says "2020 level"
-            const d = (config.paleMap?.drivers ?? []).find((x) => x.id === state.analysisDriver)
-            if (!d) return null
-            const label = (state.mapView !== 'regional' && d.griddedLabel) || d.label
-            return `${label} — change`
-          }
+          // Analysis is the one net-change view; say that plainly.
+          if (state.analysis === 'pale') return 'Change 2000–2023'
           const low = state.percentileRange?.low ?? 0
           return low > 0 ? `Top ${100 - low}%` : null
         })(),
@@ -554,6 +548,24 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           </div>
         )}
 
+        {/* Region focus — mobile access (config.areaTool) */}
+        {config.areaTool?.enabled && (
+          <button
+            type="button"
+            onClick={() => {
+              dispatch({ type: Actions.TOGGLE_AREA_TOOL })
+              setMobilePanelOpen(false)
+            }}
+            className={[
+              'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-3 mb-1',
+              'font-sans text-[12px] uppercase tracking-[0.12em]',
+              state.areaToolActive ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+            ].join(' ')}
+          >
+            Region Focus
+          </button>
+        )}
+
         {/* Analysis — mobile access (config.paleMap) */}
         {config.paleMap && (
           <div className="mt-4 pt-3 border-t border-rule">
@@ -685,7 +697,30 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               padding: '6px 8px',
             }}
           >
-            <MobileLegend variable={activeVariable} allValues={statewideValues} isDark={isDark} />
+            {paleActive ? (
+              <div>
+                <div style={{
+                  height: 7, borderRadius: 2,
+                  background: 'linear-gradient(to right, rgba(50,136,189,0.9), rgba(102,194,165,0.6), rgba(128,128,128,0.15), rgba(253,174,97,0.6), rgba(213,62,79,0.9))',
+                }} />
+                <div className="flex justify-between font-mono text-ink-3" style={{ fontSize: 9 }}>
+                  <span>−50%</span><span>change since 2000</span><span>+50%</span>
+                </div>
+              </div>
+            ) : state.analysis === 'dominance' && categoricalEntryList.length ? (
+              <div className="flex flex-wrap" style={{ gap: '1px 8px' }}>
+                {categoricalLegend(categoricalEntryList).map((e) => (
+                  <span key={e.color} className="font-mono text-ink-2 inline-flex items-center"
+                    style={{ fontSize: 8, gap: 3 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: 2, background: e.color,
+                      display: 'inline-block', flexShrink: 0 }} />
+                    {e.label}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <MobileLegend variable={activeVariable} allValues={statewideValues} isDark={isDark} />
+            )}
           </div>
 
           {/* Latitudinal marginal — config-gated (latProfileUrl) */}
@@ -795,8 +830,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             </div>
           )}
 
-          {/* Regional data stats panel — desktop only */}
-          <div className="hidden md:block">
+          {/* Regional data stats panel */}
+          <div>
             <StatsPanel
               config={config}
               drawnCircle={state.drawnCircle}
@@ -809,8 +844,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             />
           </div>
 
-          {/* Area tool — desktop only */}
-          <div className="hidden md:block">
+          {/* Area tool — touch-enabled, so mobile gets it too */}
+          <div>
             <AreaTool
               map={mapInstance}
               config={config}

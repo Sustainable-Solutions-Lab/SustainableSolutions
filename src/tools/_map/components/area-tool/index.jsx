@@ -588,12 +588,54 @@ export function AreaTool({ map, config, state, dispatch }) {
       document.addEventListener('mouseup', onDocMouseUp)
     }
 
+    // Touch mirror of the mouse path: one finger inside the circle drags
+    // it; the touch is claimed (preventDefault) so the map does not pan.
+    function onCanvasTouchStart(e) {
+      if (e.touches.length !== 1) return
+      const t = e.touches[0]
+      const rect = canvas.getBoundingClientRect()
+      const lngLat = map.unproject([t.clientX - rect.left, t.clientY - rect.top])
+      const { lat, lng, radiusKm } = circleRef.current
+      if (haversineKm(lat, lng, lngLat.lat, lngLat.lng) > radiusKm) return
+
+      e.stopPropagation()
+      e.preventDefault()
+      movingCircle = true
+      const startLat = lngLat.lat
+      const startLng = lngLat.lng
+      const origLat = lat
+      const origLng = lng
+
+      function onTouchMove(evt) {
+        if (evt.touches.length !== 1) return
+        evt.preventDefault()
+        const tt = evt.touches[0]
+        const r = canvas.getBoundingClientRect()
+        const cur = map.unproject([tt.clientX - r.left, tt.clientY - r.top])
+        const newLat = origLat + (cur.lat - startLat)
+        const newLng = origLng + (cur.lng - startLng)
+        circleRef.current = { ...circleRef.current, lat: newLat, lng: newLng }
+        drawCircleOnMap(map, newLat, newLng, circleRef.current.radiusKm, isDarkRef.current)
+        updateHandlePos()
+      }
+      function onTouchEnd() {
+        movingCircle = false
+        document.removeEventListener('touchmove', onTouchMove)
+        document.removeEventListener('touchend', onTouchEnd)
+        setTimeout(computeAndDispatch, 50)
+      }
+      document.addEventListener('touchmove', onTouchMove, { passive: false })
+      document.addEventListener('touchend', onTouchEnd)
+    }
+
     map.on('mousemove', onMapMouseMove)
     canvas.addEventListener('mousedown', onCanvasMouseDown, { capture: true })
+    canvas.addEventListener('touchstart', onCanvasTouchStart, { capture: true, passive: false })
 
     return () => {
       map.off('mousemove', onMapMouseMove)
       canvas.removeEventListener('mousedown', onCanvasMouseDown, { capture: true })
+      canvas.removeEventListener('touchstart', onCanvasTouchStart, { capture: true })
       canvas.style.cursor = ''
     }
   }, [map, state.areaToolActive, updateHandlePos, computeAndDispatch])
@@ -633,6 +675,36 @@ export function AreaTool({ map, config, state, dispatch }) {
     document.addEventListener('mouseup', onMouseUp)
   }, [map, updateHandlePos, computeAndDispatch])
 
+  const onHandleTouchStart = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const canvas = map.getCanvas()
+
+    const onTouchMove = (evt) => {
+      if (evt.touches.length !== 1) return
+      evt.preventDefault()
+      const t = evt.touches[0]
+      const rect = canvas.getBoundingClientRect()
+      const lngLat = map.unproject([t.clientX - rect.left, t.clientY - rect.top])
+      const { lat, lng } = circleRef.current
+      const newRadius = haversineKm(lat, lng, lngLat.lat, lngLat.lng)
+      if (newRadius >= MIN_RADIUS_KM) {
+        circleRef.current = { lat, lng, radiusKm: newRadius }
+        drawCircleOnMap(map, lat, lng, newRadius, isDarkRef.current)
+        updateHandlePos()
+        setResizeDiameterKm((newRadius * 2).toFixed(0))
+      }
+    }
+    const onTouchEnd = () => {
+      document.removeEventListener('touchmove', onTouchMove)
+      document.removeEventListener('touchend', onTouchEnd)
+      setResizeDiameterKm(null)
+      computeAndDispatch()
+    }
+    document.addEventListener('touchmove', onTouchMove, { passive: false })
+    document.addEventListener('touchend', onTouchEnd)
+  }, [map, updateHandlePos, computeAndDispatch])
+
   if (!state.areaToolActive || !handlePos) return null
 
   const handleColor = state.colorScheme === 'dark' ? 'rgba(255,255,255,0.85)' : 'rgba(50,50,50,0.65)'
@@ -643,9 +715,11 @@ export function AreaTool({ map, config, state, dispatch }) {
       {/* Resize handle */}
       <div
         onMouseDown={onHandleMouseDown}
+        onTouchStart={onHandleTouchStart}
         title='Drag to resize'
         style={{
           position: 'absolute',
+          touchAction: 'none',
           left: handlePos.x - HANDLE_PX,
           top: handlePos.y - HANDLE_PX,
           width: HANDLE_PX * 2,

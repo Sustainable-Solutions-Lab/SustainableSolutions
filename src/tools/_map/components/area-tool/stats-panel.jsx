@@ -648,7 +648,11 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
         borderRadius: 'var(--radius-md)',
         padding: '10px 12px 8px',
         minWidth: 240,
-        maxWidth: 320,
+        maxWidth: 'min(320px, calc(100vw - 48px))',
+        // Never taller than the map: the phone panel otherwise clips its
+        // top edge above the container. Scrolls internally instead.
+        maxHeight: 'calc(100% - 140px)',
+        overflowY: 'auto',
         zIndex: 10,
         // Design system shadow (--shadow-pop): soft, neutral, not blue-tinted.
         boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08)',

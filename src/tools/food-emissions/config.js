@@ -359,8 +359,8 @@ const config = {
     // Dominance maps: which source / commodity leads in each cell or unit.
     // Candidate sets follow the sidebar selection (see lib/analysis-categorical).
     categorical: [
-      { id: 'dom_source', kind: 'source', label: 'Dominant source', shortLabel: 'Top source' },
-      { id: 'dom_commodity', kind: 'commodity', label: 'Dominant commodity', shortLabel: 'Top commodity' },
+      { id: 'dom_source', kind: 'source', label: 'Dominant source', shortLabel: 'Top sources' },
+      { id: 'dom_commodity', kind: 'commodity', label: 'Dominant commodity', shortLabel: 'Top commodities' },
     ],
     // Labels + categorical colors for the dominance maps. Sources reuse the
     // area-trend palette; commodities name the thirteen largest and grey the

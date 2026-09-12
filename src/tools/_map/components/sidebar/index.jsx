@@ -137,8 +137,49 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           </>
         )}
 
-        {/* Dimension controls */}
-        {visibleDimensions.map((dim) => {
+        {/* Primary view — the emissions map (with its source/commodity
+            refinements, percentiles, and analysis) or one of the dominance
+            maps. A dominance view resets source/commodity to All: a 'top
+            commodities' map of one commodity is not a meaningful object. */}
+        {(config.paleMap?.categorical ?? []).length > 0 && (
+          <div className="mb-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+              View
+            </p>
+            <div className="flex gap-4 flex-wrap">
+              {[{ id: null, label: 'Emissions' }, ...config.paleMap.categorical.map((c) => ({ id: c.id, label: c.shortLabel ?? c.label }))].map((v) => {
+                const on = v.id ? (isDominance && state.analysisDriver === v.id) : !isDominance
+                return (
+                  <button
+                    key={v.id ?? 'emissions'}
+                    type="button"
+                    onClick={() => {
+                      if (on) return
+                      if (!v.id) { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
+                      for (const d of visibleDimensions) {
+                        dispatch({ type: Actions.SET_DIMENSION, dimensionId: d.id, value: d.defaultValue })
+                      }
+                      dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
+                      dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: v.id })
+                      dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
+                    }}
+                    className={[
+                      'bg-transparent border-0 cursor-pointer p-0',
+                      'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
+                      'transition-colors hover:text-ink',
+                      on ? 'font-bold text-ink underline' : 'font-normal text-ink-3',
+                    ].join(' ')}
+                  >
+                    {v.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Dimension controls — Emissions view only */}
+        {!isDominance && visibleDimensions.map((dim) => {
           const filteredDim = {
             ...dim,
             options: dim.options?.filter(
@@ -230,7 +271,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
 
         {/* ANALYSIS — regional decompositions (PALE); population and
             production factors only exist for regions. */}
-        {config.paleMap && setPaleActive && (
+        {config.paleMap && setPaleActive && !isDominance && (
           <>
             <button
               type="button"
@@ -262,43 +303,6 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                 </p>
               </div>
             )}
-          </>
-        )}
-
-        {/* Dominance shortcuts — which source / commodity leads in each
-            place. Sits with the SHOW presets because it is a way of
-            looking at the same map, not a separate analysis. */}
-        {config.paleMap?.categorical && (
-          <>
-            <div className="mb-1 flex items-center gap-3">
-              {/* Spacer keeps these aligned under the SHOW row's options —
-                  the labels already read 'Top …', like the percentiles. */}
-              <span className="font-mono" style={{ fontSize: 9, letterSpacing: '0.08em', visibility: 'hidden' }}>
-                SHOW
-              </span>
-              {config.paleMap.categorical.map((c) => {
-                const on = state.analysis === 'dominance' && state.analysisDriver === c.id
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      if (on) { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
-                      dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
-                      dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: c.id })
-                      dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
-                    }}
-                    className={[
-                      'bg-transparent border-0 cursor-pointer p-0 font-sans text-[11px]',
-                      'underline-offset-[3px] transition-colors hover:text-ink',
-                      on ? 'font-bold text-ink underline' : 'font-normal text-ink-3',
-                    ].join(' ')}
-                  >
-                    {c.shortLabel ?? c.label}
-                  </button>
-                )
-              })}
-            </div>
           </>
         )}
 

@@ -286,7 +286,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   // Maize (corn)"). Year-bar projects only.
   const badgeSelectionLabel = config.yearControl
     ? [
-        ...config.dimensions
+        ...(state.analysis === 'dominance' ? [] : config.dimensions)
           .filter((d) =>
             d.type === 'dropdown' &&
             d.location !== 'map' &&
@@ -460,7 +460,43 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           </div>
         )}
 
-        {mobileDimensions.map((dim) => {
+        {/* Primary view — mirrors the desktop sidebar. */}
+        {(config.paleMap?.categorical ?? []).length > 0 && (
+          <div className="mb-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+              View
+            </p>
+            <div className="flex gap-4 flex-wrap">
+              {[{ id: null, label: 'Emissions' }, ...config.paleMap.categorical.map((c) => ({ id: c.id, label: c.shortLabel ?? c.label }))].map((v) => {
+                const on = v.id ? (state.analysis === 'dominance' && state.analysisDriver === v.id) : state.analysis !== 'dominance'
+                return (
+                  <button
+                    key={v.id ?? 'emissions'}
+                    type="button"
+                    onClick={() => {
+                      if (on) return
+                      if (!v.id) { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
+                      for (const d of mobileDimensions) {
+                        dispatch({ type: Actions.SET_DIMENSION, dimensionId: d.id, value: d.defaultValue })
+                      }
+                      dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
+                      dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: v.id })
+                      dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
+                    }}
+                    className={[
+                      'bg-transparent border-0 cursor-pointer p-0 font-sans text-[12px] uppercase tracking-[0.12em]',
+                      on ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+                    ].join(' ')}
+                  >
+                    {v.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {state.analysis !== 'dominance' && mobileDimensions.map((dim) => {
           const filteredDim = {
             ...dim,
             options: dim.options?.filter(
@@ -500,50 +536,21 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             </div>
           </div>
         )}
-        {config.percentileFilter?.enabled && (
+        {config.percentileFilter?.enabled && state.analysis !== 'dominance' && (
           <div className="mb-2 flex items-center gap-3">
             {[[0, 'All'], [75, 'Top 25%'], [90, 'Top 10%'], [95, 'Top 5%']].map(([low, label]) => (
               <button
                 key={low}
                 type="button"
-                onClick={() => {
-                  if (state.analysis === 'dominance') dispatch({ type: Actions.SET_ANALYSIS, analysis: null })
-                  dispatch({ type: Actions.SET_PERCENTILE, low, high: 100 })
-                }}
+                onClick={() => dispatch({ type: Actions.SET_PERCENTILE, low, high: 100 })}
                 className={[
                   'bg-transparent border-0 cursor-pointer p-0 font-sans text-[11px]',
-                  state.analysis !== 'dominance' && (state.percentileRange?.low ?? 0) === low ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+                  (state.percentileRange?.low ?? 0) === low ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
                 ].join(' ')}
               >
                 {label}
               </button>
             ))}
-          </div>
-        )}
-
-        {config.paleMap?.categorical && (
-          <div className="mb-2 flex items-center gap-3">
-            {config.paleMap.categorical.map((c) => {
-              const on = state.analysis === 'dominance' && state.analysisDriver === c.id
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => {
-                    if (on) { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
-                    dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
-                    dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: c.id })
-                    dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
-                  }}
-                  className={[
-                    'bg-transparent border-0 cursor-pointer p-0 font-sans text-[11px]',
-                    on ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
-                  ].join(' ')}
-                >
-                  {c.shortLabel ?? c.label}
-                </button>
-              )
-            })}
           </div>
         )}
 
@@ -565,8 +572,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           </button>
         )}
 
-        {/* Analysis — mobile access (config.paleMap) */}
-        {config.paleMap && (
+        {/* Analysis — mobile access (config.paleMap); Emissions view only */}
+        {config.paleMap && state.analysis !== 'dominance' && (
           <div className="mt-4 pt-3 border-t border-rule">
             <button
               type="button"

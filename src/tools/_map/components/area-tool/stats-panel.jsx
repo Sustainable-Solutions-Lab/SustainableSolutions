@@ -673,10 +673,14 @@ export function StatsPanel({
         border: `1px solid ${borderColor}`,
         borderRadius: 8,
         zIndex: 12,
+        // Collapsed caps are ceilings for the max-height transition only —
+        // each sits well above its content's real height, so the sheet
+        // sizes to the content and a list is never half-clipped. Row
+        // counts are bounded instead (Composition max=4 below).
         maxHeight: sheetOpen ? 'calc(100% - 150px)'
-          : collapsedMode === 'pale' ? 210
-          : collapsedMode !== 'default' ? 122
-          : (hasData && !isCategorical ? 130 : 46),
+          : collapsedMode === 'pale' ? 230
+          : collapsedMode !== 'default' ? 220
+          : (hasData && !isCategorical ? 160 : 46),
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
@@ -761,7 +765,7 @@ export function StatsPanel({
               props={aggregateStats.compositionSums}
               taxonomy={config?.paleMap?.taxonomy}
               isDark={isDark}
-              max={5}
+              max={4}
               kinds={[collapsedMode === 'source' ? 'Sources' : 'Commodities']}
             />
           ) : hasData && !isCategorical ? (

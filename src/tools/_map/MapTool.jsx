@@ -687,7 +687,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             className="block md:hidden absolute z-10"
             style={{
               // Just above the year bar pinned at the bottom of the map.
-              bottom: 62,
+              bottom: 70,
               right: 8,
               width: 160,
               background: isDark ? 'rgba(12, 12, 28, 0.92)' : 'rgba(248, 248, 232, 0.92)',
@@ -828,9 +828,15 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             </div>
           )}
 
-          {/* Regional data stats panel */}
+          {/* Regional data stats panel. sheetFocus tells the mobile sheet
+              what the map is showing, so its collapsed view matches. */}
           <div>
             <StatsPanel
+              sheetFocus={paleActive ? 'pale'
+                : state.analysis === 'dominance'
+                  ? ((config.paleMap?.categorical ?? [])
+                      .find((c) => c.id === state.analysisDriver)?.kind ?? 'default')
+                  : 'default'}
               config={config}
               drawnCircle={state.drawnCircle}
               drawnPolygon={state.drawnPolygon}

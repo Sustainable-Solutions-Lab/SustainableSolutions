@@ -165,10 +165,15 @@ export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId =
  * approximation otherwise. Contributions are log-mean weighted so the
  * four bars sum exactly to the net change.
  */
-export function PaleChart({ trendConfig, trendWeights, isDark }) {
+/**
+ * The region's LMDI decomposition, shared by the full PaleChart and the
+ * abbreviated strip in the mobile sheet header.
+ * Returns { bars: [{label, v}], dE, span } in kt CO2e, or null.
+ */
+export function usePaleDecomposition(trendConfig, trendWeights) {
   const trends = useNationalTrends(trendConfig?.url)
 
-  const result = useMemo(() => {
+  return useMemo(() => {
     if (!trends || !trendWeights) return null
     const { years, countries } = trends
     const refIdx = years.indexOf(trendConfig.referenceYear ?? years[years.length - 1])
@@ -219,6 +224,17 @@ export function PaleChart({ trendConfig, trendWeights, isDark }) {
     ]
     return { bars, dE, span: `${years[y0]}\u2013${years[yT]}` }
   }, [trends, trendWeights, trendConfig])
+}
+
+/** Signed kt/Mt formatter for LMDI bars. */
+export function fmtPaleKt(v) {
+  const a = Math.abs(v)
+  const s = a >= 1000 ? `${(a / 1000).toFixed(a >= 10000 ? 0 : 1)} Mt` : `${a.toFixed(0)} kt`
+  return `${v >= 0 ? '+' : '\u2212'}${s}`
+}
+
+export function PaleChart({ trendConfig, trendWeights, isDark }) {
+  const result = usePaleDecomposition(trendConfig, trendWeights)
 
   if (!result) return null
   const text = isDark ? 'rgba(248,248,232,0.85)' : 'rgba(24,24,56,0.85)'
@@ -229,11 +245,7 @@ export function PaleChart({ trendConfig, trendWeights, isDark }) {
   const HALF = 64  // px each side of the zero axis
   const AXIS = 86  // label column width
 
-  const fmt = (v) => {
-    const a = Math.abs(v)
-    const s = a >= 1000 ? `${(a / 1000).toFixed(a >= 10000 ? 0 : 1)} Mt` : `${a.toFixed(0)} kt`
-    return `${v >= 0 ? '+' : '\u2212'}${s}`
-  }
+  const fmt = fmtPaleKt
 
   return (
     <div style={{ marginTop: 10 }}>

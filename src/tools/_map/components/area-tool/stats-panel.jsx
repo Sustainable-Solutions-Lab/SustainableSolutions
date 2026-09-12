@@ -14,8 +14,8 @@
  *   dispatch:       Dispatch
  */
 
-import { useMemo } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { ChevronUp, X } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
 import { buildColorScale, getEquityPalette } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
@@ -626,6 +626,19 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
 
   const unit = activeVariable?.unit ?? ''
 
+  // On phones the floating panel covered the whole map, so it becomes a
+  // bottom sheet: collapsed to a one-line summary, tap (or the chevron)
+  // to expand. Desktop keeps the floating card.
+  const [isMobile, setIsMobile] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const sync = () => setIsMobile(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
   // Aligned with the design system: paper-2 with translucency so map context
   // shows through; rule-strength border; ink-3 muted text; ink line color.
   const panelBg = isDark ? 'rgba(20, 20, 42, 0.92)' : 'rgba(241, 241, 223, 0.95)'
@@ -637,9 +650,31 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
   const isCategorical = activeVariable?.type === 'categorical'
   const hasData = activeVariable && activeVarValues.length > 0
 
-  return (
-    <div
-      style={{
+  // Whether the abbreviated (collapsed-sheet) factors trend can render.
+  const hasPaleTrend = Boolean(config?.areaTool?.trend && aggregateStats?.trendWeights)
+
+  const shellStyle = isMobile
+    ? {
+        // Bottom sheet: pinned above the year bar, full width, height
+        // animates between the summary row and the scrolling detail view.
+        position: 'absolute',
+        left: 8,
+        right: 8,
+        bottom: 74,
+        background: panelBg,
+        border: `1px solid ${borderColor}`,
+        borderRadius: 8,
+        zIndex: 12,
+        maxHeight: sheetOpen ? 'calc(100% - 150px)' : (hasPaleTrend ? 210 : 46),
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'max-height 0.28s ease',
+        boxShadow: '0 -2px 16px rgba(0,0,0,0.12)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }
+    : {
         position: 'absolute',
         bottom: 80,
         left: 24,
@@ -649,8 +684,6 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
         padding: '10px 12px 8px',
         minWidth: 240,
         maxWidth: 'min(320px, calc(100vw - 48px))',
-        // Never taller than the map: the phone panel otherwise clips its
-        // top edge above the container. Scrolls internally instead.
         maxHeight: 'calc(100% - 140px)',
         overflowY: 'auto',
         zIndex: 10,
@@ -658,8 +691,63 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
         boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
-      }}
-    >
+      }
+
+  // Collapsed headline: the two facts worth a glance — area and the mean
+  // cell value (or feature count for categorical layers).
+  const headline = [
+    `${count.toLocaleString()} km²`,
+    hasData && !isCategorical && mean !== null ? `mean ${formatValue(mean, unit)}` : null,
+  ].filter(Boolean).join(' · ')
+
+
+  return (
+    <div style={shellStyle}>
+      {isMobile && (
+        <button
+          type='button'
+          onClick={() => setSheetOpen((v) => !v)}
+          aria-expanded={sheetOpen}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            width: '100%',
+            flexShrink: 0,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '6px 40px 6px 12px',
+            minHeight: 44,
+            textAlign: 'left',
+          }}
+        >
+          <span style={{ width: 28, height: 3, borderRadius: 2, background: btnColor,
+            flexShrink: 0 }} />
+          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: lineColor,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {headline || 'Region statistics'}
+          </span>
+          <ChevronUp size={14} strokeWidth={1.5} color={btnColor}
+            style={{ marginLeft: 'auto', flexShrink: 0,
+              transform: sheetOpen ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.28s ease' }} />
+        </button>
+      )}
+
+      {/* Abbreviated view — collapsed sheet only: the PALE factors trend
+          (each factor indexed to 1 in 2000). The area-breakdown stack and
+          the rest of the statistics live in the expanded sheet. */}
+      {isMobile && !sheetOpen && hasPaleTrend && (
+        <div style={{ padding: '0 12px 8px', flexShrink: 0 }}>
+          <PaleSeriesChart
+            trendConfig={config.areaTool.trend}
+            trendWeights={aggregateStats.trendWeights}
+            isDark={isDark}
+          />
+        </div>
+      )}
+
       {/* Close button — absolute top-right */}
       <button
         onClick={handleClose}
@@ -674,10 +762,18 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
           padding: 4,
           lineHeight: 0,
           color: btnColor,
+          zIndex: 1,
         }}
       >
         <X size={14} strokeWidth={1.5} />
       </button>
+
+      <div style={isMobile
+        ? { overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '2px 12px 10px',
+            // Collapsed, the sheet shows only the header + factors trend;
+            // without this the body's first rows peek through the gap.
+            display: sheetOpen ? 'block' : 'none' }
+        : {}}>
 
       {/* Histogram (numeric) or pie chart (categorical) */}
       {hasData && isCategorical && (
@@ -785,6 +881,7 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
           Move circle to data area
         </span>
       )}
+      </div>
     </div>
   )
 }

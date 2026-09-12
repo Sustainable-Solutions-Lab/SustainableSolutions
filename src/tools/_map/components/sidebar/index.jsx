@@ -24,8 +24,6 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
   )
   const multiLayer = config.layers.filter((l) => !l.hidden).length > 1
   const isDominance = state.analysis === 'dominance'
-  const isLevelDriver = state.mapView !== 'regional' &&
-    (config.paleMap?.drivers ?? []).some((d) => d.id === paleDriver && d.level)
 
   return (
     <aside
@@ -248,89 +246,23 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             </button>
             {paleActive && (
               <div className="mb-2">
-                <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
-                  {isLevelDriver ? 'Level · 2020' : 'Driver · % of 2000 emissions'}
+                <div style={{
+                  height: 8, borderRadius: 2, marginTop: 4,
+                  background: 'linear-gradient(to right, rgba(50,136,189,0.9), rgba(102,194,165,0.6), rgba(128,128,128,0.15), rgba(253,174,97,0.6), rgba(213,62,79,0.9))',
+                }} />
+                <div className="flex justify-between font-mono text-ink-3" style={{ fontSize: 9 }}>
+                  <span>−50%</span><span>0</span><span>+50%</span>
+                </div>
+                <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                  Change in emissions 2000–2023, as a share of each
+                  {state.mapView === 'regional' ? ' unit' : ' cell'}'s 2000 total.
+                  {state.mapView === 'regional'
+                    ? ' Click a unit for the drivers behind it.'
+                    : ' Draw a region below for the drivers behind it.'}
                 </p>
-                <select
-                  value={paleDriver}
-                  onChange={(e) => {
-                    const id = e.target.value
-                    setPaleDriver?.(id)
-                    // Population and production have no per-cell series —
-                    // those drivers only exist on the regional units.
-                    const d = (config.paleMap?.drivers ?? []).find((x) => x.id === id)
-                    if (d?.regionalOnly && state.mapView !== 'regional') {
-                      dispatch({ type: Actions.SET_MAP_VIEW, view: 'regional' })
-                    }
-                  }}
-                  className="w-full bg-paper-2 text-ink border border-rule px-2 py-1.5 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
-                  style={{ borderRadius: 'var(--radius-sm)', margin: '6px 0 10px' }}
-                >
-                  {(config.paleMap.drivers ?? []).map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {(state.mapView !== 'regional' && d.griddedLabel) || d.label}
-                    </option>
-                  ))}
-                  {(config.paleMap.levels ?? []).map((d) => (
-                    <option key={d.id} value={d.id}>{d.label}</option>
-                  ))}
-                </select>
-                {isLevelDriver ? (
-                  <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                    2020 level in each cell; darker is higher.
-                  </p>
-                ) : (
-                  <>
-                    <div style={{ marginTop: 6 }}>
-                      <div style={{
-                        height: 8, borderRadius: 2,
-                        background: 'linear-gradient(to right, rgba(50,136,189,0.9), rgba(102,194,165,0.6), rgba(128,128,128,0.15), rgba(253,174,97,0.6), rgba(213,62,79,0.9))',
-                      }} />
-                      <div className="flex justify-between font-mono text-ink-3" style={{ fontSize: 9 }}>
-                        <span>−50%</span><span>0</span><span>+50%</span>
-                      </div>
-                    </div>
-                    <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                      {state.mapView === 'regional'
-                        ? "LMDI terms of each admin-1 × biome unit's 2000–2023 change. Blue pushed emissions down; red pushed them up."
-                        : "LMDI terms of each cell's 2000–2023 change (no population term on the grid; production and land follow national trajectories). Blue pushed emissions down; red pushed them up."}
-                    </p>
-                  </>
-                )}
               </div>
             )}
           </>
-        )}
-
-        {/* Percentile presets — mask everything below the chosen value
-            percentile (cells via the tile filter, regional units via the
-            regional layer). */}
-        {config.percentileFilter?.enabled && (
-          <div className="mt-1 mb-1 flex items-center gap-3">
-            <span className="font-mono text-ink-3" style={{ fontSize: 9, letterSpacing: '0.08em' }}>
-              SHOW
-            </span>
-            {[[0, 'All'], [75, 'Top 25%'], [90, 'Top 10%'], [95, 'Top 5%']].map(([low, label]) => (
-              <button
-                key={low}
-                type="button"
-                onClick={() => {
-                  // One "top" at a time: a percentile clears a dominance view.
-                  if (isDominance) dispatch({ type: Actions.SET_ANALYSIS, analysis: null })
-                  dispatch({ type: Actions.SET_PERCENTILE, low, high: 100 })
-                }}
-                className={[
-                  'bg-transparent border-0 cursor-pointer p-0 font-sans text-[11px]',
-                  'underline-offset-[3px] transition-colors hover:text-ink',
-                  !isDominance && (state.percentileRange?.low ?? 0) === low && (state.percentileRange?.high ?? 100) === 100
-                    ? 'font-bold text-ink underline'
-                    : 'font-normal text-ink-3',
-                ].join(' ')}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         )}
 
         {/* Dominance shortcuts — which source / commodity leads in each

@@ -150,12 +150,11 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   // region-bound, and those live inside the PALE decomposition itself.
   const paleActive = state.analysis === 'pale'
   const setPaleActive = (on) => {
+    // Analysis is one view now: the net change. Dominance uses the same
+    // driver slot, so reset it on the way in.
     if (on) {
-      // Coming back from a dominance map: restore a driver this menu owns.
-      const owned = config.paleMap?.drivers ?? []
-      if (!owned.some((d) => d.id === state.analysisDriver)) {
-        dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: owned[0]?.id ?? 'r_net' })
-      }
+      dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
+      dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: config.paleMap?.drivers?.[0]?.id ?? 'r_net' })
     }
     dispatch({ type: Actions.SET_ANALYSIS, analysis: on ? 'pale' : null })
   }
@@ -226,21 +225,25 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     return null
   }, [activeLevel, activeCategorical, categoricalEntryList, isDark, cellTerm, cellChangeTerms, toolYearFactors])
   // Cell-scale magnitude ramp (kt CO2e per 0.25-degree cell).
-  const analysisCellOpacity = useMemo(() => {
-    const stops = [[0, 0.06], [1, 0.3], [8, 0.6], [40, 0.85], [150, 1]]
+  // The quantity a cell is judged by: the winning source for a dominance
+  // map, the start-year emissions for a change map. Drives both the alpha
+  // ramp and the low-zoom band filters.
+  const analysisCellMagnitude = useMemo(() => {
     if (activeCategorical && categoricalEntryList.length) {
-      return categoricalOpacityExpr(categoricalEntryList, stops)
+      const props = categoricalEntryList.map((e) => ['coalesce', ['to-number', ['get', e.prop]], 0])
+      return props.length === 1 ? props[0] : ['max', ...props]
     }
     if (cellTerm && cellChangeTerms && toolYearFactors) {
-      // Weight by the cell's own start-year emissions so a percentage map
-      // does not shout from cells with nothing in them.
-      const mag = cellChangeMagnitudeExpr({ terms: cellChangeTerms, factors: toolYearFactors })
-      const expr = ['interpolate', ['linear'], mag]
-      for (const [v, a] of stops) expr.push(v, a)
-      return expr
+      return cellChangeMagnitudeExpr({ terms: cellChangeTerms, factors: toolYearFactors })
     }
     return null
   }, [activeCategorical, categoricalEntryList, cellTerm, cellChangeTerms, toolYearFactors])
+  const analysisCellOpacity = useMemo(() => {
+    if (!analysisCellMagnitude) return null
+    const expr = ['interpolate', ['linear'], analysisCellMagnitude]
+    for (const [v, a] of [[0, 0.06], [1, 0.3], [8, 0.6], [40, 0.85], [150, 1]]) expr.push(v, a)
+    return expr
+  }, [analysisCellMagnitude])
   const analysisPaintKey = [
     paleDriver, isDark ? 'd' : 'l', state.mapView, toolYearFactors ? 'f' : '-',
     state.activeDimensions?.source, state.activeDimensions?.crop,
@@ -551,7 +554,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           </div>
         )}
 
-        {/* PALE drivers map — mobile access (config.paleMap) */}
+        {/* Analysis — mobile access (config.paleMap) */}
         {config.paleMap && (
           <div className="mt-4 pt-3 border-t border-rule">
             <button
@@ -566,35 +569,10 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               Analysis
             </button>
             {paleActive && (
-              <>
-                <select
-                  value={paleDriver}
-                  onChange={(e) => {
-                    const id = e.target.value
-                    setPaleDriver(id)
-                    const d = (config.paleMap?.drivers ?? []).find((x) => x.id === id)
-                    if (d?.regionalOnly && state.mapView !== 'regional') {
-                      dispatch({ type: Actions.SET_MAP_VIEW, view: 'regional' })
-                    }
-                  }}
-                  className="w-full bg-paper-2 text-ink border border-rule px-2 py-1.5 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
-                  style={{ borderRadius: 'var(--radius-sm)', margin: '8px 0 10px' }}
-                >
-                  {(config.paleMap.drivers ?? []).map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {(state.mapView !== 'regional' && d.griddedLabel) || d.label}
-                    </option>
-                  ))}
-                  {(config.paleMap.levels ?? []).map((d) => (
-                    <option key={d.id} value={d.id}>{d.label}</option>
-                  ))}
-                </select>
-                <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                  Blue pushed emissions down, red up (% of 2000 emissions,
-                  2000–2023). Tap a region on the map for its full
-                  decomposition.
-                </p>
-              </>
+              <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                Change in emissions 2000–2023 (blue down, red up). Tap a
+                region for the drivers behind it.
+              </p>
             )}
           </div>
         )}
@@ -754,6 +732,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               config={config}
               colorExpr={analysisCellColor}
               opacityExpr={analysisCellOpacity}
+              magnitudeExpr={analysisCellMagnitude}
               paintKey={analysisPaintKey}
             />
           )}

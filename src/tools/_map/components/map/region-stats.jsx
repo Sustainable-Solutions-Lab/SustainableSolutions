@@ -83,6 +83,53 @@ export function Composition({ props, taxonomy, isDark, max = 3 }) {
   )
 }
 
+/**
+ * Change contributions for a selected unit, straight from the LMDI props
+ * baked into the unit tiles (percentages of the unit's 2000 emissions, so
+ * the four terms sum to the net change).
+ */
+function ChangeContributions({ props, isDark }) {
+  if (props?.r_net == null) return null
+  const rows = [
+    ['Population', props.r_pop],
+    ['Production / capita', props.r_prodpc],
+    ['Land / kcal', props.r_landkcal],
+    ['Emissions / ha', props.r_eland],
+  ].filter(([, v]) => v != null)
+  if (rows.length === 0) return null
+  const muted = isDark ? 'rgba(248,248,232,0.5)' : 'rgba(24,24,56,0.5)'
+  const text = isDark ? 'rgba(248,248,232,0.9)' : 'rgba(24,24,56,0.9)'
+  const max = Math.max(...rows.map(([, v]) => Math.abs(v)), Math.abs(props.r_net), 1)
+  const HALF = 52
+  const fmt = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(Math.round(v))}%`
+  return (
+    <div style={{ marginTop: 7 }}>
+      <div style={{ fontSize: 8, letterSpacing: '0.08em', color: muted, marginBottom: 2 }}>
+        CHANGE 2000–2023 · {fmt(props.r_net)} OF 2000
+      </div>
+      {rows.map(([label, v]) => {
+        const w = (Math.abs(v) / max) * HALF
+        return (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 1 }}>
+            <span style={{ fontSize: 9, color: text, width: 96, flexShrink: 0, textAlign: 'right' }}>
+              {label}
+            </span>
+            <div style={{ position: 'relative', width: 2 * HALF, height: 8, flexShrink: 0 }}>
+              <div style={{ position: 'absolute', left: HALF, top: 0, bottom: 0, width: 1,
+                background: muted, opacity: 0.5 }} />
+              <div style={{
+                position: 'absolute', left: v >= 0 ? HALF : HALF - w, width: Math.max(1, w),
+                top: 1, bottom: 1, background: v >= 0 ? '#D53E4F' : '#3288BD', opacity: 0.85,
+              }} />
+            </div>
+            <span style={{ fontSize: 9, color: muted, whiteSpace: 'nowrap' }}>{fmt(v)}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function RegionStats({ map, state, dispatch, activeVariable, isDark, config = null }) {
   const unit = state.selectedUnit
   // Unit-as-region weights for the PALE factor series: the unit's own
@@ -145,8 +192,14 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
         {p.country} · {Number(p.area_km2 ?? 0).toLocaleString()} km²
         {p.ha ? ` · ${Math.round(p.ha / 1000).toLocaleString()} kha cropland` : ''}
       </div>
+      {p.r_net != null && p.e2020_kt != null && (
+        <div style={{ fontSize: 13, fontWeight: 700 }}>
+          {Math.round(p.e2020_kt).toLocaleString()} kt CO₂e
+          <span style={{ fontSize: 9, color: muted, fontWeight: 400 }}> in 2020</span>
+        </div>
+      )}
       <div style={{ fontSize: 13, fontWeight: 700 }}>
-        {total != null
+        {p.r_net != null ? null : total != null
           ? activeVariable?.rawRead
             ? `${total < 10 ? total.toFixed(2) : Math.round(total).toLocaleString()} ${activeVariable.unit ?? ''}`
             : `${Math.round(total).toLocaleString()} kt CO₂e`
@@ -156,6 +209,7 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
         {!activeVariable?.rawRead && intens != null
           ? `${intens < 10 ? intens.toFixed(1) : Math.round(intens).toLocaleString()} t CO₂e / km²` : ''}
       </div>
+      <ChangeContributions props={p} isDark={isDark} />
       <Composition props={p} taxonomy={config?.paleMap?.taxonomy} isDark={isDark} />
       {unitWeights && config?.areaTool?.trend ? (
         <PaleSeriesChart

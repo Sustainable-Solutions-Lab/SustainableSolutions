@@ -49,12 +49,14 @@ function MiniDist({ values, isDark }) {
  * Top contributors by source and by commodity — the numbers behind the
  * dominance maps. Shares are of the region's 2020 total for that axis.
  */
-export function Composition({ props, taxonomy, isDark, max = 3 }) {
+export function Composition({ props, taxonomy, isDark, max = 3, kinds = null }) {
   if (!props || !taxonomy) return null
+  // kinds: optional ['Sources'] / ['Commodities'] filter, so a context that
+  // is about one axis (e.g. the Top source map) shows only that axis.
   const axes = [
     ['Sources', taxonomy.sources.map((s) => ({ ...s, prop: s.id }))],
     ['Commodities', taxonomy.commodities.map((c) => ({ ...c, prop: `tot_${c.id}` }))],
-  ]
+  ].filter(([title]) => !kinds || kinds.includes(title))
   const muted = isDark ? 'rgba(248,248,232,0.5)' : 'rgba(24,24,56,0.5)'
   const text = isDark ? 'rgba(248,248,232,0.9)' : 'rgba(24,24,56,0.9)'
   const rendered = axes

@@ -580,7 +580,8 @@ function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
   )
 }
 
-export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, areaToolActive, activeVariable, isDark, dispatch }) {
+export function StatsPanel({
+  sheetFocus = 'default', config, drawnCircle, drawnPolygon, aggregateStats, areaToolActive, activeVariable, isDark, dispatch }) {
   // Show whenever either a circle or a ZIP polygon is active.
   if (!drawnCircle && !drawnPolygon) return null
 
@@ -650,8 +651,15 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
   const isCategorical = activeVariable?.type === 'categorical'
   const hasData = activeVariable && activeVarValues.length > 0
 
-  // Whether the abbreviated (collapsed-sheet) factors trend can render.
+  // What the collapsed sheet shows tracks what the map is showing:
+  // Analysis -> the PALE factors trend; Top source / Top commodity -> that
+  // axis's composition; the plain emissions map -> the distribution of the
+  // mapped values inside the circle.
   const hasPaleTrend = Boolean(config?.areaTool?.trend && aggregateStats?.trendWeights)
+  const collapsedMode =
+    sheetFocus === 'pale' && hasPaleTrend ? 'pale'
+    : (sheetFocus === 'source' || sheetFocus === 'commodity') && aggregateStats?.compositionSums ? sheetFocus
+    : 'default'
 
   const shellStyle = isMobile
     ? {
@@ -665,7 +673,10 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
         border: `1px solid ${borderColor}`,
         borderRadius: 8,
         zIndex: 12,
-        maxHeight: sheetOpen ? 'calc(100% - 150px)' : (hasPaleTrend ? 210 : 46),
+        maxHeight: sheetOpen ? 'calc(100% - 150px)'
+          : collapsedMode === 'pale' ? 210
+          : collapsedMode !== 'default' ? 122
+          : (hasData && !isCategorical ? 130 : 46),
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
@@ -735,16 +746,27 @@ export function StatsPanel({ config, drawnCircle, drawnPolygon, aggregateStats, 
         </button>
       )}
 
-      {/* Abbreviated view — collapsed sheet only: the PALE factors trend
-          (each factor indexed to 1 in 2000). The area-breakdown stack and
-          the rest of the statistics live in the expanded sheet. */}
-      {isMobile && !sheetOpen && hasPaleTrend && (
+      {/* Abbreviated view — collapsed sheet only; the full statistics live
+          in the expanded sheet. */}
+      {isMobile && !sheetOpen && (
         <div style={{ padding: '0 12px 8px', flexShrink: 0 }}>
-          <PaleSeriesChart
-            trendConfig={config.areaTool.trend}
-            trendWeights={aggregateStats.trendWeights}
-            isDark={isDark}
-          />
+          {collapsedMode === 'pale' ? (
+            <PaleSeriesChart
+              trendConfig={config.areaTool.trend}
+              trendWeights={aggregateStats.trendWeights}
+              isDark={isDark}
+            />
+          ) : collapsedMode === 'source' || collapsedMode === 'commodity' ? (
+            <Composition
+              props={aggregateStats.compositionSums}
+              taxonomy={config?.paleMap?.taxonomy}
+              isDark={isDark}
+              max={5}
+              kinds={[collapsedMode === 'source' ? 'Sources' : 'Commodities']}
+            />
+          ) : hasData && !isCategorical ? (
+            <MiniHistogram values={activeVarValues} variable={activeVariable} isDark={isDark} />
+          ) : null}
         </div>
       )}
 

@@ -171,6 +171,22 @@ function FoodEmissionsMethods() {
         factor here is not a full life-cycle footprint.
       </p>
 
+      <h2 style={h2Style}>Production and yields</h2>
+      <p style={pStyle}>
+        Per-cell production — behind the calorie totals, the land-intensity
+        views, and every per-kilogram emission factor — is spatially
+        explicit in yield, not just in area. National production totals
+        from FAOSTAT are distributed within each country according to SPAM
+        2020's gridded production, which carries the yield differences
+        between irrigated and rainfed systems and between prime and
+        marginal land. Totals therefore always match the national
+        statistics, while a tonne of grain is placed where it is actually
+        grown rather than spread evenly over the crop's area. Crops
+        without a SPAM production layer fall back to allocation by
+        harvested area, which amounts to assuming the national average
+        yield for that crop.
+      </p>
+
       <h2 style={h2Style}>Area statistics and trends</h2>
       <p style={pStyle}>
         Statistics for a drawn circle aggregate the quarter-degree cells

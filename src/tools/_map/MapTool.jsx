@@ -318,6 +318,17 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const compareOn = config.yearControl?.compareDimensionId
     ? (state.activeDimensions[config.yearControl.compareDimensionId] ?? 'off') === 'on'
     : false
+
+  // Hiding the compare checkbox is not enough for time-constant variables:
+  // the dimension would stay 'on' and the diff machinery renders an
+  // all-zero (empty) map. Actually exit the mode on switch.
+  useEffect(() => {
+    const dimId = config.yearControl?.compareDimensionId
+    if (!dimId || !activeVariable?.constantInTime) return
+    if ((state.activeDimensions[dimId] ?? 'off') === 'on') {
+      dispatch({ type: Actions.SET_DIMENSION, dimensionId: dimId, value: 'off' })
+    }
+  }, [activeVariable, config, state.activeDimensions, dispatch])
   const mapBadgeValue = mapBadgeDim && !compareOn
     ? (state.activeDimensions[mapBadgeDim.id] ?? mapBadgeDim.defaultValue)
     : null
@@ -794,7 +805,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
           {/* Always-on year control — config-gated (yearControl) */}
           {config.yearControl && !paleActive && (
-            <YearBar config={config} state={state} dispatch={dispatch} isDark={isDark} />
+            <YearBar config={config} state={state} dispatch={dispatch} isDark={isDark}
+              disableCompare={Boolean(activeVariable?.constantInTime)} />
           )}
 
           {/* Regional map view — config-gated (regionalView) */}

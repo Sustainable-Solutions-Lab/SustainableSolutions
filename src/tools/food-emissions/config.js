@@ -124,6 +124,8 @@ function makeVariable({ source, crop }) {
     }
   }
   const [, srcLabel, srcMax] = SOURCES.find(([s]) => s === source)
+  const timeConstant = source === 'soil' ? { constantInTime: true,
+    note: 'Mean annual rate, 2000–2023 (attributed losses only); does not vary with the year slider.' } : {}
   // Soil carbon, all commodities: the signed net view. Losses (red) are
   // counted in totals and factors; gains (blue) are displayed only - the
   // LSRS requires field evidence before removals count, so increases
@@ -145,7 +147,10 @@ function makeVariable({ source, crop }) {
       alphaFloor: 0.05,
       alphaPower: 0.3,
       yearTerms: [{ prop: 'soc', src: 'soil' }],
-      note: 'Red cells (soil carbon loss) count in the emissions total; blue cells (gain) are shown for context but are not credited against it.',
+      // Mean annual rate over the model period; no per-year series exists
+      // in the tiles, so the year slider and compare mode do not apply.
+      constantInTime: true,
+      note: 'Mean annual rate, 2000–2023. Red cells (soil carbon loss) count in the emissions total; blue cells (gain) are shown for context but are not credited against it. This layer does not vary with the year slider.',
       description: 'Net annual change in mineral-soil carbon on stable cropland, 2000–2023 mean.',
     }
   }
@@ -155,6 +160,7 @@ function makeVariable({ source, crop }) {
     label: cropLabel ? `${srcLabel} — ${cropLabel}` : srcLabel,
     domain: { min: 0, max: crop === 'all' ? srcMax : Math.max(1, srcMax / 2) },
     yearTerms: [{ prop: `${source}${cropSuffix}`, src: source }],
+    ...timeConstant,
     description: cropLabel
       ? `${srcLabel} emissions attributed to ${cropLabel.toLowerCase()} per quarter-degree cell.`
       : `${srcLabel} emissions per quarter-degree cell.`,

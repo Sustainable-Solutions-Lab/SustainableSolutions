@@ -16,7 +16,7 @@
 import { Play, Pause } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
 
-export function YearBar({ config, state, dispatch, isDark }) {
+export function YearBar({ config, state, dispatch, isDark , disableCompare = false }) {
   const yc = config.yearControl
   if (!yc) return null
   const yearDim = config.dimensions.find((d) => d.id === yc.dimensionId)
@@ -28,9 +28,11 @@ export function YearBar({ config, state, dispatch, isDark }) {
   const yearB = yearBDim
     ? String(state.activeDimensions[yearBDim.id] ?? yearBDim.defaultValue)
     : null
-  const compareOn = yc.compareDimensionId
+  // Time-constant variables (e.g. the soil-carbon mean rate) have nothing
+  // to compare between years: hide the toggle and force the mode off.
+  const compareOn = !disableCompare && (yc.compareDimensionId
     ? (state.activeDimensions[yc.compareDimensionId] ?? 'off') === 'on'
-    : false
+    : false)
   const playing = state.animatingDimension === yearDim.id
 
   const ink = isDark ? '#F8F8E8' : '#181838'
@@ -118,7 +120,7 @@ export function YearBar({ config, state, dispatch, isDark }) {
         {sliderRow(yearDim.id, year, compareOn ? 'To' : null)}
       </div>
 
-      {yc.compareDimensionId && (
+      {yc.compareDimensionId && !disableCompare && (
         <label
           style={{
             display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,

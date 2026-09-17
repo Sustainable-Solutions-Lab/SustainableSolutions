@@ -203,6 +203,43 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   // drivers repaint the active view (cells or units).
   // A driver shows its LMDI change polygons only when it is NOT being
   // rendered as a gridded level (activeLevel decides that per map view).
+  // Soil-carbon view: diverging paint on the signed `soc` prop.
+  const socActive = state.analysis === 'soc' && Boolean(config.paleMap?.soilCarbon)
+  const socCellColor = useMemo(() => {
+    if (!socActive || state.mapView === 'regional') return null
+    const sc = config.paleMap.soilCarbon
+    // stored prop is dSOC (positive = gain); negate to flux convention so
+    // the diverging ramp reads sinks blue, sources red
+    const v = ['*', -1, ['coalesce', ['to-number', ['get', sc.prop]], 0]]
+    const r = sc.cellRange
+    return ['interpolate', ['linear'], v,
+      -r, 'rgba(50,136,189,0.95)',
+      -r / 8, 'rgba(102,194,165,0.65)',
+      0, isDark ? 'rgba(248,248,232,0.05)' : 'rgba(24,24,56,0.05)',
+      r / 8, 'rgba(253,174,97,0.65)',
+      r, 'rgba(213,62,79,0.95)',
+    ]
+  }, [socActive, state.mapView, config, isDark])
+  const socCellOpacity = useMemo(() => {
+    if (!socActive || state.mapView === 'regional') return null
+    const sc = config.paleMap.soilCarbon
+    const mag = ['abs', ['coalesce', ['to-number', ['get', sc.prop]], 0]]
+    return ['interpolate', ['linear'], mag, 0, 0.05, 10, 0.35, 100, 0.7, 1000, 1]
+  }, [socActive, state.mapView, config])
+
+  const socRegionalPaint = useMemo(() => {
+    if (!socActive || state.mapView !== 'regional') return null
+    const sc = config.paleMap.soilCarbon
+    // per-km2 rate so unit size does not dominate; +-3 t CO2e/km2/yr span
+    const v = ['/', ['*', -1, ['coalesce', ['to-number', ['get', sc.prop]], 0]],
+               ['max', 1, ['to-number', ['get', 'area_km2']]]]
+    const r = 3
+    return { colorExpr: ['interpolate', ['linear'], v,
+      -r, 'rgba(50,136,189,0.95)', -r / 8, 'rgba(102,194,165,0.6)',
+      0, isDark ? 'rgba(248,248,232,0.06)' : 'rgba(24,24,56,0.06)',
+      r / 8, 'rgba(253,174,97,0.6)', r, 'rgba(213,62,79,0.95)'] }
+  }, [socActive, state.mapView, config, isDark])
+
   // The change decomposition also runs on the cells, minus population.
   const cellTerm = cellTermFor(config, state)
   const cellChangeTerms = cellTerm ? (attachedVariable?.yearTerms ?? null) : null
@@ -212,6 +249,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   // Paint expression for the gridded analysis overlay, plus a key that
   // changes exactly when the layers must be rebuilt.
   const analysisCellColor = useMemo(() => {
+    if (socCellColor) return socCellColor
     if (activeLevel) return levelColorExpr(makeLevelVariable(activeLevel), isDark)
     if (activeCategorical && categoricalEntryList.length) {
       return categoricalColorExpr(categoricalEntryList, 5e-4)
@@ -223,7 +261,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         50, isDark)
     }
     return null
-  }, [activeLevel, activeCategorical, categoricalEntryList, isDark, cellTerm, cellChangeTerms, toolYearFactors])
+  }, [socCellColor, activeLevel, activeCategorical, categoricalEntryList, isDark, cellTerm, cellChangeTerms, toolYearFactors])
   // Cell-scale magnitude ramp (kt CO2e per 0.25-degree cell).
   // The quantity a cell is judged by: the winning source for a dominance
   // map, the start-year emissions for a change map. Drives both the alpha
@@ -239,12 +277,14 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     return null
   }, [activeCategorical, categoricalEntryList, cellTerm, cellChangeTerms, toolYearFactors])
   const analysisCellOpacity = useMemo(() => {
+    if (socCellOpacity) return socCellOpacity
     if (!analysisCellMagnitude) return null
     const expr = ['interpolate', ['linear'], analysisCellMagnitude]
     for (const [v, a] of [[0, 0.06], [1, 0.3], [8, 0.6], [40, 0.85], [150, 1]]) expr.push(v, a)
     return expr
-  }, [analysisCellMagnitude])
+  }, [socCellOpacity, analysisCellMagnitude])
   const analysisPaintKey = [
+    state.analysis ?? '-',
     paleDriver, isDark ? 'd' : 'l', state.mapView, toolYearFactors ? 'f' : '-',
     state.activeDimensions?.source, state.activeDimensions?.crop,
   ].join('|')
@@ -298,6 +338,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             return (config.paleMap?.categorical ?? []).find((c) => c.id === state.analysisDriver)?.shortLabel
           }
           // Analysis is the one net-change view; say that plainly.
+          if (state.analysis === 'soc') return 'Soil carbon Δ, t CO₂e/yr'
           if (state.analysis === 'pale') return 'Change 2000–2023'
           const low = state.percentileRange?.low ?? 0
           return low > 0 ? `Top ${100 - low}%` : null
@@ -573,6 +614,19 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         )}
 
         {/* Analysis — mobile access (config.paleMap); Emissions view only */}
+        {config.paleMap?.soilCarbon && state.analysis !== 'dominance' && (
+          <button
+            type="button"
+            onClick={() => dispatch({ type: Actions.SET_ANALYSIS, analysis: state.analysis === 'soc' ? null : 'soc' })}
+            className={[
+              'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-3 mb-1',
+              'font-sans text-[12px] uppercase tracking-[0.12em]',
+              state.analysis === 'soc' ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+            ].join(' ')}
+          >
+            Soil Carbon
+          </button>
+        )}
         {config.paleMap && state.analysis !== 'dominance' && (
           <div className="mt-4 pt-3 border-t border-rule">
             <button
@@ -752,6 +806,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               dispatch={dispatch}
               isDark={isDark}
               suppressed={analysisIsChange}
+              socPaint={socRegionalPaint}
             />
           )}
           {config.regionalView && (

@@ -306,6 +306,43 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           </>
         )}
 
+        {/* Soil carbon — Tier 2 dSOC view (config.paleMap.soilCarbon) */}
+        {config.paleMap?.soilCarbon && !isDominance && (
+          <>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: Actions.SET_ANALYSIS,
+                analysis: state.analysis === 'soc' ? null : 'soc' })}
+              className={[
+                'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-2 mb-1',
+                'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
+                'transition-colors hover:text-ink',
+                state.analysis === 'soc' ? 'font-bold text-ink underline' : 'font-normal text-ink-3',
+              ].join(' ')}
+            >
+              Soil Carbon
+            </button>
+            {state.analysis === 'soc' && (
+              <div className="mb-2">
+                <div style={{
+                  height: 8, borderRadius: 2, marginTop: 4,
+                  background: 'linear-gradient(to right, rgba(50,136,189,0.95), rgba(102,194,165,0.6), rgba(128,128,128,0.15), rgba(253,174,97,0.6), rgba(213,62,79,0.95))',
+                }} />
+                <div className="flex justify-between font-mono text-ink-3" style={{ fontSize: 9 }}>
+                  <span>gain (sink)</span><span>0</span><span>loss (source)</span>
+                </div>
+                <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                  Mean annual change in mineral-soil carbon on stable
+                  cropland, 2000–2023 (IPCC Tier 2 model driven by our
+                  residue, manure, tillage, and CRU climate data). Blue is
+                  carbon accumulating in soil; red is soil carbon lost.
+                  Separate from the emissions total above.
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
         {/* Regional Data + Read Methods — styled like the people-page filter
             chips: small uppercase sans, ink-3 inactive, ink + bold + underline
             when active. */}

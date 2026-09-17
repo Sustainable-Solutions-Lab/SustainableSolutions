@@ -35,7 +35,7 @@ function withAlpha(rgbStr, a) {
   return rgbStr
 }
 
-export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed = false }) {
+export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed = false, socPaint = null }) {
   // suppressed: an Analysis overlay (PALE) owns the polygons right now.
   const active = state.mapView === 'regional' && !suppressed
   const yearFactors = useYearFactors(config)
@@ -59,6 +59,7 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
   // wholesale assignment on re-render would clobber them.
   if (active) refs.current.everActive = true
   Object.assign(refs.current, { active, variable, isDark, catEntries,
+    socPaint: socPaint ?? null,
     percentileRange: state.percentileRange,
     selectedId: state.selectedUnit?.id ?? null, dispatch })
 
@@ -79,6 +80,16 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
     function paint() {
       const { variable: v, isDark: dark, percentileRange } = refs.current
       if (!map.getStyle?.() || !map.getLayer(FILL) || !v) return
+      // Soil-carbon view: signed per-km2 diverging choropleth.
+      if (refs.current.socPaint) {
+        const sp = refs.current.socPaint
+        try {
+          map.setPaintProperty(FILL, 'fill-color', sp.colorExpr)
+          map.setPaintProperty(FILL, 'fill-opacity', 0.85)
+          map.setFilter(FILL, null)
+        } catch {}
+        return
+      }
       if (refs.current.catEntries?.length) {
         const ents = refs.current.catEntries
         try {

@@ -247,7 +247,14 @@ function FoodEmissionsMethods() {
         emissions or credited (removals require field evidence under the
         GHG Protocol land standard). Commodity-filtered soil views show
         only the counted losses, since gains are not attributable to
-        individual crops. The
+        individual crops. In time, the layer carries three period rates
+        (2000–08, 2008–16, 2016–23): the year slider shows the selected
+        year's period rate, and compare mode integrates the rates into
+        the cumulative change between the selected years, labeled as
+        such. Period boundaries are exact; within-period years are a
+        piecewise approximation of the model's annual series (median
+        deviation 23% of a cell's final cumulative change, larger where
+        that change is near zero). The
         estimate covers management effects under IPCC scope; erosion and
         land-use conversion are excluded (conversion belongs to land-use
         change accounting). No claim of removals is made or supported:
@@ -439,7 +446,14 @@ function FuelTreatmentMethods() {
         emissions or credited (removals require field evidence under the
         GHG Protocol land standard). Commodity-filtered soil views show
         only the counted losses, since gains are not attributable to
-        individual crops. The
+        individual crops. In time, the layer carries three period rates
+        (2000–08, 2008–16, 2016–23): the year slider shows the selected
+        year's period rate, and compare mode integrates the rates into
+        the cumulative change between the selected years, labeled as
+        such. Period boundaries are exact; within-period years are a
+        piecewise approximation of the model's annual series (median
+        deviation 23% of a cell's final cumulative change, larger where
+        that change is near zero). The
         estimate covers management effects under IPCC scope; erosion and
         land-use conversion are excluded (conversion belongs to land-use
         change accounting). No claim of removals is made or supported:

@@ -49,10 +49,13 @@ const SOURCES = [
   ['urea', 'Urea CO₂', 10],
   ['lime', 'Liming CO₂', 6],
   ['burn', 'Residue burning', 2],
+  // Tier 2 SOC losses on stable cropland (gains are view-only, never
+  // netted). No annual trend series: year scaling holds it constant.
+  ['soil', 'Soil carbon loss CO₂', 20],
 ]
 const SOURCE_IDS = SOURCES.map(([id]) => id)
 // Cropland sources only — these carry per-crop props (`<src>_<crop>`).
-const CROPLAND_SOURCE_IDS = ['fer', 'man', 'res', 'rice', 'peat', 'urea', 'burn']
+const CROPLAND_SOURCE_IDS = ['fer', 'man', 'res', 'rice', 'peat', 'urea', 'burn', 'soil']
 
 // Per-crop props exported for the top-emitting crops (exporter TOP_CROPS,
 // 81% of the global total). Prop naming: `tot_<crop>`, `<source>_<crop>`.
@@ -379,6 +382,7 @@ const config = {
     // long tail (the popup still names the exact winner).
     taxonomy: {
       sources: [
+        { id: 'soil', label: 'Soil carbon loss', color: '#8C6D4F' },
         { id: 'ent',  label: 'Enteric CH₄',    color: '#F46D43' },
         { id: 'rice', label: 'Rice CH₄',       color: '#D53E4F' },
         { id: 'prp',  label: 'Pasture N₂O',    color: '#FEE08B' },

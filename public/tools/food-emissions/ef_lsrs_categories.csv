@@ -1,0 +1,15 @@
+source,lsrs_category_number,lsrs_term,notes
+fer,3,land management production emissions,fertilizer N2O direct+indirect
+man,3,land management production emissions,manure applied N2O
+res,3,land management production emissions,residue N2O
+rice,3,land management production emissions,rice CH4
+urea,3,land management production emissions,"non-biogenic CO2, urea"
+lime,3,land management production emissions,"non-biogenic CO2, liming"
+burn,3,land management production emissions,residue burning CH4+N2O
+ent,3,land management production emissions,enteric CH4
+mms,3,land management production emissions,manure management CH4+N2O
+prp,3,land management production emissions,pasture/range/paddock N2O
+peat,2,land management net biogenic CO2 emissions,drained organic soils CO2 (stock change)
+soil,2,land management net biogenic CO2 emissions,mineral-soil SOC losses on stable cropland; gains not credited
+(luc),1,land use change emissions,not in this dataset; jdLUC partner data (AdAstra/Orbae)
+(removals),4,biogenic CO2 removals,out of scope: requires field measurement per LSRS

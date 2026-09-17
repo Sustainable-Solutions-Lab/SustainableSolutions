@@ -178,6 +178,43 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           </div>
         )}
 
+        {/* LSRS accounting subcategory chips — Emissions view only.
+            Terms verified against the Land Sector and Removals Standard
+            and Guidance v1.0 (June 2026); Requirement 32 requires these
+            to stay separable. Cat 1 (land use change) comes from the
+            jdLUC partner dataset and is not yet displayable here. */}
+        {config.lsrsCategories && !isDominance && (
+          <div className="mb-2">
+            <p className="font-mono text-ink-3 m-0 mb-1" style={{ fontSize: 9, letterSpacing: '0.08em' }}>
+              LSRS CATEGORY
+            </p>
+            <div className="flex gap-3 flex-wrap items-center">
+              {[['all', 'Total'], ['cat1', '1 · Land-use change'], ['cat2', '2 · Net biogenic CO₂'], ['cat3', '3 · Production']].map(([id, label]) => {
+                const srcDim = config.dimensions.find((d) => d.id === 'source')
+                const cur = state.activeDimensions.source ?? srcDim?.defaultValue
+                const on = cur === id
+                const disabled = id === 'cat1'
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    disabled={disabled}
+                    title={disabled ? 'Land-use change factors come from the jdLUC partner dataset (AdAstra/Orbae); not yet shown in this map' : undefined}
+                    onClick={() => dispatch({ type: Actions.SET_DIMENSION, dimensionId: 'source', value: id })}
+                    className={[
+                      'bg-transparent border-0 p-0 font-sans text-[11px] underline-offset-[3px]',
+                      disabled ? 'text-ink-4 cursor-not-allowed line-through' : 'cursor-pointer transition-colors hover:text-ink',
+                      on ? 'font-bold text-ink underline' : disabled ? '' : 'font-normal text-ink-3',
+                    ].join(' ')}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Dimension controls — Emissions view only */}
         {!isDominance && visibleDimensions.map((dim) => {
           const filteredDim = {

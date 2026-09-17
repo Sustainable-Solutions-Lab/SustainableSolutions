@@ -54,6 +54,20 @@ const SOURCES = [
   ['soil', 'Soil carbon CO₂', 20],
 ]
 const SOURCE_IDS = SOURCES.map(([id]) => id)
+
+// GHG Protocol LSRS accounting subcategories (terms verified against the
+// Land Sector and Removals Standard and Guidance v1.0, June 2026):
+//   1 "land use change emissions"                 - not in this dataset
+//                                                   (jdLUC partner data)
+//   2 "land management net biogenic CO2 emissions" - stock changes on
+//     managed land: SOC losses (soil) AND drained organic soils (peat)
+//   3 "land management production emissions"       - the non-CO2 gases
+//     plus non-biogenic input CO2 (urea, lime)
+// Category 4-style removals are out of scope: the LSRS requires
+// field-measured evidence. Requirement 32 obliges factor providers to
+// keep subcategories separable - which these groupings implement.
+const LSRS_CAT2_IDS = ['peat', 'soil']
+const LSRS_CAT3_IDS = ['fer', 'man', 'res', 'rice', 'urea', 'lime', 'burn', 'ent', 'mms', 'prp']
 // Cropland sources only — these carry per-crop props (`<src>_<crop>`).
 const CROPLAND_SOURCE_IDS = ['fer', 'man', 'res', 'rice', 'peat', 'urea', 'burn', 'soil']
 
@@ -108,16 +122,26 @@ function makeVariable({ source, crop }) {
     layer: 'map',
     dimensionValues: { source, crop },
   }
-  if (source === 'all') {
-    const termSources = crop === 'all' ? SOURCE_IDS
+  if (source === 'all' || source === 'cat2' || source === 'cat3') {
+    const base = crop === 'all' ? SOURCE_IDS
       : isLivestock ? LIVESTOCK_SOURCE_IDS : CROPLAND_SOURCE_IDS
+    const termSources = source === 'cat2' ? base.filter((x) => LSRS_CAT2_IDS.includes(x))
+      : source === 'cat3' ? base.filter((x) => LSRS_CAT3_IDS.includes(x))
+      : base
+    const catLabel = source === 'cat2' ? 'Net biogenic CO₂ (LSRS 2)'
+      : source === 'cat3' ? 'Production emissions (LSRS 3)' : null
     return {
       ...shared,
-      id: `tot${cropSuffix}`,
-      label: cropLabel ? `Total emissions — ${cropLabel}` : 'Total emissions',
-      domain: { min: 0, max: crop === 'all' ? 250 : isLivestock ? 60 : 120 },
+      id: source === 'all' ? `tot${cropSuffix}` : `${source}${cropSuffix}`,
+      label: catLabel
+        ? (cropLabel ? `${catLabel} — ${cropLabel}` : catLabel)
+        : (cropLabel ? `Total emissions — ${cropLabel}` : 'Total emissions'),
+      domain: { min: 0, max: (source === 'cat2' ? 160 : crop === 'all' ? 250 : isLivestock ? 60 : 120) },
       yearTerms: termSources
         .map((s) => ({ prop: `${s}${cropSuffix}`, src: s })),
+      ...(source !== 'all'
+        ? { hasAny: termSources.map((s) => `${s}${cropSuffix}`) }
+        : {}),
       description: cropLabel
         ? `All-source emissions attributed to ${cropLabel.toLowerCase()} per quarter-degree cell.`
         : 'All-source cropland-management emissions per quarter-degree cell.',
@@ -222,6 +246,8 @@ const config = {
       defaultValue: 'all',
       options: [
         { id: 'all', label: 'All sources' },
+        { id: 'cat2', label: 'Net biogenic CO₂ (LSRS cat. 2)' },
+        { id: 'cat3', label: 'Production emissions (LSRS cat. 3)' },
         ...SOURCES.map(([id, label]) => ({ id, label })),
       ],
     },
@@ -278,6 +304,11 @@ const config = {
   },
 
   // ── Variables ────────────────────────────────────────────────────────────
+  lsrsCategories: {
+    cat2: { ids: LSRS_CAT2_IDS, label: 'Net biogenic CO₂', term: 'land management net biogenic CO2 emissions' },
+    cat3: { ids: LSRS_CAT3_IDS, label: 'Production', term: 'land management production emissions' },
+  },
+
   variables: [
     // Feed attribution: the share of cropland emissions grown to feed
     // animals, on the land where the crop grows. A subset of the cropland
@@ -300,6 +331,11 @@ const config = {
         'Cropland emissions attributable to animal feed, located where the feed is grown.',
     },
     makeVariable({ source: 'all', crop: 'all' }),
+    makeVariable({ source: 'cat2', crop: 'all' }),
+    ...CROPS.map(([crop]) => makeVariable({ source: 'cat2', crop })),
+    makeVariable({ source: 'cat3', crop: 'all' }),
+    ...CROPS.map(([crop]) => makeVariable({ source: 'cat3', crop })),
+    ...LIVESTOCK_COMMODITIES.map(([crop]) => makeVariable({ source: 'cat3', crop })),
     ...CROPS.map(([crop]) => makeVariable({ source: 'all', crop })),
     ...LIVESTOCK_COMMODITIES.map(([crop]) => makeVariable({ source: 'all', crop })),
     ...SOURCES.flatMap(([source]) => [

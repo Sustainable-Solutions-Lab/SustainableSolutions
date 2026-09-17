@@ -33,11 +33,14 @@ export function readVarValue(props, variable) {
         if (v == null || isNaN(v)) return sum
         return sum + v * factorFor(factors, t.src, m49, y)
       }, 0)
+    const present = variable.hasAny
+      ? variable.hasAny.some((k) => props[k] != null)
+      : props[variable.id] != null
     if (yearB != null) {
-      if (props[variable.id] == null) return undefined
+      if (!present) return undefined
       return at(year) - at(yearB)
     }
-    return props[variable.id] == null ? undefined : at(year)
+    return present ? at(year) : undefined
   }
   if (variable.diffOf) {
     const a = props[variable.diffOf[0]]
@@ -78,6 +81,7 @@ export function varHasExpr(variable) {
   if (variable.rawHas) return variable.rawHas
   // Scaled variables gate on the base (reference-year) prop: a cell with no
   // reference-year value for this source × crop has nothing to scale.
+  if (variable.hasAny) return ['any', ...variable.hasAny.map((k) => ['has', k])]
   if (variable.scaled) return ['has', variable.id]
   if (variable.diffOf) {
     return ['all', ['has', variable.diffOf[0]], ['has', variable.diffOf[1]]]

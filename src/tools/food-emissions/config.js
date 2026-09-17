@@ -51,7 +51,7 @@ const SOURCES = [
   ['burn', 'Residue burning', 2],
   // Tier 2 SOC losses on stable cropland (gains are view-only, never
   // netted). No annual trend series: year scaling holds it constant.
-  ['soil', 'Soil carbon loss CO₂', 20],
+  ['soil', 'Soil carbon CO₂', 20],
 ]
 const SOURCE_IDS = SOURCES.map(([id]) => id)
 // Cropland sources only — these carry per-crop props (`<src>_<crop>`).
@@ -124,6 +124,31 @@ function makeVariable({ source, crop }) {
     }
   }
   const [, srcLabel, srcMax] = SOURCES.find(([s]) => s === source)
+  // Soil carbon, all commodities: the signed net view. Losses (red) are
+  // counted in totals and factors; gains (blue) are displayed only - the
+  // LSRS requires field evidence before removals count, so increases
+  // never reduce the total. Per-commodity soil views keep the counted
+  // losses only (gains are not attributable to crops).
+  if (source === 'soil' && crop === 'all') {
+    return {
+      ...shared,
+      id: 'soc',
+      label: 'Soil carbon Δ',
+      unit: 't CO₂e/yr',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -2000, max: 2000, zero: 0 },
+      // Cap the ramp well below the long gain tail (p99 ~7 kt/cell) so
+      // typical cells are visible; alpha rises fast from zero.
+      colorMax: 1500,
+      colorMin: -1500,
+      alphaFloor: 0.05,
+      alphaPower: 0.3,
+      yearTerms: [{ prop: 'soc', src: 'soil' }],
+      note: 'Red cells (soil carbon loss) count in the emissions total; blue cells (gain) are shown for context but are not credited against it.',
+      description: 'Net annual change in mineral-soil carbon on stable cropland, 2000–2023 mean.',
+    }
+  }
   return {
     ...shared,
     id: `${source}${cropSuffix}`,
@@ -358,18 +383,6 @@ const config = {
       { minZoom: 2.6, maxZoom: 3.6, minValue: 2 },
       { minZoom: 3.6 },
     ],
-
-    // Tier 2 SOC layer (LSRS category 2): mean annual net dSOC 2000-2023,
-    // t CO2e/yr per cell/unit, negative = sink. Separate from `tot` (it is
-    // not a production emission); rendered as its own Analysis view.
-    soilCarbon: {
-      prop: 'soc',
-      label: 'Soil carbon',
-      unit: 't CO₂e/yr',
-      // diverging ramp bounds per 0.25-deg cell (t CO2e/yr); regional view
-      // recomputes per km2.
-      cellRange: 2000,
-    },
 
     // Dominance maps: which source / commodity leads in each cell or unit.
     // Candidate sets follow the sidebar selection (see lib/analysis-categorical).

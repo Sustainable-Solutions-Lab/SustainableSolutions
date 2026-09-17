@@ -235,6 +235,13 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           />
         )}
 
+        {/* Variable caveat note (e.g. soil carbon asymmetry) */}
+        {activeVariable?.note && (
+          <p className="font-sans text-ink-3 m-0 mb-2" style={{ fontSize: 10, lineHeight: 1.4 }}>
+            {activeVariable.note}
+          </p>
+        )}
+
         {/* MAP VIEW — gridded cells vs regional (admin-1 x biome) averages */}
         {config.regionalView && (
           <div className="mt-2 mb-2">

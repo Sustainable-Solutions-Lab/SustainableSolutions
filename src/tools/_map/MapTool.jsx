@@ -384,7 +384,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
     // Generic path: projects that declare config.distributionsUrl get their
     // precomputed value sample fetched directly (built alongside the tiles).
-    if (activeVariable?.diffOf || activeVariable?.scaled?.isDiff) {
+    if (activeVariable?.diffOf || activeVariable?.scaled?.isDiff || activeVariable?.isCumulative) {
       // Computed difference variables have no stored distribution sample;
       // the sidebar falls back to the gradient legend.
       setStatewideValues([])

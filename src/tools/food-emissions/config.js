@@ -147,10 +147,11 @@ function makeVariable({ source, crop }) {
       alphaFloor: 0.05,
       alphaPower: 0.3,
       yearTerms: [{ prop: 'soc', src: 'soil' }],
-      // Mean annual rate over the model period; no per-year series exists
-      // in the tiles, so the year slider and compare mode do not apply.
-      constantInTime: true,
-      note: 'Mean annual rate, 2000–2023. Red cells (soil carbon loss) count in the emissions total; blue cells (gain) are shown for context but are not credited against it. This layer does not vary with the year slider.',
+      // Piecewise year machinery: the tiles carry three period rates
+      // (soc1/soc2/soc3); a year shows its period's annual rate, compare
+      // integrates them into the cumulative change over the span.
+      segments: { knots: [2000, 2008, 2016, 2023], props: ['soc1', 'soc2', 'soc3'] },
+      note: 'Annual rate for the selected year (three model periods: 2000–08, 2008–16, 2016–23). Red cells (soil carbon loss) count in the emissions total; blue cells (gain) are shown for context but are not credited against it. Compare shows the cumulative change between the selected years.',
       description: 'Net annual change in mineral-soil carbon on stable cropland, 2000–2023 mean.',
     }
   }

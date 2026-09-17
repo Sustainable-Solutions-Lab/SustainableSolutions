@@ -223,6 +223,32 @@ function FoodEmissionsMethods() {
         calibrated feed-basket model.
       </p>
 
+      <h2 style={h2Style}>GHG Protocol land-sector categories</h2>
+      <p style={pStyle}>
+        The GHG Protocol Land Sector and Removals Standard (2026) requires
+        emissions to be accounted and reported by subcategory, and its
+        Requirement 32 obliges emission-factor providers to keep the
+        subcategories separable. This map's sources group as follows,
+        using the standard's own terms: <em>land management production
+        emissions</em> — fertilizer and manure N₂O, residue N₂O, rice
+        CH₄, residue burning, enteric CH₄, manure management, pasture
+        manure, and the non-biogenic CO₂ from urea and liming;
+        <em> land management net biogenic CO₂ emissions</em> — carbon
+        stock changes on managed land, which here means drained peatland
+        CO₂ and soil-carbon losses on stable cropland; <em>land use
+        change emissions</em> are not part of this dataset (they come
+        from parcel-level conversion data such as our partner AdAstra's
+        Orbae). The LSRS category selector in the sidebar renders each
+        grouping directly; the emission-factor downloads keep every
+        source in its own column so any grouping can be reconstructed,
+        and a companion table (ef_lsrs_categories.csv) maps each source
+        to its subcategory.
+        Removals are out of scope entirely: the standard requires
+        field-measured evidence, uncertainty deductions, and reversal
+        buffers before soil-carbon gains may be claimed, which no
+        map-based dataset can provide.
+      </p>
+
       <h2 style={h2Style}>Soil carbon</h2>
       <p style={pStyle}>
         Selecting Soil carbon CO₂ as the source shows the mean annual
@@ -420,6 +446,32 @@ function FuelTreatmentMethods() {
         country rather than the herd that eats it, and the split between
         animal groups uses literature feed-conversion ratios rather than a
         calibrated feed-basket model.
+      </p>
+
+      <h2 style={h2Style}>GHG Protocol land-sector categories</h2>
+      <p style={pStyle}>
+        The GHG Protocol Land Sector and Removals Standard (2026) requires
+        emissions to be accounted and reported by subcategory, and its
+        Requirement 32 obliges emission-factor providers to keep the
+        subcategories separable. This map's sources group as follows,
+        using the standard's own terms: <em>land management production
+        emissions</em> — fertilizer and manure N₂O, residue N₂O, rice
+        CH₄, residue burning, enteric CH₄, manure management, pasture
+        manure, and the non-biogenic CO₂ from urea and liming;
+        <em> land management net biogenic CO₂ emissions</em> — carbon
+        stock changes on managed land, which here means drained peatland
+        CO₂ and soil-carbon losses on stable cropland; <em>land use
+        change emissions</em> are not part of this dataset (they come
+        from parcel-level conversion data such as our partner AdAstra's
+        Orbae). The LSRS category selector in the sidebar renders each
+        grouping directly; the emission-factor downloads keep every
+        source in its own column so any grouping can be reconstructed,
+        and a companion table (ef_lsrs_categories.csv) maps each source
+        to its subcategory.
+        Removals are out of scope entirely: the standard requires
+        field-measured evidence, uncertainty deductions, and reversal
+        buffers before soil-carbon gains may be claimed, which no
+        map-based dataset can provide.
       </p>
 
       <h2 style={h2Style}>Soil carbon</h2>

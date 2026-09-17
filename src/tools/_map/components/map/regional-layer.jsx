@@ -101,6 +101,23 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
         return
       }
       try { map.setPaintProperty(FILL, 'fill-opacity', 1) } catch {}
+      // Diverging variables (soil carbon): signed per-km2 choropleth.
+      if (v.diverging) {
+        // soc props are t CO2e (not kt like the emission sums): t per km2
+        const val = ['/', ['to-number', varValueExpr(v)],
+                     ['max', 1, ['to-number', ['get', 'area_km2']]]]
+        const r = Math.max(0.5, (v.colorMax ?? v.domain?.max ?? 1500) / 500)
+        const neutral = dark ? 'rgba(248,248,232,0.06)' : 'rgba(24,24,56,0.06)'
+        try {
+          map.setPaintProperty(FILL, 'fill-color', ['interpolate', ['linear'], val,
+            -r, 'rgba(213,62,79,0.95)', -r / 8, 'rgba(253,174,97,0.6)',
+            0, neutral,
+            r / 8, 'rgba(102,194,165,0.6)', r, 'rgba(50,136,189,0.95)'])
+          map.setPaintProperty(FILL, 'fill-opacity', 0.85)
+          map.setFilter(FILL, null)
+        } catch {}
+        return
+      }
       if (v.rawExpr) {
         try { map.setPaintProperty(FILL, 'fill-color', levelColorExpr(v, dark)) } catch {}
         try { map.setFilter(FILL, null) } catch {}

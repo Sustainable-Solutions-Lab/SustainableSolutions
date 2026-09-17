@@ -225,8 +225,9 @@ function FoodEmissionsMethods() {
 
       <h2 style={h2Style}>Soil carbon</h2>
       <p style={pStyle}>
-        The Soil carbon view shows the mean annual change in mineral-soil
-        organic carbon on stable cropland over 2000–2023, from the IPCC
+        Selecting Soil carbon CO₂ as the source shows the mean annual
+        change in mineral-soil organic carbon on stable cropland over
+        2000–2023 as a diverging map, from the IPCC
         2019 Refinement's Tier 2 steady-state model (three carbon pools,
         globally calibrated parameters) driven by the same activity data
         as the rest of the map: our gridded residue and manure carbon
@@ -240,11 +241,13 @@ function FoodEmissionsMethods() {
         production emissions, and because model-based soil-carbon
         estimates carry different uncertainty than inventory fluxes.
         Asymmetrically — and deliberately — cells that are <em>losing</em>
-        soil carbon contribute a Soil carbon loss CO₂ source to the
-        emissions totals and factors (losses are inventory-grade
-        emissions), while cells gaining carbon are shown in this view but
-        never netted against emissions or credited (removals require
-        field evidence under the GHG Protocol land standard). The
+        soil carbon (red) contribute to the emissions totals and factors
+        (losses are inventory-grade emissions), while cells gaining
+        carbon (blue) are displayed for context but never netted against
+        emissions or credited (removals require field evidence under the
+        GHG Protocol land standard). Commodity-filtered soil views show
+        only the counted losses, since gains are not attributable to
+        individual crops. The
         estimate covers management effects under IPCC scope; erosion and
         land-use conversion are excluded (conversion belongs to land-use
         change accounting). No claim of removals is made or supported:
@@ -414,8 +417,9 @@ function FuelTreatmentMethods() {
 
       <h2 style={h2Style}>Soil carbon</h2>
       <p style={pStyle}>
-        The Soil carbon view shows the mean annual change in mineral-soil
-        organic carbon on stable cropland over 2000–2023, from the IPCC
+        Selecting Soil carbon CO₂ as the source shows the mean annual
+        change in mineral-soil organic carbon on stable cropland over
+        2000–2023 as a diverging map, from the IPCC
         2019 Refinement's Tier 2 steady-state model (three carbon pools,
         globally calibrated parameters) driven by the same activity data
         as the rest of the map: our gridded residue and manure carbon
@@ -429,11 +433,13 @@ function FuelTreatmentMethods() {
         production emissions, and because model-based soil-carbon
         estimates carry different uncertainty than inventory fluxes.
         Asymmetrically — and deliberately — cells that are <em>losing</em>
-        soil carbon contribute a Soil carbon loss CO₂ source to the
-        emissions totals and factors (losses are inventory-grade
-        emissions), while cells gaining carbon are shown in this view but
-        never netted against emissions or credited (removals require
-        field evidence under the GHG Protocol land standard). The
+        soil carbon (red) contribute to the emissions totals and factors
+        (losses are inventory-grade emissions), while cells gaining
+        carbon (blue) are displayed for context but never netted against
+        emissions or credited (removals require field evidence under the
+        GHG Protocol land standard). Commodity-filtered soil views show
+        only the counted losses, since gains are not attributable to
+        individual crops. The
         estimate covers management effects under IPCC scope; erosion and
         land-use conversion are excluded (conversion belongs to land-use
         change accounting). No claim of removals is made or supported:

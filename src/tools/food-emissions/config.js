@@ -356,6 +356,18 @@ const config = {
       { minZoom: 3.6 },
     ],
 
+    // Tier 2 SOC layer (LSRS category 2): mean annual net dSOC 2000-2023,
+    // t CO2e/yr per cell/unit, negative = sink. Separate from `tot` (it is
+    // not a production emission); rendered as its own Analysis view.
+    soilCarbon: {
+      prop: 'soc',
+      label: 'Soil carbon',
+      unit: 't CO₂e/yr',
+      // diverging ramp bounds per 0.25-deg cell (t CO2e/yr); regional view
+      // recomputes per km2.
+      cellRange: 2000,
+    },
+
     // Dominance maps: which source / commodity leads in each cell or unit.
     // Candidate sets follow the sidebar selection (see lib/analysis-categorical).
     categorical: [

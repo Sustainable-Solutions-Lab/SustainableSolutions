@@ -223,6 +223,29 @@ function FoodEmissionsMethods() {
         calibrated feed-basket model.
       </p>
 
+      <h2 style={h2Style}>Soil carbon</h2>
+      <p style={pStyle}>
+        The Soil carbon view shows the mean annual change in mineral-soil
+        organic carbon on stable cropland over 2000–2023, from the IPCC
+        2019 Refinement's Tier 2 steady-state model (three carbon pools,
+        globally calibrated parameters) driven by the same activity data
+        as the rest of the map: our gridded residue and manure carbon
+        inputs scaled by national trajectories, tillage systems from
+        Porwollik et al. (2019), soil texture, and monthly CRU TS
+        climate. Blue cells are accumulating soil carbon (a sink), red
+        cells are losing it. Globally the model finds a small net sink
+        (~15 Tg C per year), robust to the climate treatment; it is shown
+        separately from the emissions total because soil-carbon change is
+        a different accounting category (land management net CO₂) from
+        production emissions, and because model-based soil-carbon
+        estimates carry different uncertainty than inventory fluxes. The
+        estimate covers management effects under IPCC scope; erosion and
+        land-use conversion are excluded (conversion belongs to land-use
+        change accounting). No claim of removals is made or supported:
+        crediting soil-carbon removals requires multi-year field
+        measurement under the GHG Protocol's land standard.
+      </p>
+
       <h2 style={h2Style}>Drivers of change</h2>
       <p style={pStyle}>
         The Analysis views decompose change over time with the identity used
@@ -381,6 +404,29 @@ function FuelTreatmentMethods() {
         country rather than the herd that eats it, and the split between
         animal groups uses literature feed-conversion ratios rather than a
         calibrated feed-basket model.
+      </p>
+
+      <h2 style={h2Style}>Soil carbon</h2>
+      <p style={pStyle}>
+        The Soil carbon view shows the mean annual change in mineral-soil
+        organic carbon on stable cropland over 2000–2023, from the IPCC
+        2019 Refinement's Tier 2 steady-state model (three carbon pools,
+        globally calibrated parameters) driven by the same activity data
+        as the rest of the map: our gridded residue and manure carbon
+        inputs scaled by national trajectories, tillage systems from
+        Porwollik et al. (2019), soil texture, and monthly CRU TS
+        climate. Blue cells are accumulating soil carbon (a sink), red
+        cells are losing it. Globally the model finds a small net sink
+        (~15 Tg C per year), robust to the climate treatment; it is shown
+        separately from the emissions total because soil-carbon change is
+        a different accounting category (land management net CO₂) from
+        production emissions, and because model-based soil-carbon
+        estimates carry different uncertainty than inventory fluxes. The
+        estimate covers management effects under IPCC scope; erosion and
+        land-use conversion are excluded (conversion belongs to land-use
+        change accounting). No claim of removals is made or supported:
+        crediting soil-carbon removals requires multi-year field
+        measurement under the GHG Protocol's land standard.
       </p>
 
       <h2 style={h2Style}>Drivers of change</h2>

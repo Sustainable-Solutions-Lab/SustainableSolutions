@@ -238,7 +238,13 @@ function FoodEmissionsMethods() {
         separately from the emissions total because soil-carbon change is
         a different accounting category (land management net CO₂) from
         production emissions, and because model-based soil-carbon
-        estimates carry different uncertainty than inventory fluxes. The
+        estimates carry different uncertainty than inventory fluxes.
+        Asymmetrically — and deliberately — cells that are <em>losing</em>
+        soil carbon contribute a Soil carbon loss CO₂ source to the
+        emissions totals and factors (losses are inventory-grade
+        emissions), while cells gaining carbon are shown in this view but
+        never netted against emissions or credited (removals require
+        field evidence under the GHG Protocol land standard). The
         estimate covers management effects under IPCC scope; erosion and
         land-use conversion are excluded (conversion belongs to land-use
         change accounting). No claim of removals is made or supported:
@@ -421,7 +427,13 @@ function FuelTreatmentMethods() {
         separately from the emissions total because soil-carbon change is
         a different accounting category (land management net CO₂) from
         production emissions, and because model-based soil-carbon
-        estimates carry different uncertainty than inventory fluxes. The
+        estimates carry different uncertainty than inventory fluxes.
+        Asymmetrically — and deliberately — cells that are <em>losing</em>
+        soil carbon contribute a Soil carbon loss CO₂ source to the
+        emissions totals and factors (losses are inventory-grade
+        emissions), while cells gaining carbon are shown in this view but
+        never netted against emissions or credited (removals require
+        field evidence under the GHG Protocol land standard). The
         estimate covers management effects under IPCC scope; erosion and
         land-use conversion are excluded (conversion belongs to land-use
         change accounting). No claim of removals is made or supported:

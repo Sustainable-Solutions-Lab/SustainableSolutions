@@ -269,8 +269,7 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
           trendWeights={unitWeights}
           isDark={isDark}
           activeSourceId={activeVariable?.dimensionValues?.source ?? null}
-          title={`Trend in ${p.name} · by source`}
-          caption="composed from national series, weighted by the unit's emissions"
+          title="Trend in emissions · by source"
         />
       )}
       {state.analysis !== 'pale' && unitCommodityWeights && config?.areaTool?.trend && (
@@ -280,7 +279,7 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
           commodityWeights={unitCommodityWeights}
           taxonomy={config?.paleMap?.taxonomy}
           isDark={isDark}
-          title={`Trend in ${p.name} · by commodity`}
+          title="Trend in emissions · by commodity"
         />
       )}
       {state.analysis !== 'pale' && config?.areaTool?.ef && unitCropSums && (

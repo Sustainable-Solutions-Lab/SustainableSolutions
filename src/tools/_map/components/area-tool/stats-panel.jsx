@@ -592,8 +592,7 @@ export function EfSection({ efConfig, cropSums, activeVariable, isDark,
       </button>
       <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: muted, marginTop: 3, lineHeight: 1.4 }}>
         commodity- and source-specific emission factors for the selected
-        area/region and year, recomputed live from the selection
-        (emissions follow national trajectories; production held at 2020)
+        area/region and year
       </div>
     </div>
   )
@@ -866,7 +865,7 @@ export function StatsPanel({
           trendWeights={aggregateStats.trendWeights}
           isDark={isDark}
           activeSourceId={activeVariable?.dimensionValues?.source ?? null}
-          title="Trend in selected area · by source"
+          title="Trend in emissions · by source"
         />
       )}
       {sheetFocus !== 'pale' && config?.areaTool?.trend && aggregateStats?.commodityTrendWeights && (
@@ -876,7 +875,7 @@ export function StatsPanel({
           commodityWeights={aggregateStats.commodityTrendWeights}
           taxonomy={config?.paleMap?.taxonomy}
           isDark={isDark}
-          title="Trend in selected area · by commodity"
+          title="Trend in emissions · by commodity"
         />
       )}
 

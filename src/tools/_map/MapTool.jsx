@@ -18,7 +18,7 @@ import { AnalysisCellLayer } from './components/map/level-layer.jsx'
 import { RegionStats } from './components/map/region-stats.jsx'
 import { useYearFactors } from './lib/year-factors.js'
 import { levelFor, makeLevelVariable, levelColorExpr } from './lib/analysis-levels.js'
-import { categoricalFor, categoricalEntries, categoricalColorExpr, categoricalOpacityExpr, categoricalLegend } from './lib/analysis-categorical.js'
+import { categoricalFor, categoricalEntries, categoricalColorExpr, categoricalOpacityExpr, categoricalLegend, categoricalChangeColorExpr, categoricalChangeMagnitudeExpr } from './lib/analysis-categorical.js'
 import { cellTermFor, cellChangeExpr, cellChangeColorExpr, cellChangeMagnitudeExpr } from './lib/analysis-cell-change.js'
 import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
@@ -248,10 +248,23 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     (config.paleMap?.drivers ?? []).some((d) => d.id === paleDriver)
   // Paint expression for the gridded analysis overlay, plus a key that
   // changes exactly when the layers must be rebuilt.
+  // Dominance compare: with the year bar's compare toggle on, a dominance
+  // map shows where the LEADER changed between the two years, colored by
+  // the new leader (values follow the national source trajectories).
+  const domCompare = state.analysis === 'dominance'
+    && (state.activeDimensions?.compare ?? 'off') === 'on'
+    && toolYearFactors
+    ? { from: Number(state.activeDimensions?.yearB ?? 2000),
+        to: Number(state.activeDimensions?.year ?? 2024) }
+    : null
   const analysisCellColor = useMemo(() => {
     if (socCellColor) return socCellColor
     if (activeLevel) return levelColorExpr(makeLevelVariable(activeLevel), isDark)
     if (activeCategorical && categoricalEntryList.length) {
+      if (domCompare) {
+        return categoricalChangeColorExpr(categoricalEntryList, toolYearFactors,
+          domCompare.from, domCompare.to, 5e-4)
+      }
       return categoricalColorExpr(categoricalEntryList, 5e-4)
     }
     if (cellTerm && cellChangeTerms && toolYearFactors) {
@@ -261,13 +274,16 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         50, isDark)
     }
     return null
-  }, [socCellColor, activeLevel, activeCategorical, categoricalEntryList, isDark, cellTerm, cellChangeTerms, toolYearFactors])
+  }, [socCellColor, activeLevel, activeCategorical, categoricalEntryList, isDark, cellTerm, cellChangeTerms, toolYearFactors, domCompare?.from, domCompare?.to])
   // Cell-scale magnitude ramp (kt CO2e per 0.25-degree cell).
   // The quantity a cell is judged by: the winning source for a dominance
   // map, the start-year emissions for a change map. Drives both the alpha
   // ramp and the low-zoom band filters.
   const analysisCellMagnitude = useMemo(() => {
     if (activeCategorical && categoricalEntryList.length) {
+      if (domCompare) {
+        return categoricalChangeMagnitudeExpr(categoricalEntryList, toolYearFactors, domCompare.to)
+      }
       const props = categoricalEntryList.map((e) => ['coalesce', ['to-number', ['get', e.prop]], 0])
       return props.length === 1 ? props[0] : ['max', ...props]
     }
@@ -275,7 +291,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       return cellChangeMagnitudeExpr({ terms: cellChangeTerms, factors: toolYearFactors })
     }
     return null
-  }, [activeCategorical, categoricalEntryList, cellTerm, cellChangeTerms, toolYearFactors])
+  }, [activeCategorical, categoricalEntryList, cellTerm, cellChangeTerms, toolYearFactors, domCompare?.from, domCompare?.to])
   const analysisCellOpacity = useMemo(() => {
     if (socCellOpacity) return socCellOpacity
     if (!analysisCellMagnitude) return null
@@ -287,6 +303,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     state.analysis ?? '-',
     paleDriver, isDark ? 'd' : 'l', state.mapView, toolYearFactors ? 'f' : '-',
     state.activeDimensions?.source, state.activeDimensions?.crop,
+    domCompare ? `cmp${domCompare.from}-${domCompare.to}` : '-',
   ].join('|')
 
   // ── Dimension animation ────────────────────────────────────────────────

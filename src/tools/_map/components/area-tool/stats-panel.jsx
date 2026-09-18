@@ -577,9 +577,10 @@ export function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
         Download emission factors (CSV)
       </button>
       <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: muted, marginTop: 3, lineHeight: 1.4 }}>
-        one row per commodity, aggregated over the selected area: 2020
-        production, emissions by source, and kg CO2e per kg (not gridded
-        data)
+        recomputed live for the current selection: one row per commodity
+        with its 2020 production, emissions by source, and kg CO2e per kg,
+        summed over exactly the cells inside this area - move or resize
+        the selection and the factors change
       </div>
     </div>
   )
@@ -685,7 +686,7 @@ export function StatsPanel({
         maxHeight: sheetOpen ? 'calc(100% - 150px)'
           : collapsedMode === 'pale' ? 230
           : collapsedMode !== 'default' ? 220
-          : (hasData && !isCategorical ? 160 : 46),
+          : 46,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
@@ -773,8 +774,6 @@ export function StatsPanel({
               max={4}
               kinds={[collapsedMode === 'source' ? 'Sources' : 'Commodities']}
             />
-          ) : hasData && !isCategorical ? (
-            <MiniHistogram values={activeVarValues} variable={activeVariable} isDark={isDark} />
           ) : null}
         </div>
       )}
@@ -810,42 +809,22 @@ export function StatsPanel({
       {hasData && isCategorical && (
         <StackedBar values={activeVarValues} variable={activeVariable} isDark={isDark} />
       )}
-      {hasData && !isCategorical && (
-        (sheetFocus === 'pale' && config?.areaTool?.trend && aggregateStats?.trendWeights
-          ? <PaleSeriesChart
-              trendConfig={config.areaTool.trend}
-              trendWeights={aggregateStats.trendWeights}
-              isDark={isDark}
-            />
-          : <MiniHistogram values={activeVarValues} variable={activeVariable} isDark={isDark} />)
+      {hasData && !isCategorical && sheetFocus === 'pale'
+        && config?.areaTool?.trend && aggregateStats?.trendWeights && (
+        <PaleSeriesChart
+          trendConfig={config.areaTool.trend}
+          trendWeights={aggregateStats.trendWeights}
+          isDark={isDark}
+        />
       )}
 
       {/* Stats row — mean / median legend + area, sits right under the
           histogram so the line marks above it have an immediate key. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: hasData ? 5 : 0, flexWrap: 'wrap' }}>
-        {hasData && !isCategorical && (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <svg width={14} height={8} style={{ flexShrink: 0 }}>
-                <line x1={0} y1={4} x2={14} y2={4} stroke={lineColor} strokeWidth={1.5} />
-              </svg>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: textMuted }}>
-                mean {mean !== null ? formatValue(mean, unit) : '—'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <svg width={14} height={8} style={{ flexShrink: 0 }}>
-                <line x1={0} y1={4} x2={14} y2={4} stroke={lineColor} strokeWidth={1.5} strokeDasharray='3 2' />
-              </svg>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: textMuted }}>
-                median {median !== null ? formatValue(median, unit) : '—'}
-              </span>
-            </div>
-            <span style={{ color: borderColor, fontSize: 10, userSelect: 'none' }}>·</span>
-          </>
-        )}
         <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: textMuted }}>
-          {count.toLocaleString()} km²
+          {hasData && !isCategorical && mean !== null
+            ? `mean ${formatValue(mean, unit)} · median ${median !== null ? formatValue(median, unit) : '—'} · `
+            : ''}{count.toLocaleString()} km²
         </span>
       </div>
 

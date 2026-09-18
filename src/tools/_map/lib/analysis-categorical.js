@@ -43,9 +43,13 @@ export function categoricalEntries(cat, config, state) {
       prop: crop === 'all' ? s.id : `${s.id}_${crop}`,
       label: s.label,
       color: s.color,
+      src: s.id,
     }))
   }
-  // kind === 'commodity'
+  // kind === 'commodity'. `src` drives year scaling in compare mode: exact
+  // when one source is selected; otherwise a representative trajectory
+  // (enteric for livestock groups, fertilizer for crops — the same proxy
+  // the feed variable uses).
   const pool = source === 'all'
     ? commodities
     : commodities.filter((c) => c.sources.includes(source))
@@ -54,6 +58,7 @@ export function categoricalEntries(cat, config, state) {
     label: c.label,
     legendLabel: c.legendLabel,
     color: c.color,
+    src: source !== 'all' ? source : (c.sources.includes('ent') ? 'ent' : 'fer'),
   }))
 }
 
@@ -101,6 +106,54 @@ export function categoricalLegend(entries) {
     seen.set(e.color, { ...e, label: e.legendLabel ?? e.label })
   }
   return [...seen.values()]
+}
+
+/**
+ * Compare mode for dominance maps: color the cells/units whose LEADER
+ * changed between two years, by the new leader; unchanged leaders are
+ * transparent. Values are the reference-year props scaled by each entry's
+ * national source trajectory (factorPairs), matched on the m49 prop —
+ * the same construction the year bar uses for the emissions map.
+ */
+import { factorPairs } from './year-factors.js'
+
+function scaledNum(e, factors, year) {
+  const pairs = factorPairs(factors, e.src, year)
+  if (!pairs.length) return num(e.prop)
+  return ['*', num(e.prop), ['match', ['to-number', ['get', 'm49']], ...chunkPairs(pairs), 1]]
+}
+
+// factorPairs returns a flat [m49, f, ...] list; match wants
+// label(s)/output pairs — group each m49 alone with its factor.
+function chunkPairs(pairs) {
+  const out = []
+  for (let i = 0; i < pairs.length; i += 2) out.push(pairs[i], pairs[i + 1])
+  return out
+}
+
+export function categoricalChangeColorExpr(entries, factors, yearFrom, yearTo, minValue = 0) {
+  if (entries.length === 0 || !factors) return 'rgba(0,0,0,0)'
+  const maxOf = (year) => entries.length === 1
+    ? scaledNum(entries[0], factors, year)
+    : ['max', ...entries.map((e) => scaledNum(e, factors, year))]
+  const body = ['case']
+  for (const e of entries) {
+    body.push(['all',
+      ['>', ['var', 'mTo'], minValue],
+      ['==', scaledNum(e, factors, yearTo), ['var', 'mTo']],
+      ['!=', scaledNum(e, factors, yearFrom), ['var', 'mFrom']],
+    ], e.color)
+  }
+  body.push('rgba(0,0,0,0)')
+  return ['let', 'mFrom', maxOf(yearFrom), 'mTo', maxOf(yearTo), body]
+}
+
+/** The new leader's value at yearTo — drives the alpha ramp in compare mode. */
+export function categoricalChangeMagnitudeExpr(entries, factors, yearTo) {
+  if (entries.length === 0 || !factors) return 0
+  return entries.length === 1
+    ? scaledNum(entries[0], factors, yearTo)
+    : ['max', ...entries.map((e) => scaledNum(e, factors, yearTo))]
 }
 
 /** JS-side: sorted [{label, color, value, share}] for a properties object. */

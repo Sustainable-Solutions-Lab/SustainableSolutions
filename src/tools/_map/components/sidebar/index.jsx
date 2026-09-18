@@ -50,7 +50,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
       style={{ width: 280, minWidth: 280 }}
     >
       {/* Header — eyebrow + project title (matches the lab's page-title pattern) */}
-      <div className="px-3 pt-3 pb-1.5 shrink-0">
+      <div className="px-3 pt-3 pb-0.5 shrink-0">
         {config.eyebrow && (
           <p
             className="m-0"
@@ -66,8 +66,8 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           </p>
         )}
         <p
-          className="font-serif text-ink mt-1 mb-0"
-          style={{ fontSize: '32px', fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.01em' }}
+          className="font-serif text-ink mt-0.5 mb-0"
+          style={{ fontSize: '26px', fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.01em' }}
         >
           {config.title}
         </p>
@@ -77,7 +77,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
       <div className="flex-1 px-3 pt-0 pb-3 overflow-y-auto overflow-x-hidden">
         {config.summary && (
           <p
-            className="text-ink-2 m-0 mb-4"
+            className="text-ink-2 m-0 mb-3"
             style={{ fontSize: '13px', lineHeight: 1.45 }}
           >
             {config.summary}
@@ -86,7 +86,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
 
         {companion && (
           <div className="mb-2.5">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 m-0 mb-0.5">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none m-0 mb-0.5">
               Companion paper
             </p>
             {companion.url ? (
@@ -224,9 +224,11 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                 </span>
               ))}
             </div>
-            <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-              Largest contributor in each {state.mapView === 'regional' ? 'unit' : 'cell'};
-              shade shows how much it emits. Click for the full breakdown.
+            <p className="font-sans text-ink-3 m-0" style={{ fontSize: 10, lineHeight: 1.4, marginTop: 10 }}>
+              {(state.activeDimensions?.compare ?? 'off') === 'on'
+                ? `Where the leader changed between ${state.activeDimensions?.yearB ?? 2000} and ${state.activeDimensions?.year ?? 2024}: color is the new leader, shade its emissions. Unchanged ${state.mapView === 'regional' ? 'units' : 'cells'} are blank.`
+                : <>Largest contributor in each {state.mapView === 'regional' ? 'unit' : 'cell'};
+                  shade shows how much it emits. Click for the full breakdown.</>}
             </p>
           </div>
         ) : isPale ? (

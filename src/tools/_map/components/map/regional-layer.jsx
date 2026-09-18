@@ -23,7 +23,7 @@ import { useYearFactors } from '../../lib/year-factors.js'
 import { varValueExpr, varHasExpr, readVarValue } from '../../lib/variable-value.js'
 import { INTERPOLATORS } from '../../lib/colormap.js'
 import { levelFor, makeLevelVariable, levelColorExpr } from '../../lib/analysis-levels.js'
-import { categoricalFor, categoricalEntries, categoricalColorExpr, categoricalOpacityExpr, composition } from '../../lib/analysis-categorical.js'
+import { categoricalFor, categoricalEntries, categoricalColorExpr, categoricalOpacityExpr, categoricalChangeColorExpr, categoricalChangeMagnitudeExpr, composition } from '../../lib/analysis-categorical.js'
 
 const SRC = 'unit-values'
 const FILL = 'unit-values-fill'
@@ -58,7 +58,14 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
   // Merge (never replace): the mount effect attaches .ensure/.repaint and a
   // wholesale assignment on re-render would clobber them.
   if (active) refs.current.everActive = true
-  Object.assign(refs.current, { active, variable, isDark, catEntries,
+  const domCompare = state.analysis === 'dominance'
+    && (state.activeDimensions?.compare ?? 'off') === 'on'
+    && yearFactors
+    ? { factors: yearFactors,
+        from: Number(state.activeDimensions?.yearB ?? 2000),
+        to: Number(state.activeDimensions?.year ?? 2024) }
+    : null
+  Object.assign(refs.current, { active, variable, isDark, catEntries, domCompare,
     socPaint: socPaint ?? null,
     percentileRange: state.percentileRange,
     selectedId: state.selectedUnit?.id ?? null, dispatch })
@@ -92,10 +99,20 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
       }
       if (refs.current.catEntries?.length) {
         const ents = refs.current.catEntries
+        const cmp = refs.current.domCompare
         try {
-          map.setPaintProperty(FILL, 'fill-color', categoricalColorExpr(ents, 5e-4))
-          map.setPaintProperty(FILL, 'fill-opacity', categoricalOpacityExpr(ents,
-            [[0, 0.1], [200, 0.45], [2000, 0.72], [12000, 0.9]]))
+          if (cmp) {
+            map.setPaintProperty(FILL, 'fill-color',
+              categoricalChangeColorExpr(ents, cmp.factors, cmp.from, cmp.to, 5e-4))
+            const mag = categoricalChangeMagnitudeExpr(ents, cmp.factors, cmp.to)
+            const op = ['interpolate', ['linear'], mag]
+            for (const [v, a] of [[0, 0.1], [200, 0.45], [2000, 0.72], [12000, 0.9]]) op.push(v, a)
+            map.setPaintProperty(FILL, 'fill-opacity', op)
+          } else {
+            map.setPaintProperty(FILL, 'fill-color', categoricalColorExpr(ents, 5e-4))
+            map.setPaintProperty(FILL, 'fill-opacity', categoricalOpacityExpr(ents,
+              [[0, 0.1], [200, 0.45], [2000, 0.72], [12000, 0.9]]))
+          }
         } catch {}
         try { map.setFilter(FILL, null) } catch {}
         return

@@ -11,8 +11,9 @@
     "astro": "astro",
     "fetch:sheets": "node scripts/fetch-sheets.js",
     "build:materials": "node scripts/build-materials.js",
-    "prebuild": "node scripts/fetch-sheets.js && node scripts/fetch-external-pubs.js",
-    "refresh-scholar": "node scripts/scrape-scholar.js && node scripts/scholar-to-csv.js && node scripts/commit-scholar-refresh.js"
+    "prebuild": "node scripts/fetch-sheets.js && node scripts/fetch-external-pubs.js && node scripts/fetch-github.js",
+    "refresh-scholar": "node scripts/scrape-scholar.js && node scripts/scholar-to-csv.js && node scripts/commit-scholar-refresh.js",
+    "fetch:github": "node scripts/fetch-github.js"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",

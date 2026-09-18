@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import publications from '../../data/publications.json';
 import people from '../../data/people.json';
 import researchData from '../../data/research.json';
+import githubData from '../../data/github.json';
 import type { Publication, Person } from '../../lib/types';
 import { SYSTEMS, systemMatches } from '../../lib/systems';
 import { totalCitations } from '../../lib/citations';
@@ -90,6 +91,31 @@ const dataDrivenCites = dataDrivenPubs.reduce((s, p) => s + totalCitations(p), 0
 const ciuMembers = peopleArr.filter((p) => p.unit === 'ciu').length;
 const NUM_WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'];
 const ciuMembersWord = ciuMembers <= 12 ? NUM_WORDS[ciuMembers] : String(ciuMembers);
+
+// ── Open code & data (scripts/fetch-github.js snapshot) ─────────────────────
+type GhRepo = {
+  name: string; url: string; description: string; language: string | null;
+  stars: number; pushedAt: string; commits52w: number[] | null;
+};
+type GhSnapshot = {
+  orgUrl?: string; publicRepos?: number; totalStars?: number;
+  featured: GhRepo[];
+};
+const gh = githubData as GhSnapshot;
+const LANG_COLORS: Record<string, string> = {
+  Python: '#3572A5', JavaScript: '#f1e05a', TypeScript: '#3178c6',
+  R: '#198CE7', 'Jupyter Notebook': '#DA5B0B', Julia: '#a270ba',
+};
+function sparkPoints(counts: number[] | null, w = 84, h = 20): string | null {
+  if (!counts || counts.length < 2) return null;
+  const max = Math.max(...counts, 1);
+  return counts
+    .map((c, i) => `${((i / (counts.length - 1)) * w).toFixed(1)},${(h - 1 - (c / max) * (h - 2)).toFixed(1)}`)
+    .join(' ');
+}
+function monthYear(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
 
 const conceptualOverride = findResearchRow('conceptual');
 const dataDrivenOverride = findResearchRow('data-driven');
@@ -206,7 +232,7 @@ const approachCards = [
 
   <hr class="border-rule" />
 
-  <section class="container-content pt-8 pb-24">
+  <section class="container-content pt-8 pb-10">
     <h2 class="eyebrow mb-4">BY APPROACH</h2>
     <ul class="grid md:grid-cols-2 gap-4 list-none p-0 m-0">
       {approachCards.map((a) => (
@@ -233,4 +259,76 @@ const approachCards = [
       ))}
     </ul>
   </section>
+
+  {gh.featured.length > 0 && (
+    <>
+      <hr class="border-rule" />
+      <section class="container-content pt-8 pb-24">
+        <div class="flex items-baseline justify-between flex-wrap gap-2 mb-4">
+          <h2 class="eyebrow m-0">OPEN CODE &amp; DATA</h2>
+          <a
+            href={gh.orgUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-mono text-xs text-ink-3 hover:text-ink border-b-0 inline-flex items-center gap-1.5"
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+            </svg>
+            github.com/Sustainable-Solutions-Lab ↗
+          </a>
+        </div>
+        <p class="text-ink-2 text-sm max-w-prose m-0 mb-5" style="line-height: 1.5;">
+          We publish replication code and datasets for our papers and tools
+          as open repositories — {gh.publicRepos} public so far, with more
+          opening as papers publish. Sparklines show the past year of
+          commit activity.
+        </p>
+        <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0 m-0">
+          {gh.featured.map((r) => (
+            <li class="m-0 p-0 h-full">
+              <a
+                href={r.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
+                style="border-radius: var(--radius-md); overflow: hidden;"
+              >
+                <div class="p-5 flex-1 flex flex-col">
+                  <div class="flex items-start justify-between gap-3">
+                    <h3 class="m-0 font-mono" style="font-size: 15px; word-break: break-word;">{r.name}</h3>
+                    {sparkPoints(r.commits52w) && (
+                      <svg viewBox="0 0 84 20" width="84" height="20" aria-hidden="true" style="flex-shrink: 0; opacity: 0.7;">
+                        <polyline
+                          points={sparkPoints(r.commits52w)}
+                          fill="none"
+                          stroke="var(--brand-green, #48A848)"
+                          stroke-width="1.25"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                  {r.description && (
+                    <p class="text-ink-2 text-sm mt-2 m-0" style="line-height: 1.5;">
+                      {r.description}
+                    </p>
+                  )}
+                  <p class="font-mono text-xs text-ink-3 mt-auto pt-4 m-0 flex items-center gap-2 flex-wrap">
+                    {r.language && (
+                      <span class="inline-flex items-center gap-1.5">
+                        <span style={`width: 8px; height: 8px; border-radius: 50%; background: ${LANG_COLORS[r.language] ?? 'var(--ink-3)'}; display: inline-block;`} />
+                        {r.language}
+                      </span>
+                    )}
+                    {r.stars > 0 && <span>★ {r.stars}</span>}
+                    <span>updated {monthYear(r.pushedAt)}</span>
+                  </p>
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </>
+  )}
 </BaseLayout>

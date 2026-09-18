@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronUp, X } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
 import { buildColorScale, getEquityPalette } from '../../lib/colormap.js'
+import { useYearFactors, factorFor } from '../../lib/year-factors.js'
 import { formatValue } from '../../lib/format.js'
 import { TrendChart, CommodityTrendChart, PaleChart, PaleSeriesChart } from './trend-chart.jsx'
 import { Composition } from '../map/region-stats.jsx'
@@ -491,21 +492,36 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
-export function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
+export function EfSection({ efConfig, cropSums, activeVariable, isDark,
+  commodityWeights = null, factors = null, year = null }) {
   const crop = activeVariable?.dimensionValues?.crop
   const source = activeVariable?.dimensionValues?.source
   const muted = isDark ? 'rgba(248,248,232,0.5)' : 'rgba(24,24,56,0.5)'
   const text = isDark ? 'rgba(248,248,232,0.9)' : 'rgba(24,24,56,0.9)'
 
   const entryOf = (c) => efConfig.entries.find((en) => en.id === c)
+  // Emissions of (crop, source) at the selected year: per-country
+  // reference sums scaled by national source trajectories. Falls back to
+  // the raw 2020 sums when the factor table or per-country weights are
+  // not available.
+  const canScale = Boolean(commodityWeights && factors && year != null)
+  const eOf = (c, sId) => {
+    if (!canScale) return cropSums[c]?.[sId] ?? null
+    let t = 0
+    for (const [ctry, byCrop] of Object.entries(commodityWeights)) {
+      const v = byCrop[c]?.[sId]
+      if (v) t += v * factorFor(factors, sId, ctry, year)
+    }
+    return t
+  }
   const ef = (rec, c, src) => {
     const entry = entryOf(c)
     if (!rec || !entry || !(rec.p > 0)) return null
     const e = src === 'all'
-      ? entry.sources.reduce((t, sId) => t + (rec[sId] ?? 0), 0)
-      : rec[src]
+      ? entry.sources.reduce((t, sId) => t + (eOf(c, sId) ?? 0), 0)
+      : eOf(c, src)
     if (e == null) return null
-    return e / rec.p // kt per kt = kg per kg
+    return e / rec.p // kt per kt = kg per kg (production held at 2020)
   }
 
   function downloadCsv() {
@@ -518,7 +534,7 @@ export function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
       if (!rec || !(rec.p > 0)) continue
       lines.push([
         c, rec.p.toFixed(1),
-        ...allSources.map((sId) => (sources.includes(sId) ? (rec[sId] ?? 0).toFixed(2) : '')),
+        ...allSources.map((sId) => (sources.includes(sId) ? (eOf(c, sId) ?? 0).toFixed(2) : '')),
         ...allSources.map((sId) => {
           if (!sources.includes(sId)) return ''
           const v = ef(rec, c, sId)
@@ -530,7 +546,7 @@ export function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
     const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/csv' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = 'food-emissions-region-ef-2020.csv'
+    a.download = `food-emissions-ef-${canScale ? year : 2020}.csv`
     a.click()
     URL.revokeObjectURL(a.href)
   }
@@ -548,7 +564,7 @@ export function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
         fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.08em',
         textTransform: 'uppercase', color: muted, marginBottom: 3,
       }}>
-        Emission factors · 2020
+        Emission factors · {canScale ? year : 2020}
       </div>
       {headline != null ? (
         <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: text, marginBottom: 2 }}>
@@ -557,13 +573,11 @@ export function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
             {isEntrySrc ? `${source} · ${crop}` : `all attributed sources · ${crop}`}
           </span>
         </div>
-      ) : (
+      ) : crop && crop !== 'all' ? (
         <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: muted, marginBottom: 2 }}>
-          {crop && crop !== 'all'
-            ? 'no production of this commodity in the region'
-            : 'pick a commodity for a headline factor'}
+          no production of this commodity in the region
         </div>
-      )}
+      ) : null}
       <button
         type="button"
         onClick={downloadCsv}
@@ -577,17 +591,17 @@ export function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
         Download emission factors (CSV)
       </button>
       <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: muted, marginTop: 3, lineHeight: 1.4 }}>
-        recomputed live for the current selection: one row per commodity
-        with its 2020 production, emissions by source, and kg CO2e per kg,
-        summed over exactly the cells inside this area - move or resize
-        the selection and the factors change
+        commodity- and source-specific emission factors for the selected
+        area/region and year, recomputed live from the selection
+        (emissions follow national trajectories; production held at 2020)
       </div>
     </div>
   )
 }
 
 export function StatsPanel({
-  sheetFocus = 'default', config, drawnCircle, drawnPolygon, aggregateStats, areaToolActive, activeVariable, isDark, dispatch }) {
+  sheetFocus = 'default', config, drawnCircle, drawnPolygon, aggregateStats, areaToolActive, activeVariable, isDark, dispatch, year = null }) {
+  const yearFactors = useYearFactors(config)
   // Show whenever either a circle or a ZIP polygon is active.
   if (!drawnCircle && !drawnPolygon) return null
 
@@ -884,6 +898,9 @@ export function StatsPanel({
         <EfSection
           efConfig={config.areaTool.ef}
           cropSums={aggregateStats.cropSums}
+          commodityWeights={aggregateStats.commodityTrendWeights ?? null}
+          factors={yearFactors}
+          year={year}
           activeVariable={activeVariable}
           isDark={isDark}
         />

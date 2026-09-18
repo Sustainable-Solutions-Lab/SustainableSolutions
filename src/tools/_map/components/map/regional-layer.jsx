@@ -285,7 +285,17 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
   // selection outline
   useEffect(() => {
     if (!map?.getStyle?.() || !map.getLayer?.(SEL)) return
-    try { map.setFilter(SEL, ['==', ['get', 'unit_id'], state.selectedUnit?.id ?? -1]) } catch {}
+    // Compound identity: unit_id alone collided in some tile vintages,
+    // outlining unrelated polygons when e.g. Hawaii was selected.
+    const su = state.selectedUnit
+    try {
+      map.setFilter(SEL, su
+        ? ['all',
+            ['==', ['get', 'unit_id'], su.id ?? -1],
+            ['==', ['get', 'name'], su.props?.name ?? ''],
+            ['==', ['get', 'country'], su.props?.country ?? '']]
+        : ['==', ['get', 'unit_id'], -1])
+    } catch {}
   }, [map, state.selectedUnit])
 
   // Slim hover tip: identification only — the numbers and distribution

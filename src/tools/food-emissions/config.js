@@ -307,9 +307,12 @@ const config = {
   },
 
   // ── Variables ────────────────────────────────────────────────────────────
+  // Labels follow the LSRS terms verbatim (minus the trailing "emissions"
+  // for dropdown width): the Standard's subcategory names both start with
+  // "land management", which the UI must preserve.
   lsrsCategories: {
-    cat2: { ids: LSRS_CAT2_IDS, label: 'Net biogenic CO₂', term: 'land management net biogenic CO2 emissions' },
-    cat3: { ids: LSRS_CAT3_IDS, label: 'Production', term: 'land management production emissions' },
+    cat2: { ids: LSRS_CAT2_IDS, label: 'Land management net biogenic CO₂', term: 'land management net biogenic CO2 emissions' },
+    cat3: { ids: LSRS_CAT3_IDS, label: 'Land management production', term: 'land management production emissions' },
   },
 
   variables: [

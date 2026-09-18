@@ -114,7 +114,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             First control: it sets the geometry every other choice paints. */}
         {config.regionalView && (
           <div className="mb-4">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-0.5 m-0">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
               Map view
             </p>
             <div className="flex gap-4">
@@ -150,7 +150,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             over emissions / dominance maps / drivers. */}
         {multiLayer && (
           <>
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
               Map
             </p>
             <LayerTabs config={config} state={state} dispatch={dispatch} />
@@ -158,7 +158,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         )}
         {(config.paleMap?.categorical ?? []).length > 0 && (
           <div className="mb-4">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-0.5 m-0">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
               Map
             </p>
             <select

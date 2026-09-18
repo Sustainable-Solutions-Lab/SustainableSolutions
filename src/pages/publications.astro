@@ -64,17 +64,104 @@ const labAuthorOptions = peopleArr
   .sort((a, b) => a.name.localeCompare(b.name));
 
 const total = all.length;
+// ── "Where we publish" figure: last ~5 years stacked by journal family ──
+const PUB_Y0 = new Date().getFullYear() - 5;
+const PUB_Y1 = new Date().getFullYear();
+const FAMS = [
+  { id: 'science', label: 'Science titles', color: '#D53E4F',
+    test: (j: string) => /^science(\s+advances)?$/.test(j) },
+  { id: 'nature', label: 'Nature titles', color: '#3288BD',
+    test: (j: string) => /^(nature|npj)\b/.test(j) || /^scientific (data|reports)$/.test(j) || /^communications (earth|biology|chemistry)/.test(j) },
+  { id: 'pnas', label: 'PNAS', color: '#FDAE61',
+    test: (j: string) => /^(pnas|proceedings of the national academy)/.test(j) },
+  { id: 'cell', label: 'Cell titles', color: '#66C2A5',
+    test: (j: string) => /^(joule|one earth|cell(\s|$)|iscience|chem\b|matter\b)/.test(j) },
+  { id: 'other', label: 'Other', color: '#9A9AAE', test: (_: string) => true },
+];
+const pubYears: number[] = [];
+for (let y = PUB_Y0; y <= PUB_Y1; y++) pubYears.push(y);
+const famSeries = FAMS.map(() => pubYears.map(() => 0));
+for (const pub of publications as Publication[]) {
+  const y = Number(pub.year);
+  if (!(y >= PUB_Y0 && y <= PUB_Y1)) continue;
+  const j = String(pub.journal ?? '').toLowerCase().trim();
+  const k = FAMS.findIndex((f) => f.test(j));
+  famSeries[k === -1 ? FAMS.length - 1 : k][y - PUB_Y0] += 1;
+}
+const famTotals = famSeries.map((sr) => sr.reduce((a, b) => a + b, 0));
+const pubFigTotal = famTotals.reduce((a, b) => a + b, 0);
+const FIG_W = 300, FIG_H = 96, FIG_PL = 18, FIG_PB = 12;
+const stackTotals = pubYears.map((_, yi) => famSeries.reduce((a, sr) => a + sr[yi], 0));
+const figMax = Math.max(...stackTotals, 1) * 1.05;
+const figX = (yi: number) => FIG_PL + ((FIG_W - FIG_PL - 2) * yi) / (pubYears.length - 1);
+const figY = (v: number) => 2 + (FIG_H - FIG_PB - 2) * (1 - v / figMax);
+const famPaths: string[] = [];
+{
+  let base = pubYears.map(() => 0);
+  famSeries.forEach((sr) => {
+    const top = base.map((b, yi) => b + sr[yi]);
+    let d = `M ${figX(0)} ${figY(base[0]).toFixed(1)}`;
+    top.forEach((v, yi) => { d += ` L ${figX(yi).toFixed(1)} ${figY(v).toFixed(1)}`; });
+    for (let yi = pubYears.length - 1; yi >= 0; yi--) d += ` L ${figX(yi).toFixed(1)} ${figY(base[yi]).toFixed(1)}`;
+    famPaths.push(d + ' Z');
+    base = top;
+  });
+}
+
 ---
 
 <BaseLayout title="Publications">
   <section class="container-content pt-8 pb-8">
-    <p class="eyebrow mb-4">PUBLICATIONS</p>
-    <h1>Peer-reviewed work</h1>
-    <p class="lede max-w-prose mt-4">
-      Filter by system, topic, approach, or year; search across titles,
-      authors, and journals.
-    </p>
+    <div class="grid gap-8 items-start pubs-hero-grid" style="grid-template-columns: minmax(0, 1fr);">
+      <div>
+        <p class="eyebrow mb-4">PUBLICATIONS</p>
+        <h1>Peer-reviewed work</h1>
+        <p class="lede max-w-prose mt-4">
+          Filter by system, topic, approach, or year; search across titles,
+          authors, and journals.
+        </p>
+      </div>
+      {pubFigTotal > 0 && (
+        <figure class="m-0" style="max-width: 340px;">
+          <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-cardinal m-0 mb-1">
+            <span class="cardinal-dot"></span>FIGURE · JOURNAL FAMILIES
+          </p>
+          <h2 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Where we publish</h2>
+          <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
+            {pubFigTotal} papers per year by journal family, {PUB_Y0}–{PUB_Y1}
+          </p>
+          <svg
+            viewBox={`0 0 ${FIG_W} ${FIG_H}`}
+            style="width: 100%; height: auto; display: block;"
+            role="img"
+            aria-label={`Publications per year by journal family, ${PUB_Y0} to ${PUB_Y1}`}
+          >
+            {famPaths.map((d, k) => (
+              <path d={d} fill={FAMS[k].color} fill-opacity="0.9" stroke="var(--paper)" stroke-width="0.75" />
+            ))}
+            <text x={FIG_PL - 3} y={figY(figMax / 1.05) + 3} text-anchor="end" style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{Math.round(figMax / 1.05)}</text>
+            <text x={figX(0)} y={FIG_H - 2} style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{PUB_Y0}</text>
+            <text x={figX(pubYears.length - 1)} y={FIG_H - 2} text-anchor="end" style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{PUB_Y1}</text>
+          </svg>
+          <figcaption class="flex flex-wrap mt-2" style="gap: 2px 12px;">
+            {FAMS.map((f, k) => famTotals[k] > 0 && (
+              <span class="font-mono text-ink-2 inline-flex items-center" style="font-size: 10px; gap: 4px;">
+                <span style={`width: 8px; height: 8px; border-radius: 2px; background: ${f.color}; display: inline-block;`} />
+                {f.label} ({famTotals[k]})
+              </span>
+            ))}
+          </figcaption>
+        </figure>
+      )}
+    </div>
   </section>
+  <style>
+    @media (min-width: 900px) {
+      .pubs-hero-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 340px) !important;
+      }
+    }
+  </style>
 
   <section class="container-content pb-24">
     <div

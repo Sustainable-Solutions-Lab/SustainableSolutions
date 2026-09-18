@@ -16,6 +16,17 @@ import { EfSection } from '../area-tool/stats-panel.jsx'
 
 const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
 
+// WWF terrestrial biome names — the unit tiles carry the number only.
+const BIOME_NAMES = {
+  1: 'Tropical moist forests', 2: 'Tropical dry forests',
+  3: 'Tropical conifer forests', 4: 'Temperate broadleaf forests',
+  5: 'Temperate conifer forests', 6: 'Boreal forests',
+  7: 'Tropical grasslands & savannas', 8: 'Temperate grasslands',
+  9: 'Flooded grasslands', 10: 'Montane grasslands', 11: 'Tundra',
+  12: 'Mediterranean woodlands', 13: 'Deserts & xeric shrublands',
+  14: 'Mangroves',
+}
+
 function MiniDist({ values, isDark }) {
   if (!values || values.length < 5) return null
   const W = 216
@@ -216,7 +227,9 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
         style={{ position: 'absolute', top: 6, right: 8, background: 'transparent',
                  border: 'none', color: muted, cursor: 'pointer', fontSize: 13, padding: 2 }}
       >×</button>
-      <div style={{ fontSize: 11, fontWeight: 700, paddingRight: 14 }}>{p.name}</div>
+      <div style={{ fontSize: 11, fontWeight: 700, paddingRight: 14 }}>
+        {p.name}{BIOME_NAMES[p.biome] ? ` · ${BIOME_NAMES[p.biome]}` : ''}
+      </div>
       <div style={{ fontSize: 9, color: muted, marginBottom: 6 }}>
         {p.country} · {Number(p.area_km2 ?? 0).toLocaleString()} km²
         {p.ha ? ` · ${Math.round(p.ha / 1000).toLocaleString()} kha cropland` : ''}

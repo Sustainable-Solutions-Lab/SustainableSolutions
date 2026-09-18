@@ -47,7 +47,7 @@ const H = 92
 const PAD_L = 30
 const PAD_B = 14
 
-export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId = null }) {
+export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId = null, title = null, caption = null }) {
   const trends = useNationalTrends(trendConfig?.url)
   // A specific source selected in the sidebar narrows the stack to that
   // source's own trajectory; 'all' (or an id not in the list) shows the
@@ -116,7 +116,7 @@ export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId =
         fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.08em',
         textTransform: 'uppercase', opacity: 0.65, marginBottom: 4,
       }}>
-        Trend in area, {years[0]}–{years[years.length - 1]}
+        {title ?? `Trend in area, ${years[0]}–${years[years.length - 1]}`}
       </div>
       <svg width={W} height={H} style={{ display: 'block' }} role="img"
         aria-label={`Stacked emissions trend for the selected area, ${years[0]} to ${years[years.length - 1]}`}>
@@ -144,8 +144,145 @@ export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId =
         ))}
       </div>
       <div style={{ fontFamily: FONT_MONO, fontSize: 9, opacity: 0.5, marginTop: 4 }}>
-        composed from national series, weighted by emissions inside the area
+        {caption ?? 'composed from national series, weighted by emissions inside the area'}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Commodity-stacked twin of TrendChart: same top-line total, but each
+ * commodity's reference-year emissions inside the area ride its own
+ * sources' national trajectories. A residual band ("Other / unattributed")
+ * keeps the stack's top line equal to the by-source total: the commodity
+ * grid attributes ~80% of cropland emissions (top crops + livestock
+ * groups), and the remainder belongs to the long tail of crops.
+ *
+ * commodityWeights: { [countryId]: { [cropId]: { [sourceId]: kt } } }
+ * trendWeights:     { [countryId]: { [sourceProp]: kt } }  (for the total)
+ * taxonomy:         config.paleMap.taxonomy (commodity labels + colors)
+ */
+export function CommodityTrendChart({ trendConfig, trendWeights, commodityWeights, taxonomy, isDark, title = null, caption = null }) {
+  const trends = useNationalTrends(trendConfig?.url)
+
+  const composed = useMemo(() => {
+    if (!trends || !commodityWeights || !taxonomy?.commodities) return null
+    const { years, countries } = trends
+    const refIdx = years.indexOf(trendConfig.referenceYear ?? years[years.length - 1])
+    // Stack entries: named commodities in taxonomy order, greys folded into
+    // one "Other crops" band, plus the unattributed residual at the top.
+    const named = taxonomy.commodities.filter((c) => !c.legendLabel)
+    const greyed = taxonomy.commodities.filter((c) => c.legendLabel)
+    const entries = [
+      ...named.map((c) => ({ id: c.id, label: c.label, color: c.color, ids: [c.id] })),
+      ...(greyed.length ? [{ id: '_other', label: 'Other crops', color: greyed[0].color, ids: greyed.map((c) => c.id) }] : []),
+    ]
+    const series = entries.map(() => years.map(() => 0))
+    const totals = years.map(() => 0)
+    let any = false
+    for (const [cid, byCrop] of Object.entries(commodityWeights)) {
+      const nat = countries[cid]
+      if (!nat) continue
+      entries.forEach((en, k) => {
+        for (const crop of en.ids) {
+          const bySrc = byCrop[crop]
+          if (!bySrc) continue
+          for (const [src, inside] of Object.entries(bySrc)) {
+            const s = nat[src]
+            const ref = s?.[refIdx]
+            if (!inside || !s || !ref) continue
+            any = true
+            years.forEach((_, yi) => { series[k][yi] += inside * (s[yi] / ref) })
+          }
+        }
+      })
+    }
+    // Total from the by-source weights so both charts share one top line.
+    for (const [cid, sums] of Object.entries(trendWeights ?? {})) {
+      const nat = countries[cid]
+      if (!nat) continue
+      for (const src of trendConfig.sources) {
+        const inside = sums[src.prop]
+        const s = nat[src.prop]
+        const ref = s?.[refIdx]
+        if (!inside || !s || !ref) continue
+        years.forEach((_, yi) => { totals[yi] += inside * (s[yi] / ref) })
+      }
+    }
+    if (!any) return null
+    const attributed = years.map((_, yi) => series.reduce((a, s) => a + s[yi], 0))
+    const residual = years.map((_, yi) => Math.max(0, totals[yi] - attributed[yi]))
+    const kept = entries
+      .map((en, k) => ({ ...en, values: series[k] }))
+      .filter((en) => en.values.some((v) => v > 0))
+    if (residual.some((v) => v > 0)) {
+      kept.push({ id: '_resid', label: 'Unattributed', color: isDark ? '#3A3A5A' : '#C9C9B4', values: residual })
+    }
+    return { years, entries: kept }
+  }, [trends, commodityWeights, trendWeights, taxonomy, trendConfig, isDark])
+
+  if (!trendConfig || !trends || !composed) return null
+  const { years, entries } = composed
+  const totals = years.map((_, yi) => entries.reduce((a, en) => a + en.values[yi], 0))
+  const ymax = Math.max(...totals) * 1.06 || 1
+  const x = (yi) => PAD_L + ((W - PAD_L - 2) * yi) / (years.length - 1)
+  const y = (v) => 2 + (H - PAD_B - 2) * (1 - v / ymax)
+
+  const paths = []
+  let base = years.map(() => 0)
+  entries.forEach((en, k) => {
+    const top = base.map((b, yi) => b + en.values[yi])
+    let d = `M ${x(0)} ${y(base[0])}`
+    top.forEach((v, yi) => { d += ` L ${x(yi)} ${y(v)}` })
+    for (let yi = years.length - 1; yi >= 0; yi--) d += ` L ${x(yi)} ${y(base[yi])}`
+    paths.push(
+      <path key={k} d={`${d} Z`} fill={en.color ?? '#888'}
+        stroke={isDark ? '#14142A' : '#F8F8E8'} strokeWidth={0.75} />
+    )
+    base = top
+  })
+
+  const fmt = (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)} Mt` : `${Math.round(v)} kt`)
+  const axisColor = isDark ? 'rgba(248,248,232,0.4)' : 'rgba(24,24,56,0.4)'
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{
+        fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.08em',
+        textTransform: 'uppercase', opacity: 0.65, marginBottom: 4,
+      }}>
+        {title ?? `Trend in area · by commodity`}
+      </div>
+      <svg width={W} height={H} style={{ display: 'block' }} role="img"
+        aria-label={`Stacked emissions trend by commodity, ${years[0]} to ${years[years.length - 1]}`}>
+        {paths}
+        <line x1={PAD_L} x2={W - 2} y1={y(0)} y2={y(0)} stroke={axisColor} strokeWidth={1} />
+        <text x={PAD_L - 3} y={y(ymax / 1.06) + 3} textAnchor="end"
+          style={{ fontFamily: FONT_MONO, fontSize: 8, fill: axisColor }}>{fmt(ymax / 1.06)}</text>
+        <text x={x(0)} y={H - 3} textAnchor="start"
+          style={{ fontFamily: FONT_MONO, fontSize: 8, fill: axisColor }}>{years[0]}</text>
+        <text x={x(years.length - 1)} y={H - 3} textAnchor="end"
+          style={{ fontFamily: FONT_MONO, fontSize: 8, fill: axisColor }}>{years[years.length - 1]}</text>
+      </svg>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px', marginTop: 4 }}>
+        {entries.map((en) => (
+          <span key={en.id} style={{
+            fontFamily: FONT_MONO, fontSize: 9, opacity: 0.8,
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+          }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: 2, display: 'inline-block',
+              background: en.color ?? '#888',
+            }} />
+            {en.label}
+          </span>
+        ))}
+      </div>
+      {caption != null && (
+        <div style={{ fontFamily: FONT_MONO, fontSize: 9, opacity: 0.5, marginTop: 4 }}>
+          {caption}
+        </div>
+      )}
     </div>
   )
 }

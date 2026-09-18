@@ -11,7 +11,8 @@ import { useMemo } from 'react'
 import { Actions } from '../../contracts/events.js'
 import { readVarValue } from '../../lib/variable-value.js'
 import { composition } from '../../lib/analysis-categorical.js'
-import { PaleSeriesChart } from '../area-tool/trend-chart.jsx'
+import { TrendChart, CommodityTrendChart, PaleSeriesChart } from '../area-tool/trend-chart.jsx'
+import { EfSection } from '../area-tool/stats-panel.jsx'
 
 const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
 
@@ -134,7 +135,7 @@ function ChangeContributions({ props, isDark }) {
 
 export function RegionStats({ map, state, dispatch, activeVariable, isDark, config = null }) {
   const unit = state.selectedUnit
-  // Unit-as-region weights for the PALE factor series: the unit's own
+  // Unit-as-region weights for the trend charts: the unit's own
   // reference-year source sums under its country.
   const unitWeights = useMemo(() => {
     if (!unit?.props || !config?.areaTool?.trend) return null
@@ -147,6 +148,31 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
     if (Object.keys(rec).length === 0) return null
     w[String(unit.props.m49 ?? 0)] = rec
     return w
+  }, [unit, config])
+  // Per-commodity weights and EF sums from the unit's own <src>_<crop> and
+  // p_<crop> props — the unit tiles carry the same fields the circle path
+  // sums from cells, so the popup mirrors the Region Focus panel exactly.
+  const unitCommodityWeights = useMemo(() => {
+    if (!unit?.props || !config?.areaTool?.ef || !config?.areaTool?.trend) return null
+    const byCrop = {}
+    for (const { id: crop, sources } of config.areaTool.ef.entries) {
+      for (const src of sources) {
+        const v = Number(unit.props[`${src}_${crop}`] ?? 0)
+        if (v > 0) (byCrop[crop] ??= {})[src] = v
+      }
+    }
+    if (Object.keys(byCrop).length === 0) return null
+    return { [String(unit.props.m49 ?? 0)]: byCrop }
+  }, [unit, config])
+  const unitCropSums = useMemo(() => {
+    if (!unit?.props || !config?.areaTool?.ef) return null
+    const sums = {}
+    for (const { id: c, sources } of config.areaTool.ef.entries) {
+      const rec = { p: Number(unit.props[`p_${c}`] ?? 0) }
+      for (const src of sources) rec[src] = Number(unit.props[`${src}_${c}`] ?? 0)
+      sums[c] = rec
+    }
+    return sums
   }, [unit, config])
   const cellValues = useMemo(() => {
     if (!map || !unit || !activeVariable) return []
@@ -176,7 +202,8 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
 
   return (
     <div style={{
-      position: 'absolute', left: 12, bottom: 96, zIndex: 15, width: 240,
+      position: 'absolute', left: 12, bottom: 96, zIndex: 15, width: 244,
+      maxHeight: 'calc(100% - 170px)', overflowY: 'auto',
       background: isDark ? 'rgba(12,12,28,0.94)' : 'rgba(248,248,232,0.96)',
       border: `1px solid ${isDark ? 'rgba(248,248,232,0.2)' : 'rgba(24,24,56,0.2)'}`,
       borderRadius: 4, padding: '10px 12px',
@@ -211,17 +238,51 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
         {!activeVariable?.rawRead && intens != null
           ? `${intens < 10 ? intens.toFixed(1) : Math.round(intens).toLocaleString()} t CO₂e / km²` : ''}
       </div>
-      <ChangeContributions props={p} isDark={isDark} />
-      <Composition props={p} taxonomy={config?.paleMap?.taxonomy} isDark={isDark} />
-      {unitWeights && config?.areaTool?.trend ? (
+      {/* Mirrors the Region Focus panel: emissions modes get the twin
+          by-source / by-commodity trend stacks + emission factors; the
+          Drivers map gets the change decomposition + PALE factor series;
+          dominance maps get their axis's composition list. */}
+      {state.analysis === 'pale' && <ChangeContributions props={p} isDark={isDark} />}
+      {state.analysis === 'dominance' && (
+        <Composition props={p} taxonomy={config?.paleMap?.taxonomy} isDark={isDark}
+          kinds={[state.analysisDriver === 'dom_commodity' ? 'Commodities' : 'Sources']} />
+      )}
+      {state.analysis !== 'pale' && unitWeights && config?.areaTool?.trend && (
+        <TrendChart
+          trendConfig={config.areaTool.trend}
+          trendWeights={unitWeights}
+          isDark={isDark}
+          activeSourceId={activeVariable?.dimensionValues?.source ?? null}
+          title={`Trend in ${p.name} · by source`}
+          caption="composed from national series, weighted by the unit's emissions"
+        />
+      )}
+      {state.analysis !== 'pale' && unitCommodityWeights && config?.areaTool?.trend && (
+        <CommodityTrendChart
+          trendConfig={config.areaTool.trend}
+          trendWeights={unitWeights}
+          commodityWeights={unitCommodityWeights}
+          taxonomy={config?.paleMap?.taxonomy}
+          isDark={isDark}
+          title={`Trend in ${p.name} · by commodity`}
+        />
+      )}
+      {state.analysis !== 'pale' && config?.areaTool?.ef && unitCropSums && (
+        <EfSection
+          efConfig={config.areaTool.ef}
+          cropSums={unitCropSums}
+          activeVariable={activeVariable}
+          isDark={isDark}
+        />
+      )}
+      {state.analysis === 'pale' && unitWeights && config?.areaTool?.trend && (
         <PaleSeriesChart
           trendConfig={config.areaTool.trend}
           trendWeights={unitWeights}
           isDark={isDark}
         />
-      ) : (
-        <MiniDist values={cellValues} isDark={isDark} />
       )}
+      {!unitWeights && <MiniDist values={cellValues} isDark={isDark} />}
     </div>
   )
 }

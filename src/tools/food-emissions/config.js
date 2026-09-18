@@ -128,8 +128,8 @@ function makeVariable({ source, crop }) {
     const termSources = source === 'cat2' ? base.filter((x) => LSRS_CAT2_IDS.includes(x))
       : source === 'cat3' ? base.filter((x) => LSRS_CAT3_IDS.includes(x))
       : base
-    const catLabel = source === 'cat2' ? 'Net biogenic CO₂ (LSRS 2)'
-      : source === 'cat3' ? 'Production emissions (LSRS 3)' : null
+    const catLabel = source === 'cat2' ? 'Land management net biogenic CO₂ (LSRS cat. 2)'
+      : source === 'cat3' ? 'Land management production (LSRS cat. 3)' : null
     return {
       ...shared,
       id: source === 'all' ? `tot${cropSuffix}` : `${source}${cropSuffix}`,
@@ -203,9 +203,9 @@ const config = {
     'Where do food-system greenhouse-gas emissions come from, and how is that changing? This tool works toward a complete, spatially explicit, commodity-specific accounting of emissions from land use and land management — mapped where they happen, traced to what is grown, and followed through time. Today it covers the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid, for any year 2000–2024, plus direct livestock emissions (enteric CH₄, manure-management CH₄ and N₂O, manure deposited on pasture) and CO₂ from agricultural liming. Cropland emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model; livestock currently distributes FAO national series across gridded animal densities, to be upgraded with forthcoming spatially explicit livestock data. Land-use-change emissions join next, through the Cornerstone jurisdictional framework.',
 
   region: {
-    // Default load centered on Cuba: the Americas fill the frame, with
-    // Europe/Africa entering at the right edge on wide screens.
-    center: [-79.5, 21.5],
+    // Default load centered on the mid-Atlantic: Americas on the left,
+    // Europe/Africa on the right, both fully in frame on wide screens.
+    center: [-30, 21.5],
     zoom: 1.32,
     // Phones start closer, still Cuba-centered: southern US above,
     // Caribbean and northern South America below.
@@ -240,14 +240,17 @@ const config = {
   // at the bottom of the map renders it instead.
   dimensions: [
     {
+      // Rendered as two selects in the sidebar (Source category + Specific
+      // sources) — both write this one dimension. 'all'/'cat2'/'cat3' are
+      // category values; the rest are specific sources.
       id: 'source',
-      label: 'Source',
+      label: 'Specific sources',
       type: 'dropdown',
       defaultValue: 'all',
       options: [
         { id: 'all', label: 'All sources' },
-        { id: 'cat2', label: 'Net biogenic CO₂ (LSRS cat. 2)' },
-        { id: 'cat3', label: 'Production emissions (LSRS cat. 3)' },
+        { id: 'cat2', label: 'Land management net biogenic CO₂ (LSRS cat. 2)' },
+        { id: 'cat3', label: 'Land management production (LSRS cat. 3)' },
         ...SOURCES.map(([id, label]) => ({ id, label })),
       ],
     },

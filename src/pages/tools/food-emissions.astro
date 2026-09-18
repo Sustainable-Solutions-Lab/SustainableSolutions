@@ -10,7 +10,7 @@ import type { Tool } from '../../lib/types';
 const tool = (tools as Tool[]).find((t) => t.slug === 'food-emissions') ?? null;
 
 const repoLinks = {
-  github: 'https://github.com/Sustainable-Solutions-Lab/gridded-land-management',
+  github: 'https://github.com/Sustainable-Solutions-Lab/gridded-land-sector-emissions',
 };
 
 // Lead-author-only citation: the author list is still growing as
@@ -25,7 +25,7 @@ const companion = {
 ---
 
 <ToolFrame
-  title={tool?.title ?? 'Mapping food system emissions'}
+  title={tool?.title ?? 'Gridded land sector emissions'}
   description={tool?.summary ?? 'Spatially explicit, commodity-specific maps of greenhouse-gas emissions from land use and land management.'}
   noindex
   background="var(--paper-2)"

@@ -340,11 +340,11 @@ function FoodEmissionsMethods() {
         from the Region Focus panel.
         Replication code and tests:{' '}
         <a
-          href="https://github.com/Sustainable-Solutions-Lab/gridded-land-management"
+          href="https://github.com/Sustainable-Solutions-Lab/gridded-land-sector-emissions"
           target="_blank"
           rel="noopener noreferrer"
           style={linkStyle}
-        >gridded-land-management</a>.
+        >gridded-land-sector-emissions</a>.
       </p>
     </>
   )

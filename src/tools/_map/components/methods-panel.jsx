@@ -89,7 +89,7 @@ function FoodEmissionsMethods() {
         circle, or switch to the regional view and click a jurisdiction, to
         see the enclosed total, the source and commodity mix, and a
         2000–2024 trend composed from national series. The
-        companion paper (<strong>DeAngelo, Seifried, Steffen &amp; Davis, in
+        companion paper (<strong>DeAngelo et al., in
         preparation</strong>) will extend the dataset annually and merge it
         with jurisdictional land-use-change emissions being developed by
         the{' '}
@@ -185,6 +185,27 @@ function FoodEmissionsMethods() {
         without a SPAM production layer fall back to allocation by
         harvested area, which amounts to assuming the national average
         yield for that crop.
+      </p>
+
+      <h2 style={h2Style}>Crop maps and masks</h2>
+      <p style={pStyle}>
+        Crop locations and allocation rest on SPAM 2020, the standard
+        global crop-distribution model. Where more detailed public maps
+        exist we are incorporating them through a conservative,
+        total-preserving refinement: within each jurisdiction the finer
+        map redistributes that jurisdiction's emissions and production,
+        so country and admin-1 totals — and every per-source figure —
+        are conserved exactly while placement sharpens. The registry of
+        candidate maps includes the USDA Cropland Data Layer (United
+        States, 30 m annual), MapBiomas (Brazil, 30 m annual), Agriculture
+        Canada's Annual Crop Inventory, JRC's EUCROPMAP (EU, 10 m), ESA
+        WorldCereal, and commodity-specific maps such as the global
+        oil-palm extent and planting-year layers of Descals et al.
+        (2024). Two tracks are kept strictly separate: a reproducible
+        core built only from open, versioned, redistributable data, and
+        an enhanced track that may add restrictively-licensed or
+        model-derived masks, always with a frozen copy and provenance.
+        The map shown here is the core build.
       </p>
 
       <h2 style={h2Style}>Area statistics and trends</h2>
@@ -286,6 +307,13 @@ function FoodEmissionsMethods() {
         change accounting). No claim of removals is made or supported:
         crediting soil-carbon removals requires multi-year field
         measurement under the GHG Protocol's land standard.
+        The layer currently covers cropland; a companion rangeland layer
+        is in development on the grazing-intensity response functions
+        and global stocking-density and forage-demand grids of{' '}
+        <strong>Powell et al., <em>Assessing the net-climate benefits of
+        improved grazing intensity in global rangelands</em>, Science
+        (2026)</strong>, which would extend soil-carbon stock-change
+        coverage to the world's grazing lands.
       </p>
 
       <h2 style={h2Style}>Drivers of change</h2>
@@ -421,129 +449,6 @@ function FuelTreatmentMethods() {
         (blue) indicate locations where treatment is cost-effective at
         today's prices; negative values (red) indicate locations where
         the cost of treatment exceeds the expected damages avoided.
-      </p>
-
-      <h2 style={h2Style}>Feed</h2>
-      <p style={pStyle}>
-        Choosing <em>Crops grown for feed</em> shows the share of cropland
-        emissions grown to feed animals, on the land where the crop grows.
-        For each country and crop, FAO Food Balance Sheets give the quantity
-        used as feed against domestic supply; that ratio is applied to the
-        crop's gridded emissions. Oilseeds count a share of processing as
-        well, since they are crushed before the cake is fed — taking
-        reported feed alone would put US soy at 2.5%. About 7% of the
-        emissions on this map are attributable to feed.
-      </p>
-      <p style={pStyle}>
-        The downloadable factors add a feed column for each livestock
-        commodity, splitting a country's feed pool across animal groups in
-        proportion to concentrate demand (production times a feed-conversion
-        ratio). The effect is largest where it should be: US poultry rises
-        from 0.14 to 0.65 kg CO₂e per kg and pigs from 2.1 to 2.9, while
-        beef moves from 13.0 to 13.7 because its emissions are dominated by
-        enteric fermentation rather than feed. Two caveats: feed is located
-        where it is grown, so exported feed stays with the exporting
-        country rather than the herd that eats it, and the split between
-        animal groups uses literature feed-conversion ratios rather than a
-        calibrated feed-basket model.
-      </p>
-
-      <h2 style={h2Style}>GHG Protocol land-sector categories</h2>
-      <p style={pStyle}>
-        The GHG Protocol Land Sector and Removals Standard (2026) requires
-        emissions to be accounted and reported by subcategory, and its
-        Requirement 32 obliges emission-factor providers to keep the
-        subcategories separable. This map's sources group as follows,
-        using the standard's own terms: <em>land management production
-        emissions</em> — fertilizer and manure N₂O, residue N₂O, rice
-        CH₄, residue burning, enteric CH₄, manure management, pasture
-        manure, and the non-biogenic CO₂ from urea and liming;
-        <em> land management net biogenic CO₂ emissions</em> — carbon
-        stock changes on managed land, which here means drained peatland
-        CO₂ and soil-carbon losses on stable cropland; <em>land use
-        change emissions</em> are not part of this dataset (they come
-        from parcel-level conversion data such as our partner AdAstra's
-        Orbae). The LSRS category selector in the sidebar renders each
-        grouping directly; the emission-factor downloads keep every
-        source in its own column so any grouping can be reconstructed,
-        and a companion table (ef_lsrs_categories.csv) maps each source
-        to its subcategory.
-        Removals are out of scope entirely: the standard requires
-        field-measured evidence, uncertainty deductions, and reversal
-        buffers before soil-carbon gains may be claimed, which no
-        map-based dataset can provide.
-      </p>
-
-      <h2 style={h2Style}>Soil carbon</h2>
-      <p style={pStyle}>
-        Selecting Soil carbon CO₂ as the source shows the mean annual
-        change in mineral-soil organic carbon on stable cropland over
-        2000–2023 as a diverging map, from the IPCC
-        2019 Refinement's Tier 2 steady-state model (three carbon pools,
-        globally calibrated parameters) driven by the same activity data
-        as the rest of the map: our gridded residue and manure carbon
-        inputs scaled by national trajectories, tillage systems from
-        Porwollik et al. (2019), soil texture, and monthly CRU TS
-        climate. Blue cells are accumulating soil carbon (a sink), red
-        cells are losing it. Globally the model finds a small net sink
-        (~15 Tg C per year), robust to the climate treatment; it is shown
-        separately from the emissions total because soil-carbon change is
-        a different accounting category (land management net CO₂) from
-        production emissions, and because model-based soil-carbon
-        estimates carry different uncertainty than inventory fluxes.
-        Asymmetrically — and deliberately — cells that are <em>losing</em>
-        soil carbon (red) contribute to the emissions totals and factors
-        (losses are inventory-grade emissions), while cells gaining
-        carbon (blue) are displayed for context but never netted against
-        emissions or credited (removals require field evidence under the
-        GHG Protocol land standard). Commodity-filtered soil views show
-        only the counted losses, since gains are not attributable to
-        individual crops. In time, the layer carries three period rates
-        (2000–08, 2008–16, 2016–23): the year slider shows the selected
-        year's period rate, and compare mode integrates the rates into
-        the cumulative change between the selected years, labeled as
-        such. Period boundaries are exact; within-period years are a
-        piecewise approximation of the model's annual series (median
-        deviation 23% of a cell's final cumulative change, larger where
-        that change is near zero). The
-        estimate covers management effects under IPCC scope; erosion and
-        land-use conversion are excluded (conversion belongs to land-use
-        change accounting). No claim of removals is made or supported:
-        crediting soil-carbon removals requires multi-year field
-        measurement under the GHG Protocol's land standard.
-      </p>
-
-      <h2 style={h2Style}>Drivers of change</h2>
-      <p style={pStyle}>
-        The Analysis views decompose change over time with the identity used
-        by <strong>Hong et al., <em>Global and regional drivers of land-use
-        emissions in 1961–2017</em>, Nature (2021)</strong>: emissions are
-        the product of population, production per person, land used per unit
-        of production, and emissions per unit of land. Written that way, a
-        region's change separates into how many people it feeds, how much
-        each of them consumes, how efficiently land delivers that
-        production, and how much each hectare emits.
-      </p>
-      <p style={pStyle}>
-        We evaluate the four terms for every admin-1 × biome unit and split
-        the 2000–2023 change between them with a log-mean Divisia (LMDI)
-        decomposition, so the contributions sum exactly to the net change.
-        The same decomposition runs on the gridded cells, where population
-        has no per-cell series: the identity drops it and works with total
-        production instead, giving three terms. There, production and
-        agricultural land follow national trajectories, so those two terms
-        vary between countries but not within them, while the emissions
-        term and the net change carry the within-country detail.
-        Population is gridded (HYDE 3.3 annual population), as is
-        the 2020 emissions pattern; production and agricultural land are
-        national series apportioned to units by their share of national
-        emissions, so those two terms are proportional attributions rather
-        than independent subnational observations. Production is measured
-        in calories, using per-commodity factors checked against FAO Food
-        Balance Sheets. Where Hong et al. worked at the national scale and
-        over six decades, the aim here is to carry the same decomposition
-        to subnational units on spatially explicit data — the analysis the
-        companion paper develops.
       </p>
 
       <h2 style={h2Style}>Caveats</h2>

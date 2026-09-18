@@ -150,6 +150,20 @@ const famPaths: string[] = [];
             {famPaths.map((d, k) => (
               <path d={d} fill={famsOrdered[k].color} fill-opacity="0.9" stroke="var(--ink)" stroke-width="0.5" />
             ))}
+            {/* Hover targets: one invisible column per year with a native
+                tooltip carrying that year's family breakdown. */}
+            {pubYears.map((y, yi) => {
+              const x0 = yi === 0 ? figX(0) : (figX(yi - 1) + figX(yi)) / 2;
+              const x1 = yi === pubYears.length - 1 ? figX(yi) : (figX(yi) + figX(yi + 1)) / 2;
+              const parts = famsOrdered
+                .map((f, k) => seriesOrdered[k][yi] > 0 ? `${f.label} ${seriesOrdered[k][yi]}` : null)
+                .filter(Boolean);
+              return (
+                <rect x={x0} y={0} width={x1 - x0} height={FIG_H} fill="transparent">
+                  <title>{`${y} · ${stackTotals[yi]} paper${stackTotals[yi] === 1 ? '' : 's'}${parts.length ? ' — ' + parts.join(' · ') : ''}`}</title>
+                </rect>
+              );
+            })}
             <text x={FIG_PL - 3} y={figY(figMax / 1.05) + 3} text-anchor="end" style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{Math.round(figMax / 1.05)}</text>
             {pubYears.map((y, yi) => (yi % 2 === 0 || yi === pubYears.length - 1) && (
               <text

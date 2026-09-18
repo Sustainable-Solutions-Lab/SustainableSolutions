@@ -34,17 +34,177 @@ const filterChips = [
   { id: 'all', label: 'All' },
   ...visibleSections.map((s) => ({ id: s.id, label: s.label })),
 ];
+// ── "The lab over time" figure: monthly headcount stacked by role class,
+//    plus alumni destinations. Largest series stacks at the bottom.
+type Row = { role?: string; status?: string; joined_date?: string | null;
+  left_date?: string | null; current_position?: string | null; name?: string };
+const rowsAll = people as Row[];
+function roleClass(role: string): string {
+  const r = (role ?? '').toLowerCase();
+  if (r.includes('postdoc')) return 'postdocs';
+  if (r.includes('phd') || r.includes('ms student') || r.includes('grad')) return 'grad';
+  if (r.includes('undergrad')) return 'undergrad';
+  return 'staff';
+}
+const HC_CLASSES = [
+  { id: 'postdocs', label: 'Postdocs', color: '#3288BD' },
+  { id: 'grad', label: 'Grad students', color: '#66C2A5' },
+  { id: 'undergrad', label: 'Undergrads', color: '#FDAE61' },
+  { id: 'staff', label: 'Staff & collaborators', color: '#9A9AAE' },
+];
+function ym(d: string): number { const [a, b] = d.split('-').map(Number); return a * 12 + (b - 1); }
+const nowD = new Date();
+const nowYm = nowD.getFullYear() * 12 + nowD.getMonth();
+const startYm = ym('2012-10');
+const months: number[] = [];
+for (let m = startYm; m <= nowYm; m++) months.push(m);
+const hcSeries = HC_CLASSES.map(() => months.map(() => 0));
+for (const r of rowsAll) {
+  if (!r.joined_date) continue;
+  const j = ym(r.joined_date);
+  // Alumni without a left date recorded: count them through the present
+  // (they were members until recently; sheet hygiene item).
+  const l = r.left_date ? ym(r.left_date) : nowYm;
+  const k = HC_CLASSES.findIndex((c) => c.id === roleClass(r.role ?? ''));
+  for (let m = Math.max(j, startYm); m <= Math.min(l, nowYm); m++) {
+    hcSeries[k][m - startYm] += 1;
+  }
+}
+// Largest at the bottom; keep the catch-all staff class on top.
+const hcOrder = HC_CLASSES.map((_, k) => k)
+  .filter((k) => HC_CLASSES[k].id !== 'staff')
+  .sort((a, b) => hcSeries[b].reduce((x, y) => x + y, 0) - hcSeries[a].reduce((x, y) => x + y, 0))
+  .concat(HC_CLASSES.findIndex((c) => c.id === 'staff'));
+const hcClasses = hcOrder.map((k) => HC_CLASSES[k]);
+const hcOrdered = hcOrder.map((k) => hcSeries[k]);
+const hcPresent = hcClasses.filter((_, k) => hcOrdered[k].some((v) => v > 0));
+const HC_W = 300, HC_H = 96, HC_PL = 14, HC_PB = 12;
+const hcTotals = months.map((_, mi) => hcOrdered.reduce((a, sr) => a + sr[mi], 0));
+const hcMax = Math.max(...hcTotals, 1) * 1.05;
+const hcX = (mi: number) => HC_PL + ((HC_W - HC_PL - 2) * mi) / (months.length - 1);
+const hcY = (v: number) => 2 + (HC_H - HC_PB - 2) * (1 - v / hcMax);
+const hcPaths: string[] = [];
+{
+  let base = months.map(() => 0);
+  hcOrdered.forEach((sr) => {
+    const top = base.map((b, mi) => b + sr[mi]);
+    let d = `M ${hcX(0).toFixed(1)} ${hcY(base[0]).toFixed(1)}`;
+    top.forEach((v, mi) => { d += ` L ${hcX(mi).toFixed(1)} ${hcY(v).toFixed(1)}`; });
+    for (let mi = months.length - 1; mi >= 0; mi--) d += ` L ${hcX(mi).toFixed(1)} ${hcY(base[mi]).toFixed(1)}`;
+    hcPaths.push(d + ' Z');
+    base = top;
+  });
+}
+const hcYearTicks: number[] = [];
+for (let m = startYm; m <= nowYm; m++) { if (m % 12 === 0 && (m / 12) % 4 === 0) hcYearTicks.push(m); }
+
+// Alumni destinations
+function destClass(pos: string): string {
+  const t = (pos ?? '').toLowerCase();
+  if (!t) return 'unknown';
+  if (t.includes('faculty') || t.includes('professor') || t.includes('lecturer')) return 'faculty';
+  if (t.includes('postdoc')) return 'postdoc';
+  if (t.includes('phd') || t.includes('student')) return 'grad';
+  return 'industry';
+}
+const DESTS = [
+  { id: 'faculty', label: 'Faculty', color: '#5E4FA2' },
+  { id: 'postdoc', label: 'Postdocs', color: '#3288BD' },
+  { id: 'grad', label: 'Grad school', color: '#66C2A5' },
+  { id: 'industry', label: 'Industry & NGOs', color: '#D53E4F' },
+  { id: 'unknown', label: 'TBD', color: '#9A9AAE' },
+];
+const destCounts = DESTS.map((d) =>
+  rowsAll.filter((r) => r.status === 'alumni' && destClass(r.current_position ?? '') === d.id).length);
+const destTotal = destCounts.reduce((a, b) => a + b, 0);
+
 ---
 
 <BaseLayout title="People">
   <section class="container-content pt-8 pb-6">
-    <p class="eyebrow mb-4">PEOPLE</p>
-    <h1>Lab members</h1>
-    <p class="lede max-w-prose mt-4">
-      Current researchers, postdocs, and students — and the alumni now leading their
-      own labs and groups.
-    </p>
+    <div class="grid gap-8 items-start people-hero-grid" style="grid-template-columns: minmax(0, 1fr);">
+      <div>
+        <p class="eyebrow mb-4">PEOPLE</p>
+        <h1>Lab members</h1>
+        <p class="lede max-w-prose mt-4">
+          Current researchers, postdocs, and students — and the alumni now leading their
+          own labs and groups.
+        </p>
+      </div>
+      <figure class="m-0" style="max-width: 340px;">
+        <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-cardinal m-0 mb-1">
+          <span class="cardinal-dot"></span>FIGURE · LAB OVER TIME
+        </p>
+        <h2 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Fourteen years of the group</h2>
+        <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
+          Monthly headcount by role, and where the {destTotal} alumni landed
+        </p>
+        <svg
+          viewBox={`0 0 ${HC_W} ${HC_H}`}
+          style="width: 100%; height: auto; display: block;"
+          role="img"
+          aria-label="Lab headcount over time by role"
+        >
+          {hcPaths.map((d, k) => (
+            <path d={d} fill={hcClasses[k].color} fill-opacity="0.9" stroke="var(--ink)" stroke-width="0.5" />
+          ))}
+          {months.map((m, mi) => (mi % 6 === 0 || mi === months.length - 1) && hcTotals[mi] >= 0 && (
+            <rect x={hcX(Math.max(0, mi - 3))} y={0} width={hcX(Math.min(months.length - 1, mi + 3)) - hcX(Math.max(0, mi - 3))} height={HC_H} fill="transparent">
+              <title>{`${Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, '0')} · ${hcTotals[mi]} member${hcTotals[mi] === 1 ? '' : 's'} — ${hcClasses.map((c, k) => hcOrdered[k][mi] > 0 ? `${c.label} ${hcOrdered[k][mi]}` : null).filter(Boolean).join(' · ')}`}</title>
+            </rect>
+          ))}
+          <text x={HC_PL - 3} y={hcY(hcMax / 1.05) + 3} text-anchor="end" style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{Math.round(hcMax / 1.05)}</text>
+          {hcYearTicks.map((m) => (
+            <text x={hcX(m - startYm)} y={HC_H - 2} text-anchor="middle" style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{m / 12}</text>
+          ))}
+        </svg>
+        <figcaption class="flex flex-wrap mt-1" style="gap: 2px 12px;">
+          {hcClasses.map((c, k) => hcOrdered[k].some((v) => v > 0) && (
+            <span class="font-mono text-ink-2 inline-flex items-center" style="font-size: 10px; gap: 4px;">
+              <span style={`width: 8px; height: 8px; border-radius: 2px; background: ${c.color}; display: inline-block;`} />
+              {c.label}
+            </span>
+          ))}
+        </figcaption>
+        {destTotal > 0 && (
+          <div class="mt-3">
+            <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 m-0 mb-1">ALUMNI DESTINATIONS</p>
+            <svg viewBox="0 0 300 14" style="width: 100%; height: 14px; display: block; border-radius: 2px; overflow: hidden;" role="img" aria-label="Alumni destinations">
+              {(() => {
+                let x = 0;
+                return DESTS.map((d, k) => {
+                  if (!destCounts[k]) return null;
+                  const w = (destCounts[k] / destTotal) * 300;
+                  const el = (
+                    <rect x={x} y={0} width={w} height={14} fill={d.color} fill-opacity="0.9">
+                      <title>{`${d.label}: ${destCounts[k]} of ${destTotal}`}</title>
+                    </rect>
+                  );
+                  x += w;
+                  return el;
+                });
+              })()}
+            </svg>
+            <div class="flex flex-wrap mt-1" style="gap: 2px 12px;">
+              {DESTS.map((d, k) => destCounts[k] > 0 && (
+                <span class="font-mono text-ink-2 inline-flex items-center" style="font-size: 10px; gap: 4px;">
+                  <span style={`width: 8px; height: 8px; border-radius: 2px; background: ${d.color}; display: inline-block;`} />
+                  {d.label} ({destCounts[k]})
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </figure>
+    </div>
   </section>
+  <style>
+    @media (min-width: 900px) {
+      .people-hero-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 340px) !important;
+      }
+    }
+  </style>
 
   <div class="container-content pb-6">
     <div

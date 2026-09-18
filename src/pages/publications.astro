@@ -88,7 +88,18 @@ for (const pub of publications as Publication[]) {
   const k = FAMS.findIndex((f) => f.test(j));
   famSeries[k === -1 ? FAMS.length - 1 : k][y - PUB_Y0] += 1;
 }
-const famTotals = famSeries.map((sr) => sr.reduce((a, b) => a + b, 0));
+// Display order: largest family at the BOTTOM of the stack (Steve's
+// standing preference for stacked areas); the catch-all Other stays on
+// top regardless of size. Classification above always runs in FAMS
+// order (specific families first) - this reorders display only.
+const rawTotals = famSeries.map((sr) => sr.reduce((a, b) => a + b, 0));
+const famOrder = FAMS.map((_, k) => k)
+  .filter((k) => FAMS[k].id !== 'other')
+  .sort((a, b) => rawTotals[b] - rawTotals[a])
+  .concat(FAMS.findIndex((f) => f.id === 'other'));
+const famsOrdered = famOrder.map((k) => FAMS[k]);
+const seriesOrdered = famOrder.map((k) => famSeries[k]);
+const famTotals = famOrder.map((k) => rawTotals[k]);
 const pubFigTotal = famTotals.reduce((a, b) => a + b, 0);
 const FIG_W = 300, FIG_H = 96, FIG_PL = 18, FIG_PB = 12;
 const stackTotals = pubYears.map((_, yi) => famSeries.reduce((a, sr) => a + sr[yi], 0));
@@ -98,7 +109,7 @@ const figY = (v: number) => 2 + (FIG_H - FIG_PB - 2) * (1 - v / figMax);
 const famPaths: string[] = [];
 {
   let base = pubYears.map(() => 0);
-  famSeries.forEach((sr) => {
+  seriesOrdered.forEach((sr) => {
     const top = base.map((b, yi) => b + sr[yi]);
     let d = `M ${figX(0)} ${figY(base[0]).toFixed(1)}`;
     top.forEach((v, yi) => { d += ` L ${figX(yi).toFixed(1)} ${figY(v).toFixed(1)}`; });
@@ -128,7 +139,7 @@ const famPaths: string[] = [];
           </p>
           <h2 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Where we publish</h2>
           <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
-            {pubFigTotal} papers per year by journal family, {PUB_Y0}–{PUB_Y1}
+            Most recent publications by journal family
           </p>
           <svg
             viewBox={`0 0 ${FIG_W} ${FIG_H}`}
@@ -137,14 +148,20 @@ const famPaths: string[] = [];
             aria-label={`Publications per year by journal family, ${PUB_Y0} to ${PUB_Y1}`}
           >
             {famPaths.map((d, k) => (
-              <path d={d} fill={FAMS[k].color} fill-opacity="0.9" stroke="var(--paper)" stroke-width="0.75" />
+              <path d={d} fill={famsOrdered[k].color} fill-opacity="0.9" stroke="var(--ink)" stroke-width="0.5" />
             ))}
             <text x={FIG_PL - 3} y={figY(figMax / 1.05) + 3} text-anchor="end" style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{Math.round(figMax / 1.05)}</text>
-            <text x={figX(0)} y={FIG_H - 2} style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{PUB_Y0}</text>
-            <text x={figX(pubYears.length - 1)} y={FIG_H - 2} text-anchor="end" style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{PUB_Y1}</text>
+            {pubYears.map((y, yi) => (yi % 2 === 0 || yi === pubYears.length - 1) && (
+              <text
+                x={figX(yi)}
+                y={FIG_H - 2}
+                text-anchor={yi === 0 ? 'start' : yi === pubYears.length - 1 ? 'end' : 'middle'}
+                style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);"
+              >{y}</text>
+            ))}
           </svg>
           <figcaption class="flex flex-wrap mt-2" style="gap: 2px 12px;">
-            {FAMS.map((f, k) => famTotals[k] > 0 && (
+            {famsOrdered.map((f, k) => famTotals[k] > 0 && (
               <span class="font-mono text-ink-2 inline-flex items-center" style="font-size: 10px; gap: 4px;">
                 <span style={`width: 8px; height: 8px; border-radius: 2px; background: ${f.color}; display: inline-block;`} />
                 {f.label} ({famTotals[k]})

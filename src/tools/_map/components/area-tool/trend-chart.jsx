@@ -44,7 +44,7 @@ function useNationalTrends(url) {
 
 const W = 220
 const H = 92
-const PAD_L = 30
+const PAD_L = 38   // fits "99.9 Mt" y labels without clipping at the panel edge
 const PAD_B = 14
 
 export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId = null, title = null, caption = null }) {

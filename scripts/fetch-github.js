@@ -19,7 +19,10 @@ const ORG = 'Sustainable-Solutions-Lab';
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data', 'github.json');
 const N_FEATURED = 6;
 // The site's own repo is not a research output; howto is internal docs.
-const EXCLUDE = new Set(['SustainableSolutions', 'howto']);
+const EXCLUDE = new Set(['SustainableSolutions', 'howto', '.github']);
+// Cross-listed forks of Steve's personal published-paper repos are lab
+// projects too — allow them through the fork filter by name.
+const ALLOW_FORKS = new Set(['FoodWithoutAg']);
 
 const HEADERS = { 'User-Agent': 'ssl-site-build', Accept: 'application/vnd.github+json' };
 
@@ -45,7 +48,8 @@ async function main() {
   const org = await gh(`/orgs/${ORG}`);
   const repos = await gh(`/orgs/${ORG}/repos?per_page=100&type=public`);
   const pool = repos
-    .filter((r) => !EXCLUDE.has(r.name) && !r.archived && !r.fork)
+    .filter((r) => !EXCLUDE.has(r.name) && !r.archived
+      && (!r.fork || ALLOW_FORKS.has(r.name)))
     .sort((a, b) =>
       (b.stargazers_count - a.stargazers_count)
       || (new Date(b.pushed_at) - new Date(a.pushed_at)));

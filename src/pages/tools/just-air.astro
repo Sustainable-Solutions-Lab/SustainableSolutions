@@ -9,9 +9,15 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'just-air') ?? null;
 const companionPub = tool?.doi
   ? (publications as Publication[]).find((p) => p.doi?.toLowerCase() === tool.doi!.toLowerCase()) ?? null
   : null;
+// Lead author from the publication record ("Bergero, C.; ..." → "Bergero
+// et al.") so the companion line reads as a citation, not just a journal.
+const leadSurname = companionPub?.authors
+  ? String(companionPub.authors).split(';')[0].split(',')[0].trim()
+  : null;
 const companion = companionPub
   ? {
       title: companionPub.title,
+      lead: leadSurname ? `${leadSurname} et al.` : null,
       journal: companionPub.journal,
       year: companionPub.year,
       url: companionPub.url ?? (companionPub.doi ? `https://doi.org/${companionPub.doi}` : null),

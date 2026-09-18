@@ -24,6 +24,25 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
   )
   const multiLayer = config.layers.filter((l) => !l.hidden).length > 1
   const isDominance = state.analysis === 'dominance'
+  const isPale = state.analysis === 'pale'
+  // Main map select: what the map depicts. 'emissions' is the quantitative
+  // map (with its LSRS/source/commodity refinements); the dominance ids and
+  // 'pale' (Drivers) are the analysis views.
+  const mainView = isPale ? 'pale' : isDominance ? (state.analysisDriver ?? 'dom_source') : 'emissions'
+  const isEmissions = mainView === 'emissions'
+  const setMainView = (v) => {
+    if (v === mainView) return
+    if (v === 'pale') { setPaleActive?.(true); return }
+    if (v === 'emissions') { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
+    // Dominance views reset source/commodity to All: a 'top commodities'
+    // map of one commodity is not a meaningful object.
+    for (const d of visibleDimensions) {
+      dispatch({ type: Actions.SET_DIMENSION, dimensionId: d.id, value: d.defaultValue })
+    }
+    dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
+    dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: v })
+    dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
+  }
 
   return (
     <aside
@@ -78,56 +97,57 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                 className="text-ink-2 hover:text-ink border-b-0"
                 style={{ fontSize: '13px', lineHeight: 1.4, display: 'block' }}
               >
-                <em className="not-italic">{companion.journal}</em> · {companion.year}
+                {companion.lead ? `${companion.lead} · ` : ''}<em className="not-italic">{companion.journal}</em> · {companion.year}
               </a>
             ) : (
               <span
                 className="text-ink-2"
                 style={{ fontSize: '13px', lineHeight: 1.4, display: 'block' }}
               >
-                <em className="not-italic">{companion.journal}</em> · {companion.year}
+                {companion.lead ? `${companion.lead} · ` : ''}<em className="not-italic">{companion.journal}</em> · {companion.year}
               </span>
             )}
           </div>
         )}
 
-        {repoLinks && (repoLinks.github || repoLinks.zenodo || repoLinks.website) && (
-          <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs uppercase tracking-wider">
-            {repoLinks.website && (
-              <a
-                href={repoLinks.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-ink-2 hover:text-ink border-b-0"
-              >
-                Website ↗
-              </a>
-            )}
-            {repoLinks.github && (
-              <a
-                href={repoLinks.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-ink-2 hover:text-ink border-b-0"
-              >
-                GitHub ↗
-              </a>
-            )}
-            {repoLinks.zenodo && (
-              <a
-                href={repoLinks.zenodo}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-ink-2 hover:text-ink border-b-0"
-              >
-                Zenodo ↗
-              </a>
+        {/* MAP VIEW — gridded cells vs regional (admin-1 × biome) averages.
+            First control: it sets the geometry every other choice paints. */}
+        {config.regionalView && (
+          <div className="mb-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+              Map view
+            </p>
+            <div className="flex gap-4">
+              {[['gridded', 'Gridded'], ['regional', 'Regional']].map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => dispatch({ type: Actions.SET_MAP_VIEW, view: v })}
+                  className={[
+                    'bg-transparent border-0 cursor-pointer p-0',
+                    'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
+                    'transition-colors hover:text-ink',
+                    (state.mapView ?? 'gridded') === v
+                      ? 'font-bold text-ink underline'
+                      : 'font-normal text-ink-3',
+                  ].join(' ')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {state.mapView === 'regional' && (
+              <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                Units are admin-1 × biome; color is per-km² intensity of the
+                selection below. Click a unit for its statistics.
+              </p>
             )}
           </div>
         )}
 
-        {/* MAP section header — matches publications-page filter labels.
-            Single-layer projects skip the layer select entirely. */}
+        {/* MAP — what the map depicts. Multi-layer projects use the layer
+            select; single-layer projects with analysis views get a select
+            over emissions / dominance maps / drivers. */}
         {multiLayer && (
           <>
             <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
@@ -136,45 +156,25 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             <LayerTabs config={config} state={state} dispatch={dispatch} />
           </>
         )}
-
-        {/* Primary view — the emissions map (with its source/commodity
-            refinements, percentiles, and analysis) or one of the dominance
-            maps. A dominance view resets source/commodity to All: a 'top
-            commodities' map of one commodity is not a meaningful object. */}
         {(config.paleMap?.categorical ?? []).length > 0 && (
           <div className="mb-3">
             <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
-              View
+              Map
             </p>
-            <div className="flex gap-4 flex-wrap">
-              {[{ id: null, label: 'Emissions' }, ...config.paleMap.categorical.map((c) => ({ id: c.id, label: c.shortLabel ?? c.label }))].map((v) => {
-                const on = v.id ? (isDominance && state.analysisDriver === v.id) : !isDominance
-                return (
-                  <button
-                    key={v.id ?? 'emissions'}
-                    type="button"
-                    onClick={() => {
-                      if (on) return
-                      if (!v.id) { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
-                      for (const d of visibleDimensions) {
-                        dispatch({ type: Actions.SET_DIMENSION, dimensionId: d.id, value: d.defaultValue })
-                      }
-                      dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
-                      dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: v.id })
-                      dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
-                    }}
-                    className={[
-                      'bg-transparent border-0 cursor-pointer p-0',
-                      'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
-                      'transition-colors hover:text-ink',
-                      on ? 'font-bold text-ink underline' : 'font-normal text-ink-3',
-                    ].join(' ')}
-                  >
-                    {v.label}
-                  </button>
-                )
-              })}
-            </div>
+            <select
+              value={mainView}
+              onChange={(e) => setMainView(e.target.value)}
+              className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
+              style={{ borderRadius: 'var(--radius-sm)' }}
+            >
+              <option value="emissions">Emissions</option>
+              {config.paleMap.categorical.map((c) => (
+                <option key={c.id} value={c.id}>{c.shortLabel ?? c.label}</option>
+              ))}
+              {(config.paleMap.drivers ?? []).length > 0 && setPaleActive && (
+                <option value="pale">Drivers of change</option>
+              )}
+            </select>
           </div>
         )}
 
@@ -183,7 +183,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             and Guidance v1.0 (June 2026); Requirement 32 requires these
             to stay separable. Cat 1 (land use change) comes from the
             jdLUC partner dataset and is not yet displayable here. */}
-        {config.lsrsCategories && !isDominance && (
+        {config.lsrsCategories && isEmissions && (
           <div className="mb-2">
             <p className="font-mono text-ink-3 m-0 mb-1" style={{ fontSize: 9, letterSpacing: '0.08em' }}>
               LSRS CATEGORY
@@ -216,7 +216,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         )}
 
         {/* Dimension controls — Emissions view only */}
-        {!isDominance && visibleDimensions.map((dim) => {
+        {isEmissions && visibleDimensions.map((dim) => {
           const filteredDim = {
             ...dim,
             options: dim.options?.filter(
@@ -256,7 +256,24 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
               shade shows how much it emits. Click for the full breakdown.
             </p>
           </div>
-        ) : config.percentileFilter?.enabled && activeVariable && activeVariable.type !== 'categorical' && allValues.length > 0 ? (
+        ) : isPale ? (
+          <div className="mb-2">
+            <div style={{
+              height: 8, borderRadius: 2, marginTop: 4,
+              background: 'linear-gradient(to right, rgba(50,136,189,0.9), rgba(102,194,165,0.6), rgba(128,128,128,0.15), rgba(253,174,97,0.6), rgba(213,62,79,0.9))',
+            }} />
+            <div className="flex justify-between font-mono text-ink-3" style={{ fontSize: 9 }}>
+              <span>−50%</span><span>0</span><span>+50%</span>
+            </div>
+            <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+              Change in emissions 2000–2023, as a share of each
+              {state.mapView === 'regional' ? ' unit' : ' cell'}'s 2000 total.
+              {state.mapView === 'regional'
+                ? ' Click a unit for the drivers behind it.'
+                : ' Draw a region below for the drivers behind it.'}
+            </p>
+          </div>
+        ) : isEmissions && config.percentileFilter?.enabled && activeVariable && activeVariable.type !== 'categorical' && allValues.length > 0 ? (
           <DistributionChart
             variable={activeVariable}
             allValues={allValues}
@@ -264,90 +281,19 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             dispatch={dispatch}
             isDark={state.colorScheme === 'dark'}
           />
-        ) : (
+        ) : isEmissions ? (
           <Legend
             variable={activeVariable}
             allValues={allValues}
             isDark={state.colorScheme === 'dark'}
           />
-        )}
+        ) : null}
 
         {/* Variable caveat note (e.g. soil carbon asymmetry) */}
-        {activeVariable?.note && (
+        {isEmissions && activeVariable?.note && (
           <p className="font-sans text-ink-3 m-0 mb-2" style={{ fontSize: 10, lineHeight: 1.4 }}>
             {activeVariable.note}
           </p>
-        )}
-
-        {/* MAP VIEW — gridded cells vs regional (admin-1 x biome) averages */}
-        {config.regionalView && (
-          <div className="mt-2 mb-2">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
-              Map view
-            </p>
-            <div className="flex gap-4">
-              {[['gridded', 'Gridded'], ['regional', 'Regional']].map(([v, label]) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => dispatch({ type: Actions.SET_MAP_VIEW, view: v })}
-                  className={[
-                    'bg-transparent border-0 cursor-pointer p-0',
-                    'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
-                    'transition-colors hover:text-ink',
-                    (state.mapView ?? 'gridded') === v
-                      ? 'font-bold text-ink underline'
-                      : 'font-normal text-ink-3',
-                  ].join(' ')}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            {state.mapView === 'regional' && (
-              <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                Units are admin-1 × biome; color is per-km² intensity of the
-                selection above. Click a unit for its statistics.
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* ANALYSIS — regional decompositions (PALE); population and
-            production factors only exist for regions. */}
-        {config.paleMap && setPaleActive && !isDominance && (
-          <>
-            <button
-              type="button"
-              onClick={() => setPaleActive(!paleActive)}
-              className={[
-                'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-2 mb-1',
-                'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
-                'transition-colors hover:text-ink',
-                paleActive ? 'font-bold text-ink underline' : 'font-normal text-ink-3',
-              ].join(' ')}
-            >
-              Analysis
-            </button>
-            {paleActive && (
-              <div className="mb-2">
-                <div style={{
-                  height: 8, borderRadius: 2, marginTop: 4,
-                  background: 'linear-gradient(to right, rgba(50,136,189,0.9), rgba(102,194,165,0.6), rgba(128,128,128,0.15), rgba(253,174,97,0.6), rgba(213,62,79,0.9))',
-                }} />
-                <div className="flex justify-between font-mono text-ink-3" style={{ fontSize: 9 }}>
-                  <span>−50%</span><span>0</span><span>+50%</span>
-                </div>
-                <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                  Change in emissions 2000–2023, as a share of each
-                  {state.mapView === 'regional' ? ' unit' : ' cell'}'s 2000 total.
-                  {state.mapView === 'regional'
-                    ? ' Click a unit for the drivers behind it.'
-                    : ' Draw a region below for the drivers behind it.'}
-                </p>
-              </div>
-            )}
-          </>
         )}
 
         {/* Soil carbon — Tier 2 dSOC view (config.paleMap.soilCarbon) */}
@@ -432,6 +378,44 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         >
           Read Methods
         </button>
+
+        {/* Repo links — bottom of the panel, matching the magnets explorer's
+            footer pattern (octicon + mono repo name). Standard placement for
+            all map tools. */}
+        {repoLinks && (repoLinks.github || repoLinks.zenodo) && (
+          <div className="mt-6 pt-4 border-t border-rule flex flex-col gap-2">
+            {repoLinks.github && (
+              <a
+                href={repoLinks.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink-2 hover:text-ink border-b-0 inline-flex items-center"
+                style={{ gap: 6, fontSize: 12 }}
+              >
+                <svg viewBox="0 0 16 16" width={15} height={15} fill="currentColor" aria-hidden="true" style={{ flexShrink: 0 }}>
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                </svg>
+                <span>Model code on GitHub <span style={{ opacity: 0.6, fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>{repoLinks.github.split('/').filter(Boolean).pop()} ↗</span></span>
+              </a>
+            )}
+            {repoLinks.zenodo && (
+              <a
+                href={repoLinks.zenodo}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink-2 hover:text-ink border-b-0 inline-flex items-center"
+                style={{ gap: 6, fontSize: 12 }}
+              >
+                <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                  <ellipse cx="12" cy="5" rx="9" ry="3" />
+                  <path d="M3 5v14a9 3 0 0 0 18 0V5" />
+                  <path d="M3 12a9 3 0 0 0 18 0" />
+                </svg>
+                <span>Data archive on Zenodo <span style={{ opacity: 0.6, fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>{repoLinks.zenodo.replace(/^https?:\/\/(dx\.)?doi\.org\//, '')} ↗</span></span>
+              </a>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Lab wordmark — pinned at the bottom of the sidebar (outside the

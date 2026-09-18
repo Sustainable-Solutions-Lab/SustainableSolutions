@@ -503,69 +503,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       drawer={
         <>
 
-        {config.layers.filter((l) => !l.hidden).length > 1 && (
-          <div className="mb-3">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
-              Map
-            </p>
-            <LayerTabs config={config} state={state} dispatch={dispatch} />
-          </div>
-        )}
-
-        {/* Primary view — mirrors the desktop sidebar. */}
-        {(config.paleMap?.categorical ?? []).length > 0 && (
-          <div className="mb-3">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
-              View
-            </p>
-            <div className="flex gap-4 flex-wrap">
-              {[{ id: null, label: 'Emissions' }, ...config.paleMap.categorical.map((c) => ({ id: c.id, label: c.shortLabel ?? c.label }))].map((v) => {
-                const on = v.id ? (state.analysis === 'dominance' && state.analysisDriver === v.id) : state.analysis !== 'dominance'
-                return (
-                  <button
-                    key={v.id ?? 'emissions'}
-                    type="button"
-                    onClick={() => {
-                      if (on) return
-                      if (!v.id) { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
-                      for (const d of mobileDimensions) {
-                        dispatch({ type: Actions.SET_DIMENSION, dimensionId: d.id, value: d.defaultValue })
-                      }
-                      dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
-                      dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: v.id })
-                      dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
-                    }}
-                    className={[
-                      'bg-transparent border-0 cursor-pointer p-0 font-sans text-[12px] uppercase tracking-[0.12em]',
-                      on ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
-                    ].join(' ')}
-                  >
-                    {v.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {state.analysis !== 'dominance' && mobileDimensions.map((dim) => {
-          const filteredDim = {
-            ...dim,
-            options: dim.options?.filter(
-              (opt) => !opt.visibleForLayers || opt.visibleForLayers.includes(state.activeLayer),
-            ),
-          }
-          return (
-            <DimensionControl
-              key={dim.id}
-              dimension={filteredDim}
-              value={state.activeDimensions[dim.id] ?? dim.defaultValue}
-              dispatch={dispatch}
-            />
-          )
-        })}
-
-        {/* Map view + percentile presets — mobile */}
+        {/* Map view (geometry) first, then the main map select — mirrors the
+            desktop sidebar's ordering. */}
         {config.regionalView && (
           <div className="mb-3">
             <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
@@ -588,7 +527,73 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             </div>
           </div>
         )}
-        {config.percentileFilter?.enabled && state.analysis !== 'dominance' && (
+
+        {config.layers.filter((l) => !l.hidden).length > 1 && (
+          <div className="mb-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+              Map
+            </p>
+            <LayerTabs config={config} state={state} dispatch={dispatch} />
+          </div>
+        )}
+
+        {(config.paleMap?.categorical ?? []).length > 0 && (
+          <div className="mb-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+              Map
+            </p>
+            <select
+              value={paleActive ? 'pale' : state.analysis === 'dominance' ? (state.analysisDriver ?? 'dom_source') : 'emissions'}
+              onChange={(e) => {
+                const v = e.target.value
+                if (v === 'pale') { setPaleActive(true); return }
+                if (v === 'emissions') { dispatch({ type: Actions.SET_ANALYSIS, analysis: null }); return }
+                for (const d of mobileDimensions) {
+                  dispatch({ type: Actions.SET_DIMENSION, dimensionId: d.id, value: d.defaultValue })
+                }
+                dispatch({ type: Actions.SET_PERCENTILE, low: 0, high: 100 })
+                dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: v })
+                dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
+              }}
+              className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
+              style={{ borderRadius: 'var(--radius-sm)' }}
+            >
+              <option value="emissions">Emissions</option>
+              {config.paleMap.categorical.map((c) => (
+                <option key={c.id} value={c.id}>{c.shortLabel ?? c.label}</option>
+              ))}
+              {(config.paleMap.drivers ?? []).length > 0 && (
+                <option value="pale">Drivers of change</option>
+              )}
+            </select>
+            {paleActive && (
+              <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
+                Change in emissions 2000–2023 (blue down, red up). Tap a
+                region for the drivers behind it.
+              </p>
+            )}
+          </div>
+        )}
+
+        {state.analysis == null && mobileDimensions.map((dim) => {
+          const filteredDim = {
+            ...dim,
+            options: dim.options?.filter(
+              (opt) => !opt.visibleForLayers || opt.visibleForLayers.includes(state.activeLayer),
+            ),
+          }
+          return (
+            <DimensionControl
+              key={dim.id}
+              dimension={filteredDim}
+              value={state.activeDimensions[dim.id] ?? dim.defaultValue}
+              dispatch={dispatch}
+            />
+          )
+        })}
+
+        {/* Percentile presets — mobile, emissions view only */}
+        {config.percentileFilter?.enabled && state.analysis == null && (
           <div className="mb-2 flex items-center gap-3">
             {[[0, 'All'], [75, 'Top 25%'], [90, 'Top 10%'], [95, 'Top 5%']].map(([low, label]) => (
               <button
@@ -622,42 +627,6 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           >
             Region Focus
           </button>
-        )}
-
-        {/* Analysis — mobile access (config.paleMap); Emissions view only */}
-        {config.paleMap?.soilCarbon && state.analysis !== 'dominance' && (
-          <button
-            type="button"
-            onClick={() => dispatch({ type: Actions.SET_ANALYSIS, analysis: state.analysis === 'soc' ? null : 'soc' })}
-            className={[
-              'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-3 mb-1',
-              'font-sans text-[12px] uppercase tracking-[0.12em]',
-              state.analysis === 'soc' ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
-            ].join(' ')}
-          >
-            Soil Carbon
-          </button>
-        )}
-        {config.paleMap && state.analysis !== 'dominance' && (
-          <div className="mt-4 pt-3 border-t border-rule">
-            <button
-              type="button"
-              onClick={() => setPaleActive(!paleActive)}
-              className={[
-                'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mb-1',
-                'font-sans text-[12px] uppercase tracking-[0.12em]',
-                paleActive ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
-              ].join(' ')}
-            >
-              Analysis
-            </button>
-            {paleActive && (
-              <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
-                Change in emissions 2000–2023 (blue down, red up). Tap a
-                region for the drivers behind it.
-              </p>
-            )}
-          </div>
         )}
 
         {/* City inequality picker — only meaningful for PM / mortality

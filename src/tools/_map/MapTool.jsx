@@ -507,7 +507,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             desktop sidebar's ordering. */}
         {config.regionalView && (
           <div className="mb-3">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
               Map view
             </p>
             <div className="flex gap-4">
@@ -530,7 +530,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
         {config.layers.filter((l) => !l.hidden).length > 1 && (
           <div className="mb-3">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
               Map
             </p>
             <LayerTabs config={config} state={state} dispatch={dispatch} />
@@ -539,7 +539,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
         {(config.paleMap?.categorical ?? []).length > 0 && (
           <div className="mb-3">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
               Map
             </p>
             <select

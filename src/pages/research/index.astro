@@ -172,15 +172,15 @@ const approachCards = [
       </div>
       {joyRepos.length > 0 && (
         <aside class="code-panel" style="max-width: 340px;">
-          <div class="flex items-baseline justify-between gap-2 mb-2">
-            <p class="eyebrow m-0">OPEN CODE</p>
-            <p class="font-mono text-xs text-ink-3 m-0">
-              {gh.publicRepos} repos · ★ {gh.totalStars}
-            </p>
-          </div>
-          <p class="text-ink-2 text-sm m-0 mb-3" style="line-height: 1.5;">
-            Our lab is committed to working in the open as much as
-            possible. These are our most active public projects.
+          {/* Header conforms to the news-page figure pattern (cardinal
+              eyebrow + serif title + italic caption). */}
+          <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-cardinal m-0 mb-1">
+            <span class="cardinal-dot"></span>FIGURE · OPEN CODE
+          </p>
+          <h2 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Working in the open</h2>
+          <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
+            Our most active public projects — a year of weekly commits
+            across {gh.publicRepos} public repos (★ {gh.totalStars})
           </p>
           {/* Ridgeline of the past year's commits, one Spectral ridge per repo,
               drawn back (top) to front (bottom). */}

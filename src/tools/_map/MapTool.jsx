@@ -913,6 +913,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               activeVariable={activeVariable}
               isDark={isDark}
               dispatch={dispatch}
+              year={Number(state.activeDimensions?.year ?? 2024)}
             />
           </div>
 

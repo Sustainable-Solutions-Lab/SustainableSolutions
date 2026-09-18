@@ -13,6 +13,7 @@ import { readVarValue } from '../../lib/variable-value.js'
 import { composition } from '../../lib/analysis-categorical.js'
 import { TrendChart, CommodityTrendChart, PaleSeriesChart } from '../area-tool/trend-chart.jsx'
 import { EfSection } from '../area-tool/stats-panel.jsx'
+import { useYearFactors } from '../../lib/year-factors.js'
 
 const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
 
@@ -146,6 +147,8 @@ function ChangeContributions({ props, isDark }) {
 
 export function RegionStats({ map, state, dispatch, activeVariable, isDark, config = null }) {
   const unit = state.selectedUnit
+  const yearFactors = useYearFactors(config ?? {})
+  const selYear = Number(state.activeDimensions?.year ?? 2024)
   // Unit-as-region weights for the trend charts: the unit's own
   // reference-year source sums under its country.
   const unitWeights = useMemo(() => {
@@ -284,6 +287,9 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
         <EfSection
           efConfig={config.areaTool.ef}
           cropSums={unitCropSums}
+          commodityWeights={unitCommodityWeights}
+          factors={yearFactors}
+          year={selYear}
           activeVariable={activeVariable}
           isDark={isDark}
         />

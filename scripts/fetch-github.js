@@ -22,7 +22,7 @@ const N_FEATURED = 6;
 const EXCLUDE = new Set(['SustainableSolutions', 'howto', '.github']);
 // Cross-listed forks of Steve's personal published-paper repos are lab
 // projects too — allow them through the fork filter by name.
-const ALLOW_FORKS = new Set(['FoodWithoutAg']);
+const ALLOW_FORKS = new Set(['FoodWithoutAg', 'multiregional-acct', 'eeio-defense']);
 
 const HEADERS = { 'User-Agent': 'ssl-site-build', Accept: 'application/vnd.github+json' };
 

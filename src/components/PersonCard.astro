@@ -38,20 +38,15 @@ const detailHref = isExternal
 const isAlum = person.status === 'alumni';
 const currentPosition = (person.current_position ?? '').trim();
 
-const Wrapper = detailHref ? 'a' : 'div';
-const wrapperClass = detailHref
-  ? 'group block bg-paper border border-rule p-5 hover:border-rule-strong transition-colors border-b-0'
-  : 'block bg-paper border border-rule p-5';
+// The card is a plain container; only the NAME links (photos linking too
+// made stray external arrows render under pictures, and a wrong sheet URL
+// sent one person's photo to another's site).
 ---
 
-<Wrapper
+<div
   id={person.slug}
-  class={wrapperClass}
+  class="block bg-paper border border-rule p-5"
   style="min-height: 152px; scroll-margin-top: 80px;"
-  href={detailHref ?? undefined}
-  data-external={isExternal && detailHref ? '' : null}
-  target={isExternal && detailHref ? '_blank' : undefined}
-  rel={isExternal && detailHref ? 'noopener' : undefined}
 >
   <div class="flex items-center gap-4 h-full">
     {
@@ -76,7 +71,17 @@ const wrapperClass = detailHref
       )
     }
     <div class="min-w-0 flex-1 overflow-hidden">
-      <p class="font-serif text-lg leading-tight m-0 line-clamp-2">{person.name}</p>
+      <p class="font-serif text-lg leading-tight m-0 line-clamp-2">
+        {detailHref ? (
+          <a
+            href={detailHref}
+            class="text-ink hover:underline border-b-0"
+            data-external={isExternal ? '' : null}
+            target={isExternal ? '_blank' : undefined}
+            rel={isExternal ? 'noopener' : undefined}
+          >{person.name}</a>
+        ) : person.name}
+      </p>
       <p class="text-ink-3 text-sm leading-tight mt-1 line-clamp-2">{person.role}</p>
       {
         isAlum && currentPosition && (
@@ -87,4 +92,4 @@ const wrapperClass = detailHref
       }
     </div>
   </div>
-</Wrapper>
+</div>

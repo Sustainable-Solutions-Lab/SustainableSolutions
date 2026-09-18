@@ -196,7 +196,7 @@ const config = {
   id: 'food-emissions',
   mapControls: false,
   eyebrow: 'INTERACTIVE MAP',
-  title: 'Mapping food system emissions',
+  title: 'Gridded land sector emissions',
   summary:
     'Toward spatially explicit, commodity-specific maps of greenhouse-gas emissions from land use and land management, worldwide and through time.',
   description:

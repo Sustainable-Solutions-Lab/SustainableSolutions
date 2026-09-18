@@ -53,21 +53,21 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
       <div className="px-3 pt-3 pb-0.5 shrink-0">
         {config.eyebrow && (
           <p
-            className="m-0"
             style={{
               fontFamily: "'JetBrains Mono', ui-monospace, monospace",
               fontSize: '11px',
               letterSpacing: '0.12em',
               textTransform: 'uppercase',
               color: 'var(--ink-3)',
+              margin: 0,
             }}
           >
             {config.eyebrow}
           </p>
         )}
         <p
-          className="font-serif text-ink mt-0.5 mb-0"
-          style={{ fontSize: '26px', fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.01em' }}
+          className="font-serif text-ink"
+          style={{ fontSize: '26px', fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.01em', margin: '2px 0 0' }}
         >
           {config.title}
         </p>
@@ -77,8 +77,8 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
       <div className="flex-1 px-3 pt-0 pb-3 overflow-y-auto overflow-x-hidden">
         {config.summary && (
           <p
-            className="text-ink-2 m-0 mb-3"
-            style={{ fontSize: '13px', lineHeight: 1.45 }}
+            className="text-ink-2"
+            style={{ fontSize: '13px', lineHeight: 1.45, margin: '0 0 12px' }}
           >
             {config.summary}
           </p>
@@ -86,7 +86,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
 
         {companion && (
           <div className="mb-2.5">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none m-0 mb-0.5">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
               Companion paper
             </p>
             {companion.url ? (
@@ -114,7 +114,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             First control: it sets the geometry every other choice paints. */}
         {config.regionalView && (
           <div className="mb-4">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
               Map view
             </p>
             <div className="flex gap-4">
@@ -150,7 +150,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             over emissions / dominance maps / drivers. */}
         {multiLayer && (
           <>
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
               Map
             </p>
             <LayerTabs config={config} state={state} dispatch={dispatch} />
@@ -158,7 +158,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         )}
         {(config.paleMap?.categorical ?? []).length > 0 && (
           <div className="mb-4">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
               Map
             </p>
             <select

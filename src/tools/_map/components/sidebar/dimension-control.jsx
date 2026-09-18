@@ -25,7 +25,7 @@ export function DimensionControl({ dimension, value, dispatch, animatingDimensio
     // mb-4 puts clear air before the NEXT section header while the label
     // stays tight (mb-0.5) to the control it heads.
     <div className="mb-4">
-      <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
+      <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
         {dimension.label}
       </p>
 
@@ -144,7 +144,7 @@ export function SourceCategoryControls({ config, state, dispatch }) {
   return (
     <>
       <div className="mb-4">
-        <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
+        <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
           Source category
         </p>
         <select value={category} onChange={(e) => set(e.target.value)}
@@ -159,7 +159,7 @@ export function SourceCategoryControls({ config, state, dispatch }) {
         </select>
       </div>
       <div className="mb-4">
-        <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none mb-0.5 m-0">
+        <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
           Specific sources
         </p>
         <select value={specific} onChange={(e) => set(e.target.value)}

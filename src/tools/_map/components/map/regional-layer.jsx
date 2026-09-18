@@ -188,7 +188,11 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
           .sort((a, b) => a - b)
         if (vals.length < 20) return
         rangeRef.p95 = vals[Math.floor(0.95 * (vals.length - 1))] || 20
-        if (feats.length > 300) rangeRef.locked = true
+        // Lock on the first decent sample: recomputing on later idles let
+        // the color scale follow the viewport, so a unit changed color as
+        // you zoomed (California-Mediterranean went yellow to wine). The
+        // scale now freezes per variable until a repaint resets it.
+        if (vals.length >= 50) rangeRef.locked = true
         paint()
       } catch {}
     }

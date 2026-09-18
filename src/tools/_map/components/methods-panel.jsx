@@ -103,9 +103,9 @@ function FoodEmissionsMethods() {
 
       <h2 style={h2Style}>Where the numbers come from</h2>
       <p style={pStyle}>
-        Emissions follow the model of <strong>Cao et al., <em>Spatially
+        Emissions follow the model of <a href="https://doi.org/10.1038/s41558-026-02558-4" target="_blank" rel="noopener noreferrer" style={linkStyle}><strong>Cao et al., <em>Spatially
         explicit global assessment of cropland greenhouse gas emissions
-        circa 2020</em>, Nature Climate Change (2026)</strong>, which applies
+        circa 2020</em>, Nature Climate Change (2026)</strong></a>, which applies
         IPCC 2019 Refinement methods to crop-specific gridded inputs (SPAM
         harvested areas, IFA fertilizer rates, gridded livestock, RiceAtlas
         seasons, hybrid peatland maps). We reimplemented the model
@@ -136,10 +136,10 @@ function FoodEmissionsMethods() {
 
       <h2 style={h2Style}>Livestock (provisional)</h2>
       <p style={pStyle}>
-        The reference for global livestock emissions is <strong>Herrero et
+        The reference for global livestock emissions is <a href="https://doi.org/10.1073/pnas.1308149110" target="_blank" rel="noopener noreferrer" style={linkStyle}><strong>Herrero et
         al., <em>Biomass use, production, feed efficiencies, and greenhouse
         gas emissions from global livestock systems</em>, PNAS
-        (2013)</strong>, which resolves enteric fermentation and manure
+        (2013)</strong></a>, which resolves enteric fermentation and manure
         emissions by species, production system, and region for a period
         centered on 2000. Two things have to change for that framework to
         sit alongside the cropland maps here: it has to run annually rather
@@ -200,8 +200,8 @@ function FoodEmissionsMethods() {
         States, 30 m annual), MapBiomas (Brazil, 30 m annual), Agriculture
         Canada's Annual Crop Inventory, JRC's EUCROPMAP (EU, 10 m), ESA
         WorldCereal, and commodity-specific maps such as the global
-        oil-palm extent and planting-year layers of Descals et al.
-        (2024). Two tracks are kept strictly separate: a reproducible
+        oil-palm extent and planting-year layers of <a href="https://doi.org/10.5194/essd-16-5111-2024" target="_blank" rel="noopener noreferrer" style={linkStyle}>Descals et al.
+        (2024)</a>. Two tracks are kept strictly separate: a reproducible
         core built only from open, versioned, redistributable data, and
         an enhanced track that may add restrictively-licensed or
         model-derived masks, always with a frozen copy and provenance.
@@ -246,7 +246,7 @@ function FoodEmissionsMethods() {
 
       <h2 style={h2Style}>GHG Protocol land-sector categories</h2>
       <p style={pStyle}>
-        The GHG Protocol Land Sector and Removals Standard (2026) requires
+        The <a href="https://ghgprotocol.org/land-sector-and-removals-guidance" target="_blank" rel="noopener noreferrer" style={linkStyle}>GHG Protocol Land Sector and Removals Standard (2026)</a> requires
         emissions to be accounted and reported by subcategory, and its
         Requirement 32 obliges emission-factor providers to keep the
         subcategories separable. This map's sources group as follows,
@@ -279,7 +279,7 @@ function FoodEmissionsMethods() {
         globally calibrated parameters) driven by the same activity data
         as the rest of the map: our gridded residue and manure carbon
         inputs scaled by national trajectories, tillage systems from
-        Porwollik et al. (2019), soil texture, and monthly CRU TS
+        <a href="https://doi.org/10.5194/essd-11-823-2019" target="_blank" rel="noopener noreferrer" style={linkStyle}>Porwollik et al. (2019)</a>, soil texture, and monthly CRU TS
         climate. Blue cells are accumulating soil carbon (a sink), red
         cells are losing it. Globally the model finds a small net sink
         (~15 Tg C per year), robust to the climate treatment; it is shown
@@ -310,17 +310,17 @@ function FoodEmissionsMethods() {
         The layer currently covers cropland; a companion rangeland layer
         is in development on the grazing-intensity response functions
         and global stocking-density and forage-demand grids of{' '}
-        <strong>Powell et al., <em>Assessing the net-climate benefits of
+<a href="https://doi.org/10.1126/science.adz4320" target="_blank" rel="noopener noreferrer" style={linkStyle}><strong>Powell et al., <em>Assessing the net-climate benefits of
         improved grazing intensity in global rangelands</em>, Science
-        (2026)</strong>, which would extend soil-carbon stock-change
+        (2026)</strong></a>, which would extend soil-carbon stock-change
         coverage to the world's grazing lands.
       </p>
 
       <h2 style={h2Style}>Drivers of change</h2>
       <p style={pStyle}>
         The Analysis views decompose change over time with the identity used
-        by <strong>Hong et al., <em>Global and regional drivers of land-use
-        emissions in 1961–2017</em>, Nature (2021)</strong>: emissions are
+        by <a href="https://doi.org/10.1038/s41586-020-03138-y" target="_blank" rel="noopener noreferrer" style={linkStyle}><strong>Hong et al., <em>Global and regional drivers of land-use
+        emissions in 1961–2017</em>, Nature (2021)</strong></a>: emissions are
         the product of population, production per person, land used per unit
         of production, and emissions per unit of land. Written that way, a
         region's change separates into how many people it feeds, how much
@@ -355,7 +355,11 @@ function FoodEmissionsMethods() {
         scale. Commodity views cover the twelve largest crops and eight
         livestock groups; the remaining crops appear only in the all-
         commodity totals. Dominance maps rank contributors on 2020 values
-        rather than the displayed year. Land-use-change emissions
+        rather than the displayed year; in compare mode they instead show
+        where the leader changed between the two selected years, with each
+        contributor scaled by its national source trajectory (commodities
+        ride a representative source — enteric CH₄ for livestock groups,
+        fertilizer for crops). Land-use-change emissions
         (deforestation, grassland conversion, the peat-drainage pulse) are
         not yet included; they join via the Cornerstone jurisdictional
         framework.

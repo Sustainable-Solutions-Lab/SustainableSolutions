@@ -282,7 +282,7 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
           isDark={isDark}
         />
       )}
-      {!unitWeights && <MiniDist values={cellValues} isDark={isDark} />}
+
     </div>
   )
 }

@@ -9,7 +9,11 @@
    ========================================================================== */
 
 @import 'tailwindcss';
-@import './colors_and_type.css';
+/* layer(base): the design system's element styles (p margins, headings,
+   links) must sit BELOW Tailwind's utilities in the cascade — unlayered,
+   they silently beat every utility class (m-0/mt-* on <p> did nothing
+   site-wide until 2026-09-18). */
+@import './colors_and_type.css' layer(base);
 
 /* ---------- Tailwind v4 token bridge ------------------------------------
    Each utility (e.g. `bg-paper`, `text-ink-2`, `border-rule`) resolves to

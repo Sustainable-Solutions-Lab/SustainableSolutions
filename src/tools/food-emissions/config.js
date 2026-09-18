@@ -206,7 +206,7 @@ const config = {
     // Default load centered on the mid-Atlantic: Americas on the left,
     // Europe/Africa on the right, both fully in frame on wide screens.
     center: [-30, 21.5],
-    zoom: 1.32,
+    zoom: 1.6,
     // Phones start closer, still Cuba-centered: southern US above,
     // Caribbean and northern South America below.
     mobileCenter: [-79.5, 24],

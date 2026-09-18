@@ -50,7 +50,7 @@ const HC_CLASSES = [
   { id: 'postdocs', label: 'Postdocs', color: '#3288BD' },
   { id: 'grad', label: 'Grad students', color: '#66C2A5' },
   { id: 'undergrad', label: 'Undergrads', color: '#FDAE61' },
-  { id: 'staff', label: 'Staff & collaborators', color: '#9A9AAE' },
+  { id: 'staff', label: 'Faculty & staff', color: '#9A9AAE' },
 ];
 function ym(d: string): number { const [a, b] = d.split('-').map(Number); return a * 12 + (b - 1); }
 const nowD = new Date();
@@ -61,6 +61,8 @@ for (let m = startYm; m <= nowYm; m++) months.push(m);
 const hcSeries = HC_CLASSES.map(() => months.map(() => 0));
 for (const r of rowsAll) {
   if (!r.joined_date) continue;
+  // Collaborators are honorary members - not part of the headcount.
+  if (/collaborator/i.test(r.role ?? '')) continue;
   const j = ym(r.joined_date);
   // Alumni without a left date recorded: count them through the present
   // (they were members until recently; sheet hygiene item).

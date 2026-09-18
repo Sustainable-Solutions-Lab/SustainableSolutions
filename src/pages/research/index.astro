@@ -216,7 +216,9 @@ const approachCards = [
               </li>
             ))}
           </ul>
-          <p class="text-ink-2 text-sm m-0 mt-10" style="line-height: 1.6;">
+          {/* Inline margin: colors_and_type.css sets p margins OUTSIDE any
+              cascade layer, so Tailwind margin utilities lose on <p>. */}
+          <p class="text-ink-2 text-sm" style="line-height: 1.6; margin: 28px 0 0;">
             Follow and work with us on{' '}
             <a
               href={gh.orgUrl}

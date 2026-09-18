@@ -80,11 +80,25 @@ export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId =
     }
     if (!any) return null
     // Stack order: largest series at the BOTTOM (stack builds base-up),
-    // ranked by the final year of the series.
+    // ranked by the final year. Beyond the top 5, series aggregate into
+    // one grey "All other" band so the stack and legend stay readable.
     const last = years.length - 1
     const order = bySource.map((v, k) => k).sort((a, b) => bySource[b][last] - bySource[a][last])
-    return { years, bySource: order.map((k) => bySource[k]),
-             sources: order.map((k) => trendConfig.sources[k]) }
+    let entries = order.map((k) => ({ ...trendConfig.sources[k], values: bySource[k] }))
+    if (entries.length > 6) {
+      const rest = entries.slice(5)
+      entries = [...entries.slice(0, 5), {
+        id: '_other', label: 'All other', color: '#9A9AAE',
+        values: years.map((_, yi) => rest.reduce((a, e) => a + e.values[yi], 0)),
+      }]
+    }
+    // Cumulative share of the whole period, for the legend.
+    const grand = entries.reduce((a, e) => a + e.values.reduce((x, y) => x + y, 0), 0)
+    for (const e of entries) {
+      const c = e.values.reduce((x, y) => x + y, 0)
+      e.pct = grand > 0 ? (c / grand) * 100 : 0
+    }
+    return { years, entries }
   }, [trends, trendWeights, effConfig])
 
   if (!trendConfig) return null
@@ -93,7 +107,8 @@ export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId =
   if (!trends) return null
   if (!composed) return null
 
-  const { years, bySource, sources: orderedSources } = composed
+  const { years, entries } = composed
+  const bySource = entries.map((e) => e.values)
   const totals = years.map((_, yi) => bySource.reduce((a, s) => a + s[yi], 0))
   const ymax = Math.max(...totals) * 1.06 || 1
   const x = (yi) => PAD_L + ((W - PAD_L - 2) * yi) / (years.length - 1)
@@ -107,13 +122,14 @@ export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId =
     top.forEach((v, yi) => { d += ` L ${x(yi)} ${y(v)}` })
     for (let yi = years.length - 1; yi >= 0; yi--) d += ` L ${x(yi)} ${y(base[yi])}`
     paths.push(
-      <path key={k} d={`${d} Z`} fill={orderedSources[k].color ?? '#888'}
+      <path key={k} d={`${d} Z`} fill={entries[k].color ?? '#888'}
         stroke={isDark ? '#14142A' : '#F8F8E8'} strokeWidth={0.75} />
     )
     base = top
   })
 
   const fmt = (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)} Mt` : `${Math.round(v)} kt`)
+  const fmtPct = (x) => (x >= 0.5 ? `${Math.round(x)}%` : '<1%')
   const axisColor = isDark ? 'rgba(248,248,232,0.4)' : 'rgba(24,24,56,0.4)'
 
   return (
@@ -136,7 +152,7 @@ export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId =
           style={{ fontFamily: FONT_MONO, fontSize: 8, fill: axisColor }}>{years[years.length - 1]}</text>
       </svg>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px', marginTop: 4 }}>
-        {orderedSources.map((s, k) => (
+        {entries.map((s) => (
           <span key={s.id} style={{
             fontFamily: FONT_MONO, fontSize: 9, opacity: 0.8,
             display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -145,13 +161,15 @@ export function TrendChart({ trendConfig, trendWeights, isDark, activeSourceId =
               width: 8, height: 8, borderRadius: 2, display: 'inline-block',
               background: s.color ?? '#888',
             }} />
-            {s.label}
+            {s.label} ({fmtPct(s.pct)})
           </span>
         ))}
       </div>
-      <div style={{ fontFamily: FONT_MONO, fontSize: 9, opacity: 0.5, marginTop: 4 }}>
-        {caption ?? 'composed from national series, weighted by emissions inside the area'}
-      </div>
+      {caption != null && (
+        <div style={{ fontFamily: FONT_MONO, fontSize: 9, opacity: 0.5, marginTop: 4 }}>
+          {caption}
+        </div>
+      )}
     </div>
   )
 }
@@ -219,12 +237,23 @@ export function CommodityTrendChart({ trendConfig, trendWeights, commodityWeight
     const attributed = years.map((_, yi) => series.reduce((a, s) => a + s[yi], 0))
     const residual = years.map((_, yi) => Math.max(0, totals[yi] - attributed[yi]))
     const last = years.length - 1
-    const kept = entries
+    let kept = entries
       .map((en, k) => ({ ...en, values: series[k] }))
       .filter((en) => en.values.some((v) => v > 0))
       .sort((a, b) => b.values[last] - a.values[last])
-    if (residual.some((v) => v > 0)) {
-      kept.push({ id: '_resid', label: 'Unattributed', color: isDark ? '#3A3A5A' : '#C9C9B4', values: residual })
+    // Top 5 named commodities; everything else (long tail + the
+    // unattributed remainder) folds into one grey "All other" band.
+    const restEntries = kept.slice(5)
+    kept = kept.slice(0, 5)
+    const otherVals = years.map((_, yi) =>
+      restEntries.reduce((a, e) => a + e.values[yi], 0) + residual[yi])
+    if (otherVals.some((v) => v > 0)) {
+      kept.push({ id: '_other', label: 'All other', color: '#9A9AAE', values: otherVals })
+    }
+    const grand = kept.reduce((a, e) => a + e.values.reduce((x, y) => x + y, 0), 0)
+    for (const e of kept) {
+      const c = e.values.reduce((x, y) => x + y, 0)
+      e.pct = grand > 0 ? (c / grand) * 100 : 0
     }
     return { years, entries: kept }
   }, [trends, commodityWeights, trendWeights, taxonomy, trendConfig, isDark])
@@ -282,7 +311,7 @@ export function CommodityTrendChart({ trendConfig, trendWeights, commodityWeight
               width: 8, height: 8, borderRadius: 2, display: 'inline-block',
               background: en.color ?? '#888',
             }} />
-            {en.label}
+            {en.label} ({en.pct >= 0.5 ? `${Math.round(en.pct)}%` : '<1%'})
           </span>
         ))}
       </div>

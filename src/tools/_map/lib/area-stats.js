@@ -184,3 +184,34 @@ export function computeTrendWeights(features, trendConfig) {
   }
   return weights
 }
+
+/**
+ * Per-country, per-commodity sums of the `<source>_<crop>` properties inside
+ * a drawn area, so the panel can stack the area's trajectory by commodity:
+ * each commodity's reference-year emissions ride its own sources' national
+ * trajectories. Commodity list and source attribution come from
+ * config.areaTool.ef.entries (the same grid the EF table uses).
+ *
+ * @returns {Object.<string, Object.<string, Object.<string, number>>>}
+ *          { [countryId]: { [cropId]: { [sourceProp]: sum } } }
+ */
+export function computeCommodityTrendWeights(features, areaToolConfig) {
+  const weights = {}
+  const countryProp = areaToolConfig.trend.countryProp
+  for (const f of features) {
+    const p = f.properties
+    if (!p || p[countryProp] == null) continue
+    const c = String(p[countryProp])
+    const w = (weights[c] ??= {})
+    for (const { id: crop, sources } of areaToolConfig.ef.entries) {
+      for (const src of sources) {
+        const v = p[`${src}_${crop}`]
+        if (v != null && isFinite(v) && Number(v) !== 0) {
+          const rec = (w[crop] ??= {})
+          rec[src] = (rec[src] ?? 0) + Number(v)
+        }
+      }
+    }
+  }
+  return weights
+}

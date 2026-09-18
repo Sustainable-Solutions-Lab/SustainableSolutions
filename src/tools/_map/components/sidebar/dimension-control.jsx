@@ -22,7 +22,9 @@ export function DimensionControl({ dimension, value, dispatch, animatingDimensio
   }
 
   return (
-    <div className="mb-2">
+    // mb-4 puts clear air before the NEXT section header while the label
+    // stays tight (mb-0.5) to the control it heads.
+    <div className="mb-4">
       <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-0.5 m-0">
         {dimension.label}
       </p>
@@ -113,6 +115,64 @@ function SliderControl({ dimension, value, onChange, playing, onTogglePlay }) {
         />
       </div>
     </div>
+  )
+}
+
+/**
+ * Paired LSRS source-category + specific-source selects. Both write the
+ * single 'source' dimension: 'all'/'cat2'/'cat3' are category values,
+ * source ids are specific. Category labels follow the Standard's terms
+ * verbatim (both cat 2 and 3 begin "land management..."); Requirement 32
+ * requires the subcategories to stay separable. Cat 1 (land use change
+ * emissions) comes from the jdLUC partner dataset — listed but disabled
+ * until those factors are displayable here.
+ */
+export function SourceCategoryControls({ config, state, dispatch }) {
+  const srcDim = config.dimensions.find((d) => d.id === 'source')
+  if (!srcDim || !config.lsrsCategories) return null
+  const cur = state.activeDimensions.source ?? srcDim.defaultValue ?? 'all'
+  const cat2 = config.lsrsCategories.cat2
+  const cat3 = config.lsrsCategories.cat3
+  const category = cur === 'cat2' || cat2.ids.includes(cur) ? 'cat2'
+    : cur === 'cat3' || cat3.ids.includes(cur) ? 'cat3' : 'all'
+  const sourceOpts = (srcDim.options ?? []).filter((o) =>
+    !['all', 'cat2', 'cat3'].includes(o.id)
+    && (category === 'all' || config.lsrsCategories[category].ids.includes(o.id)))
+  const specific = sourceOpts.some((o) => o.id === cur) ? cur : category
+  const set = (value) => dispatch({ type: Actions.SET_DIMENSION, dimensionId: 'source', value })
+  const selectCls = 'w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink'
+  return (
+    <>
+      <div className="mb-4">
+        <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-0.5 m-0">
+          Source category
+        </p>
+        <select value={category} onChange={(e) => set(e.target.value)}
+          className={selectCls} style={{ borderRadius: 'var(--radius-sm)' }}>
+          <option value="all">Total (all categories)</option>
+          <option value="cat1" disabled
+            title="Land use change factors come from the jdLUC partner dataset (AdAstra/Orbae); not yet shown in this map">
+            1 · Land use change (partner data, coming)
+          </option>
+          <option value="cat2">2 · {cat2.label}</option>
+          <option value="cat3">3 · {cat3.label}</option>
+        </select>
+      </div>
+      <div className="mb-4">
+        <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-0.5 m-0">
+          Specific sources
+        </p>
+        <select value={specific} onChange={(e) => set(e.target.value)}
+          className={selectCls} style={{ borderRadius: 'var(--radius-sm)' }}>
+          <option value={category}>
+            {category === 'all' ? 'All sources' : 'All sources in category'}
+          </option>
+          {sourceOpts.map((o) => (
+            <option key={o.id} value={o.id}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+    </>
   )
 }
 

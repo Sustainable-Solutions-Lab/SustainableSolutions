@@ -19,7 +19,7 @@ import { ChevronUp, X } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
 import { buildColorScale, getEquityPalette } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
-import { TrendChart, PaleChart, PaleSeriesChart } from './trend-chart.jsx'
+import { TrendChart, CommodityTrendChart, PaleChart, PaleSeriesChart } from './trend-chart.jsx'
 import { Composition } from '../map/region-stats.jsx'
 
 const POS_COLOR = '#4393c3'
@@ -491,7 +491,7 @@ function EquityChart({ records, valueKey, isDark, unit, metricLabel, variable })
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
-function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
+export function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
   const crop = activeVariable?.dimensionValues?.crop
   const source = activeVariable?.dimensionValues?.source
   const muted = isDark ? 'rgba(248,248,232,0.5)' : 'rgba(24,24,56,0.5)'
@@ -574,8 +574,13 @@ function EfSection({ efConfig, cropSums, activeVariable, isDark }) {
           cursor: 'pointer',
         }}
       >
-        Download region EFs (CSV)
+        Download emission factors (CSV)
       </button>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: muted, marginTop: 3, lineHeight: 1.4 }}>
+        one row per commodity, aggregated over the selected area: 2020
+        production, emissions by source, and kg CO2e per kg (not gridded
+        data)
+      </div>
     </div>
   )
 }
@@ -806,7 +811,7 @@ export function StatsPanel({
         <StackedBar values={activeVarValues} variable={activeVariable} isDark={isDark} />
       )}
       {hasData && !isCategorical && (
-        (config?.areaTool?.trend && aggregateStats?.trendWeights
+        (sheetFocus === 'pale' && config?.areaTool?.trend && aggregateStats?.trendWeights
           ? <PaleSeriesChart
               trendConfig={config.areaTool.trend}
               trendWeights={aggregateStats.trendWeights}
@@ -859,31 +864,44 @@ export function StatsPanel({
         />
       )}
 
-      {/* Trend chart — config-gated (config.areaTool.trend): composes the
-          area's multi-year trajectory from national per-source series,
-          weighted by emissions inside the circle. Used by food-emissions. */}
-      {config?.areaTool?.trend && aggregateStats?.trendWeights && (
+      {/* Twin trend charts — emissions modes: the selected area's
+          trajectory stacked by source, then by commodity, sharing one
+          top-line total. Drivers mode gets the PALE charts instead. */}
+      {sheetFocus !== 'pale' && config?.areaTool?.trend && aggregateStats?.trendWeights && (
         <TrendChart
           trendConfig={config.areaTool.trend}
           trendWeights={aggregateStats.trendWeights}
           isDark={isDark}
           activeSourceId={activeVariable?.dimensionValues?.source ?? null}
+          title="Trend in selected area · by source"
+        />
+      )}
+      {sheetFocus !== 'pale' && config?.areaTool?.trend && aggregateStats?.commodityTrendWeights && (
+        <CommodityTrendChart
+          trendConfig={config.areaTool.trend}
+          trendWeights={aggregateStats.trendWeights}
+          commodityWeights={aggregateStats.commodityTrendWeights}
+          taxonomy={config?.paleMap?.taxonomy}
+          isDark={isDark}
+          title="Trend in selected area · by commodity"
         />
       )}
 
-      {/* Largest source / commodity inside the circle */}
-      {aggregateStats?.compositionSums && (
+      {/* Largest source / commodity — dominance maps only, matched to the
+          axis being mapped (the twin trends carry this in emissions mode). */}
+      {(sheetFocus === 'source' || sheetFocus === 'commodity') && aggregateStats?.compositionSums && (
         <Composition
           props={aggregateStats.compositionSums}
           taxonomy={config?.paleMap?.taxonomy}
           isDark={isDark}
+          kinds={[sheetFocus === 'source' ? 'Sources' : 'Commodities']}
         />
       )}
 
       {/* Emission factors — config-gated (config.areaTool.ef): kg CO2e per
           kg of commodity for the region, per crop x cropland source, with a
           CSV download. */}
-      {config?.areaTool?.ef && aggregateStats?.cropSums && (
+      {sheetFocus !== 'pale' && config?.areaTool?.ef && aggregateStats?.cropSums && (
         <EfSection
           efConfig={config.areaTool.ef}
           cropSums={aggregateStats.cropSums}
@@ -892,8 +910,8 @@ export function StatsPanel({
         />
       )}
 
-      {/* PALE decomposition — config-gated (config.areaTool.pale) */}
-      {config?.areaTool?.pale && aggregateStats?.trendWeights && (
+      {/* PALE decomposition — Drivers mode only */}
+      {sheetFocus === 'pale' && config?.areaTool?.pale && aggregateStats?.trendWeights && (
         <PaleChart
           trendConfig={config.areaTool.trend}
           trendWeights={aggregateStats.trendWeights}

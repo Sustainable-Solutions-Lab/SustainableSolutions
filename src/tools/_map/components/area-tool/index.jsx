@@ -22,6 +22,7 @@ import {
   featuresWithinPolygon,
   computeAggregateStats,
   computeTrendWeights,
+  computeCommodityTrendWeights,
 } from '../../lib/area-stats.js'
 import { LAYER_IDS } from '../../lib/use-map-layer.js'
 import { justAirLayerIds } from '../../lib/use-just-air-layers.js'
@@ -261,6 +262,9 @@ export function AreaTool({ map, config, state, dispatch }) {
     const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)
     if (config.areaTool.trend) {
       stats.trendWeights = computeTrendWeights(filtered, config.areaTool.trend)
+      if (config.areaTool.ef) {
+        stats.commodityTrendWeights = computeCommodityTrendWeights(filtered, config.areaTool)
+      }
     }
 
     // Per-crop emission-factor sums (config.areaTool.ef): kt of each
@@ -378,6 +382,9 @@ export function AreaTool({ map, config, state, dispatch }) {
     const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)
     if (config.areaTool.trend) {
       stats.trendWeights = computeTrendWeights(filtered, config.areaTool.trend)
+      if (config.areaTool.ef) {
+        stats.commodityTrendWeights = computeCommodityTrendWeights(filtered, config.areaTool)
+      }
     }
 
     // Per-crop emission-factor sums (config.areaTool.ef): kt of each

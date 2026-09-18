@@ -9,7 +9,7 @@ import { Map } from './components/map/index.jsx'
 import { Sidebar } from './components/sidebar/index.jsx'
 import { MobileLegend } from './components/sidebar/legend.jsx'
 import { LayerTabs } from './components/sidebar/layer-tabs.jsx'
-import { DimensionControl } from './components/sidebar/dimension-control.jsx'
+import { DimensionControl, SourceCategoryControls } from './components/sidebar/dimension-control.jsx'
 import { LatProfile } from './components/map/lat-profile.jsx'
 import { YearBar } from './components/map/year-bar.jsx'
 import { PaleLayer } from './components/map/pale-layer.jsx'
@@ -575,7 +575,12 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           </div>
         )}
 
-        {state.analysis == null && mobileDimensions.map((dim) => {
+        {state.analysis == null && config.lsrsCategories && (
+          <SourceCategoryControls config={config} state={state} dispatch={dispatch} />
+        )}
+        {state.analysis == null && mobileDimensions
+          .filter((dim) => !(config.lsrsCategories && dim.id === 'source'))
+          .map((dim) => {
           const filteredDim = {
             ...dim,
             options: dim.options?.filter(
@@ -615,17 +620,20 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         {config.areaTool?.enabled && (
           <button
             type="button"
+            disabled={state.mapView === 'regional'}
             onClick={() => {
               dispatch({ type: Actions.TOGGLE_AREA_TOOL })
               setMobilePanelOpen(false)
             }}
             className={[
-              'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-3 mb-1',
+              'block w-full text-left bg-transparent border-0 p-0 mt-3 mb-1',
               'font-sans text-[12px] uppercase tracking-[0.12em]',
-              state.areaToolActive ? 'font-bold text-ink underline underline-offset-[3px]' : 'font-normal text-ink-3',
+              state.mapView === 'regional' ? 'text-ink-4 cursor-not-allowed'
+                : state.areaToolActive ? 'font-bold text-ink underline underline-offset-[3px] cursor-pointer'
+                : 'font-normal text-ink-3 cursor-pointer',
             ].join(' ')}
           >
-            Region Focus
+            Region Focus{state.mapView === 'regional' ? ' (gridded view only)' : ''}
           </button>
         )}
 

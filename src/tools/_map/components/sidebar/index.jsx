@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { Actions } from '../../contracts/events.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { LayerTabs } from './layer-tabs.jsx'
-import { DimensionControl } from './dimension-control.jsx'
+import { DimensionControl, SourceCategoryControls } from './dimension-control.jsx'
 import { Legend } from './legend.jsx'
 import { DistributionChart } from './distribution-chart.jsx'
 import { ZipInput } from './zip-input.jsx'
@@ -113,8 +113,8 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         {/* MAP VIEW — gridded cells vs regional (admin-1 × biome) averages.
             First control: it sets the geometry every other choice paints. */}
         {config.regionalView && (
-          <div className="mb-3">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+          <div className="mb-4">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-0.5 m-0">
               Map view
             </p>
             <div className="flex gap-4">
@@ -157,8 +157,8 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           </>
         )}
         {(config.paleMap?.categorical ?? []).length > 0 && (
-          <div className="mb-3">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-1 m-0">
+          <div className="mb-4">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 mb-0.5 m-0">
               Map
             </p>
             <select
@@ -178,45 +178,18 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           </div>
         )}
 
-        {/* LSRS accounting subcategory chips — Emissions view only.
-            Terms verified against the Land Sector and Removals Standard
-            and Guidance v1.0 (June 2026); Requirement 32 requires these
-            to stay separable. Cat 1 (land use change) comes from the
-            jdLUC partner dataset and is not yet displayable here. */}
+        {/* LSRS source-category + specific-source selects — Emissions view
+            only (see SourceCategoryControls for the accounting terms). */}
         {config.lsrsCategories && isEmissions && (
-          <div className="mb-2">
-            <p className="font-mono text-ink-3 m-0 mb-1" style={{ fontSize: 9, letterSpacing: '0.08em' }}>
-              LSRS CATEGORY
-            </p>
-            <div className="flex gap-3 flex-wrap items-center">
-              {[['all', 'Total'], ['cat1', '1 · Land-use change'], ['cat2', '2 · Net biogenic CO₂'], ['cat3', '3 · Production']].map(([id, label]) => {
-                const srcDim = config.dimensions.find((d) => d.id === 'source')
-                const cur = state.activeDimensions.source ?? srcDim?.defaultValue
-                const on = cur === id
-                const disabled = id === 'cat1'
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    disabled={disabled}
-                    title={disabled ? 'Land-use change factors come from the jdLUC partner dataset (AdAstra/Orbae); not yet shown in this map' : undefined}
-                    onClick={() => dispatch({ type: Actions.SET_DIMENSION, dimensionId: 'source', value: id })}
-                    className={[
-                      'bg-transparent border-0 p-0 font-sans text-[11px] underline-offset-[3px]',
-                      disabled ? 'text-ink-4 cursor-not-allowed line-through' : 'cursor-pointer transition-colors hover:text-ink',
-                      on ? 'font-bold text-ink underline' : disabled ? '' : 'font-normal text-ink-3',
-                    ].join(' ')}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <SourceCategoryControls config={config} state={state} dispatch={dispatch} />
         )}
 
-        {/* Dimension controls — Emissions view only */}
-        {isEmissions && visibleDimensions.map((dim) => {
+        {/* Dimension controls — Emissions view only; 'source' is rendered
+            by the paired category/specific selects above when the project
+            defines LSRS categories. */}
+        {isEmissions && visibleDimensions
+          .filter((dim) => !(config.lsrsCategories && dim.id === 'source'))
+          .map((dim) => {
           const filteredDim = {
             ...dim,
             options: dim.options?.filter(
@@ -268,9 +241,8 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
               Change in emissions 2000–2023, as a share of each
               {state.mapView === 'regional' ? ' unit' : ' cell'}'s 2000 total.
-              {state.mapView === 'regional'
-                ? ' Click a unit for the drivers behind it.'
-                : ' Draw a region below for the drivers behind it.'}
+              {' '}Draw/select a region to explore the drivers of changes in
+              emissions.
             </p>
           </div>
         ) : isEmissions && config.percentileFilter?.enabled && activeVariable && activeVariable.type !== 'categorical' && allValues.length > 0 ? (
@@ -339,17 +311,22 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         {config.areaTool?.enabled && (
           <button
             type="button"
+            disabled={state.mapView === 'regional'}
+            title={state.mapView === 'regional'
+              ? 'Region Focus draws a circle on the gridded view — in Regional view, click a unit for its statistics instead'
+              : undefined}
             onClick={() => {
               if (state.methodsOpen) dispatch({ type: Actions.TOGGLE_METHODS })
               dispatch({ type: Actions.TOGGLE_AREA_TOOL })
             }}
             className={[
-              'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-2 mb-1',
+              'block w-full text-left bg-transparent border-0 p-0 mt-2 mb-1',
               'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
-              'transition-colors hover:text-ink',
-              state.areaToolActive
-                ? 'font-bold text-ink underline'
-                : 'font-normal text-ink-3',
+              state.mapView === 'regional'
+                ? 'text-ink-4 cursor-not-allowed'
+                : state.areaToolActive
+                  ? 'font-bold text-ink underline cursor-pointer transition-colors hover:text-ink'
+                  : 'font-normal text-ink-3 cursor-pointer transition-colors hover:text-ink',
             ].join(' ')}
           >
             Region Focus

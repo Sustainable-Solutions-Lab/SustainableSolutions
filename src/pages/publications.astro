@@ -264,7 +264,9 @@ const famPaths: string[] = [];
       style="top: 56px;"
       role="search"
     >
-      <label class="flex items-center gap-2 text-sm flex-1 md:flex-initial min-w-0">
+      {/* On phones the search takes the full first row - flex-1 alone let
+          the wrap algorithm crush it to a sliver beside the dropdowns. */}
+      <label class="flex items-center gap-2 text-sm min-w-0 basis-full md:basis-auto md:flex-initial">
         <span class="font-mono text-xs uppercase tracking-wider text-ink-3 hidden md:inline">Search</span>
         <input
           id="pub-search"

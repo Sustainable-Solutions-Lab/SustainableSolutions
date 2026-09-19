@@ -17,6 +17,7 @@ import { PolygonUpload } from './polygon-upload.jsx'
 import { categoricalLegend } from '../../lib/analysis-categorical.js'
 
 export function Sidebar({ config, state, dispatch, allValues = [], companion = null, repoLinks = null, paleActive = false, setPaleActive = null, paleDriver = 'r_net', setPaleDriver = null, analysisEntries = [] }) {
+  const [masksOpen, setMasksOpen] = useState(false)
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
   const activeDimensionIds = activeLayerConfig?.dimensionIds ?? []
@@ -213,9 +214,21 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         {config.enhancedMasks?.length > 0 && (isEmissions || isDominance) && (
           <div className="mb-4">
             <div className="flex items-center" style={{ gap: 14, margin: '0 0 3px' }}>
-              <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none m-0">
+              <button
+                type="button"
+                onClick={() => setMasksOpen((v) => !v)}
+                aria-expanded={masksOpen}
+                className="bg-transparent border-0 p-0 cursor-pointer font-mono text-xs uppercase tracking-wider text-ink-3 leading-none hover:text-ink inline-flex items-center"
+                style={{ gap: 5 }}
+              >
+                <span style={{ fontSize: 8, transform: masksOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▶</span>
                 Improved crop maps
-              </p>
+                {!masksOpen && (state.activeDimensions?.masks ?? '') !== '' && (
+                  <span className="text-ink-2 normal-case tracking-normal">
+                    ({(state.activeDimensions.masks).split(',').filter(Boolean).length} on)
+                  </span>
+                )}
+              </button>
               {(() => {
                 const allSfx = config.enhancedMasks.map((m) => m.suffix)
                 const cur = (state.activeDimensions?.masks ?? '').split(',').filter(Boolean)
@@ -236,11 +249,13 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                 )
               })()}
             </div>
+            {masksOpen && (
             <p className="font-sans text-ink-3" style={{ fontSize: 10, lineHeight: 1.4, margin: '0 0 4px' }}>
               Puts these crops where satellites see them, replacing
               statistical downscaling. Totals unchanged.
             </p>
-            {config.enhancedMasks.map((m) => {
+            )}
+            {masksOpen && config.enhancedMasks.map((m) => {
               const cur = (state.activeDimensions?.masks ?? '').split(',').filter(Boolean)
               const on = cur.includes(m.suffix)
               const regional = state.mapView === 'regional'

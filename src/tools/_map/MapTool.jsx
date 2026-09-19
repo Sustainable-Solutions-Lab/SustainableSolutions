@@ -137,6 +137,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   )
 
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
+  const [mobileMasksOpen, setMobileMasksOpen] = useState(false)
   const [mobileAboutOpen, setMobileAboutOpen] = useState(false)
   // City-inequality mobile picker — list of 15 metros, with one
   // selectable at a time to render the pre-baked equity chart inline.
@@ -634,9 +635,21 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         {config.enhancedMasks?.length > 0 && state.analysis !== 'pale' && (
           <div className="mb-2">
             <div className="flex items-center" style={{ gap: 14, margin: '0 0 3px' }}>
-              <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none m-0">
+              <button
+                type="button"
+                onClick={() => setMobileMasksOpen((v) => !v)}
+                aria-expanded={mobileMasksOpen}
+                className="bg-transparent border-0 p-0 cursor-pointer font-mono text-xs uppercase tracking-wider text-ink-3 leading-none hover:text-ink inline-flex items-center"
+                style={{ gap: 5 }}
+              >
+                <span style={{ fontSize: 8, transform: mobileMasksOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▶</span>
                 Improved crop maps
-              </p>
+                {!mobileMasksOpen && (state.activeDimensions?.masks ?? '') !== '' && (
+                  <span className="text-ink-2 normal-case tracking-normal">
+                    ({(state.activeDimensions.masks).split(',').filter(Boolean).length} on)
+                  </span>
+                )}
+              </button>
               {(() => {
                 const allSfx = config.enhancedMasks.map((m) => m.suffix)
                 const cur = (state.activeDimensions?.masks ?? '').split(',').filter(Boolean)
@@ -655,7 +668,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                 )
               })()}
             </div>
-            {config.enhancedMasks.map((m) => {
+            {mobileMasksOpen && config.enhancedMasks.map((m) => {
               const cur = (state.activeDimensions?.masks ?? '').split(',').filter(Boolean)
               const on = cur.includes(m.suffix)
               const next = on ? cur.filter((x) => x !== m.suffix) : [...cur, m.suffix]

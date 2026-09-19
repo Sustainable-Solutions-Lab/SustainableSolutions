@@ -173,6 +173,8 @@ const destTotal = destCounts.reduce((a, b) => a + b, 0);
             </rect>
           ))}
           <text x={HC_PL - 3} y={hcY(hcMax / 1.05) + 3} text-anchor="end" style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{Math.round(hcMax / 1.05)}</text>
+          <text x={HC_PL - 3} y={hcY(hcMax / 2.1) + 3} text-anchor="end" style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{Math.round(hcMax / 2.1)}</text>
+          <text x={HC_PL - 3} y={hcY(0) + 3} text-anchor="end" style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">0</text>
           {hcYearTicks.map((m) => (
             <text x={hcX(m - startYm)} y={HC_H - 2} text-anchor="middle" style="font-family: var(--font-mono); font-size: 8px; fill: var(--ink-3);">{m / 12}</text>
           ))}

@@ -27,6 +27,7 @@ import {
 import { LAYER_IDS } from '../../lib/use-map-layer.js'
 import { justAirLayerIds } from '../../lib/use-just-air-layers.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
+import { activeMaskSuffixes, readProp } from '../../lib/variable-value.js'
 
 // Layer IDs that currently render data on the map. The area tool's
 // queryRenderedFeatures call needs whichever set is live so the per-circle
@@ -259,11 +260,12 @@ export function AreaTool({ map, config, state, dispatch }) {
     }
 
     // Stats for preset aggregate variables
+    const maskSfx = activeMaskSuffixes(config, stateRef.current)
     const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)
     if (config.areaTool.trend) {
-      stats.trendWeights = computeTrendWeights(filtered, config.areaTool.trend)
+      stats.trendWeights = computeTrendWeights(filtered, config.areaTool.trend, maskSfx)
       if (config.areaTool.ef) {
-        stats.commodityTrendWeights = computeCommodityTrendWeights(filtered, config.areaTool)
+        stats.commodityTrendWeights = computeCommodityTrendWeights(filtered, config.areaTool, maskSfx)
       }
     }
 
@@ -278,8 +280,8 @@ export function AreaTool({ map, config, state, dispatch }) {
         for (const f of filtered) {
           const pr = f.properties
           if (!pr) continue
-          rec.p += Number(pr[`p_${c}`] ?? 0)
-          for (const src of sources) rec[src] += Number(pr[`${src}_${c}`] ?? 0)
+          rec.p += Number(readProp(pr, `p_${c}`, maskSfx) ?? 0)
+          for (const src of sources) rec[src] += Number(readProp(pr, `${src}_${c}`, maskSfx) ?? 0)
         }
         cropSums[c] = rec
       }
@@ -299,7 +301,7 @@ export function AreaTool({ map, config, state, dispatch }) {
         const pr = f.properties
         if (!pr) continue
         for (const k of props) {
-          const v = Number(pr[k] ?? 0)
+          const v = Number(readProp(pr, k, maskSfx) ?? 0)
           if (v) sums[k] = (sums[k] ?? 0) + v
         }
       }
@@ -379,11 +381,12 @@ export function AreaTool({ map, config, state, dispatch }) {
     const activeLayers = dataLayerIds(config).filter((id) => map.getLayer(id))
     const features = map.queryRenderedFeatures(bbox, { layers: activeLayers })
     const filtered = featuresWithinPolygon(features, geometry)
+    const maskSfx = activeMaskSuffixes(config, state)
     const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)
     if (config.areaTool.trend) {
-      stats.trendWeights = computeTrendWeights(filtered, config.areaTool.trend)
+      stats.trendWeights = computeTrendWeights(filtered, config.areaTool.trend, maskSfx)
       if (config.areaTool.ef) {
-        stats.commodityTrendWeights = computeCommodityTrendWeights(filtered, config.areaTool)
+        stats.commodityTrendWeights = computeCommodityTrendWeights(filtered, config.areaTool, maskSfx)
       }
     }
 
@@ -398,8 +401,8 @@ export function AreaTool({ map, config, state, dispatch }) {
         for (const f of filtered) {
           const pr = f.properties
           if (!pr) continue
-          rec.p += Number(pr[`p_${c}`] ?? 0)
-          for (const src of sources) rec[src] += Number(pr[`${src}_${c}`] ?? 0)
+          rec.p += Number(readProp(pr, `p_${c}`, maskSfx) ?? 0)
+          for (const src of sources) rec[src] += Number(readProp(pr, `${src}_${c}`, maskSfx) ?? 0)
         }
         cropSums[c] = rec
       }
@@ -419,7 +422,7 @@ export function AreaTool({ map, config, state, dispatch }) {
         const pr = f.properties
         if (!pr) continue
         for (const k of props) {
-          const v = Number(pr[k] ?? 0)
+          const v = Number(readProp(pr, k, maskSfx) ?? 0)
           if (v) sums[k] = (sums[k] ?? 0) + v
         }
       }

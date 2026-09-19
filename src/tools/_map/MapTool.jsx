@@ -5,6 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { Actions, initialState } from './contracts/events.js'
 import { projects } from './registry.js'
 import { getActiveVariable } from './lib/get-active-variable.js'
+import { activeMaskSuffixes } from './lib/variable-value.js'
 import { Map } from './components/map/index.jsx'
 import { Sidebar } from './components/sidebar/index.jsx'
 import { MobileLegend } from './components/sidebar/legend.jsx'
@@ -87,6 +88,12 @@ function reducer(state, action) {
       }
     case Actions.TOGGLE_METHODS:
       return { ...state, methodsOpen: !state.methodsOpen }
+    case Actions.TOGGLE_MASK: {
+      const cur = state.masks ?? []
+      return { ...state, masks: cur.includes(action.maskId)
+        ? cur.filter((m) => m !== action.maskId)
+        : [...cur, action.maskId] }
+    }
     default:
       return state
   }
@@ -190,9 +197,13 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const isDark = state.colorScheme === 'dark'
   const rawActiveVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const toolYearFactors = useYearFactors(config)
-  const attachedVariable = rawActiveVariable?.scaled && toolYearFactors
+  // Enhanced-mask suffixes (e.g. __dsc for Descals palm): gridded view
+  // only - the regional unit tiles carry no override props.
+  const maskSuffixes = state.mapView === 'regional' ? [] : activeMaskSuffixes(config, state)
+  const withMask = (v) => (v && maskSuffixes.length ? { ...v, maskSuffixes } : v)
+  const attachedVariable = withMask(rawActiveVariable?.scaled && toolYearFactors
     ? { ...rawActiveVariable, scaled: { ...rawActiveVariable.scaled, factors: toolYearFactors } }
-    : rawActiveVariable
+    : rawActiveVariable)
   const activeLevel = levelFor(config, state)
   const activeCategorical = categoricalFor(config, state)
   const categoricalEntryList = useMemo(
@@ -264,9 +275,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     if (activeCategorical && categoricalEntryList.length) {
       if (domCompare) {
         return categoricalChangeColorExpr(categoricalEntryList, toolYearFactors,
-          domCompare.from, domCompare.to, 5e-4)
+          domCompare.from, domCompare.to, 5e-4, maskSuffixes)
       }
-      return categoricalColorExpr(categoricalEntryList, 5e-4)
+      return categoricalColorExpr(categoricalEntryList, 5e-4, maskSuffixes)
     }
     if (cellTerm && cellChangeTerms && toolYearFactors) {
       return cellChangeColorExpr(
@@ -275,7 +286,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         50, isDark)
     }
     return null
-  }, [socCellColor, activeLevel, activeCategorical, categoricalEntryList, isDark, cellTerm, cellChangeTerms, toolYearFactors, domCompare?.from, domCompare?.to])
+  }, [socCellColor, activeLevel, activeCategorical, categoricalEntryList, isDark, cellTerm, cellChangeTerms, toolYearFactors, domCompare?.from, domCompare?.to, maskSuffixes.join('+')])
   // Cell-scale magnitude ramp (kt CO2e per 0.25-degree cell).
   // The quantity a cell is judged by: the winning source for a dominance
   // map, the start-year emissions for a change map. Drives both the alpha
@@ -283,16 +294,19 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const analysisCellMagnitude = useMemo(() => {
     if (activeCategorical && categoricalEntryList.length) {
       if (domCompare) {
-        return categoricalChangeMagnitudeExpr(categoricalEntryList, toolYearFactors, domCompare.to)
+        return categoricalChangeMagnitudeExpr(categoricalEntryList, toolYearFactors, domCompare.to, maskSuffixes)
       }
-      const props = categoricalEntryList.map((e) => ['coalesce', ['to-number', ['get', e.prop]], 0])
+      const props = categoricalEntryList.map((e) => ['coalesce', ['to-number',
+        maskSuffixes.length
+          ? ['coalesce', ...maskSuffixes.map((x) => ['get', e.prop + x]), ['get', e.prop]]
+          : ['get', e.prop]], 0])
       return props.length === 1 ? props[0] : ['max', ...props]
     }
     if (cellTerm && cellChangeTerms && toolYearFactors) {
       return cellChangeMagnitudeExpr({ terms: cellChangeTerms, factors: toolYearFactors })
     }
     return null
-  }, [activeCategorical, categoricalEntryList, cellTerm, cellChangeTerms, toolYearFactors, domCompare?.from, domCompare?.to])
+  }, [activeCategorical, categoricalEntryList, cellTerm, cellChangeTerms, toolYearFactors, domCompare?.from, domCompare?.to, maskSuffixes.join('+')])
   const analysisCellOpacity = useMemo(() => {
     if (socCellOpacity) return socCellOpacity
     if (!analysisCellMagnitude) return null
@@ -305,6 +319,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     paleDriver, isDark ? 'd' : 'l', state.mapView, toolYearFactors ? 'f' : '-',
     state.activeDimensions?.source, state.activeDimensions?.crop,
     domCompare ? `cmp${domCompare.from}-${domCompare.to}` : '-',
+    maskSuffixes.join('+') || '-',
   ].join('|')
 
   // ── Dimension animation ────────────────────────────────────────────────
@@ -614,6 +629,27 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             />
           )
         })}
+
+        {config.enhancedMasks?.length > 0 && state.analysis !== 'pale' && (
+          <div className="mb-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
+              Crop masks
+            </p>
+            {config.enhancedMasks.map((m) => (
+              <label key={m.id} className="flex items-start gap-2 font-sans text-[11px] text-ink-2">
+                <input
+                  type="checkbox"
+                  checked={(state.masks ?? []).includes(m.id)}
+                  disabled={state.mapView === 'regional'}
+                  onChange={() => dispatch({ type: Actions.TOGGLE_MASK, maskId: m.id })}
+                  className="accent-cardinal"
+                  style={{ marginTop: 1 }}
+                />
+                <span>{m.label}</span>
+              </label>
+            ))}
+          </div>
+        )}
 
         {/* Percentile presets — mobile, emissions view only */}
         {config.percentileFilter?.enabled && state.analysis == null && (

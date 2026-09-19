@@ -169,7 +169,17 @@ export function percentileThresholds(features, variableId, lowPct, highPct) {
  * @param {Object} trendConfig - config.areaTool.trend ({ sources, countryProp })
  * @returns {Object.<string, Object.<string, number>>} { [countryId]: { [prop]: sum } }
  */
-export function computeTrendWeights(features, trendConfig) {
+function pv(p, name, suffixes) {
+  if (suffixes) {
+    for (const sfx of suffixes) {
+      const v = p[name + sfx]
+      if (v != null) return v
+    }
+  }
+  return p[name]
+}
+
+export function computeTrendWeights(features, trendConfig, suffixes = null) {
   const weights = {}
   const countryProp = trendConfig.countryProp
   for (const f of features) {
@@ -178,7 +188,7 @@ export function computeTrendWeights(features, trendConfig) {
     const c = String(p[countryProp])
     const w = (weights[c] ??= {})
     for (const src of trendConfig.sources) {
-      const v = p[src.prop]
+      const v = pv(p, src.prop, suffixes)
       if (v != null && isFinite(v)) w[src.prop] = (w[src.prop] ?? 0) + Number(v)
     }
   }
@@ -195,7 +205,7 @@ export function computeTrendWeights(features, trendConfig) {
  * @returns {Object.<string, Object.<string, Object.<string, number>>>}
  *          { [countryId]: { [cropId]: { [sourceProp]: sum } } }
  */
-export function computeCommodityTrendWeights(features, areaToolConfig) {
+export function computeCommodityTrendWeights(features, areaToolConfig, suffixes = null) {
   const weights = {}
   const countryProp = areaToolConfig.trend.countryProp
   for (const f of features) {
@@ -205,7 +215,7 @@ export function computeCommodityTrendWeights(features, areaToolConfig) {
     const w = (weights[c] ??= {})
     for (const { id: crop, sources } of areaToolConfig.ef.entries) {
       for (const src of sources) {
-        const v = p[`${src}_${crop}`]
+        const v = pv(p, `${src}_${crop}`, suffixes)
         if (v != null && isFinite(v) && Number(v) !== 0) {
           const rec = (w[crop] ??= {})
           rec[src] = (rec[src] ?? 0) + Number(v)

@@ -205,7 +205,17 @@ function FoodEmissionsMethods() {
         core built only from open, versioned, redistributable data, and
         an enhanced track that may add restrictively-licensed or
         model-derived masks, always with a frozen copy and provenance.
-        The map shown here is the core build.
+        SPAM 2020 remains the default allocation everywhere; finer
+        core-track masks arrive one by one as opt-in toggles under
+        <em> Crop masks</em> in the sidebar. The first is the oil-palm
+        extent of Descals et al. (2024): switching it on reallocates
+        each country's palm-attributed emissions and production to the
+        mapped 10 m extent — national and per-source totals are
+        conserved exactly; only within-country placement changes. Where
+        SPAM misplaces a crop entirely (Cameroon's oil palm, which SPAM
+        scatters into the northern savanna rather than the coastal
+        estates), the toggle is the difference between a blank map and
+        the right one.
       </p>
 
       <h2 style={h2Style}>Area statistics and trends</h2>

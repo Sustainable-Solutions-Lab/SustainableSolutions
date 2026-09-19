@@ -5,7 +5,16 @@ import ActiveMemberCard from '../../components/ActiveMemberCard.astro';
 import people from '../../data/people.json';
 import type { Person } from '../../lib/types';
 
-const all = (people as Person[]).slice().sort((a, b) => a.order - b.order);
+// Plot-only rows: no slug, or an alumni row whose slug belongs to a
+// current member (e.g. a student-era stint of someone now on the team).
+// They count in the figures (rowsAll below) but never render as cards.
+const currentSlugs = new Set(
+  (people as Person[]).filter((p) => p.status === 'current' && p.slug).map((p) => p.slug),
+);
+const cardable = (people as Person[]).filter(
+  (p) => p.slug && !(p.status === 'alumni' && currentSlugs.has(p.slug)),
+);
+const all = cardable.slice().sort((a, b) => a.order - b.order);
 
 // Sections are mutually exclusive — each person appears in exactly one.
 // Priority: alumni > current CIU > current main.
@@ -116,8 +125,12 @@ const DESTS = [
   { id: 'industry', label: 'Industry & NGOs', color: '#D53E4F' },
   { id: 'unknown', label: 'TBD', color: '#9A9AAE' },
 ];
+const currentSlugSet = new Set(
+  rowsAll.filter((r: any) => r.status === 'current' && (r as any).slug).map((r: any) => (r as any).slug));
 const destCounts = DESTS.map((d) =>
-  rowsAll.filter((r) => r.status === 'alumni' && destClass(r.current_position ?? '') === d.id).length);
+  rowsAll.filter((r: any) => r.status === 'alumni'
+    && !((r as any).slug && currentSlugSet.has((r as any).slug))
+    && destClass(r.current_position ?? '') === d.id).length);
 const destTotal = destCounts.reduce((a, b) => a + b, 0);
 
 ---

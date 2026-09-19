@@ -12,8 +12,13 @@ export async function getStaticPaths() {
   // External collaborators (sheet `external` = TRUE) skip the internal
   // detail page; their card on /people links straight to personal_url.
   const { default: people } = await import('../../data/people.json')
+  // One page per slug: alumni stints of current members (duplicate slug)
+  // and slug-less plot-only rows generate no page.
+  const currentSlugs = new Set(
+    (people as Person[]).filter((p) => p.status === 'current' && p.slug).map((p) => p.slug))
   return (people as Person[])
-    .filter((p) => p.external !== true)
+    .filter((p) => p.external !== true && p.slug
+      && !(p.status === 'alumni' && currentSlugs.has(p.slug)))
     .map((person) => ({
       params: { slug: person.slug },
       props: { person },

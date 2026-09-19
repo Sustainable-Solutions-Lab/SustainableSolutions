@@ -471,7 +471,9 @@ export function AreaTool({ map, config, state, dispatch }) {
     setHandlePos(null)
     drawPolygonOnMap(map, state.drawnPolygon.geometry, state.colorScheme === 'dark')
     const [w, s, e, n] = polygonBbox(state.drawnPolygon.geometry)
-    map.fitBounds([[w, s], [e, n]], { padding: 60, duration: 600, maxZoom: 11 })
+    // Generous padding + a zoom cap that keeps the surrounding region in
+    // frame - a sourcing shed reads better with its context visible.
+    map.fitBounds([[w, s], [e, n]], { padding: 140, duration: 600, maxZoom: 6.5 })
     // Recompute after the fit lands so queryRenderedFeatures sees the new view.
     const t = setTimeout(computePolygonStats, 700)
     return () => clearTimeout(t)

@@ -101,6 +101,25 @@ const famsOrdered = famOrder.map((k) => FAMS[k]);
 const seriesOrdered = famOrder.map((k) => famSeries[k]);
 const famTotals = famOrder.map((k) => rawTotals[k]);
 const pubFigTotal = famTotals.reduce((a, b) => a + b, 0);
+// All-time cumulative counts (same classification, every year) for the donut.
+const allTimeRaw = FAMS.map(() => 0);
+for (const pub of publications as Publication[]) {
+  const j = String(pub.journal ?? '').toLowerCase().trim();
+  if (!j && !pub.year) continue;
+  const k = FAMS.findIndex((f) => f.test(j));
+  allTimeRaw[k === -1 ? FAMS.length - 1 : k] += 1;
+}
+const allTime = famOrder.map((k) => allTimeRaw[k]);
+const allTimeTotal = allTime.reduce((a, b) => a + b, 0);
+const donutSegs = (() => {
+  let off = 25; // start at 12 o'clock (pathLength 100; dashoffset 25 = top)
+  return allTime.map((v, k) => {
+    const pct = allTimeTotal > 0 ? (v / allTimeTotal) * 100 : 0;
+    const seg = { color: famsOrdered[k].color, label: famsOrdered[k].label, v, pct, off };
+    off -= pct;
+    return seg;
+  });
+})();
 const FIG_W = 300, FIG_H = 96, FIG_PL = 18, FIG_PB = 12;
 const stackTotals = pubYears.map((_, yi) => famSeries.reduce((a, sr) => a + sr[yi], 0));
 const figMax = Math.max(...stackTotals, 1) * 1.05;
@@ -139,11 +158,34 @@ const famPaths: string[] = [];
           </p>
           <h2 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Where we publish</h2>
           <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
-            Most recent publications by journal family
+            All-time share (ring) and papers per year by journal family
           </p>
+          <div class="flex items-center" style="gap: 12px;">
+          <svg
+            viewBox="-2 -2 40 40"
+            role="img"
+            aria-label="All-time publications by journal family"
+            style="width: 84px; height: 84px; flex: none;"
+          >
+            {donutSegs.map((seg) => seg.v > 0 && (
+              <circle
+                cx="18" cy="18" r="16"
+                fill="none"
+                stroke={seg.color}
+                stroke-width="6.5"
+                pathLength="100"
+                stroke-dasharray={`${seg.pct} ${100 - seg.pct}`}
+                stroke-dashoffset={seg.off}
+              >
+                <title>{`${seg.label}: ${seg.v} of ${allTimeTotal} all-time (${Math.round(seg.pct)}%)`}</title>
+              </circle>
+            ))}
+            <text x="18" y="17" text-anchor="middle" style="font-family: var(--font-mono); font-size: 7px; fill: var(--ink);">{allTimeTotal}</text>
+            <text x="18" y="24" text-anchor="middle" style="font-family: var(--font-mono); font-size: 4px; fill: var(--ink-3);">ALL TIME</text>
+          </svg>
           <svg
             viewBox={`0 0 ${FIG_W} ${FIG_H}`}
-            style="width: 100%; height: auto; display: block;"
+            style="width: 100%; height: auto; display: block; min-width: 0; flex: 1;"
             role="img"
             aria-label={`Publications per year by journal family, ${PUB_Y0} to ${PUB_Y1}`}
           >
@@ -176,6 +218,7 @@ const famPaths: string[] = [];
               >{y}</text>
             ))}
           </svg>
+          </div>
           <figcaption class="flex flex-wrap mt-2" style="gap: 2px 12px;">
             {famsOrdered.map((f, k) => famTotals[k] > 0 && (
               <span class="font-mono text-ink-2 inline-flex items-center" style="font-size: 10px; gap: 4px;">

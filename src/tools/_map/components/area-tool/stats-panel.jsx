@@ -600,7 +600,31 @@ export function EfSection({ efConfig, cropSums, activeVariable, isDark,
 
 export function StatsPanel({
   sheetFocus = 'default', config, drawnCircle, drawnPolygon, aggregateStats, areaToolActive, activeVariable, isDark, dispatch, year = null }) {
+  // ALL hooks run before the visibility guard: an early return that
+  // skips hooks changes the hook count when a circle first appears,
+  // and React tears the component down (blank screen on mobile).
   const yearFactors = useYearFactors(config)
+  const activeVarValues = aggregateStats?.activeVarValues ?? []
+  const { mean, median } = useMemo(() => {
+    if (!activeVarValues.length || activeVariable?.type === 'categorical') return { mean: null, median: null }
+    const mean_ = activeVarValues.reduce((s, v) => s + v, 0) / activeVarValues.length
+    const sorted = [...activeVarValues].sort((a, b) => a - b)
+    const n = sorted.length
+    const median_ = n % 2 === 0
+      ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+      : sorted[Math.floor(n / 2)]
+    return { mean: mean_, median: median_ }
+  }, [activeVarValues])
+  const [isMobile, setIsMobile] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const sync = () => setIsMobile(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
   // Show whenever either a circle or a ZIP polygon is active.
   if (!drawnCircle && !drawnPolygon) return null
 
@@ -612,7 +636,6 @@ export function StatsPanel({
   }
 
   const count = aggregateStats?.count ?? 0
-  const activeVarValues = aggregateStats?.activeVarValues ?? []
   const equityRecords = aggregateStats?.equityRecords ?? []
 
   // Pick the value key used by the equity chart. Income & race-bins drive
@@ -632,32 +655,7 @@ export function StatsPanel({
     equityMetricLabel = scenario === 'low' ? 'Mortality · Low-CDR' : 'Mortality · High-CDR'
   }
 
-  // Compute mean and median — only for numeric (non-categorical) variables
-  const { mean, median } = useMemo(() => {
-    if (!activeVarValues.length || activeVariable?.type === 'categorical') return { mean: null, median: null }
-    const mean_ = activeVarValues.reduce((s, v) => s + v, 0) / activeVarValues.length
-    const sorted = [...activeVarValues].sort((a, b) => a - b)
-    const n = sorted.length
-    const median_ = n % 2 === 0
-      ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
-      : sorted[Math.floor(n / 2)]
-    return { mean: mean_, median: median_ }
-  }, [activeVarValues])
-
   const unit = activeVariable?.unit ?? ''
-
-  // On phones the floating panel covered the whole map, so it becomes a
-  // bottom sheet: collapsed to a one-line summary, tap (or the chevron)
-  // to expand. Desktop keeps the floating card.
-  const [isMobile, setIsMobile] = useState(false)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)')
-    const sync = () => setIsMobile(mq.matches)
-    sync()
-    mq.addEventListener('change', sync)
-    return () => mq.removeEventListener('change', sync)
-  }, [])
 
   // Aligned with the design system: paper-2 with translucency so map context
   // shows through; rule-strength border; ink-3 muted text; ink line color.

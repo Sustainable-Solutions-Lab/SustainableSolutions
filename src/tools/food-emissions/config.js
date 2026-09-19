@@ -351,6 +351,12 @@ const config = {
       suffix: '__eu',
       note: 'Places EU wheat, barley, maize, rice, potatoes, rapeseed, and soybean where EUCROPMAP 2022 maps them. National totals unchanged.',
     },
+    {
+      id: 'fdap',
+      label: 'Cocoa & coffee — AI-mapped at 10 m (Forest Data Partnership 2026)',
+      suffix: '__fdp',
+      note: 'Places cocoa and coffee (arabica + robusta) where the Forest Data Partnership 2026a models map them, produced by Google for the Forest Data Partnership. Model probabilities are read as fractional cover with FAOSTAT-calibrated floors. National totals unchanged.',
+    },
   ],
 
   // Labels follow the LSRS terms verbatim (minus the trailing "emissions"

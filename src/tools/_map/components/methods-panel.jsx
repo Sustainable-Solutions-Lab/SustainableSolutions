@@ -216,6 +216,15 @@ function FoodEmissionsMethods() {
         scatters into the northern savanna rather than the coastal
         estates), the toggle is the difference between a blank map and
         the right one.
+        The enhanced track's first entries are the cocoa and coffee
+        presence models produced by Google for the{' '}
+        <a href="https://www.forestdatapartnership.org" target="_blank" rel="noopener noreferrer" style={linkStyle}>Forest Data
+        Partnership</a> (2026a release, CC-BY): mean 10 m model
+        probability is read as fractional cover at 1 km, with a
+        per-crop probability floor calibrated so global expected area
+        matches FAOSTAT harvested area. These are model-derived rather
+        than directly observed maps, which is why they live on the
+        enhanced track; a rubber layer follows.
       </p>
 
       <h2 style={h2Style}>Area statistics and trends</h2>

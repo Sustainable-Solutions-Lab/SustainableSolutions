@@ -633,7 +633,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         {config.enhancedMasks?.length > 0 && state.analysis !== 'pale' && (
           <div className="mb-3">
             <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
-              Crop masks
+              Improved crop maps
             </p>
             {config.enhancedMasks.map((m) => {
               const cur = (state.activeDimensions?.masks ?? '').split(',').filter(Boolean)

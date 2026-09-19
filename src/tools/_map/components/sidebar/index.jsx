@@ -213,7 +213,11 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         {config.enhancedMasks?.length > 0 && (isEmissions || isDominance) && (
           <div className="mb-4">
             <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
-              Crop masks
+              Improved crop maps
+            </p>
+            <p className="font-sans text-ink-3" style={{ fontSize: 10, lineHeight: 1.4, margin: '0 0 4px' }}>
+              Puts these crops where satellites see them, replacing
+              statistical downscaling. Totals unchanged.
             </p>
             {config.enhancedMasks.map((m) => {
               const cur = (state.activeDimensions?.masks ?? '').split(',').filter(Boolean)
@@ -236,12 +240,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                 </label>
               )
             })}
-            {(state.activeDimensions?.masks ?? '') !== '' && state.mapView !== 'regional' && (
-              <p className="font-sans text-ink-3 m-0" style={{ fontSize: 10, lineHeight: 1.4, margin: '3px 0 0' }}>
-                Reallocation within countries; national totals conserved.
-                SPAM 2020 remains the default when off.
-              </p>
-            )}
+
           </div>
         )}
 

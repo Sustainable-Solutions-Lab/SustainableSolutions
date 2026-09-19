@@ -21,15 +21,8 @@ export function DimensionControl({ dimension, value, dispatch, animatingDimensio
     })
   }
 
-  return (
-    // mb-4 puts clear air before the NEXT section header while the label
-    // stays tight to the control it heads; the mobile drawer passes
-    // compact to halve the rhythm so more map shows below the sheet.
-    <div className={compact ? 'mb-2' : 'mb-4'}>
-      <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
-        {dimension.label}
-      </p>
-
+  const control = (
+    <>
       {dimension.type === 'toggle' && (
         <ToggleControl dimension={dimension} value={value} onChange={handleChange} />
       )}
@@ -45,6 +38,30 @@ export function DimensionControl({ dimension, value, dispatch, animatingDimensio
       {dimension.type === 'dropdown' && (
         <DropdownControl dimension={dimension} value={value} onChange={handleChange} />
       )}
+    </>
+  )
+
+  // Mobile drawer (compact): header and a narrowed select share one line so
+  // more map peeks out below the sheet. Sliders keep the stacked layout.
+  if (compact && dimension.type !== 'slider') {
+    return (
+      <div className="mb-2 flex items-center justify-between" style={{ gap: 10 }}>
+        <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none shrink-0" style={{ margin: 0 }}>
+          {dimension.label}
+        </p>
+        <div style={{ width: '62%', minWidth: 0 }}>{control}</div>
+      </div>
+    )
+  }
+
+  return (
+    // mb-4 puts clear air before the NEXT section header while the label
+    // stays tight to the control it heads.
+    <div className={compact ? 'mb-2' : 'mb-4'}>
+      <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
+        {dimension.label}
+      </p>
+      {control}
     </div>
   )
 }
@@ -148,12 +165,25 @@ export function SourceCategoryControls({ config, state, dispatch, compact = fals
   const specific = sourceOpts.some((o) => o.id === cur) ? cur : category
   const set = (value) => dispatch({ type: Actions.SET_DIMENSION, dimensionId: 'source', value })
   const selectCls = 'w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink'
+  // Compact (mobile drawer): header left, narrowed select right, one line.
+  const block = (label, select) => compact ? (
+    <div className="mb-2 flex items-center justify-between" style={{ gap: 10 }}>
+      <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none shrink-0" style={{ margin: 0 }}>
+        {label}
+      </p>
+      <div style={{ width: '62%', minWidth: 0 }}>{select}</div>
+    </div>
+  ) : (
+    <div className="mb-4">
+      <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
+        {label}
+      </p>
+      {select}
+    </div>
+  )
   return (
     <>
-      <div className={compact ? 'mb-2' : 'mb-4'}>
-        <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
-          LSRS source category
-        </p>
+      {block('LSRS source category', (
         <select value={category} onChange={(e) => set(e.target.value)}
           className={selectCls} style={{ borderRadius: 'var(--radius-sm)' }}>
           <option value="all">Total (all categories)</option>
@@ -164,11 +194,8 @@ export function SourceCategoryControls({ config, state, dispatch, compact = fals
           <option value="cat2">2 · {cat2.label}</option>
           <option value="cat3">3 · {cat3.label}</option>
         </select>
-      </div>
-      <div className={compact ? 'mb-2' : 'mb-4'}>
-        <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
-          Specific sources
-        </p>
+      ))}
+      {block('Specific sources', (
         <select value={specific} onChange={(e) => set(e.target.value)}
           className={selectCls} style={{ borderRadius: 'var(--radius-sm)' }}>
           <option value={category}>
@@ -178,7 +205,7 @@ export function SourceCategoryControls({ config, state, dispatch, compact = fals
             <option key={o.id} value={o.id} disabled={o.disabled}>{o.label}</option>
           ))}
         </select>
-      </div>
+      ))}
     </>
   )
 }

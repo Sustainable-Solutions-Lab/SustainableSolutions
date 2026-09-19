@@ -20,22 +20,52 @@
 
 import { factorFor, factorPairs } from './year-factors.js'
 
+/**
+ * Enhanced-mask support: tiles carry sparse `<prop><suffix>` overrides
+ * (e.g. `fer_oilp__dsc` for the Descals palm reallocation). When the
+ * variable carries maskSuffixes (attached by MapTool from the active
+ * toggles), every prop read prefers the override and falls back to the
+ * base SPAM value.
+ */
+export function readProp(props, name, suffixes) {
+  if (suffixes) {
+    for (const sfx of suffixes) {
+      const v = props[name + sfx]
+      if (v != null) return v
+    }
+  }
+  return props[name]
+}
+
+/** The suffixes of currently-toggled enhanced masks (config.enhancedMasks). */
+export function activeMaskSuffixes(config, state) {
+  const masks = state?.masks ?? []
+  if (!masks.length || !config?.enhancedMasks) return []
+  return config.enhancedMasks.filter((m) => masks.includes(m.id)).map((m) => m.suffix)
+}
+
+export function propExpr(name, suffixes) {
+  if (!suffixes || suffixes.length === 0) return ['get', name]
+  return ['coalesce', ...suffixes.map((sfx) => ['get', name + sfx]), ['get', name]]
+}
+
 /** JS-side read from a properties object. */
 export function readVarValue(props, variable) {
   if (!props || !variable) return undefined
   if (variable.rawRead) return variable.rawRead(props)
+  const sfx = variable.maskSuffixes
   if (variable.scaled?.factors) {
     const { terms, year, yearB, factors } = variable.scaled
     const m49 = props.m49
     const at = (y) =>
       terms.reduce((sum, t) => {
-        const v = props[t.prop]
+        const v = readProp(props, t.prop, sfx)
         if (v == null || isNaN(v)) return sum
         return sum + v * factorFor(factors, t.src, m49, y)
       }, 0)
     const present = variable.hasAny
-      ? variable.hasAny.some((k) => props[k] != null)
-      : props[variable.id] != null
+      ? variable.hasAny.some((k) => readProp(props, k, sfx) != null)
+      : readProp(props, variable.id, sfx) != null
     if (yearB != null) {
       if (!present) return undefined
       return at(year) - at(yearB)
@@ -48,17 +78,18 @@ export function readVarValue(props, variable) {
     if (a == null || b == null) return undefined
     return a - b
   }
-  return props[variable.id]
+  return readProp(props, variable.id, sfx)
 }
 
 /** MapLibre expression producing the variable's value. */
 export function varValueExpr(variable) {
   if (variable.rawExpr) return variable.rawExpr
+  const sfx = variable.maskSuffixes
   if (variable.scaled?.factors) {
     const { terms, year, yearB, factors } = variable.scaled
     const at = (y) => {
       const parts = terms.map((t) => {
-        const get = ['coalesce', ['to-number', ['get', t.prop]], 0]
+        const get = ['coalesce', ['to-number', propExpr(t.prop, sfx)], 0]
         const pairs = factorPairs(factors, t.src, y)
         if (pairs.length === 0) return get
         return ['*', get, ['match', ['get', 'm49'], ...pairs, 1]]
@@ -73,7 +104,7 @@ export function varValueExpr(variable) {
       ['to-number', ['get', variable.diffOf[1]]],
     ]
   }
-  return ['get', variable.id]
+  return sfx?.length ? ['to-number', propExpr(variable.id, sfx)] : ['get', variable.id]
 }
 
 /** MapLibre expression: does the feature carry the variable at all? */

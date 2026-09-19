@@ -208,6 +208,41 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           )
         })}
 
+        {/* Enhanced-mask toggles: SPAM default, finer datasets opt-in.
+            Gridded view only - unit tiles carry no overrides. */}
+        {config.enhancedMasks?.length > 0 && (isEmissions || isDominance) && (
+          <div className="mb-4">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
+              Crop masks
+            </p>
+            {config.enhancedMasks.map((m) => {
+              const on = (state.masks ?? []).includes(m.id)
+              const regional = state.mapView === 'regional'
+              return (
+                <label key={m.id} title={regional ? 'Enhanced masks apply to the gridded view' : m.note}
+                  className={['flex items-start gap-2 font-sans text-[11px]',
+                    regional ? 'text-ink-4 cursor-not-allowed' : 'text-ink-2 cursor-pointer'].join(' ')}>
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    disabled={regional}
+                    onChange={() => dispatch({ type: Actions.TOGGLE_MASK, maskId: m.id })}
+                    className="accent-cardinal"
+                    style={{ marginTop: 1 }}
+                  />
+                  <span>{m.label}{regional ? ' (gridded only)' : ''}</span>
+                </label>
+              )
+            })}
+            {(state.masks ?? []).length > 0 && state.mapView !== 'regional' && (
+              <p className="font-sans text-ink-3 m-0" style={{ fontSize: 10, lineHeight: 1.4, margin: '3px 0 0' }}>
+                Reallocation within countries; national totals conserved.
+                SPAM 2020 remains the default when off.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Distribution chart serves as the colorbar (Firefuels-style). The
             standalone gradient legend below it is only rendered when the
             distribution chart is suppressed — i.e. for categorical variables

@@ -65,6 +65,7 @@ export const Actions = {
   TOGGLE_AREA_TOOL:    'TOGGLE_AREA_TOOL',
   TOGGLE_SCHEME:       'TOGGLE_SCHEME',
   TOGGLE_METHODS:      'TOGGLE_METHODS',
+  TOGGLE_MASK:         'TOGGLE_MASK',
 }
 
 /**
@@ -93,5 +94,6 @@ export const initialState = {
   percentileRange: { low: 0, high: 100 },
   colorScheme: 'dark',
   methodsOpen: false,
+  masks: [],
   areaToolActive: false,
 }

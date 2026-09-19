@@ -62,17 +62,19 @@ export function categoricalEntries(cat, config, state) {
   }))
 }
 
-const num = (prop) => ['coalesce', ['to-number', ['get', prop]], 0]
+const num = (prop, sfx = null) => sfx?.length
+  ? ['coalesce', ['to-number', ['coalesce', ...sfx.map((x) => ['get', prop + x]), ['get', prop]]], 0]
+  : ['coalesce', ['to-number', ['get', prop]], 0]
 
 /** Fill/circle color: the winning entry's color, transparent where absent. */
-export function categoricalColorExpr(entries, minValue = 0) {
+export function categoricalColorExpr(entries, minValue = 0, suffixes = null) {
   if (entries.length === 0) return 'rgba(0,0,0,0)'
   const maxExpr = entries.length === 1
-    ? num(entries[0].prop)
-    : ['max', ...entries.map((e) => num(e.prop))]
+    ? num(entries[0].prop, suffixes)
+    : ['max', ...entries.map((e) => num(e.prop, suffixes))]
   const expr = ['case']
   for (const e of entries) {
-    expr.push(['all', ['>', maxExpr, minValue], ['==', num(e.prop), maxExpr]], e.color)
+    expr.push(['all', ['>', maxExpr, minValue], ['==', num(e.prop, suffixes), maxExpr]], e.color)
   }
   expr.push('rgba(0,0,0,0)')
   return expr
@@ -84,11 +86,11 @@ export function categoricalColorExpr(entries, minValue = 0) {
  * that matter read strongest. `stops` are [value, alpha] pairs in the
  * units of the underlying props (kt CO2e).
  */
-export function categoricalOpacityExpr(entries, stops) {
+export function categoricalOpacityExpr(entries, stops, suffixes = null) {
   if (entries.length === 0) return 0
   const maxExpr = entries.length === 1
-    ? num(entries[0].prop)
-    : ['max', ...entries.map((e) => num(e.prop))]
+    ? num(entries[0].prop, suffixes)
+    : ['max', ...entries.map((e) => num(e.prop, suffixes))]
   const expr = ['interpolate', ['linear'], maxExpr]
   for (const [v, a] of stops) expr.push(v, a)
   return expr
@@ -117,10 +119,10 @@ export function categoricalLegend(entries) {
  */
 import { factorPairs } from './year-factors.js'
 
-function scaledNum(e, factors, year) {
+function scaledNum(e, factors, year, suffixes = null) {
   const pairs = factorPairs(factors, e.src, year)
-  if (!pairs.length) return num(e.prop)
-  return ['*', num(e.prop), ['match', ['to-number', ['get', 'm49']], ...chunkPairs(pairs), 1]]
+  if (!pairs.length) return num(e.prop, suffixes)
+  return ['*', num(e.prop, suffixes), ['match', ['to-number', ['get', 'm49']], ...chunkPairs(pairs), 1]]
 }
 
 // factorPairs returns a flat [m49, f, ...] list; match wants
@@ -131,17 +133,17 @@ function chunkPairs(pairs) {
   return out
 }
 
-export function categoricalChangeColorExpr(entries, factors, yearFrom, yearTo, minValue = 0) {
+export function categoricalChangeColorExpr(entries, factors, yearFrom, yearTo, minValue = 0, suffixes = null) {
   if (entries.length === 0 || !factors) return 'rgba(0,0,0,0)'
   const maxOf = (year) => entries.length === 1
-    ? scaledNum(entries[0], factors, year)
-    : ['max', ...entries.map((e) => scaledNum(e, factors, year))]
+    ? scaledNum(entries[0], factors, year, suffixes)
+    : ['max', ...entries.map((e) => scaledNum(e, factors, year, suffixes))]
   const body = ['case']
   for (const e of entries) {
     body.push(['all',
       ['>', ['var', 'mTo'], minValue],
-      ['==', scaledNum(e, factors, yearTo), ['var', 'mTo']],
-      ['!=', scaledNum(e, factors, yearFrom), ['var', 'mFrom']],
+      ['==', scaledNum(e, factors, yearTo, suffixes), ['var', 'mTo']],
+      ['!=', scaledNum(e, factors, yearFrom, suffixes), ['var', 'mFrom']],
     ], e.color)
   }
   body.push('rgba(0,0,0,0)')
@@ -149,11 +151,11 @@ export function categoricalChangeColorExpr(entries, factors, yearFrom, yearTo, m
 }
 
 /** The new leader's value at yearTo — drives the alpha ramp in compare mode. */
-export function categoricalChangeMagnitudeExpr(entries, factors, yearTo) {
+export function categoricalChangeMagnitudeExpr(entries, factors, yearTo, suffixes = null) {
   if (entries.length === 0 || !factors) return 0
   return entries.length === 1
-    ? scaledNum(entries[0], factors, yearTo)
-    : ['max', ...entries.map((e) => scaledNum(e, factors, yearTo))]
+    ? scaledNum(entries[0], factors, yearTo, suffixes)
+    : ['max', ...entries.map((e) => scaledNum(e, factors, yearTo, suffixes))]
 }
 
 /** JS-side: sorted [{label, color, value, share}] for a properties object. */

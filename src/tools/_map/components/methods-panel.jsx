@@ -207,7 +207,7 @@ function FoodEmissionsMethods() {
         model-derived masks, always with a frozen copy and provenance.
         SPAM 2020 remains the default allocation everywhere; finer
         core-track masks arrive one by one as opt-in toggles under
-        <em> Crop masks</em> in the sidebar. The first is the oil-palm
+        <em> Improved crop maps</em> in the sidebar. The first is the oil-palm
         extent of Descals et al. (2024): switching it on reallocates
         each country's palm-attributed emissions and production to the
         mapped 10 m extent — national and per-source totals are

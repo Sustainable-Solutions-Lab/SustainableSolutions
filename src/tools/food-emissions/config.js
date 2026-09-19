@@ -101,6 +101,14 @@ const CROPS = [
   ['rape', 'Rapeseed'],
   ['pota', 'Potato'],
   ['sorg', 'Sorghum'],
+  // EUDR-sensitive commodities + food-security staples: smaller emitters,
+  // exposed because supply-chain users need them selectable.
+  ['coco', 'Cocoa'],
+  ['coff', 'Coffee (arabica)'],
+  ['rcof', 'Coffee (robusta)'],
+  ['rubb', 'Rubber'],
+  ['cass', 'Cassava'],
+  ['bean', 'Beans'],
 ]
 
 // One variable per source × crop cell of the selection grid. `yearTerms`
@@ -315,7 +323,7 @@ const config = {
   enhancedMasks: [
     {
       id: 'descals-palm',
-      label: 'Oil palm \u2014 Descals et al. 2024 (10 m)',
+      label: 'Oil palm \u2014 satellite-mapped at 10 m (Descals et al. 2024)',
       suffix: '__dsc',
       note: 'Reallocates each country\u2019s palm-attributed emissions and production to the mapped 10 m extent (industrial + smallholder). National totals unchanged.',
     },
@@ -492,6 +500,12 @@ const config = {
         { id: 'rape', label: 'Rapeseed',      color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
         { id: 'pota', label: 'Potato',        color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
         { id: 'sorg', label: 'Sorghum',       color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+        { id: 'coco', label: 'Cocoa',         color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+        { id: 'coff', label: 'Coffee (arabica)', color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+        { id: 'rcof', label: 'Coffee (robusta)', color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+        { id: 'rubb', label: 'Rubber',        color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+        { id: 'cass', label: 'Cassava',       color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
+        { id: 'bean', label: 'Beans',         color: '#9A9AAE', legendLabel: 'Other crops', sources: CROPLAND_SOURCE_IDS },
       ],
     },
   },

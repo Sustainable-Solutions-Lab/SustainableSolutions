@@ -13,6 +13,7 @@ import { DimensionControl, SourceCategoryControls } from './dimension-control.js
 import { Legend } from './legend.jsx'
 import { DistributionChart } from './distribution-chart.jsx'
 import { ZipInput } from './zip-input.jsx'
+import { PolygonUpload } from './polygon-upload.jsx'
 import { categoricalLegend } from '../../lib/analysis-categorical.js'
 
 export function Sidebar({ config, state, dispatch, allValues = [], companion = null, repoLinks = null, paleActive = false, setPaleActive = null, paleDriver = 'r_net', setPaleDriver = null, analysisEntries = [] }) {
@@ -333,6 +334,10 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           >
             Region Focus
           </button>
+        )}
+
+        {config.areaTool?.enabled && (
+          <PolygonUpload state={state} dispatch={dispatch} />
         )}
 
         {state.areaToolActive && config.areaTool?.zipsBaseUrl && (

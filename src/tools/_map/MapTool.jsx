@@ -10,6 +10,7 @@ import { Sidebar } from './components/sidebar/index.jsx'
 import { MobileLegend } from './components/sidebar/legend.jsx'
 import { LayerTabs } from './components/sidebar/layer-tabs.jsx'
 import { DimensionControl, SourceCategoryControls } from './components/sidebar/dimension-control.jsx'
+import { PolygonUpload } from './components/sidebar/polygon-upload.jsx'
 import { LatProfile } from './components/map/lat-profile.jsx'
 import { YearBar } from './components/map/year-bar.jsx'
 import { PaleLayer } from './components/map/pale-layer.jsx'
@@ -652,6 +653,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           >
             Region Focus{state.mapView === 'regional' ? ' (gridded view only)' : ''}
           </button>
+        )}
+        {config.areaTool?.enabled && (
+          <PolygonUpload state={state} dispatch={dispatch} compact />
         )}
 
         {/* City inequality picker — only meaningful for PM / mortality

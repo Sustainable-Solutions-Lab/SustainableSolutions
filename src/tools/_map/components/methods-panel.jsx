@@ -213,12 +213,11 @@ function FoodEmissionsMethods() {
         While the map displays gridded cells and admin-1 × biome units,
         the underlying gridded data supports aggregation over{' '}
         <em>any</em> custom polygon — a company's sourcing area, a supply
-        shed, a watershed. The in-tool Region Focus offers drawn circles
-        (and ZIP-code polygons in US tools) today, but the statistics,
+        shed, a watershed. The Region Focus tool offers drawn circles,
+        ZIP-code polygons (US tools), and — via <em>Upload sourcing
+        area</em> — your own GeoJSON or KML polygons; statistics,
         trends, and emission factors are computed the same way for any
-        boundary: from the quarter-degree cells inside it. Custom
-        sourcing-area polygons are a data request away, and per-polygon
-        factors recompute exactly as the panel's do.
+        boundary, from the quarter-degree cells inside it.
       </p>
       <p style={pStyle}>
         Statistics for a drawn circle aggregate the quarter-degree cells

@@ -111,12 +111,24 @@ for (const pub of publications as Publication[]) {
 }
 const allTime = famOrder.map((k) => allTimeRaw[k]);
 const allTimeTotal = allTime.reduce((a, b) => a + b, 0);
+function segTextColor(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  const lum = 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+  return lum > 150 ? '#181838' : '#F8F8E8';
+}
 const donutSegs = (() => {
   let off = 25; // start at 12 o'clock (pathLength 100; dashoffset 25 = top)
+  let cum = 0;  // clockwise-from-top start of each segment, in percent
   return allTime.map((v, k) => {
     const pct = allTimeTotal > 0 ? (v / allTimeTotal) * 100 : 0;
-    const seg = { color: famsOrdered[k].color, label: famsOrdered[k].label, v, pct, off };
+    const mid = ((cum + pct / 2) / 100) * 2 * Math.PI;
+    const seg = {
+      color: famsOrdered[k].color, label: famsOrdered[k].label, v, pct, off,
+      lx: 18 + 16 * Math.sin(mid), ly: 18 - 16 * Math.cos(mid),
+      tcol: segTextColor(famsOrdered[k].color),
+    };
     off -= pct;
+    cum += pct;
     return seg;
   });
 })();
@@ -180,6 +192,13 @@ const famPaths: string[] = [];
                 <title>{`${seg.label}: ${seg.v} of ${allTimeTotal} all-time (${Math.round(seg.pct)}%)`}</title>
               </circle>
             ))}
+            {donutSegs.map((seg) => seg.pct >= 8 && (
+              <text
+                x={seg.lx} y={seg.ly + 1.4}
+                text-anchor="middle"
+                style={`font-family: var(--font-mono); font-size: 3.6px; font-weight: 600; fill: ${seg.tcol};`}
+              >{Math.round(seg.pct)}%</text>
+            ))}
             <text x="18" y="17" text-anchor="middle" style="font-family: var(--font-mono); font-size: 7px; fill: var(--ink);">{allTimeTotal}</text>
             <text x="18" y="24" text-anchor="middle" style="font-family: var(--font-mono); font-size: 4px; fill: var(--ink-3);">ALL TIME</text>
           </svg>
@@ -223,7 +242,7 @@ const famPaths: string[] = [];
             {famsOrdered.map((f, k) => famTotals[k] > 0 && (
               <span class="font-mono text-ink-2 inline-flex items-center" style="font-size: 10px; gap: 4px;">
                 <span style={`width: 8px; height: 8px; border-radius: 2px; background: ${f.color}; display: inline-block;`} />
-                {f.label} ({famTotals[k]})
+                {f.label} ({allTime[k]})
               </span>
             ))}
           </figcaption>

@@ -82,7 +82,7 @@ export function PolygonUpload({ state, dispatch, compact = false }) {
   }
 
   return (
-    <div className={compact ? 'mb-1' : 'mb-2'}>
+    <div className={compact ? 'inline-block' : 'mb-2'}>
       <input
         ref={fileRef}
         type="file"

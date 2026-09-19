@@ -327,6 +327,18 @@ const config = {
       suffix: '__dsc',
       note: 'Reallocates each country\u2019s palm-attributed emissions and production to the mapped 10 m extent (industrial + smallholder). National totals unchanged.',
     },
+    {
+      id: 'usda-cdl',
+      label: 'United States \u2014 USDA Cropland Data Layer (30 m)',
+      suffix: '__cdl',
+      note: 'Places US maize, soybean, wheat, cotton, rice, sorghum, barley, canola, potatoes, beans, peanuts, and sugarcane where the 2023 CDL maps them. US totals unchanged.',
+    },
+    {
+      id: 'mapbiomas',
+      label: 'Brazil \u2014 MapBiomas collection 9 (30 m)',
+      suffix: '__mb',
+      note: 'Places Brazilian soybean, sugarcane, rice, coffee, and cotton where MapBiomas 2023 maps them. Brazilian totals unchanged.',
+    },
   ],
 
   // Labels follow the LSRS terms verbatim (minus the trailing "emissions"

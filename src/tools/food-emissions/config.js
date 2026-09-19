@@ -51,7 +51,11 @@ const SOURCES = [
   ['burn', 'Residue burning', 2],
   // Tier 2 SOC losses on stable cropland (gains are view-only, never
   // netted). No annual trend series: year scaling holds it constant.
-  ['soil', 'Soil carbon CO₂', 20],
+  // Labeled by land use: rangeland and forest soil-carbon layers are in
+  // the pipeline and appear as pending entries under LSRS cat. 2 - the
+  // Standard treats them inside categories 1/2, not as a category of
+  // their own, so the differentiation lives here in Specific sources.
+  ['soil', 'Soil carbon CO₂ — cropland', 20],
 ]
 const SOURCE_IDS = SOURCES.map(([id]) => id)
 
@@ -260,6 +264,10 @@ const config = {
         { id: 'cat2', label: 'Land management net biogenic CO₂ (LSRS cat. 2)' },
         { id: 'cat3', label: 'Land management production (LSRS cat. 3)' },
         ...SOURCES.map(([id, label]) => ({ id, label })),
+        // Pending soil-carbon land uses: listed (disabled) under cat. 2 so
+        // the coverage roadmap is visible where it will eventually live.
+        { id: 'soil_range', label: 'Soil carbon CO₂ — rangeland (coming)', cat: 'cat2', disabled: true },
+        { id: 'soil_forest', label: 'Soil carbon CO₂ — forest (pending standard)', cat: 'cat2', disabled: true },
       ],
     },
     {

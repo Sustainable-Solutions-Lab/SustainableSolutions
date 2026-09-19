@@ -298,12 +298,15 @@ function FoodEmissionsMethods() {
         buffers before soil-carbon gains may be claimed, which no
         map-based dataset can provide.
         Finally, the LSRS defers carbon stock changes in forestry and
-        non-productive lands to future versions of the Standard. We are
-        piloting forest carbon methods now — national forest inventory
-        re-measurements, forest-age reconstructions, and satellite
-        biomass epochs — so those layers can appear here as soon as the
-        Standard&rsquo;s language is final; the category selector lists
-        them as pending in the meantime.
+        non-productive lands to future versions of the Standard — but
+        structurally they belong inside categories 1 and 2, not in a
+        category of their own, so that is where they will surface here:
+        the specific-sources list differentiates soil carbon by land
+        use, with rangeland and forest entries shown as pending under
+        category 2. We are piloting the forest methods now — national
+        forest inventory re-measurements, forest-age reconstructions,
+        and satellite biomass epochs — so those entries can go live as
+        soon as the Standard&rsquo;s language is final.
       </p>
 
       <h2 style={h2Style}>Soil carbon</h2>

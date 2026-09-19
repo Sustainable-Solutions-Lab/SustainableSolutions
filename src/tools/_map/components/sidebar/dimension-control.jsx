@@ -62,7 +62,7 @@ function ToggleControl({ dimension, value, onChange }) {
       style={{ borderRadius: 'var(--radius-sm)' }}
     >
       {dimension.options.map((option) => (
-        <option key={option.id} value={option.id}>
+        <option key={option.id} value={option.id} disabled={option.disabled}>
           {option.label}
         </option>
       ))}
@@ -136,9 +136,15 @@ export function SourceCategoryControls({ config, state, dispatch, compact = fals
   const cat3 = config.lsrsCategories.cat3
   const category = cur === 'cat2' || cat2.ids.includes(cur) ? 'cat2'
     : cur === 'cat3' || cat3.ids.includes(cur) ? 'cat3' : 'all'
+  // Disabled options are pending layers pinned to a category via o.cat
+  // (e.g. rangeland/forest soil carbon under cat. 2 - the LSRS resolves
+  // forestry inside categories 1/2, so the roadmap shows here, not as a
+  // category of its own).
   const sourceOpts = (srcDim.options ?? []).filter((o) =>
     !['all', 'cat2', 'cat3'].includes(o.id)
-    && (category === 'all' || config.lsrsCategories[category].ids.includes(o.id)))
+    && (category === 'all'
+      || config.lsrsCategories[category].ids.includes(o.id)
+      || o.cat === category))
   const specific = sourceOpts.some((o) => o.id === cur) ? cur : category
   const set = (value) => dispatch({ type: Actions.SET_DIMENSION, dimensionId: 'source', value })
   const selectCls = 'w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink'
@@ -157,10 +163,6 @@ export function SourceCategoryControls({ config, state, dispatch, compact = fals
           </option>
           <option value="cat2">2 · {cat2.label}</option>
           <option value="cat3">3 · {cat3.label}</option>
-          <option value="forestry" disabled
-            title="The LSRS defers forestry and non-productive lands to future versions of the Standard; our forest carbon layers are in pilot and will appear here once that language is final">
-            Forestry &amp; non-productive lands (pending standard)
-          </option>
         </select>
       </div>
       <div className={compact ? 'mb-2' : 'mb-4'}>
@@ -173,7 +175,7 @@ export function SourceCategoryControls({ config, state, dispatch, compact = fals
             {category === 'all' ? 'All sources' : 'All sources in category'}
           </option>
           {sourceOpts.map((o) => (
-            <option key={o.id} value={o.id}>{o.label}</option>
+            <option key={o.id} value={o.id} disabled={o.disabled}>{o.label}</option>
           ))}
         </select>
       </div>
@@ -190,7 +192,7 @@ function DropdownControl({ dimension, value, onChange }) {
       style={{ borderRadius: 'var(--radius-sm)' }}
     >
       {dimension.options.map((option) => (
-        <option key={option.id} value={option.id}>
+        <option key={option.id} value={option.id} disabled={option.disabled}>
           {option.label}
         </option>
       ))}

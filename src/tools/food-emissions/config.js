@@ -339,6 +339,18 @@ const config = {
       suffix: '__mb',
       note: 'Places Brazilian soybean, sugarcane, rice, coffee, and cotton where MapBiomas 2023 maps them. Brazilian totals unchanged.',
     },
+    {
+      id: 'aafc-aci',
+      label: 'Canada \u2014 AAFC Annual Crop Inventory (30 m)',
+      suffix: '__aci',
+      note: 'Places Canadian wheat, canola, barley, maize, soybean, beans, potatoes, and sorghum where the 2023 ACI maps them. Canadian totals unchanged.',
+    },
+    {
+      id: 'eucropmap',
+      label: 'European Union \u2014 JRC EUCROPMAP (10 m)',
+      suffix: '__eu',
+      note: 'Places EU wheat, barley, maize, rice, potatoes, rapeseed, and soybean where EUCROPMAP 2022 maps them. National totals unchanged.',
+    },
   ],
 
   // Labels follow the LSRS terms verbatim (minus the trailing "emissions"

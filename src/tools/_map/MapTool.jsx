@@ -199,7 +199,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   const toolYearFactors = useYearFactors(config)
   // Enhanced-mask suffixes (e.g. __dsc for Descals palm): gridded view
   // only - the regional unit tiles carry no override props.
-  const maskSuffixes = state.mapView === 'regional' ? [] : activeMaskSuffixes(config, state)
+  const maskSuffixes = activeMaskSuffixes(config, state)
   const withMask = (v) => (v && maskSuffixes.length ? { ...v, maskSuffixes } : v)
   const attachedVariable = withMask(rawActiveVariable?.scaled && toolYearFactors
     ? { ...rawActiveVariable, scaled: { ...rawActiveVariable.scaled, factors: toolYearFactors } }
@@ -635,19 +635,24 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
               Crop masks
             </p>
-            {config.enhancedMasks.map((m) => (
-              <label key={m.id} className="flex items-start gap-2 font-sans text-[11px] text-ink-2">
-                <input
-                  type="checkbox"
-                  checked={(state.masks ?? []).includes(m.id)}
-                  disabled={state.mapView === 'regional'}
-                  onChange={() => dispatch({ type: Actions.TOGGLE_MASK, maskId: m.id })}
-                  className="accent-cardinal"
-                  style={{ marginTop: 1 }}
-                />
-                <span>{m.label}</span>
-              </label>
-            ))}
+            {config.enhancedMasks.map((m) => {
+              const cur = (state.activeDimensions?.masks ?? '').split(',').filter(Boolean)
+              const on = cur.includes(m.suffix)
+              const next = on ? cur.filter((x) => x !== m.suffix) : [...cur, m.suffix]
+              return (
+                <label key={m.id} className="flex items-start gap-2 font-sans text-[11px] text-ink-2">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    disabled={state.mapView === 'regional'}
+                    onChange={() => dispatch({ type: Actions.SET_DIMENSION, dimensionId: 'masks', value: next.join(',') })}
+                    className="accent-cardinal"
+                    style={{ marginTop: 1 }}
+                  />
+                  <span>{m.label}</span>
+                </label>
+              )
+            })}
           </div>
         )}
 

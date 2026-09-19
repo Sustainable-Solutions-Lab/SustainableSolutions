@@ -372,9 +372,13 @@ function FoodEmissionsMethods() {
       <h2 style={h2Style}>Caveats</h2>
       <p style={pStyle}>
         Cells are ~28 km and should be read at landscape scale, not field
-        scale. Commodity views cover the twelve largest crops and eight
-        livestock groups; the remaining crops appear only in the all-
-        commodity totals. Dominance maps rank contributors on 2020 values
+        scale. Commodity views cover eighteen crops — the twelve largest
+        emitters plus six selectable for supply-chain relevance (cocoa,
+        arabica and robusta coffee, rubber, cassava, beans) — and eight
+        livestock groups. The underlying dataset resolves all 46 SPAM
+        crop classes; the crops not exposed in the menus are still
+        counted in every all-commodity total and are available as data
+        on request. Dominance maps rank contributors on 2020 values
         rather than the displayed year; in compare mode they instead show
         where the leader changed between the two selected years, with each
         contributor scaled by its national source trajectory (commodities

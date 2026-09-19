@@ -697,26 +697,26 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
         {/* Region focus — mobile access (config.areaTool) */}
         {config.areaTool?.enabled && (
-          <button
-            type="button"
-            disabled={state.mapView === 'regional'}
-            onClick={() => {
-              dispatch({ type: Actions.TOGGLE_AREA_TOOL })
-              setMobilePanelOpen(false)
-            }}
-            className={[
-              'block w-full text-left bg-transparent border-0 p-0 mt-2 mb-1',
-              'font-sans text-[12px] uppercase tracking-[0.12em]',
-              state.mapView === 'regional' ? 'text-ink-4 cursor-not-allowed'
-                : state.areaToolActive ? 'font-bold text-ink underline underline-offset-[3px] cursor-pointer'
-                : 'font-normal text-ink-3 cursor-pointer',
-            ].join(' ')}
-          >
-            Region Focus{state.mapView === 'regional' ? ' (gridded view only)' : ''}
-          </button>
-        )}
-        {config.areaTool?.enabled && (
-          <PolygonUpload state={state} dispatch={dispatch} compact />
+          <div className="flex items-baseline flex-wrap mt-2" style={{ gap: '2px 10px' }}>
+            <button
+              type="button"
+              disabled={state.mapView === 'regional'}
+              onClick={() => {
+                dispatch({ type: Actions.TOGGLE_AREA_TOOL })
+                setMobilePanelOpen(false)
+              }}
+              className={[
+                'bg-transparent border-0 p-0',
+                'font-sans text-[12px] uppercase tracking-[0.12em]',
+                state.mapView === 'regional' ? 'text-ink-4 cursor-not-allowed'
+                  : state.areaToolActive ? 'font-bold text-ink underline underline-offset-[3px] cursor-pointer'
+                  : 'font-normal text-ink-3 cursor-pointer',
+              ].join(' ')}
+            >
+              Region Focus{state.mapView === 'regional' ? ' (gridded view only)' : ''}
+            </button>
+            <PolygonUpload state={state} dispatch={dispatch} compact />
+          </div>
         )}
 
         {/* City inequality picker — only meaningful for PM / mortality
@@ -785,7 +785,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             dispatch({ type: Actions.TOGGLE_METHODS })
             setMobilePanelOpen(false)
           }}
-          className="block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-6 font-sans text-[12px] uppercase tracking-[0.12em] text-ink-3 hover:text-ink"
+          className="block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-2 font-sans text-[12px] uppercase tracking-[0.12em] text-ink-3 hover:text-ink"
         >
           Read Methods
         </button>

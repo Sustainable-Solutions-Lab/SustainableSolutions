@@ -573,7 +573,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
         {(config.paleMap?.categorical ?? []).length > 0 && (
           <div className="mb-2">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
+            <div className="flex items-center justify-between" style={{ gap: 10 }}>
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none shrink-0" style={{ margin: 0 }}>
               Map
             </p>
             <select
@@ -589,8 +590,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                 dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: v })
                 dispatch({ type: Actions.SET_ANALYSIS, analysis: 'dominance' })
               }}
-              className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
-              style={{ borderRadius: 'var(--radius-sm)' }}
+              className="bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
+              style={{ borderRadius: 'var(--radius-sm)', width: '62%', minWidth: 0 }}
             >
               <option value="emissions">Emissions</option>
               {config.paleMap.categorical.map((c) => (
@@ -600,6 +601,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                 <option value="pale">Drivers of change</option>
               )}
             </select>
+            </div>
             {paleActive && (
               <p className="font-sans text-ink-3 m-0 mt-1" style={{ fontSize: 10, lineHeight: 1.4 }}>
                 Change in emissions 2000–2023 (blue down, red up). Tap a

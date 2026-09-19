@@ -130,6 +130,10 @@ const currentSlugSet = new Set(
 const destCounts = DESTS.map((d) =>
   rowsAll.filter((r: any) => r.status === 'alumni'
     && !((r as any).slug && currentSlugSet.has((r as any).slug))
+    // Visiting students return to their home program - that's not a
+    // destination, so they don't count here (they do count in the
+    // headcount series: they really were working members).
+    && !/visiting/i.test(r.role ?? '')
     && destClass(r.current_position ?? '') === d.id).length);
 const destTotal = destCounts.reduce((a, b) => a + b, 0);
 

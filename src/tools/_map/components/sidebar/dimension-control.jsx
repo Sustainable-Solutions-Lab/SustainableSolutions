@@ -10,7 +10,7 @@
 import { Play, Pause } from 'lucide-react'
 import { Actions } from '../../contracts/events.js'
 
-export function DimensionControl({ dimension, value, dispatch, animatingDimension }) {
+export function DimensionControl({ dimension, value, dispatch, animatingDimension, compact = false }) {
   function handleChange(newValue) {
     dispatch({ type: Actions.SET_DIMENSION, dimensionId: dimension.id, value: newValue })
   }
@@ -23,8 +23,9 @@ export function DimensionControl({ dimension, value, dispatch, animatingDimensio
 
   return (
     // mb-4 puts clear air before the NEXT section header while the label
-    // stays tight (mb-0.5) to the control it heads.
-    <div className="mb-4">
+    // stays tight to the control it heads; the mobile drawer passes
+    // compact to halve the rhythm so more map shows below the sheet.
+    <div className={compact ? 'mb-2' : 'mb-4'}>
       <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
         {dimension.label}
       </p>
@@ -127,7 +128,7 @@ function SliderControl({ dimension, value, onChange, playing, onTogglePlay }) {
  * emissions) comes from the jdLUC partner dataset — listed but disabled
  * until those factors are displayable here.
  */
-export function SourceCategoryControls({ config, state, dispatch }) {
+export function SourceCategoryControls({ config, state, dispatch, compact = false }) {
   const srcDim = config.dimensions.find((d) => d.id === 'source')
   if (!srcDim || !config.lsrsCategories) return null
   const cur = state.activeDimensions.source ?? srcDim.defaultValue ?? 'all'
@@ -143,7 +144,7 @@ export function SourceCategoryControls({ config, state, dispatch }) {
   const selectCls = 'w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink'
   return (
     <>
-      <div className="mb-4">
+      <div className={compact ? 'mb-2' : 'mb-4'}>
         <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
           Source category
         </p>
@@ -158,7 +159,7 @@ export function SourceCategoryControls({ config, state, dispatch }) {
           <option value="cat3">3 · {cat3.label}</option>
         </select>
       </div>
-      <div className="mb-4">
+      <div className={compact ? 'mb-2' : 'mb-4'}>
         <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
           Specific sources
         </p>

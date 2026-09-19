@@ -539,7 +539,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         {/* Map view (geometry) first, then the main map select — mirrors the
             desktop sidebar's ordering. */}
         {config.regionalView && (
-          <div className="mb-3">
+          <div className="mb-2">
             <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
               Map view
             </p>
@@ -562,7 +562,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         )}
 
         {config.layers.filter((l) => !l.hidden).length > 1 && (
-          <div className="mb-3">
+          <div className="mb-2">
             <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
               Map
             </p>
@@ -571,7 +571,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         )}
 
         {(config.paleMap?.categorical ?? []).length > 0 && (
-          <div className="mb-3">
+          <div className="mb-2">
             <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
               Map
             </p>
@@ -609,7 +609,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         )}
 
         {state.analysis == null && config.lsrsCategories && (
-          <SourceCategoryControls config={config} state={state} dispatch={dispatch} />
+          <SourceCategoryControls config={config} state={state} dispatch={dispatch} compact />
         )}
         {state.analysis == null && mobileDimensions
           .filter((dim) => !(config.lsrsCategories && dim.id === 'source'))
@@ -626,12 +626,13 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               dimension={filteredDim}
               value={state.activeDimensions[dim.id] ?? dim.defaultValue}
               dispatch={dispatch}
+              compact
             />
           )
         })}
 
         {config.enhancedMasks?.length > 0 && state.analysis !== 'pale' && (
-          <div className="mb-3">
+          <div className="mb-2">
             <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
               Improved crop maps
             </p>
@@ -658,7 +659,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
         {/* Percentile presets — mobile, emissions view only */}
         {config.percentileFilter?.enabled && state.analysis == null && (
-          <div className="mb-2 flex items-center gap-3">
+          <div className="mb-1 flex items-center gap-3">
             {[[0, 'All'], [75, 'Top 25%'], [90, 'Top 10%'], [95, 'Top 5%']].map(([low, label]) => (
               <button
                 key={low}
@@ -685,7 +686,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               setMobilePanelOpen(false)
             }}
             className={[
-              'block w-full text-left bg-transparent border-0 p-0 mt-3 mb-1',
+              'block w-full text-left bg-transparent border-0 p-0 mt-2 mb-1',
               'font-sans text-[12px] uppercase tracking-[0.12em]',
               state.mapView === 'regional' ? 'text-ink-4 cursor-not-allowed'
                 : state.areaToolActive ? 'font-bold text-ink underline underline-offset-[3px] cursor-pointer'

@@ -210,6 +210,17 @@ function FoodEmissionsMethods() {
 
       <h2 style={h2Style}>Area statistics and trends</h2>
       <p style={pStyle}>
+        While the map displays gridded cells and admin-1 × biome units,
+        the underlying gridded data supports aggregation over{' '}
+        <em>any</em> custom polygon — a company's sourcing area, a supply
+        shed, a watershed. The in-tool Region Focus offers drawn circles
+        (and ZIP-code polygons in US tools) today, but the statistics,
+        trends, and emission factors are computed the same way for any
+        boundary: from the quarter-degree cells inside it. Custom
+        sourcing-area polygons are a data request away, and per-polygon
+        factors recompute exactly as the panel's do.
+      </p>
+      <p style={pStyle}>
         Statistics for a drawn circle aggregate the quarter-degree cells
         whose centers fall inside it. The trend chart composes each
         country's national per-source series (2000–2024, from our annual

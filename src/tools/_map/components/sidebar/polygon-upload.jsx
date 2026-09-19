@@ -105,7 +105,7 @@ export function PolygonUpload({ state, dispatch, compact = false }) {
             : 'text-ink-3 cursor-pointer transition-colors hover:text-ink underline-offset-[3px] hover:underline',
         ].join(' ')}
       >
-        Upload sourcing area (GeoJSON/KML)
+        or Upload sourcing area (GeoJSON/KML)
       </button>
       {loadedName && (
         <p className="font-mono text-ink-3 m-0" style={{ fontSize: 9, margin: '2px 0 0' }}>

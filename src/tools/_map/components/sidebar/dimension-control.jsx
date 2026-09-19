@@ -157,6 +157,10 @@ export function SourceCategoryControls({ config, state, dispatch, compact = fals
           </option>
           <option value="cat2">2 · {cat2.label}</option>
           <option value="cat3">3 · {cat3.label}</option>
+          <option value="forestry" disabled
+            title="The LSRS defers forestry and non-productive lands to future versions of the Standard; our forest carbon layers are in pilot and will appear here once that language is final">
+            Forestry &amp; non-productive lands (pending standard)
+          </option>
         </select>
       </div>
       <div className={compact ? 'mb-2' : 'mb-4'}>

@@ -192,11 +192,11 @@ const famPaths: string[] = [];
                 <title>{`${seg.label}: ${seg.v} of ${allTimeTotal} all-time (${Math.round(seg.pct)}%)`}</title>
               </circle>
             ))}
-            {donutSegs.map((seg) => seg.pct >= 8 && (
+            {donutSegs.map((seg) => seg.pct >= 4 && (
               <text
-                x={seg.lx} y={seg.ly + 1.4}
+                x={seg.lx} y={seg.ly + 1.2}
                 text-anchor="middle"
-                style={`font-family: var(--font-mono); font-size: 3.6px; font-weight: 600; fill: ${seg.tcol};`}
+                style={`font-family: var(--font-mono); font-size: ${seg.pct >= 8 ? 3.6 : 2.9}px; font-weight: 600; fill: ${seg.tcol};`}
               >{Math.round(seg.pct)}%</text>
             ))}
             <text x="18" y="17" text-anchor="middle" style="font-family: var(--font-mono); font-size: 7px; fill: var(--ink);">{allTimeTotal}</text>

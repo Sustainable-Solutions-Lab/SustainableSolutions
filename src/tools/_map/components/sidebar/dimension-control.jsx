@@ -146,7 +146,7 @@ export function SourceCategoryControls({ config, state, dispatch, compact = fals
     <>
       <div className={compact ? 'mb-2' : 'mb-4'}>
         <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
-          Source category
+          LSRS source category
         </p>
         <select value={category} onChange={(e) => set(e.target.value)}
           className={selectCls} style={{ borderRadius: 'var(--radius-sm)' }}>

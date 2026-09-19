@@ -198,7 +198,7 @@ const config = {
   eyebrow: 'INTERACTIVE MAP',
   title: 'Gridded land sector emissions',
   summary:
-    'Toward spatially explicit, commodity-specific maps of greenhouse-gas emissions from land use and land management, worldwide and through time.',
+    'Commodity- and source-specific maps of greenhouse-gas emissions from land, compliant with the GHG Protocol Land Sector and Removals Standard (LSRS).',
   description:
     'Where do food-system greenhouse-gas emissions come from, and how is that changing? This tool works toward a complete, spatially explicit, commodity-specific accounting of emissions from land use and land management — mapped where they happen, traced to what is grown, and followed through time. Today it covers the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid, for any year 2000–2024, plus direct livestock emissions (enteric CH₄, manure-management CH₄ and N₂O, manure deposited on pasture) and CO₂ from agricultural liming. Cropland emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model; livestock currently distributes FAO national series across gridded animal densities, to be upgraded with forthcoming spatially explicit livestock data. Land-use-change emissions join next, through the Cornerstone jurisdictional framework.',
 
@@ -307,6 +307,20 @@ const config = {
   },
 
   // ── Variables ────────────────────────────────────────────────────────────
+  // ── Enhanced masks ──────────────────────────────────────────────────────
+  // SPAM 2020 is always the default allocation. Each entry here is a
+  // finer, core-track (open + redistributable) dataset the user can
+  // toggle on; the tiles carry sparse `<prop><suffix>` overrides where
+  // the reallocation differs, and every read falls back to SPAM.
+  enhancedMasks: [
+    {
+      id: 'descals-palm',
+      label: 'Oil palm \u2014 Descals et al. 2024 (10 m)',
+      suffix: '__dsc',
+      note: 'Reallocates each country\u2019s palm-attributed emissions and production to the mapped 10 m extent (industrial + smallholder). National totals unchanged.',
+    },
+  ],
+
   // Labels follow the LSRS terms verbatim (minus the trailing "emissions"
   // for dropdown width): the Standard's subcategory names both start with
   // "land management", which the UI must preserve.

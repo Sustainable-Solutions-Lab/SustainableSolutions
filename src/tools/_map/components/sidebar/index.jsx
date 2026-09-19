@@ -216,8 +216,10 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
               Crop masks
             </p>
             {config.enhancedMasks.map((m) => {
-              const on = (state.masks ?? []).includes(m.id)
+              const cur = (state.activeDimensions?.masks ?? '').split(',').filter(Boolean)
+              const on = cur.includes(m.suffix)
               const regional = state.mapView === 'regional'
+              const next = on ? cur.filter((x) => x !== m.suffix) : [...cur, m.suffix]
               return (
                 <label key={m.id} title={regional ? 'Enhanced masks apply to the gridded view' : m.note}
                   className={['flex items-start gap-2 font-sans text-[11px]',
@@ -226,7 +228,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                     type="checkbox"
                     checked={on}
                     disabled={regional}
-                    onChange={() => dispatch({ type: Actions.TOGGLE_MASK, maskId: m.id })}
+                    onChange={() => dispatch({ type: Actions.SET_DIMENSION, dimensionId: 'masks', value: next.join(',') })}
                     className="accent-cardinal"
                     style={{ marginTop: 1 }}
                   />
@@ -234,7 +236,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                 </label>
               )
             })}
-            {(state.masks ?? []).length > 0 && state.mapView !== 'regional' && (
+            {(state.activeDimensions?.masks ?? '') !== '' && state.mapView !== 'regional' && (
               <p className="font-sans text-ink-3 m-0" style={{ fontSize: 10, lineHeight: 1.4, margin: '3px 0 0' }}>
                 Reallocation within countries; national totals conserved.
                 SPAM 2020 remains the default when off.

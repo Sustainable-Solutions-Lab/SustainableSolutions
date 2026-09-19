@@ -39,9 +39,8 @@ export function readProp(props, name, suffixes) {
 
 /** The suffixes of currently-toggled enhanced masks (config.enhancedMasks). */
 export function activeMaskSuffixes(config, state) {
-  const masks = state?.masks ?? []
-  if (!masks.length || !config?.enhancedMasks) return []
-  return config.enhancedMasks.filter((m) => masks.includes(m.id)).map((m) => m.suffix)
+  const v = state?.activeDimensions?.masks
+  return typeof v === 'string' && v.length ? v.split(',').filter(Boolean) : []
 }
 
 export function propExpr(name, suffixes) {

@@ -105,8 +105,18 @@ export function getActiveVariable(config, activeLayer, activeDimensions) {
   // The factor table itself is attached later (use-just-air-layers) — id
   // stays the base prop so distributions, lat profiles, filters, and area
   // stats keep their reference-year semantics untouched.
+  // Enhanced-mask suffixes ride the hidden 'masks' dimension (a
+  // comma-joined suffix list, e.g. "__dsc") so every consumer that
+  // resolves a variable — main layer paint, filters, area stats —
+  // picks them up and repaints on toggle without extra plumbing.
+  const maskDim = activeDimensions?.masks
+  const maskSuffixes = typeof maskDim === 'string' && maskDim.length
+    ? maskDim.split(',').filter(Boolean)
+    : null
+  const vm = maskSuffixes && v ? { ...v, maskSuffixes } : v
+
   const yc = config.yearControl
-  if (v?.yearTerms && yc) {
+  if (vm?.yearTerms && yc) {
     const dimValue = (dimId, fallback) =>
       activeDimensions[dimId] ?? config.dimensions.find((d) => d.id === dimId)?.defaultValue ?? fallback
     const year = Number(dimValue(yc.dimensionId, yc.referenceYear))
@@ -114,28 +124,28 @@ export function getActiveVariable(config, activeLayer, activeDimensions) {
     if (compareOn) {
       const yearB = Number(dimValue(yc.yearBDimensionId, yc.referenceYear))
       return {
-        ...v,
+        ...vm,
         diverging: true,
         colormap: yc.compareColormap ?? 'SpectralR',
         domain: { min: -(v.domain?.max ?? 1) / 4, max: (v.domain?.max ?? 1) / 4, zero: 0 },
         alphaFloor: 0.05,
         alphaPower: 0.5,
         colorAnchorId: undefined,
-        scaled: { terms: v.yearTerms, year, yearB, isDiff: true },
-        label: `${v.label} — change ${yearB} to ${year}`,
+        scaled: { terms: vm.yearTerms, year, yearB, isDiff: true },
+        label: `${vm.label} — change ${yearB} to ${year}`,
       }
     }
     if (year !== yc.referenceYear) {
       return {
-        ...v,
+        ...vm,
         // Anchor the color scale to the reference-year base prop so the
         // animation shows change as color change, not a re-normalizing scale.
-        colorAnchorId: v.id,
-        scaled: { terms: v.yearTerms, year },
+        colorAnchorId: vm.id,
+        scaled: { terms: vm.yearTerms, year },
       }
     }
   }
-  return v
+  return vm
 }
 
 /**

@@ -148,7 +148,7 @@ export default function ToolShell({
                 fontSize: 12,
                 lineHeight: 1.3,
                 display: '-webkit-box',
-                WebkitLineClamp: 3,
+                WebkitLineClamp: 4,
                 WebkitBoxOrient: 'vertical',
                 overflow: 'hidden',
               }}

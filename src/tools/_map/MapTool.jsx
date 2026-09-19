@@ -540,8 +540,8 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         {/* Map view (geometry) first, then the main map select — mirrors the
             desktop sidebar's ordering. */}
         {config.regionalView && (
-          <div className="mb-2">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
+          <div className="mb-2 flex items-baseline justify-between">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: 0 }}>
               Map view
             </p>
             <div className="flex gap-4">

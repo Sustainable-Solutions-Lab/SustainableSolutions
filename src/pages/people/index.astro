@@ -123,7 +123,7 @@ const DESTS = [
   { id: 'postdoc', label: 'Postdocs', color: '#3288BD' },
   { id: 'grad', label: 'Grad school', color: '#66C2A5' },
   { id: 'industry', label: 'Industry & NGOs', color: '#D53E4F' },
-  { id: 'unknown', label: 'TBD', color: '#9A9AAE' },
+  // 'unknown' destinations are simply not plotted - too mysterious.
 ];
 const currentSlugSet = new Set(
   rowsAll.filter((r: any) => r.status === 'current' && (r as any).slug).map((r: any) => (r as any).slug));
@@ -152,7 +152,7 @@ const destTotal = destCounts.reduce((a, b) => a + b, 0);
         </p>
         <h2 class="font-serif font-semibold text-base m-0" style="line-height: 1.15;">Fourteen years of the group</h2>
         <p class="font-serif italic text-xs text-ink-3 mt-0 mb-3 m-0">
-          Monthly headcount by role, and where the {destTotal} alumni landed
+          Monthly headcount by role, and where alumni have landed
         </p>
         <svg
           viewBox={`0 0 ${HC_W} ${HC_H}`}
@@ -183,7 +183,7 @@ const destTotal = destCounts.reduce((a, b) => a + b, 0);
         </figcaption>
         {destTotal > 0 && (
           <div class="mt-3">
-            <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 m-0 mb-1">ALUMNI DESTINATIONS</p>
+            <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 m-0 mb-1">ALUMNI DESTINATIONS (AS OF NOW)</p>
             <svg viewBox="0 0 300 14" style="width: 100%; height: 14px; display: block; border-radius: 2px; overflow: hidden;" role="img" aria-label="Alumni destinations">
               {(() => {
                 let x = 0;

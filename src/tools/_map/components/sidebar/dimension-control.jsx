@@ -151,7 +151,7 @@ export function SourceCategoryControls({ config, state, dispatch }) {
           className={selectCls} style={{ borderRadius: 'var(--radius-sm)' }}>
           <option value="all">Total (all categories)</option>
           <option value="cat1" disabled
-            title="Land use change factors come from the jdLUC partner dataset (AdAstra/Orbae); not yet shown in this map">
+            title="Land use change factors come from the next-generation jdLUC product being co-developed with AdAstra; not yet shown in this map">
             1 · Land use change (partner data, coming)
           </option>
           <option value="cat2">2 · {cat2.label}</option>

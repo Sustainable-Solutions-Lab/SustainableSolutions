@@ -257,9 +257,9 @@ function FoodEmissionsMethods() {
         <em> land management net biogenic CO₂ emissions</em> — carbon
         stock changes on managed land, which here means drained peatland
         CO₂ and soil-carbon losses on stable cropland; <em>land use
-        change emissions</em> are not part of this dataset (they come
-        from parcel-level conversion data such as our partner AdAstra's
-        Orbae). The LSRS category selector in the sidebar renders each
+        change emissions</em> are not part of this dataset; we are
+        co-developing a next-generation jurisdictional land-use-change
+        product with our partner AdAstra to supply them. The LSRS category selector in the sidebar renders each
         grouping directly; the emission-factor downloads keep every
         source in its own column so any grouping can be reconstructed,
         and a companion table (ef_lsrs_categories.csv) maps each source

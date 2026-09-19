@@ -212,9 +212,30 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             Gridded view only - unit tiles carry no overrides. */}
         {config.enhancedMasks?.length > 0 && (isEmissions || isDominance) && (
           <div className="mb-4">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
-              Improved crop maps
-            </p>
+            <div className="flex items-center justify-between" style={{ margin: '0 0 3px' }}>
+              <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none m-0">
+                Improved crop maps
+              </p>
+              {(() => {
+                const allSfx = config.enhancedMasks.map((m) => m.suffix)
+                const cur = (state.activeDimensions?.masks ?? '').split(',').filter(Boolean)
+                const allOn = allSfx.every((x) => cur.includes(x))
+                const regional = state.mapView === 'regional'
+                return (
+                  <label className={['inline-flex items-center gap-1 font-sans text-[11px]',
+                    regional ? 'text-ink-4 cursor-not-allowed' : 'text-ink-2 cursor-pointer'].join(' ')}>
+                    <input
+                      type="checkbox"
+                      checked={allOn}
+                      disabled={regional}
+                      onChange={() => dispatch({ type: Actions.SET_DIMENSION, dimensionId: 'masks', value: allOn ? '' : allSfx.join(',') })}
+                      className="accent-cardinal"
+                    />
+                    All
+                  </label>
+                )
+              })()}
+            </div>
             <p className="font-sans text-ink-3" style={{ fontSize: 10, lineHeight: 1.4, margin: '0 0 4px' }}>
               Puts these crops where satellites see them, replacing
               statistical downscaling. Totals unchanged.

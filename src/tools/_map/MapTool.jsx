@@ -633,9 +633,28 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
 
         {config.enhancedMasks?.length > 0 && state.analysis !== 'pale' && (
           <div className="mb-2">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
-              Improved crop maps
-            </p>
+            <div className="flex items-center justify-between" style={{ margin: '0 0 3px' }}>
+              <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none m-0">
+                Improved crop maps
+              </p>
+              {(() => {
+                const allSfx = config.enhancedMasks.map((m) => m.suffix)
+                const cur = (state.activeDimensions?.masks ?? '').split(',').filter(Boolean)
+                const allOn = allSfx.every((x) => cur.includes(x))
+                return (
+                  <label className="inline-flex items-center gap-1 font-sans text-[11px] text-ink-2">
+                    <input
+                      type="checkbox"
+                      checked={allOn}
+                      disabled={state.mapView === 'regional'}
+                      onChange={() => dispatch({ type: Actions.SET_DIMENSION, dimensionId: 'masks', value: allOn ? '' : allSfx.join(',') })}
+                      className="accent-cardinal"
+                    />
+                    All
+                  </label>
+                )
+              })()}
+            </div>
             {config.enhancedMasks.map((m) => {
               const cur = (state.activeDimensions?.masks ?? '').split(',').filter(Boolean)
               const on = cur.includes(m.suffix)

@@ -132,7 +132,7 @@ export function getActiveVariable(config, activeLayer, activeDimensions) {
         alphaPower: 0.5,
         colorAnchorId: undefined,
         scaled: { terms: vm.yearTerms, year, yearB, isDiff: true },
-        label: `${vm.label} — change ${yearB} to ${year}`,
+        label: `${vm.label} — ${year} vs. ${yearB}`,
       }
     }
     if (year !== yc.referenceYear) {

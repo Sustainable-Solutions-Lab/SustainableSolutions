@@ -134,7 +134,7 @@ function makeVariable({ source, crop }) {
     layer: 'map',
     dimensionValues: { source, crop },
   }
-  // Forest carbon pilot (research preview; OR/ME/GA; live AG pool; not in
+  // Forest carbon pilot (research preview; 44 US states; live AG pool; not in
   // any total): the two GHG Protocol accounting options as separate signed
   // views. fmlp = managed-land-proxy net stock change; fab = activity-based
   // (harvest-attributed only). Commodity dropdown does not apply.
@@ -155,9 +155,9 @@ function makeVariable({ source, crop }) {
       yearTerms: [{ prop: source, src: source }],
       constantInTime: true,
       note: isMlp
-        ? 'Pilot (Oregon, Maine, Georgia): net live-aboveground carbon change on forestland from ~31,500 paired FIA re-measurements — the managed-land-proxy accounting option. Red = net loss, blue = net removal. Research preview pending the LSRS forestry standard; not counted in any total.'
-        : 'Pilot (Oregon, Maine, Georgia): harvest-attributed carbon flux only — the activity-based accounting option (undisturbed regrowth is the no-activity baseline and drops out). Red = attributable emissions. Research preview pending the LSRS forestry standard; not counted in any total.',
-      description: 'FIA-measured forest carbon flux, pilot states, mean of ~2015–2023 re-measurement periods.',
+        ? 'US pilot (44 states): net live-aboveground carbon change on forestland from ~234,000 paired FIA re-measurements — the managed-land-proxy accounting option. Red = net loss, blue = net removal. Research preview pending the LSRS forestry standard; not counted in any total.'
+        : 'US pilot (44 states): harvest-attributed carbon flux only — the activity-based accounting option (undisturbed regrowth is the no-activity baseline and drops out). Red = attributable emissions. Research preview pending the LSRS forestry standard; not counted in any total.',
+      description: 'FIA-measured forest carbon flux, conterminous US + AK, mean of recent re-measurement periods.',
     }
   }
   if (source === 'all' || source === 'cat2' || source === 'cat3') {
@@ -292,8 +292,8 @@ const config = {
         ...SOURCES.map(([id, label]) => ({ id, label })),
         // Forest carbon pilot: the two GHG Protocol accounting options as
         // selectable signed views (research preview, not in totals).
-        { id: 'fmlp', label: 'Forest carbon — net stock change (opt. 1 · pilot OR/ME/GA)', cat: 'cat2' },
-        { id: 'fab', label: 'Forest carbon — activity-based (opt. 2 · pilot OR/ME/GA)', cat: 'cat2' },
+        { id: 'fmlp', label: 'Forest carbon — net stock change (opt. 1 · US pilot)', cat: 'cat2' },
+        { id: 'fab', label: 'Forest carbon — activity-based (opt. 2 · US pilot)', cat: 'cat2' },
         // Pending soil-carbon land uses: listed (disabled) under cat. 2 so
         // the coverage roadmap is visible where it will eventually live.
         { id: 'soil_range', label: 'Soil carbon CO₂ — rangeland (coming)', cat: 'cat2', disabled: true },

@@ -241,10 +241,12 @@ export function CommodityTrendChart({ trendConfig, trendWeights, commodityWeight
       .map((en, k) => ({ ...en, values: series[k] }))
       .filter((en) => en.values.some((v) => v > 0))
       .sort((a, b) => b.values[last] - a.values[last])
-    // Top 5 named commodities; everything else (long tail + the
+    // Top 8 named commodities; everything else (long tail + the
     // unattributed remainder) folds into one grey "All other" band.
-    const restEntries = kept.slice(5)
-    kept = kept.slice(0, 5)
+    // Five left most areas with a third of the stack unnamed — the mix
+    // spans 26 commodities, so the fold has to sit further out.
+    const restEntries = kept.slice(8)
+    kept = kept.slice(0, 8)
     const otherVals = years.map((_, yi) =>
       restEntries.reduce((a, e) => a + e.values[yi], 0) + residual[yi])
     if (otherVals.some((v) => v > 0)) {

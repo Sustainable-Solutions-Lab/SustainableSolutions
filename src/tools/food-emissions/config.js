@@ -565,7 +565,10 @@ const config = {
         { id: 'goat', label: 'Goats',         color: '#FEE08B', sources: LIVESTOCK_SOURCE_IDS },
         { id: 'pigs', label: 'Pigs',          color: '#E87828', sources: LIVESTOCK_SOURCE_IDS },
         { id: 'poul', label: 'Poultry & eggs', color: '#FFFFBF', sources: LIVESTOCK_SOURCE_IDS },
-        { id: 'olvs', label: 'Other livestock', color: '#9A9AAE', legendLabel: 'Other crops', sources: LIVESTOCK_SOURCE_IDS },
+        // Camels, horses, asses, mules — dominant across pastoral drylands
+        // (2.7% of cells, more than every grey-tail crop combined), so it
+        // gets its own warm row rather than being pooled with the crops.
+        { id: 'olvs', label: 'Other livestock', color: '#8A6F3C', legendLabel: 'Other livestock', sources: LIVESTOCK_SOURCE_IDS },
         { id: 'rice', label: 'Rice',          color: '#3288BD', sources: CROPLAND_SOURCE_IDS },
         { id: 'whea', label: 'Wheat',         color: '#66C2A5', sources: CROPLAND_SOURCE_IDS },
         { id: 'maiz', label: 'Maize',         color: '#ABDDA4', sources: CROPLAND_SOURCE_IDS },

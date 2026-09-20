@@ -540,11 +540,13 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         {/* Map view (geometry) first, then the main map select — mirrors the
             desktop sidebar's ordering. */}
         {config.regionalView && (
-          <div className="mb-2 flex items-baseline" style={{ gap: 20 }}>
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: 0 }}>
+          <div className="mb-2 flex items-baseline justify-between" style={{ gap: 10 }}>
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none shrink-0" style={{ margin: 0 }}>
               Map view
             </p>
-            <div className="flex gap-4">
+            {/* Same 62% column as the dropdowns so the links' left edge
+                aligns with the selects below. */}
+            <div className="flex gap-4" style={{ width: '62%', minWidth: 0 }}>
               {[['gridded', 'Gridded'], ['regional', 'Regional']].map(([v, label]) => (
                 <button
                   key={v}

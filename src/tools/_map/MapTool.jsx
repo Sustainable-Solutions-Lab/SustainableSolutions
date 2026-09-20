@@ -363,9 +363,18 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
       dispatch({ type: Actions.SET_DIMENSION, dimensionId: dimId, value: 'off' })
     }
   }, [activeVariable, config, state.activeDimensions, dispatch])
-  const mapBadgeValue = mapBadgeDim && !compareOn
-    ? (state.activeDimensions[mapBadgeDim.id] ?? mapBadgeDim.defaultValue)
-    : null
+  // The big year over the map. In compare mode it names both ends of the
+  // comparison ("2024 vs. 2020") rather than dropping out — the map is
+  // showing a difference, and the title should say which one.
+  const mapBadgeValue = !mapBadgeDim ? null
+    : !compareOn ? (state.activeDimensions[mapBadgeDim.id] ?? mapBadgeDim.defaultValue)
+      : (() => {
+        const bDim = config.dimensions.find((d) => d.id === config.yearControl?.yearBDimensionId)
+        if (!bDim) return null
+        const a = state.activeDimensions[mapBadgeDim.id] ?? mapBadgeDim.defaultValue
+        const b = state.activeDimensions[bDim.id] ?? bDim.defaultValue
+        return `${a} vs. ${b}`
+      })()
   // Small what-is-shown label under the year readout: the selected option of
   // every sidebar dropdown the active layer uses (e.g. "Fertilizer N₂O ·
   // Maize (corn)"). Year-bar projects only.
@@ -950,7 +959,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                 <div
                   aria-live="polite"
                   style={{
-                    fontSize: 34,
+                    // "2024 vs. 2020" is three times the width of a bare
+                    // year; step down so it still clears the map controls.
+                    fontSize: compareOn ? 24 : 34,
                     fontWeight: 700,
                     fontVariantNumeric: 'tabular-nums',
                     letterSpacing: '0.02em',

@@ -116,17 +116,6 @@ export function YearBar({ config, state, dispatch, isDark , disableCompare = fal
       )}
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {/* Compare mode reads as one comparison, so name it once up top
-            rather than making the eye assemble it from two slider rows. */}
-        {compareOn && yearBDim && (
-          <div style={{
-            font: '700 13px "JetBrains Mono", ui-monospace, monospace',
-            fontVariantNumeric: 'tabular-nums', color: ink,
-            letterSpacing: '0.02em', lineHeight: 1,
-          }}>
-            {year} vs. {yearB}
-          </div>
-        )}
         {compareOn && yearBDim && sliderRow(yearBDim.id, yearB, 'From')}
         {sliderRow(yearDim.id, year, compareOn ? 'To' : null)}
       </div>

@@ -305,15 +305,18 @@ function FoodEmissionsMethods() {
         use, with rangeland and forest entries shown as pending under
         category 2. We are piloting the forest methods now: two
         research-preview layers under category 2 show forest biomass
-        carbon flux for 44 US states from ~234,000 paired USDA Forest
-        Inventory and Analysis re-measurements, one for
+        carbon flux for 44 US states and France from ~291,000 paired
+        national forest inventory re-measurements (USDA FIA; France's
+        IGN, whose revisits record each stem's fate and re-measured
+        girth, so growth rides IGN's own volumes), one for
         each accounting option the GHG Protocol is weighing — the
         managed-land proxy (net stock change, including regrowth) and
         activity-based accounting (harvest-attributed flux only). The
-        two options disagree in sign almost everywhere (nationally about
-        −490 vs +270 Mt CO₂e/yr), which is the crux of the deferral
-        debate; the interior West flips to a net source under the
-        managed-land proxy where beetle kill and fire dominate. These layers are never counted in
+        two options disagree in sign in both countries — about −490 vs
+        +270 Mt CO₂e/yr across the US states, and −42 vs +42 Mt CO₂e/yr
+        in France — which is the crux of the deferral debate; within
+        the US, the interior West flips to a net source even under the
+        managed-land proxy, where beetle kill and fire dominate. These layers are never counted in
         any total and will graduate from pilot to source when the
         Standard&rsquo;s forestry language is final.
       </p>

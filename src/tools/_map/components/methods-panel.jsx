@@ -303,10 +303,17 @@ function FoodEmissionsMethods() {
         category of their own, so that is where they will surface here:
         the specific-sources list differentiates soil carbon by land
         use, with rangeland and forest entries shown as pending under
-        category 2. We are piloting the forest methods now — national
-        forest inventory re-measurements, forest-age reconstructions,
-        and satellite biomass epochs — so those entries can go live as
-        soon as the Standard&rsquo;s language is final.
+        category 2. We are piloting the forest methods now: two
+        research-preview layers under category 2 show forest biomass
+        carbon flux for Oregon, Maine, and Georgia from ~31,500 paired
+        USDA Forest Inventory and Analysis re-measurements, one for
+        each accounting option the GHG Protocol is weighing — the
+        managed-land proxy (net stock change, including regrowth) and
+        activity-based accounting (harvest-attributed flux only). The
+        two options disagree in sign in all three states, which is the
+        crux of the deferral debate. These layers are never counted in
+        any total and will graduate from pilot to source when the
+        Standard&rsquo;s forestry language is final.
       </p>
 
       <h2 style={h2Style}>Soil carbon</h2>

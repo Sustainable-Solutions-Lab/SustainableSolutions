@@ -151,8 +151,11 @@ export function SourceCategoryControls({ config, state, dispatch, compact = fals
   const cur = state.activeDimensions.source ?? srcDim.defaultValue ?? 'all'
   const cat2 = config.lsrsCategories.cat2
   const cat3 = config.lsrsCategories.cat3
-  const category = cur === 'cat2' || cat2.ids.includes(cur) ? 'cat2'
-    : cur === 'cat3' || cat3.ids.includes(cur) ? 'cat3' : 'all'
+  // Options pinned to a category via o.cat (forest pilot, pending soil
+  // land uses) keep that category selected without joining its totals.
+  const curCat = (srcDim.options ?? []).find((o) => o.id === cur)?.cat
+  const category = cur === 'cat2' || cat2.ids.includes(cur) || curCat === 'cat2' ? 'cat2'
+    : cur === 'cat3' || cat3.ids.includes(cur) || curCat === 'cat3' ? 'cat3' : 'all'
   // Disabled options are pending layers pinned to a category via o.cat
   // (e.g. rangeland/forest soil carbon under cat. 2 - the LSRS resolves
   // forestry inside categories 1/2, so the roadmap shows here, not as a

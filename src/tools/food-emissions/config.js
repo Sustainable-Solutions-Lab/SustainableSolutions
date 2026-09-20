@@ -156,7 +156,7 @@ function makeVariable({ source, crop }) {
       constantInTime: true,
       note: isMlp
         ? 'Pilot (44 US states, France, Spain): net live-aboveground carbon change on forestland from ~334,000 paired national-inventory re-measurements (USDA FIA, French IGN, Spanish IFN) — the managed-land-proxy accounting option. Red = net loss, blue = net removal. Research preview pending the LSRS forestry standard; not counted in any total.'
-        : 'Pilot (44 US states, France, Spain): carbon flux attributable to harvest — the activity-based accounting option: observed flux on harvested stands minus a matched no-harvest counterfactual, so ambient regrowth and CO₂ fertilization drop out. Red = attributable emissions. Research preview pending the LSRS forestry standard; not counted in any total.',
+        : 'Pilot (44 US states, France, Spain): carbon flux attributable to forest management — the activity-based accounting option: observed flux on managed stands minus a matched counterfactual with no management, so ambient regrowth and CO₂ fertilization drop out. Management is identified from each inventory\u2019s own records of felling and stand treatment. Red = attributable emissions, blue = attributable gain. Research preview pending the LSRS forestry standard; not counted in any total.',
       description: 'Inventory-measured forest carbon flux (US FIA, French IGN, Spanish IFN), mean of recent re-measurement periods.',
     }
   }
@@ -293,7 +293,7 @@ const config = {
         // Forest carbon pilot: the two GHG Protocol accounting options as
         // selectable signed views (research preview, not in totals).
         { id: 'fmlp', label: 'Forest carbon — net stock change (opt. 1 · pilot)', cat: 'cat2' },
-        { id: 'fab', label: 'Forest carbon — activity-based (opt. 2 · pilot)', cat: 'cat2' },
+        { id: 'fab', label: 'Forest carbon — management-attributable (opt. 2 · pilot)', cat: 'cat2' },
         // Pending soil-carbon land uses: listed (disabled) under cat. 2 so
         // the coverage roadmap is visible where it will eventually live.
         { id: 'soil_range', label: 'Soil carbon CO₂ — rangeland (coming)', cat: 'cat2', disabled: true },

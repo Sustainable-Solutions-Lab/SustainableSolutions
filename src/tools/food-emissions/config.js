@@ -134,6 +134,32 @@ function makeVariable({ source, crop }) {
     layer: 'map',
     dimensionValues: { source, crop },
   }
+  // Forest carbon pilot (research preview; OR/ME/GA; live AG pool; not in
+  // any total): the two GHG Protocol accounting options as separate signed
+  // views. fmlp = managed-land-proxy net stock change; fab = activity-based
+  // (harvest-attributed only). Commodity dropdown does not apply.
+  if (source === 'fmlp' || source === 'fab') {
+    const isMlp = source === 'fmlp'
+    return {
+      ...shared,
+      id: source,
+      label: isMlp ? 'Forest carbon — net stock change (opt. 1)' : 'Forest carbon — activity-based (opt. 2)',
+      unit: 't CO₂e/yr',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -300000, max: 300000, zero: 0 },
+      colorMax: isMlp ? 120000 : 60000,
+      colorMin: isMlp ? -120000 : -60000,
+      alphaFloor: 0.05,
+      alphaPower: 0.3,
+      yearTerms: [{ prop: source, src: source }],
+      constantInTime: true,
+      note: isMlp
+        ? 'Pilot (Oregon, Maine, Georgia): net live-aboveground carbon change on forestland from ~31,500 paired FIA re-measurements — the managed-land-proxy accounting option. Red = net loss, blue = net removal. Research preview pending the LSRS forestry standard; not counted in any total.'
+        : 'Pilot (Oregon, Maine, Georgia): harvest-attributed carbon flux only — the activity-based accounting option (undisturbed regrowth is the no-activity baseline and drops out). Red = attributable emissions. Research preview pending the LSRS forestry standard; not counted in any total.',
+      description: 'FIA-measured forest carbon flux, pilot states, mean of ~2015–2023 re-measurement periods.',
+    }
+  }
   if (source === 'all' || source === 'cat2' || source === 'cat3') {
     const base = crop === 'all' ? SOURCE_IDS
       : isLivestock ? LIVESTOCK_SOURCE_IDS : CROPLAND_SOURCE_IDS
@@ -264,6 +290,10 @@ const config = {
         { id: 'cat2', label: 'Land management net biogenic CO₂ (LSRS cat. 2)' },
         { id: 'cat3', label: 'Land management production (LSRS cat. 3)' },
         ...SOURCES.map(([id, label]) => ({ id, label })),
+        // Forest carbon pilot: the two GHG Protocol accounting options as
+        // selectable signed views (research preview, not in totals).
+        { id: 'fmlp', label: 'Forest carbon — net stock change (opt. 1 · pilot OR/ME/GA)', cat: 'cat2' },
+        { id: 'fab', label: 'Forest carbon — activity-based (opt. 2 · pilot OR/ME/GA)', cat: 'cat2' },
         // Pending soil-carbon land uses: listed (disabled) under cat. 2 so
         // the coverage roadmap is visible where it will eventually live.
         { id: 'soil_range', label: 'Soil carbon CO₂ — rangeland (coming)', cat: 'cat2', disabled: true },
@@ -408,6 +438,16 @@ const config = {
       makeVariable({ source, crop: 'all' }),
       ...CROPS.map(([crop]) => makeVariable({ source, crop })),
       ...LIVESTOCK_COMMODITIES.map(([crop]) => makeVariable({ source, crop })),
+    ]),
+    // Forest pilot views ignore the commodity dropdown: alias every crop
+    // selection to the same signed layer so no source x crop combination
+    // is left without a variable.
+    ...['fmlp', 'fab'].flatMap((source) => [
+      makeVariable({ source, crop: 'all' }),
+      ...[...CROPS, ...LIVESTOCK_COMMODITIES, ['feed']].map(([crop]) => ({
+        ...makeVariable({ source, crop: 'all' }),
+        dimensionValues: { source, crop },
+      })),
     ]),
   ],
 

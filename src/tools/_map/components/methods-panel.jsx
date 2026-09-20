@@ -314,8 +314,8 @@ function FoodEmissionsMethods() {
         managed-land proxy (net stock change, including regrowth) and
         activity-based accounting (harvest-attributed flux only). The
         two options disagree in sign in both countries — about −490 vs
-        +270 Mt CO₂e/yr across the US states, −42 vs +42 in France, and
-        −56 vs +12 in Spain — which is the crux of the deferral debate; within
+        +401 Mt CO₂e/yr across the US states, −42 vs +65 in France, and
+        −56 vs +23 in Spain — which is the crux of the deferral debate; within
         the US, the interior West flips to a net source even under the
         managed-land proxy, where beetle kill and fire dominate. These layers are never counted in
         any total and will graduate from pilot to source when the

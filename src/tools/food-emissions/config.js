@@ -156,7 +156,7 @@ function makeVariable({ source, crop }) {
       constantInTime: true,
       note: isMlp
         ? 'Pilot (44 US states, France, Spain): net live-aboveground carbon change on forestland from ~334,000 paired national-inventory re-measurements (USDA FIA, French IGN, Spanish IFN) — the managed-land-proxy accounting option. Red = net loss, blue = net removal. Research preview pending the LSRS forestry standard; not counted in any total.'
-        : 'Pilot (44 US states, France, Spain): harvest-attributed carbon flux only — the activity-based accounting option (undisturbed regrowth is the no-activity baseline and drops out). Red = attributable emissions. Research preview pending the LSRS forestry standard; not counted in any total.',
+        : 'Pilot (44 US states, France, Spain): carbon flux attributable to harvest — the activity-based accounting option: observed flux on harvested stands minus a matched no-harvest counterfactual, so ambient regrowth and CO₂ fertilization drop out. Red = attributable emissions. Research preview pending the LSRS forestry standard; not counted in any total.',
       description: 'Inventory-measured forest carbon flux (US FIA, French IGN, Spanish IFN), mean of recent re-measurement periods.',
     }
   }

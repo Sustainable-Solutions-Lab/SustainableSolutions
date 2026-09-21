@@ -30,6 +30,37 @@ const FILL = 'unit-values-fill'
 const LINE = 'unit-values-line'
 const SEL = 'unit-values-selected'
 
+// Global colour scale, precomputed over every unit at build time
+// (pipeline/export_unit_values.py -> unit-scales.json). Fixed for all
+// viewports and all visitors: the scale must not depend on what happens
+// to be on screen.
+let SCALES = null
+let scalesPromise = null
+function loadScales(url) {
+  if (SCALES || !url) return
+  if (!scalesPromise) {
+    scalesPromise = fetch(url).then((r) => (r.ok ? r.json() : null))
+      .then((d) => { SCALES = d || {} }).catch(() => { SCALES = {} })
+  }
+}
+
+/** Fixed max for a variable: its declared colorMax, else the global p95. */
+function globalMax(v) {
+  if (v?.colorMax != null) return v.colorMax
+  const terms = v?.yearTerms ?? []
+  if (!SCALES || !terms.length) return null
+  // Single-term variables read their own precomputed percentile. Multi-term
+  // ones (totals, LSRS categories) sum the parts: p95 of a sum is not the
+  // sum of p95s, but it is deterministic and errs toward a cooler map,
+  // which is the right way to be wrong for a legend.
+  let s = 0
+  for (const term of terms) {
+    const val = SCALES[term.prop]
+    if (val != null) s += val
+  }
+  return s > 0 ? s : null
+}
+
 /**
  * Selection filter. unit_id alone collided across tile vintages and
  * outlined unrelated polygons, so identity is compound. This lives in one
@@ -101,7 +132,6 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
   // ── Source + layers ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!map || !config.regionalView) return undefined
-    const rangeRef = { p95: null, locked: false }
 
     function paint() {
       const { variable: v, isDark: dark, percentileRange } = refs.current
@@ -161,7 +191,7 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
       }
       const interp = INTERPOLATORS[dark && v.darkColormap ? v.darkColormap : (v.colormap ?? 'SpectralHot')]
         ?? INTERPOLATORS.SpectralHot
-      const max = v.colorMax ?? rangeRef.p95 ?? 20
+      const max = globalMax(v) ?? 20
       const expr = ['interpolate', ['linear'], intensityExpr]
       const steps = 18
       for (let i = 0; i <= steps; i++) {
@@ -186,62 +216,6 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
         } else {
           map.setFilter(FILL, null)
         }
-      } catch {}
-    }
-
-    function computeRange() {
-      if (rangeRef.locked) return
-      const { variable: v } = refs.current
-      if (!v || !map.getLayer?.(FILL)) return
-      try {
-        const feats = map.queryRenderedFeatures({ layers: [FILL] })
-        if (feats.length < 20) return
-        const vals = feats
-          .map((f) => {
-            const val = readVarValue(f.properties, v)
-            if (v.rawRead) return val
-            const a = f.properties.area_km2 || 1
-            return val != null ? (val * 1000) / Math.max(1, a) : null
-          })
-          .filter((x) => x != null && isFinite(x) && x > 0)
-          .sort((a, b) => a - b)
-        if (vals.length < 20) return
-        rangeRef.p95 = vals[Math.floor(0.95 * (vals.length - 1))] || 20
-        // Lock on the first decent sample: recomputing on later idles let
-        // the color scale follow the viewport, so a unit changed color as
-        // you zoomed (California-Mediterranean went yellow to wine). The
-        // scale now freezes per variable until a repaint resets it.
-        if (vals.length >= 50) rangeRef.locked = true
-        paint()
-      } catch {}
-    }
-
-    function ensure() {
-      if (!map.getStyle?.()) return
-      // Lazy creation: layers born visibility:none never trigger tile
-      // loading under the pmtiles protocol, so don't create until the
-      // regional view is first activated. And STRICTLY no-op when the
-      // layers already exist — re-setting layout/paint on every idle
-      // keeps the style permanently dirty and tile loads never finish.
-      if (map.getLayer(FILL)) return
-      if (!(refs.current.active || refs.current.everActive)) return
-      try {
-        if (!map.getSource(SRC)) {
-          map.addSource(SRC, { type: 'vector', url: `pmtiles://${config.regionalView.tilesUrl}` })
-        }
-        const sl = config.regionalView.sourceLayer ?? SRC
-        map.addLayer({ id: FILL, type: 'fill', source: SRC, 'source-layer': sl,
-                       paint: { 'fill-color': 'rgba(0,0,0,0)' } })
-        map.addLayer({ id: LINE, type: 'line', source: SRC, 'source-layer': sl,
-                       // Whisper-weight: biome subdivisions sit far below the
-                       // national/admin-1 reference lines.
-                       paint: { 'line-color': isDark ? 'rgba(248,248,232,0.10)' : 'rgba(24,24,56,0.08)', 'line-width': 0.3 } })
-        if (!map.getLayer(SEL)) {
-          map.addLayer({ id: SEL, type: 'line', source: SRC, 'source-layer': sl,
-                         filter: selectionFilter(refs.current.selectedUnit),
-                         paint: { 'line-color': isDark ? '#F8F8E8' : '#181838', 'line-width': 2 } })
-        }
-        paint()
       } catch {}
     }
 
@@ -273,19 +247,17 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
     // If the map is already idle at activation no event may fire — retry.
     const retry = setInterval(ensure, 400)
     const stopRetry = setTimeout(() => clearInterval(retry), 4000)
-    map.on('idle', computeRange)
     map.on('mousemove', onMove)
     map.on('click', onClick)
     map.on('mouseout', onLeave)
     // repaint hooks for variable/theme/percentile changes
-    refs.current.repaint = () => { rangeRef.p95 = null; rangeRef.locked = false; computeRange(); paint() }
+    refs.current.repaint = () => { paint() }
     refs.current.ensure = ensure
     return () => {
       clearInterval(retry)
       clearTimeout(stopRetry)
       map.off('styledata', ensure)
       map.off('idle', ensure)
-      map.off('idle', computeRange)
       map.off('mousemove', onMove)
       map.off('click', onClick)
       map.off('mouseout', onLeave)

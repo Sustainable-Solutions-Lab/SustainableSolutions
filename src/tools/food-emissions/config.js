@@ -508,6 +508,9 @@ const config = {
 
   // ── Regional map view: admin-1 x biome unit choropleth ──────────────────
   regionalView: {
+    // Fixed global colour scale, precomputed over every unit so the ramp
+    // never depends on the viewport (pipeline/export_unit_values.py).
+    scalesUrl: '/tools/food-emissions/unit-scales.json',
     tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/unit-values.pmtiles',
     sourceLayer: 'unit-values',
   },

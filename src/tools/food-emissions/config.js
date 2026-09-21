@@ -614,6 +614,10 @@ const config = {
   tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/food-emissions.pmtiles',
   sourceLayer: 'food-emissions',
   distributionsUrl: '/tools/food-emissions/distributions.json',
+  // Per-country value ladders backing the gridded colour scale; see
+  // _map/lib/fixed-color-range.js for why the global sample alone is not
+  // enough once national year factors are applied.
+  colorLaddersUrl: '/tools/food-emissions/distributions-by-country.json',
   // Vertical emissions-by-latitude marginal along the map's right edge.
   latProfileUrl: '/tools/food-emissions/lat-profiles.json',
   // Two cell tiers (crossfading at z 2.75-3.0): 0.5° aggregates carry the

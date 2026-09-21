@@ -91,6 +91,60 @@ async function main() {
   );
   console.log(`  distributions.json: ${keys.size} variables`);
 
+  // Per-country value ladders, consumed by the map's colour scale
+  // (_map/lib/fixed-color-range.js).
+  //
+  // A cell's displayed value is its reference-year value times that
+  // country's year factor, so the colour range for any year - or for the
+  // difference between two years in compare mode - depends on the joint
+  // distribution of (value, country), not on the value distribution alone.
+  // Percentiles of the global sample scaled by a typical factor are not a
+  // usable substitute: countries whose emissions fell tend to be the ones
+  // with smaller cells, so that shortcut overstated the negative side of a
+  // compare map by 2.5x and washed the blues out of it.
+  //
+  // Sixteen evenly spaced quantiles per country, each standing for n/16
+  // cells, reconstruct the mixture to within ~20 % of the true p99 on the
+  // positive side and ~5 % on the negative, checked against a full pass
+  // over every cell for three year pairs. Eight quantiles is visibly worse
+  // on the positive tail; thirty-two buys nothing.
+  console.log('Building per-country ladders…');
+  const LADDER = 16;
+  const byCountry = {};           // prop -> m49 -> [values]
+  for (const line of raw) {
+    const props = JSON.parse(line).properties;
+    if (props._scale !== 28) continue;
+    const m49 = props.m49;
+    if (m49 == null) continue;
+    for (const [k, v] of Object.entries(props)) {
+      if (k === '_scale' || k === 'm49' || k === 'ha') continue;
+      if (typeof v !== 'number' || !isFinite(v) || v === 0) continue;
+      ((byCountry[k] ??= {})[m49] ??= []).push(v);
+    }
+  }
+  const ladders = {};
+  for (const [k, countries] of Object.entries(byCountry)) {
+    const out = {};
+    for (const [m49, arr] of Object.entries(countries)) {
+      // Countries with a handful of cells contribute noise, not shape.
+      if (arr.length < LADDER) continue;
+      arr.sort((a, b) => a - b);
+      const q = [];
+      for (let j = 0; j < LADDER; j++) {
+        q.push(+arr[Math.floor(((j + 0.5) / LADDER) * (arr.length - 1))].toPrecision(4));
+      }
+      out[m49] = { n: arr.length, q };
+    }
+    if (Object.keys(out).length) ladders[k] = out;
+  }
+  await fs.writeFile(
+    resolve(PUBLIC_DIR, 'distributions-by-country.json'),
+    JSON.stringify({ ladder: LADDER, props: ladders }),
+  );
+  const lsz = (await fs.stat(resolve(PUBLIC_DIR, 'distributions-by-country.json'))).size;
+  console.log(`  distributions-by-country.json: ${Object.keys(ladders).length} variables, ` +
+    `${(lsz / 1024 / 1024).toFixed(2)} MB`);
+
   // Latitudinal profiles: per-variable sums in 0.25-degree latitude bands,
   // for the map's right-edge marginal chart. Full pass (not sampled).
   console.log('Building latitude profiles…');

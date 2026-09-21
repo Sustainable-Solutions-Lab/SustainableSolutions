@@ -41,21 +41,11 @@ function applyJustAirFilter(map, config, variable, percentileRange, onFilterStat
         console.error('[applyJustAirFilter] setFilter', layerId, err)
       }
     }
-    if (onFilterStats) {
-      const sourceLayer = config.sourceLayer ?? config.id
-      let features = []
-      try { features = map.querySourceFeatures(JUST_AIR_SOURCE_ID, { sourceLayer }) } catch {}
-      const totalValues = features
-        .map((f) => readVarValue(f.properties, variable))
-        .filter((v) => v != null && !isNaN(v))
-      onFilterStats({
-        count: totalValues.length,
-        totalCount: totalValues.length,
-        mean: null,
-        median: null,
-        allValues: totalValues,
-      })
-    }
+    // No stats scan here. The slider is at its default, so there are no
+    // thresholds to derive, and the sidebar histogram and legend read the
+    // precomputed sample (distributions.json), not live features. Scanning
+    // the whole source to fill an unread field cost ~1.8 s of blocked main
+    // thread on every variable change, twice over.
     return
   }
 

@@ -27,8 +27,9 @@
  * wide on the positive side and 2.5x on the negative, which is what drained
  * the blue out of the compare map.
  *
- * distributions-by-country.json carries sixteen evenly spaced quantiles per
- * country per property, each standing for n/16 cells. Scaling each country's
+ * distributions-by-country.json (2.5 MB raw, 596 KB gzipped, fetched in the
+ * background) carries sixteen evenly spaced quantiles per country per
+ * property, each standing for n/16 cells. Scaling each country's
  * ladder by that country's own factor and taking a weighted percentile of the
  * mixture reproduces the true p99 to within ~20 % on the positive side and
  * ~5 % on the negative, across year pairs as different as 2024-vs-2000 and

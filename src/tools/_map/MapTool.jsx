@@ -121,6 +121,11 @@ function seedStateForProject(projectId) {
   for (const d of project.dimensions ?? []) {
     activeDimensions[d.id] = d.defaultValue
   }
+  // Improved crop maps are on by default: they are strictly better
+  // placement within the same national totals, so the finer map is the
+  // right thing to show first and SPAM is the fallback, not the default.
+  const sfx = (project.enhancedMasks ?? []).map((m) => m.suffix).filter(Boolean)
+  if (sfx.length) activeDimensions.masks = sfx.join(',')
   return {
     ...initialState,
     projectId,

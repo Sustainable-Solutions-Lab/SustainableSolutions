@@ -85,7 +85,20 @@ function ContinuousLegend({ variable, allValues = [], isDark = true }) {
     const sorted_ = [...allValues].sort((a, b) => a - b)
     const p01 = sorted_[Math.floor(sorted_.length * 0.01)] ?? sorted_[0]
     const p99 = sorted_[Math.floor(sorted_.length * 0.99)] ?? sorted_[sorted_.length - 1]
-    if (p99 > p01) effectiveDomain = { ...variable.domain, min: p01, max: p99 }
+    if (p99 > p01) {
+      if (variable.diverging) {
+        // A diverging ramp means nothing unless both arms are visible.
+        // Percentile-trimming a one-sided variable (the management-
+        // attributable forest layer is 94% negative) left a legend with
+        // no blue in it at all, so keep the domain symmetric about the
+        // declared zero and let the rarer sign keep its colour.
+        const z = zeroVal
+        const half = Math.max(Math.abs(p99 - z), Math.abs(z - p01))
+        effectiveDomain = { ...variable.domain, min: z - half, max: z + half }
+      } else {
+        effectiveDomain = { ...variable.domain, min: p01, max: p99 }
+      }
+    }
   }
   const { min, max } = effectiveDomain
 
@@ -174,7 +187,20 @@ function MobileContinuousLegend({ variable, allValues = [], isDark }) {
     const sorted_ = [...allValues].sort((a, b) => a - b)
     const p01 = sorted_[Math.floor(sorted_.length * 0.01)] ?? sorted_[0]
     const p99 = sorted_[Math.floor(sorted_.length * 0.99)] ?? sorted_[sorted_.length - 1]
-    if (p99 > p01) effectiveDomain = { ...variable.domain, min: p01, max: p99 }
+    if (p99 > p01) {
+      if (variable.diverging) {
+        // A diverging ramp means nothing unless both arms are visible.
+        // Percentile-trimming a one-sided variable (the management-
+        // attributable forest layer is 94% negative) left a legend with
+        // no blue in it at all, so keep the domain symmetric about the
+        // declared zero and let the rarer sign keep its colour.
+        const z = zeroVal
+        const half = Math.max(Math.abs(p99 - z), Math.abs(z - p01))
+        effectiveDomain = { ...variable.domain, min: z - half, max: z + half }
+      } else {
+        effectiveDomain = { ...variable.domain, min: p01, max: p99 }
+      }
+    }
   }
   const { min, max } = effectiveDomain
 

@@ -131,7 +131,7 @@ async function main() {
       arr.sort((a, b) => a - b);
       const q = [];
       for (let j = 0; j < LADDER; j++) {
-        q.push(+arr[Math.floor(((j + 0.5) / LADDER) * (arr.length - 1))].toPrecision(4));
+        q.push(+arr[Math.floor(((j + 0.5) / LADDER) * (arr.length - 1))].toPrecision(3));
       }
       out[m49] = { n: arr.length, q };
     }

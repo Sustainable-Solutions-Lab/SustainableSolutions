@@ -24,23 +24,31 @@ import { useEffect, useState } from 'react'
 const C = 200            // centre of the 400 x 400 viewBox
 const R = 82             // globe radius
 
-// 1 — vertical crosshair, top to bottom, running well past the globe.
-const VERT = `M ${C} 62 L ${C} 358`
+// 1 — vertical crosshair, top to bottom. The arms clear the globe by about
+//      half a radius; further out and the mark reads as a gunsight rather
+//      than a logo.
+const VERT = `M ${C} 84 L ${C} 330`
 
 // 2 — horizontal crosshair, left to right, with the gap on the left arm.
 //     Two subpaths in one element: a dash sweep crosses the gap and picks
 //     up again on the far side, exactly like lifting the pen.
-const HORIZ = `M 50 ${C} L 160 ${C} M 168 ${C} L 349 ${C}`
+//     The artwork's gap scales to about 8 units here, but at this size an
+//     11-unit stroke all but closes it, so it is opened to 20 to survive.
+const HORIZ = `M 76 ${C} L 152 ${C} M 172 ${C} L 324 ${C}`
 
-// 3 — the globe, one clockwise stroke from twelve o'clock.
-const GLOBE = `M ${C} ${C - R} A ${R} ${R} 0 0 1 ${C} ${C + R} ` +
-              `A ${R} ${R} 0 0 1 ${C} ${C - R}`
+// 3 — the globe, one clockwise stroke from six o'clock: down at the bottom,
+//     round past nine, over the top and back. Sweep flag 1 is clockwise on
+//     screen, so from the bottom it leaves to the left.
+const GLOBE = `M ${C} ${C + R} A ${R} ${R} 0 0 1 ${C} ${C - R} ` +
+              `A ${R} ${R} 0 0 1 ${C} ${C + R}`
 
 // 4 — satellites: an orbit streak, then the body, then the lit core.
+//     Ordered the way the globe is drawn — clockwise from six o'clock — so
+//     they arrive following the stroke that just went round.
 const SATS = [
-  { streak: 'M 104.6 108.8 A 138 138 0 0 0 55 196.5',   cx: 113.8, cy: 92.6,  r: 23.0, k: 9.7 },
-  { streak: 'M 298.7 291.2 A 136 136 0 0 1 326.3 255.4', cx: 290.6, cy: 302.8, r: 22.0, k: 9.2 },
+  { streak: 'M 104.6 108.8 A 138 138 0 0 0 55 196.5',    cx: 113.8, cy: 92.6,  r: 23.0, k: 9.7 },
   { streak: 'M 74.6 256.6 A 137 137 0 0 0 132.3 319',    cx: 303.3, cy: 128.4, r: 25.4, k: 13.2 },
+  { streak: 'M 298.7 291.2 A 136 136 0 0 1 326.3 255.4', cx: 290.6, cy: 302.8, r: 22.0, k: 9.2 },
 ]
 
 // Logo colours: navy structure (cream on a dark map so it stays visible),

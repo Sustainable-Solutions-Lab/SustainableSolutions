@@ -241,20 +241,23 @@ function FoodEmissionsMethods() {
         padding: '12px 14px', margin: '0 0 14px',
       }}>
         <p style={{ ...pStyle, margin: '0 0 8px' }}>
-          <a href="/tools/food-emissions/ef_admin1_2024.csv" style={linkStyle} download>
-            <strong>Admin-1 × commodity × source</strong></a>{' '}
-          — every subnational unit, 28,460 rows. The bulk download most
-          users want.
+          <a href="/tools/food-emissions/emission_factors_2024.xlsx" style={linkStyle} download>
+            <strong>Emission factors workbook (XLSX)</strong></a>{' '}
+          — the whole set in one file: admin-1 and country tables, plus
+          sheets defining every column and every source and commodity
+          abbreviation. Start here.
         </p>
-        <p style={{ ...pStyle, margin: 0 }}>
+        <p style={{ ...pStyle, margin: 0, fontSize: 13 }}>
+          Same data as CSV for scripting:{' '}
+          <a href="/tools/food-emissions/ef_admin1_2024.csv" style={linkStyle} download>
+            admin-1</a>{' · '}
           <a href="/tools/food-emissions/ef_country_2024.csv" style={linkStyle} download>
-            <strong>Country × commodity × source</strong></a>{' '}
-          — national factors, 2,104 rows, same columns.
+            country</a>
         </p>
       </div>
       <p style={pStyle}>
-        Both files share a column layout, so they concatenate or join
-        without reshaping. Factors for an arbitrary area, including an
+        The two tables share a column layout, so they concatenate or join
+        without reshaping, and cover 18 crops and 8 livestock commodities. Factors for an arbitrary area, including an
         uploaded sourcing polygon, download from the Region Focus panel
         instead, and those follow whichever year is selected on the map.
         Both the emissions and the production denominator here are moved

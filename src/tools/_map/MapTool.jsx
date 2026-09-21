@@ -26,6 +26,7 @@ import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
 import { MethodsPanel } from './components/methods-panel.jsx'
+import { MapBusy } from './components/map/map-busy.jsx'
 import { DevControls, shouldShowDevControls, readStoredTuning } from './components/dev-controls.jsx'
 import { DEFAULT_TUNING } from './lib/use-just-air-layers.js'
 
@@ -320,6 +321,11 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     for (const [v, a] of [[0, 0.06], [1, 0.3], [8, 0.6], [40, 0.85], [150, 1]]) expr.push(v, a)
     return expr
   }, [socCellOpacity, analysisCellMagnitude])
+  // Repainting every feature after a paint-key change (compare, mask
+  // toggle, source or commodity switch) blocks the main thread for a
+  // beat. Show that it is working instead of appearing frozen.
+  const [mapBusy, setMapBusy] = useState(false)
+
   const analysisPaintKey = [
     state.analysis ?? '-',
     paleDriver, isDark ? 'd' : 'l', state.mapView, toolYearFactors ? 'f' : '-',
@@ -327,6 +333,23 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     domCompare ? `cmp${domCompare.from}-${domCompare.to}` : '-',
     maskSuffixes.join('+') || '-',
   ].join('|')
+
+  const paintKeyRef = useRef(analysisPaintKey)
+  useEffect(() => {
+    if (paintKeyRef.current === analysisPaintKey) return
+    paintKeyRef.current = analysisPaintKey
+    setMapBusy(true)
+  }, [analysisPaintKey])
+
+  useEffect(() => {
+    if (!mapInstance) return undefined
+    const done = () => setMapBusy(false)
+    mapInstance.on('idle', done)
+    // Never strand the overlay if idle does not fire (a style already
+    // settled, or a repaint that changes nothing).
+    const bail = setTimeout(done, 6000)
+    return () => { try { mapInstance.off('idle', done) } catch {} ; clearTimeout(bail) }
+  }, [mapInstance, mapBusy])
 
   // ── Dimension animation ────────────────────────────────────────────────
   // Lives at tool level (not in the slider component) so it keeps running —
@@ -892,6 +915,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               isDark={isDark}
             />
           )}
+
+          {/* Busy veil over the map while a paint-key change is applied. */}
+          <MapBusy busy={mapBusy} isDark={isDark} />
 
           {/* Always-on year control — config-gated (yearControl) */}
           {config.yearControl && !paleActive && (

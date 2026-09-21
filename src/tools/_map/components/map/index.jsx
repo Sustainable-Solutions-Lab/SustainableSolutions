@@ -534,7 +534,17 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     }
 
     // Try immediately — works if source is already loaded
-    applyFilter()
+    // Defer past a browser paint. This effect walks every feature in the
+    // source (querySourceFeatures over ~256k cells, then a sort), which is
+    // seconds of synchronous main-thread work. Run inline, it happens in
+    // the same commit as the click that triggered it, so the checkbox the
+    // user just clicked does not visually toggle and no loading indicator
+    // can appear until it finishes. Two frames of delay costs nothing and
+    // lets the UI respond first.
+    let raf1 = 0, raf2 = 0
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => { try { applyFilter() } catch {} })
+    })
 
     // Re-run once the source finishes loading (querySourceFeatures returns empty
     // until the GeoJSON/tile data has been parsed and loaded into the map).
@@ -547,6 +557,8 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     map.on('sourcedata', onSourceData)
 
     return () => {
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
       map.off('sourcedata', onSourceData)
     }
   }, [state.percentileRange, state.activeLayer, state.activeDimensions, config, mapReady, onFilterStats])

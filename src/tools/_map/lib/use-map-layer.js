@@ -302,7 +302,22 @@ export function useMapLayer(map, config, state, opacityP95) {
       } catch (_) { /* ignore */ }
     }
 
+    // Applying the paint expressions is the expensive step: in compare mode
+    // the colour expression carries a match over ~236 countries for each of
+    // up to 12 source terms at two years, and MapLibre evaluates it for
+    // every one of ~256k cells. Run it two frames late so the click that
+    // triggered it can paint first - otherwise the control the user just
+    // toggled stays visually unchanged, and any loading indicator is stuck
+    // behind the same blocked frame.
+    let paintRaf1 = 0, paintRaf2 = 0
     function updatePaint() {
+      cancelAnimationFrame(paintRaf1); cancelAnimationFrame(paintRaf2)
+      paintRaf1 = requestAnimationFrame(() => {
+        paintRaf2 = requestAnimationFrame(applyPaintNow)
+      })
+    }
+
+    function applyPaintNow() {
       if (paintingRef.current) return
       const variable = variableRef.current
       if (!variable) return
@@ -338,6 +353,8 @@ export function useMapLayer(map, config, state, opacityP95) {
     }
 
     return () => {
+      cancelAnimationFrame(paintRaf1)
+      cancelAnimationFrame(paintRaf2)
       map.off('styledata', addLayers)
       map.off('sourcedata', onSourceData)
       for (const layerId of LAYER_IDS) {

@@ -3,7 +3,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ScopeMatrix from '../components/ScopeMatrix.astro';
 import featured from '../data/featured.json';
 import publications from '../data/publications.json';
-import type { FeaturedItem, Publication } from '../lib/types';
+import tools from '../data/tools.json';
+import type { FeaturedItem, Publication, Tool } from '../lib/types';
+import { toolHref, toolsForPublication } from '../lib/tools';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -44,10 +46,18 @@ const cards = items.map((it) => {
     (anchorLink && (!it.link || it.link === '/publications'))
       ? anchorLink
       : (it.link || pub?.url || (it.doi ? `https://doi.org/${it.doi}` : null) || '#');
+  // Companion efforts (Cornerstone and the like), resolved the same way the
+  // publication cards do it: explicit slugs in the Publications tab's `tool`
+  // column, plus any Tools-tab row whose own `doi` matches the paper.
+  // Drop any that resolve to this card's own href: a type=tool card carrying
+  // its paper's DOI otherwise lists itself as its own companion.
+  const companions: Tool[] = (pub ? toolsForPublication(pub, tools as Tool[]) : [])
+    .filter((t) => toolHref(t) !== link);
   return {
     ...it,
     imgUrl: resolveImage(it.image_filename),
     pub,
+    companions,
     href: link,
     isExternal: typeof link === 'string' && /^https?:\/\//.test(link),
   };
@@ -87,10 +97,18 @@ const cards = items.map((it) => {
       <ul class="list-none p-0 m-0 grid md:grid-cols-3 gap-6 auto-rows-fr">
         {cards.map((it) => (
           <li class="m-0 p-0 h-full">
+            {/* The card border/hover lives on this wrapper rather than the
+                anchor so a companion-effort link can sit alongside the main
+                link instead of nested inside it (nested <a> is invalid, and
+                the stretched-link ::after trick would collide with the
+                global a[data-external]::after arrow). */}
+            <div
+              class="group flex flex-col h-full bg-paper border border-rule border-b-0 hover:border-ink-3 transition-colors"
+              style="border-radius: var(--radius-md); overflow: hidden;"
+            >
             <a
               href={it.href}
-              class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
-              style="border-radius: var(--radius-md); overflow: hidden;"
+              class="flex flex-col flex-1 bare"
               data-external={it.isExternal ? '' : null}
             >
               {it.imgUrl ? (
@@ -123,6 +141,22 @@ const cards = items.map((it) => {
                 )}
               </div>
             </a>
+            {it.companions.length > 0 && (
+              <p class="font-mono text-xs text-ink-3 px-5 pb-5 m-0 uppercase tracking-wider">
+                <span class="mr-1">Companion effort:</span>
+                {it.companions.map((t, i) => (
+                  <>
+                    {i > 0 && <span class="dot">·</span>}
+                    <a
+                      href={toolHref(t)}
+                      class="border-b-0 hover:underline"
+                      data-external={/^https?:\/\//.test(toolHref(t)) ? '' : null}
+                    >{t.title}</a>
+                  </>
+                ))}
+              </p>
+            )}
+            </div>
           </li>
         ))}
       </ul>

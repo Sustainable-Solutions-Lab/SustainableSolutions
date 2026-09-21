@@ -14,25 +14,22 @@
  */
 import { useEffect, useState } from 'react'
 
-// The lab mark (public/logos/lab/lab-logo.svg), ordered so the drawing
-// reads outside-in: the enclosing arc, the two inner quarters, then the
-// small gestures and the outer ticks.
-const STROKES = [
-  { d: 'M32.27,170.53c0-36.8,14.04-73.6,42.12-101.68', w: 7 },
-  { d: 'M102.88,294.33c-25.86-15.32-46.51-38.52-58.64-66.29', w: 7 },
-  { d: 'M309.41,224.43c-6.06,14.98-14.57,28.7-25.03,40.67', w: 7 },
-  { d: 'M176.11,260.93c-49.8,0-90.18-40.37-90.18-90.18s40.37-90.18,90.18-90.18', w: 11 },
-  { d: 'M176.11,170.75v-90.18c49.8,0,90.18,40.37,90.18,90.18', w: 11 },
-  { d: 'M176.11,170.75v90.18c49.8,0,90.18-40.37,90.18-90.18', w: 11 },
-  { d: 'M176.07,94.13c11.66-.85,33.12,5.93,38.49,10.16', w: 6 },
-  { d: 'M180.48,234.6c6.78-26.73,45.74-4.89,65.13-17.88', w: 6 },
+// The actual lab mark, converted from LabLogo_spectral.ai (the Illustrator
+// master) rather than redrawn: the two blue quarter arcs, the green
+// enclosing arc, the cream bar, and the three orange nodes, in the
+// artwork's own colours. Rendered as strokes so each can be painted on.
+const MARK = [
+  { c: '#A9DE94', k: 'arc', d: 'M 175.84375 260.746094 C 126.117188 260.746094 85.800781 220.433594 85.800781 170.707031 C 85.800781 120.976562 126.117188 80.664062 175.84375 80.664062' },
+  { c: '#348AC8', k: 'arc', d: 'M 175.84375 170.707031 L 175.84375 80.664062 C 225.570312 80.664062 265.886719 120.976562 265.886719 170.707031' },
+  { c: '#348AC8', k: 'arc', d: 'M 175.84375 170.707031 L 175.84375 260.746094 C 225.570312 260.746094 265.886719 220.433594 265.886719 170.707031' },
+  { c: '#FCFDEA', k: 'bar', d: 'M 171.375 240.875 L 247.097656 240.875 L 247.097656 214.941406 L 171.375 214.941406 Z M 171.375 240.875' },
+  { c: '#F89A40', k: 'dot', d: 'M 102.722656 60.929688 C 102.722656 70.574219 94.902344 78.394531 85.257812 78.394531 C 75.613281 78.394531 67.796875 70.574219 67.796875 60.929688 C 67.796875 51.285156 75.613281 43.464844 85.257812 43.464844 C 94.902344 43.464844 102.722656 51.285156 102.722656 60.929688' },
+  { c: '#F89A40', k: 'dot', d: 'M 305.78125 95.371094 C 305.78125 107.429688 296.007812 117.199219 283.953125 117.199219 C 271.898438 117.199219 262.125 107.429688 262.125 95.371094 C 262.125 83.316406 271.898438 73.542969 283.953125 73.542969 C 296.007812 73.542969 305.78125 83.316406 305.78125 95.371094' },
+  { c: '#F89A40', k: 'dot', d: 'M 287.101562 280.484375 C 287.101562 290.128906 279.28125 297.949219 269.636719 297.949219 C 259.992188 297.949219 252.171875 290.128906 252.171875 280.484375 C 252.171875 270.839844 259.992188 263.019531 269.636719 263.019531 C 279.28125 263.019531 287.101562 270.839844 287.101562 280.484375' },
 ]
 
-// ColorBrewer Spectral, the lab's data palette, warm through cool so the
-// stroke order carries the ramp.
-const SPECTRAL = ['#9E0142', '#D53E4F', '#F46D43', '#FDAE61',
-                  '#66C2A5', '#3288BD', '#5E4FA2', '#78C8D8']
-
+// Nodes are closed circles and the bar is a closed rectangle, so they read
+// better fading in as a whole than being traced.
 const CYCLE = 2200          // ms for one full paint-and-evaporate pass
 const STAGGER = 150         // ms between strokes starting
 
@@ -64,20 +61,20 @@ export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
         opacity: busy ? 1 : 0, transition: 'opacity 200ms ease',
       }}
     >
-      <svg viewBox="0 0 343.48 343.91" width="96" height="96" aria-hidden="true">
-        {STROKES.map((s, i) => (
+      <svg viewBox="0 0 343.482 343.905" width="104" height="104" aria-hidden="true">
+        {MARK.map((s, i) => (
           <path
-            key={s.d + i}
+            key={i}
             d={s.d}
-            fill="none"
-            stroke={SPECTRAL[i % SPECTRAL.length]}
-            strokeWidth={s.w}
+            fill={s.k === 'arc' ? 'none' : s.c}
+            stroke={s.c}
+            strokeWidth={s.k === 'arc' ? 15 : 0}
             strokeLinecap="round"
             style={{
-              // 360 comfortably exceeds the longest arc, so one offset
-              // sweep covers any stroke without measuring each path.
-              strokeDasharray: 360,
-              animation: `ssl-paint ${CYCLE}ms linear ${i * STAGGER}ms infinite`,
+              // Arcs are traced; the bar and nodes simply wash in and out.
+              ...(s.k === 'arc'
+                ? { strokeDasharray: 620, animation: `ssl-paint ${CYCLE}ms linear ${i * STAGGER}ms infinite` }
+                : { animation: `ssl-wash ${CYCLE}ms linear ${i * STAGGER}ms infinite` }),
             }}
           />
         ))}
@@ -94,13 +91,20 @@ export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
       <style>{`
         @keyframes ssl-paint {
           /* wet: the stroke lays down */
-          0%   { stroke-dashoffset: 360; opacity: 0; }
-          8%   { opacity: 0.95; }
-          38%  { stroke-dashoffset: 0;  opacity: 0.95; }
-          /* drying: it thins from the end it was drawn from */
-          70%  { stroke-dashoffset: -360; opacity: 0.35; }
-          85%  { opacity: 0; }
-          100% { stroke-dashoffset: -360; opacity: 0; }
+          0%   { stroke-dashoffset: 620; opacity: 0; }
+          7%   { opacity: 1; }
+          40%  { stroke-dashoffset: 0;  opacity: 1; }
+          /* drying: it retreats from the end it was drawn from */
+          72%  { stroke-dashoffset: -620; opacity: 0.4; }
+          86%  { opacity: 0; }
+          100% { stroke-dashoffset: -620; opacity: 0; }
+        }
+        @keyframes ssl-wash {
+          0%   { opacity: 0; }
+          18%  { opacity: 1; }
+          58%  { opacity: 1; }
+          86%  { opacity: 0; }
+          100% { opacity: 0; }
         }
         @media (prefers-reduced-motion: reduce) {
           svg path { animation-duration: 0ms !important;

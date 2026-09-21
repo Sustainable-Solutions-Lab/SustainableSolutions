@@ -600,9 +600,9 @@ const config = {
   // Bulk emission-factor download, surfaced in the sidebar as well as in
   // the methods panel: admin-1 x commodity x source, kg CO2e per kg.
   efDownload: {
-    href: '/tools/food-emissions/ef_admin1_2020.csv',
+    href: '/tools/food-emissions/ef_admin1_2024.csv',
     label: 'Download factors ↓',
-    title: 'Admin-1 by commodity by source emission factors, kg CO\u2082e per kg, 2020 (CSV)',
+    title: 'Admin-1 by commodity by source emission factors, kg CO\u2082e per kg, 2024 (CSV)',
   },
 
   // Tiles on R2 like the other map tools; rebuild via

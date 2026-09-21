@@ -435,6 +435,24 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           Read Methods
         </button>
 
+        {/* Bulk factor download, surfaced here so it does not require
+            opening Methods to find. Config-gated: only projects that
+            publish a factor table declare efDownload. */}
+        {config.efDownload && (
+          <a
+            href={config.efDownload.href}
+            download
+            className={[
+              'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-2',
+              'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
+              'transition-colors hover:text-ink font-normal text-ink-3 no-underline',
+            ].join(' ')}
+            title={config.efDownload.title}
+          >
+            {config.efDownload.label}
+          </a>
+        )}
+
         {/* Repo links — bottom of the panel, matching the magnets explorer's
             footer pattern (octicon + mono repo name). Standard placement for
             all map tools. */}

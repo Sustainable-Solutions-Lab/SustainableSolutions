@@ -334,21 +334,33 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     maskSuffixes.join('+') || '-',
   ].join('|')
 
+  // Flip to busy during render, not in an effect: an effect runs after
+  // the commit, so the veil would appear only once the expensive work had
+  // already started and blocked the frame. Computing it from the paint key
+  // during render means the veil and the toggled control paint together.
   const paintKeyRef = useRef(analysisPaintKey)
-  useEffect(() => {
-    if (paintKeyRef.current === analysisPaintKey) return
+  if (paintKeyRef.current !== analysisPaintKey) {
     paintKeyRef.current = analysisPaintKey
-    setMapBusy(true)
-  }, [analysisPaintKey])
+    if (!mapBusy) setMapBusy(true)
+  }
 
   useEffect(() => {
-    if (!mapInstance) return undefined
-    const done = () => setMapBusy(false)
+    if (!mapInstance || !mapBusy) return undefined
+    // Guarantee at least one painted frame of the veil, otherwise a cheap
+    // repaint clears it before it is ever visible and the user sees a
+    // flicker instead of feedback.
+    let min = false, idle = false
+    const settle = () => { if (min && idle) setMapBusy(false) }
+    const t0 = setTimeout(() => { min = true; settle() }, 420)
+    const done = () => { idle = true; settle() }
     mapInstance.on('idle', done)
     // Never strand the overlay if idle does not fire (a style already
     // settled, or a repaint that changes nothing).
-    const bail = setTimeout(done, 6000)
-    return () => { try { mapInstance.off('idle', done) } catch {} ; clearTimeout(bail) }
+    const bail = setTimeout(() => setMapBusy(false), 8000)
+    return () => {
+      try { mapInstance.off('idle', done) } catch {}
+      clearTimeout(t0); clearTimeout(bail)
+    }
   }, [mapInstance, mapBusy])
 
   // ── Dimension animation ────────────────────────────────────────────────

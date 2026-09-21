@@ -390,6 +390,12 @@ const config = {
       note: 'Places EU wheat, barley, maize, rice, potatoes, rapeseed, and soybean where EUCROPMAP 2022 maps them. National totals unchanged.',
     },
     {
+      id: 'wang-rubber',
+      label: 'Rubber — satellite-mapped at 10 m (Wang et al. 2023)',
+      suffix: '__wng',
+      note: 'Places Southeast Asian rubber, about nine tenths of world production, where 10 m imagery maps it. The mapped extent reproduces the published 14.2 Mha. National totals unchanged.',
+    },
+    {
       id: 'fdap',
       label: 'Cocoa & coffee — AI-mapped at 10 m (Forest Data Partnership 2026)',
       suffix: '__fdp',

@@ -16,7 +16,7 @@ import { ZipInput } from './zip-input.jsx'
 import { PolygonUpload } from './polygon-upload.jsx'
 import { categoricalLegend } from '../../lib/analysis-categorical.js'
 
-export function Sidebar({ config, state, dispatch, allValues = [], companion = null, repoLinks = null, paleActive = false, setPaleActive = null, paleDriver = 'r_net', setPaleDriver = null, analysisEntries = [] }) {
+export function Sidebar({ config, state, dispatch, allValues = [], companion = null, repoLinks = null, paleActive = false, setPaleActive = null, paleDriver = 'r_net', setPaleDriver = null, analysisEntries = [], colorRange = null }) {
   const [masksOpen, setMasksOpen] = useState(false)
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
@@ -332,6 +332,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           <Legend
             variable={activeVariable}
             allValues={allValues}
+            colorRange={colorRange}
             isDark={state.colorScheme === 'dark'}
           />
         ) : null}

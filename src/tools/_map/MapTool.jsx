@@ -27,6 +27,7 @@ import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
 import { MethodsPanel } from './components/methods-panel.jsx'
 import { MapBusy } from './components/map/map-busy.jsx'
+import { loadColorSamples, peekColorSamples, fixedColorRange } from './lib/fixed-color-range.js'
 import { DevControls, shouldShowDevControls, readStoredTuning } from './components/dev-controls.jsx'
 import { DEFAULT_TUNING } from './lib/use-just-air-layers.js'
 
@@ -217,6 +218,27 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     [activeCategorical, config, state.activeDimensions],
   )
   const activeVariable = activeLevel ? makeLevelVariable(activeLevel) : attachedVariable
+
+  // The colour range the gridded cells are actually painted with. Computed
+  // here as well as in the layer hook, from the same inputs and the same
+  // module-cached samples, so the legend cannot drift from the map. Without
+  // it the legend fell back to the variable's declared domain and quoted a
+  // symmetric span while the ramp saturated asymmetrically.
+  const [colorSamples, setColorSamples] = useState(
+    () => peekColorSamples(config.distributionsUrl, config.colorLaddersUrl),
+  )
+  useEffect(() => {
+    if (colorSamples) return undefined
+    if (!config.distributionsUrl && !config.colorLaddersUrl) return undefined
+    let alive = true
+    loadColorSamples(config.distributionsUrl, config.colorLaddersUrl)
+      .then((s) => { if (alive && s) setColorSamples(s) })
+    return () => { alive = false }
+  }, [config.distributionsUrl, config.colorLaddersUrl, colorSamples])
+  const paintColorRange = useMemo(
+    () => fixedColorRange(activeVariable, colorSamples, toolYearFactors),
+    [activeVariable, colorSamples, toolYearFactors],
+  )
   // Change drivers render the LMDI unit polygons; level and dominance
   // drivers repaint the active view (cells or units).
   // A driver shows its LMDI change polygons only when it is NOT being
@@ -325,42 +347,62 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   // beat. Show that it is working instead of appearing frozen.
   const [mapBusy, setMapBusy] = useState(false)
 
+  // Everything that forces MapLibre to re-evaluate paint for every cell.
+  // The year dimensions belong here: toggling Compare rebuilds the value
+  // expression for all of them, and leaving year/yearB/compare out was why
+  // the veil never appeared on the one control that most needs it.
+  const yc = config.yearControl
   const analysisPaintKey = [
     state.analysis ?? '-',
     paleDriver, isDark ? 'd' : 'l', state.mapView, toolYearFactors ? 'f' : '-',
     state.activeDimensions?.source, state.activeDimensions?.crop,
+    yc ? state.activeDimensions?.[yc.dimensionId] : '-',
+    yc ? state.activeDimensions?.[yc.yearBDimensionId] : '-',
+    yc ? state.activeDimensions?.[yc.compareDimensionId] : '-',
     domCompare ? `cmp${domCompare.from}-${domCompare.to}` : '-',
     maskSuffixes.join('+') || '-',
   ].join('|')
 
-  // Flip to busy during render, not in an effect: an effect runs after
-  // the commit, so the veil would appear only once the expensive work had
-  // already started and blocked the frame. Computing it from the paint key
-  // during render means the veil and the toggled control paint together.
+  // Count repaints during render rather than in an effect, so the tick is
+  // already in hand on the commit that changes the map.
   const paintKeyRef = useRef(analysisPaintKey)
+  const [repaintTick, setRepaintTick] = useState(0)
   if (paintKeyRef.current !== analysisPaintKey) {
     paintKeyRef.current = analysisPaintKey
-    if (!mapBusy) setMapBusy(true)
+    // During a year animation the key changes every frame; a veil there
+    // would strobe.
+    if (!state.animatingDimension) setRepaintTick((n) => n + 1)
   }
 
   useEffect(() => {
-    if (!mapInstance || !mapBusy) return undefined
-    // Guarantee at least one painted frame of the veil, otherwise a cheap
-    // repaint clears it before it is ever visible and the user sees a
-    // flicker instead of feedback.
-    let min = false, idle = false
-    const settle = () => { if (min && idle) setMapBusy(false) }
-    const t0 = setTimeout(() => { min = true; settle() }, 420)
-    const done = () => { idle = true; settle() }
-    mapInstance.on('idle', done)
-    // Never strand the overlay if idle does not fire (a style already
-    // settled, or a repaint that changes nothing).
-    const bail = setTimeout(() => setMapBusy(false), 8000)
+    if (!mapInstance || repaintTick === 0) return undefined
+    // Reveal on a delay and hide on `idle`. The delay matters in both
+    // directions: a repaint that settles quickly should not flash a veil
+    // nobody asked for, and one that does not settle should show it while
+    // there is still something to wait through. Tile decode and upload
+    // happen off the blocked-main-thread path, so `idle` is the only
+    // honest signal that the new map is actually on screen.
+    let idle = false, shown = false, minElapsed = false
+    let minTimer = 0
+    const clear = () => setMapBusy(false)
+    const settle = () => { if (idle && (!shown || minElapsed)) clear() }
+    const reveal = setTimeout(() => {
+      if (idle) return
+      shown = true
+      setMapBusy(true)
+      // Once shown, hold it long enough to read as an animation rather
+      // than a flicker.
+      minTimer = setTimeout(() => { minElapsed = true; settle() }, 560)
+    }, 140)
+    const onIdle = () => { idle = true; clearTimeout(reveal); settle() }
+    mapInstance.on('idle', onIdle)
+    // Never strand the overlay if idle does not fire.
+    const bail = setTimeout(clear, 8000)
     return () => {
-      try { mapInstance.off('idle', done) } catch {}
-      clearTimeout(t0); clearTimeout(bail)
+      try { mapInstance.off('idle', onIdle) } catch {}
+      clearTimeout(reveal); clearTimeout(minTimer); clearTimeout(bail)
     }
-  }, [mapInstance, mapBusy])
+  }, [mapInstance, repaintTick])
 
   // ── Dimension animation ────────────────────────────────────────────────
   // Lives at tool level (not in the slider component) so it keeps running —
@@ -580,6 +622,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           paleDriver={paleDriver}
           setPaleDriver={setPaleDriver}
           analysisEntries={categoricalEntryList}
+          colorRange={paintColorRange}
         />
       }
       drawer={
@@ -912,7 +955,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                 ))}
               </div>
             ) : (
-              <MobileLegend variable={activeVariable} allValues={statewideValues} isDark={isDark} />
+              <MobileLegend variable={activeVariable} allValues={statewideValues} colorRange={paintColorRange} isDark={isDark} />
             )}
           </div>
 

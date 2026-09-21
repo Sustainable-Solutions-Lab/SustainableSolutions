@@ -24,7 +24,7 @@ import { buildColorScale, INTERPOLATORS } from './colormap.js'
 import { readVarValue, varValueExpr, varHasExpr } from './variable-value.js'
 import { getActiveVariable } from './get-active-variable.js'
 import { useYearFactors } from './year-factors.js'
-import { loadDistributions, peekDistributions, fixedColorRange } from './fixed-color-range.js'
+import { loadColorSamples, peekColorSamples, fixedColorRange } from './fixed-color-range.js'
 import { levelFor } from './analysis-levels.js'
 
 // Tiling-exact base radius for a 1 km cell — the natural Mercator-derived
@@ -217,13 +217,14 @@ export function useJustAirLayers(map, config, state, tuning) {
   // lib/fixed-color-range.js). Kick the fetch off once; until it lands the
   // range falls back to the variable's declared domain.
   const distUrl = config.distributionsUrl
-  const [dist, setDist] = useState(() => peekDistributions(distUrl))
+  const ladderUrl = config.colorLaddersUrl
+  const [dist, setDist] = useState(() => peekColorSamples(distUrl, ladderUrl))
   useEffect(() => {
-    if (!distUrl || dist) return undefined
+    if ((!distUrl && !ladderUrl) || dist) return undefined
     let alive = true
-    loadDistributions(distUrl).then((d) => { if (alive && d) setDist(d) })
+    loadColorSamples(distUrl, ladderUrl).then((d) => { if (alive && d) setDist(d) })
     return () => { alive = false }
-  }, [distUrl, dist])
+  }, [distUrl, ladderUrl, dist])
   const distRef = useRef(dist); distRef.current = dist
   const resolved = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const attached = resolved?.scaled && yearFactors

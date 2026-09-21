@@ -9,25 +9,25 @@
 import { buildLegendStops } from '../../lib/colormap.js'
 import { formatValue } from '../../lib/format.js'
 
-export function Legend({ variable, allValues = [], isDark = true }) {
+export function Legend({ variable, allValues = [], colorRange = null, isDark = true }) {
   if (!variable) return null
   if (variable.type === 'categorical') {
     return <CategoricalLegend variable={variable} isDark={isDark} />
   }
   // Continuous case — used by projects that don't surface the distribution
   // chart in the sidebar (so the user still gets a color scale + min/max).
-  return <ContinuousLegend variable={variable} allValues={allValues} isDark={isDark} />
+  return <ContinuousLegend variable={variable} allValues={allValues} colorRange={colorRange} isDark={isDark} />
 }
 
 /**
  * Compact color bar for the mobile map overlay.
  */
-export function MobileLegend({ variable, allValues = [], isDark = true }) {
+export function MobileLegend({ variable, allValues = [], colorRange = null, isDark = true }) {
   if (!variable) return null
   if (variable.type === 'categorical') {
     return <MobileCategoricalLegend variable={variable} isDark={isDark} />
   }
-  return <MobileContinuousLegend variable={variable} allValues={allValues} isDark={isDark} />
+  return <MobileContinuousLegend variable={variable} allValues={allValues} colorRange={colorRange} isDark={isDark} />
 }
 
 function CategoricalLegend({ variable, isDark = true }) {
@@ -76,12 +76,23 @@ function hexToRgbStr(hex) {
 
 // (Continuous sidebar legend — currently unused; the distribution chart
 // covers the continuous case in the desktop sidebar. Kept for parity.)
-function ContinuousLegend({ variable, allValues = [], isDark = true }) {
+function ContinuousLegend({ variable, allValues = [], colorRange = null, isDark = true }) {
   const { zero } = variable.domain
   const unit = variable.unit || ''
 
   let effectiveDomain = variable.domain
-  if (allValues.length >= 2) {
+  // The range the cells are actually painted with wins: a legend that
+  // disagrees with the ramp beside it is worse than no legend. Difference
+  // variables have no value sample at all, so this is the only honest
+  // source for them.
+  if (colorRange && (colorRange.maxPosDev > 0 || colorRange.maxNegDev > 0)) {
+    const z = variable.domain?.zero ?? 0
+    effectiveDomain = {
+      ...variable.domain,
+      min: z - colorRange.maxNegDev,
+      max: z + colorRange.maxPosDev,
+    }
+  } else if (allValues.length >= 2) {
     const sorted_ = [...allValues].sort((a, b) => a - b)
     const p01 = sorted_[Math.floor(sorted_.length * 0.01)] ?? sorted_[0]
     const p99 = sorted_[Math.floor(sorted_.length * 0.99)] ?? sorted_[sorted_.length - 1]
@@ -178,12 +189,23 @@ function fmtNum(v) {
   return `${sign}${Math.round(abs)}`
 }
 
-function MobileContinuousLegend({ variable, allValues = [], isDark }) {
+function MobileContinuousLegend({ variable, allValues = [], colorRange = null, isDark }) {
   const unit = variable.unit || ''
   const zeroVal = variable.domain?.zero ?? 0
 
   let effectiveDomain = variable.domain
-  if (allValues.length >= 2) {
+  // The range the cells are actually painted with wins: a legend that
+  // disagrees with the ramp beside it is worse than no legend. Difference
+  // variables have no value sample at all, so this is the only honest
+  // source for them.
+  if (colorRange && (colorRange.maxPosDev > 0 || colorRange.maxNegDev > 0)) {
+    const z = variable.domain?.zero ?? 0
+    effectiveDomain = {
+      ...variable.domain,
+      min: z - colorRange.maxNegDev,
+      max: z + colorRange.maxPosDev,
+    }
+  } else if (allValues.length >= 2) {
     const sorted_ = [...allValues].sort((a, b) => a - b)
     const p01 = sorted_[Math.floor(sorted_.length * 0.01)] ?? sorted_[0]
     const p99 = sorted_[Math.floor(sorted_.length * 0.99)] ?? sorted_[sorted_.length - 1]

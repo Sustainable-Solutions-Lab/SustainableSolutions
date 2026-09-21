@@ -219,6 +219,36 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
       } catch {}
     }
 
+    function ensure() {
+      if (!map.getStyle?.()) return
+      // Lazy creation: layers born visibility:none never trigger tile
+      // loading under the pmtiles protocol, so don't create until the
+      // regional view is first activated. And STRICTLY no-op when the
+      // layers already exist — re-setting layout/paint on every idle
+      // keeps the style permanently dirty and tile loads never finish.
+      if (map.getLayer(FILL)) return
+      if (!(refs.current.active || refs.current.everActive)) return
+      try {
+        if (!map.getSource(SRC)) {
+          map.addSource(SRC, { type: 'vector', url: `pmtiles://${config.regionalView.tilesUrl}` })
+        }
+        loadScales(config.regionalView.scalesUrl)
+        const sl = config.regionalView.sourceLayer ?? SRC
+        map.addLayer({ id: FILL, type: 'fill', source: SRC, 'source-layer': sl,
+                       paint: { 'fill-color': 'rgba(0,0,0,0)' } })
+        map.addLayer({ id: LINE, type: 'line', source: SRC, 'source-layer': sl,
+                       // Whisper-weight: biome subdivisions sit far below the
+                       // national/admin-1 reference lines.
+                       paint: { 'line-color': isDark ? 'rgba(248,248,232,0.10)' : 'rgba(24,24,56,0.08)', 'line-width': 0.3 } })
+        if (!map.getLayer(SEL)) {
+          map.addLayer({ id: SEL, type: 'line', source: SRC, 'source-layer': sl,
+                         filter: selectionFilter(refs.current.selectedUnit),
+                         paint: { 'line-color': isDark ? '#F8F8E8' : '#181838', 'line-width': 2 } })
+        }
+        paint()
+      } catch {}
+    }
+
     function onMove(e) {
       if (!refs.current.active || !map.getLayer(FILL)) return
       const pad = 5

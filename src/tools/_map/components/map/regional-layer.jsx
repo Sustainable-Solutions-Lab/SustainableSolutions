@@ -30,6 +30,22 @@ const FILL = 'unit-values-fill'
 const LINE = 'unit-values-line'
 const SEL = 'unit-values-selected'
 
+/**
+ * Selection filter. unit_id alone collided across tile vintages and
+ * outlined unrelated polygons, so identity is compound. This lives in one
+ * place because the bug came back once: the layer was CREATED with a
+ * unit_id-only filter and only upgraded by an effect keyed on selection
+ * change, so any re-creation of the layer (style reload, view switch)
+ * silently reverted it.
+ */
+function selectionFilter(su) {
+  if (!su) return ['==', ['get', 'unit_id'], -1]
+  return ['all',
+    ['==', ['get', 'unit_id'], su.id ?? -1],
+    ['==', ['get', 'name'], su.props?.name ?? ''],
+    ['==', ['get', 'country'], su.props?.country ?? '']]
+}
+
 function withAlpha(rgbStr, a) {
   if (rgbStr.startsWith('rgb(')) return rgbStr.replace('rgb(', 'rgba(').replace(')', `,${a.toFixed(3)})`)
   return rgbStr
@@ -68,7 +84,10 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
   Object.assign(refs.current, { active, variable, isDark, catEntries, domCompare,
     socPaint: socPaint ?? null,
     percentileRange: state.percentileRange,
-    selectedId: state.selectedUnit?.id ?? null, dispatch })
+    selectedId: state.selectedUnit?.id ?? null,
+    // the whole unit, so a layer re-created outside React can rebuild the
+    // compound selection filter rather than falling back to unit_id alone
+    selectedUnit: state.selectedUnit ?? null, dispatch })
 
   // Fill metric: level analyses ARE ratios already; the standard view
   // divides the (year-scaled) total by unit area -> t/km2.
@@ -217,9 +236,11 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
                        // Whisper-weight: biome subdivisions sit far below the
                        // national/admin-1 reference lines.
                        paint: { 'line-color': isDark ? 'rgba(248,248,232,0.10)' : 'rgba(24,24,56,0.08)', 'line-width': 0.3 } })
-        map.addLayer({ id: SEL, type: 'line', source: SRC, 'source-layer': sl,
-                       filter: ['==', ['get', 'unit_id'], refs.current.selectedId ?? -1],
-                       paint: { 'line-color': isDark ? '#F8F8E8' : '#181838', 'line-width': 2 } })
+        if (!map.getLayer(SEL)) {
+          map.addLayer({ id: SEL, type: 'line', source: SRC, 'source-layer': sl,
+                         filter: selectionFilter(refs.current.selectedUnit),
+                         paint: { 'line-color': isDark ? '#F8F8E8' : '#181838', 'line-width': 2 } })
+        }
         paint()
       } catch {}
     }
@@ -291,15 +312,7 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
     if (!map?.getStyle?.() || !map.getLayer?.(SEL)) return
     // Compound identity: unit_id alone collided in some tile vintages,
     // outlining unrelated polygons when e.g. Hawaii was selected.
-    const su = state.selectedUnit
-    try {
-      map.setFilter(SEL, su
-        ? ['all',
-            ['==', ['get', 'unit_id'], su.id ?? -1],
-            ['==', ['get', 'name'], su.props?.name ?? ''],
-            ['==', ['get', 'country'], su.props?.country ?? '']]
-        : ['==', ['get', 'unit_id'], -1])
-    } catch {}
+    try { map.setFilter(SEL, selectionFilter(state.selectedUnit)) } catch {}
   }, [map, state.selectedUnit])
 
   // Slim hover tip: identification only — the numbers and distribution

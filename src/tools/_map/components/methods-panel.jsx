@@ -230,7 +230,7 @@ function FoodEmissionsMethods() {
       <h2 style={h2Style}>Download the emission factors</h2>
       <p style={pStyle}>
         The full factor tables are downloadable as CSV: kilograms of CO₂e
-        per kilogram of primary product, reference year 2020, given both
+        per kilogram of primary product for 2024, the most recent year the inputs support, given both
         as a total and broken out by source, so a user can take the whole
         set rather than reading values off the map. Livestock rows
         additionally carry the feed-crop emissions attributed to each
@@ -241,23 +241,25 @@ function FoodEmissionsMethods() {
         padding: '12px 14px', margin: '0 0 14px',
       }}>
         <p style={{ ...pStyle, margin: '0 0 8px' }}>
-          <a href="/tools/food-emissions/ef_admin1_2020.csv" style={linkStyle} download>
+          <a href="/tools/food-emissions/ef_admin1_2024.csv" style={linkStyle} download>
             <strong>Admin-1 × commodity × source</strong></a>{' '}
-          — every subnational unit, 28,695 rows. The bulk download most
+          — every subnational unit, 28,460 rows. The bulk download most
           users want.
         </p>
         <p style={{ ...pStyle, margin: 0 }}>
-          <a href="/tools/food-emissions/ef_country_2020.csv" style={linkStyle} download>
+          <a href="/tools/food-emissions/ef_country_2024.csv" style={linkStyle} download>
             <strong>Country × commodity × source</strong></a>{' '}
-          — national factors, 2,138 rows, same columns.
+          — national factors, 2,104 rows, same columns.
         </p>
       </div>
       <p style={pStyle}>
         Both files share a column layout, so they concatenate or join
         without reshaping. Factors for an arbitrary area, including an
         uploaded sourcing polygon, download from the Region Focus panel
-        instead, and those are scaled to the year selected on the map
-        rather than fixed at 2020. Admin-1 assignment comes from the
+        instead, and those follow whichever year is selected on the map.
+        Both the emissions and the production denominator here are moved
+        from the 2020 reference to 2024 on the same national trajectories
+        the map uses, so numerator and denominator share a vintage. Admin-1 assignment comes from the
         jurisdiction grid sampled at cell centres, so units are
         approximate at borders, and rows below one kilotonne of
         production are omitted because the ratio is unstable there.

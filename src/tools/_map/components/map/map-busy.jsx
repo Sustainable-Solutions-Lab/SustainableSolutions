@@ -7,8 +7,9 @@
  * The mark is the lab logo drawn the way you would draw it by hand — the
  * crosshair first, in two perpendicular strokes, the horizontal one broken by
  * the small gap the logo has on its left arm; then the globe in a single
- * clockwise stroke; then the satellites last, arriving on their orbit streaks
- * while the crosshair and globe are already drying off. Nothing ever
+ * clockwise stroke; then the orbit last, arriving one element at a time
+ * clockwise from six o'clock while the crosshair and globe are already
+ * drying off. Nothing ever
  * completes, which is the point: it signals work in progress without implying
  * a fraction of it we cannot measure.
  *
@@ -42,14 +43,30 @@ const HORIZ = `M 76 ${C} L 152 ${C} M 172 ${C} L 324 ${C}`
 const GLOBE = `M ${C} ${C + R} A ${R} ${R} 0 0 1 ${C} ${C - R} ` +
               `A ${R} ${R} 0 0 1 ${C} ${C + R}`
 
-// 4 — satellites: an orbit streak, then the body, then the lit core.
-//     Ordered the way the globe is drawn — clockwise from six o'clock — so
-//     they arrive following the stroke that just went round.
-const SATS = [
-  { streak: 'M 104.6 108.8 A 138 138 0 0 0 55 196.5',    cx: 113.8, cy: 92.6,  r: 23.0, k: 9.7 },
-  { streak: 'M 74.6 256.6 A 137 137 0 0 0 132.3 319',    cx: 303.3, cy: 128.4, r: 25.4, k: 13.2 },
-  { streak: 'M 298.7 291.2 A 136 136 0 0 1 326.3 255.4', cx: 290.6, cy: 302.8, r: 22.0, k: 9.2 },
+// 4 — the orbit: streaks and satellites, in clock order starting at six and
+//     going clockwise, so they arrive following the stroke that just went
+//     round the globe.
+//
+//     The artwork pairs a trailing arc with the upper-left and lower-right
+//     satellites, leaves the upper-right one bare, and puts a fourth arc on
+//     its own at lower left. Keeping that as four separate elements rather
+//     than forcing three streak-plus-satellite pairs is both truer to the
+//     logo and what makes the sweep legible: four arrivals read as a
+//     sequence where three barely did.
+const ORBIT = [
+  { streak: 'M 74.6 256.6 A 137 137 0 0 0 132.3 319' },                              // ~7 o'clock
+  { streak: 'M 104.6 108.8 A 138 138 0 0 0 55 196.5', cx: 113.8, cy: 92.6,  r: 23.0, k: 9.7 },  // ~10
+  { cx: 303.3, cy: 128.4, r: 25.4, k: 13.2 },                                        // ~1:30
+  { streak: 'M 298.7 291.2 A 136 136 0 0 1 326.3 255.4', cx: 290.6, cy: 302.8, r: 22.0, k: 9.2 }, // ~4:30
 ]
+
+// Each orbit element gets its own keyframes rather than a shared set offset
+// by animation-delay. A delay shifts the whole timeline, so the last element
+// to arrive would still be fading out after the next cycle's crosshair had
+// started drawing. Explicit percentages keep every arrival inside one pass.
+const ORBIT_IN = 50      // first element starts arriving, % of cycle
+const ORBIT_STEP = 5     // spacing between arrivals, % of cycle
+const ORBIT_OUT = 92     // all of them leave together
 
 // Logo colours: navy structure (cream on a dark map so it stays visible),
 // the globe's green-to-teal, and the satellites' orange core.
@@ -57,7 +74,7 @@ const GREEN = '#48A848'
 const TEAL  = '#78C8D8'
 const AMBER = '#E87828'
 
-const CYCLE = 2600       // ms for one full draw-and-evaporate pass
+const CYCLE = 3120       // ms for one full draw-and-evaporate pass
 
 // Each element's slice of the cycle, as percentages. Strokes overlap: the
 // crosshair is already fading before the satellites land.
@@ -117,17 +134,23 @@ export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
           d={GLOBE} fill="none" stroke="url(#ssl-globe)" strokeWidth={SW} strokeLinecap="round"
           style={{ strokeDasharray: 520, animation: `ssl-g ${CYCLE}ms linear infinite` }}
         />
-        {/* 4 — satellites on their streaks */}
-        {SATS.map((s, i) => (
-          <g key={i} style={{ animation: `ssl-s ${CYCLE}ms linear ${i * 110}ms infinite` }}>
-            <path
-              d={s.streak} fill="none" stroke={ink} strokeWidth={7} strokeLinecap="round"
-              style={{ strokeDasharray: 200, animation: `ssl-trail ${CYCLE}ms linear ${i * 110}ms infinite` }}
-            />
-            {/* The logo rings each orange core in navy. On a dark veil a
-                filled disc would invert that; a ring keeps the reading. */}
-            <circle cx={s.cx} cy={s.cy} r={s.r - 4} fill="none" stroke={ink} strokeWidth={7} />
-            <circle cx={s.cx} cy={s.cy} r={s.k} fill={AMBER} />
+        {/* 4 — the orbit, arriving clockwise from six o'clock */}
+        {ORBIT.map((s, i) => (
+          <g key={i} style={{ animation: `ssl-orbit-${i} ${CYCLE}ms linear infinite` }}>
+            {s.streak && (
+              <path
+                d={s.streak} fill="none" stroke={ink} strokeWidth={7} strokeLinecap="round"
+                style={{ strokeDasharray: 200, animation: `ssl-trail-${i} ${CYCLE}ms linear infinite` }}
+              />
+            )}
+            {s.cx != null && (
+              <>
+                {/* The logo rings each orange core in navy. On a dark veil a
+                    filled disc would invert that; a ring keeps the reading. */}
+                <circle cx={s.cx} cy={s.cy} r={s.r - 4} fill="none" stroke={ink} strokeWidth={7} />
+                <circle cx={s.cx} cy={s.cy} r={s.k} fill={AMBER} />
+              </>
+            )}
           </g>
         ))}
       </svg>
@@ -174,21 +197,26 @@ export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
           96%  { opacity: 0; }
           100% { stroke-dashoffset: -520; opacity: 0; }
         }
-        @keyframes ssl-trail {
-          0%   { stroke-dashoffset: 200; }
-          52%  { stroke-dashoffset: 200; }
-          66%  { stroke-dashoffset: 0; }
-          100% { stroke-dashoffset: 0; }
-        }
-        /* Satellites arrive last and outlast the rest, so the mark empties
-           out from the centre while they are still on their orbits. */
-        @keyframes ssl-s {
+        /* The orbit arrives last and outlasts the rest, so the mark empties
+           out from the centre while the satellites are still on station.
+           One keyframe set per element, stepped ${ORBIT_STEP}% apart. */
+        ${ORBIT.map((_, i) => {
+          const a = ORBIT_IN + i * ORBIT_STEP
+          return `
+        @keyframes ssl-orbit-${i} {
           0%   { opacity: 0; }
-          54%  { opacity: 0; }
-          64%  { opacity: 1; }
-          92%  { opacity: 1; }
+          ${a}%   { opacity: 0; }
+          ${a + 4}%  { opacity: 1; }
+          ${ORBIT_OUT}%  { opacity: 1; }
           100% { opacity: 0; }
         }
+        @keyframes ssl-trail-${i} {
+          0%   { stroke-dashoffset: 200; }
+          ${a}%   { stroke-dashoffset: 200; }
+          ${a + 9}%  { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: 0; }
+        }`
+        }).join('')}
         @media (prefers-reduced-motion: reduce) {
           svg path, svg g {
             animation-duration: 0ms !important;

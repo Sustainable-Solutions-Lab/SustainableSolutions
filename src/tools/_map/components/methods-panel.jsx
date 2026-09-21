@@ -227,6 +227,42 @@ function FoodEmissionsMethods() {
         enhanced track; a rubber layer follows.
       </p>
 
+      <h2 style={h2Style}>Download the emission factors</h2>
+      <p style={pStyle}>
+        The full factor tables are downloadable as CSV: kilograms of CO₂e
+        per kilogram of primary product, reference year 2020, given both
+        as a total and broken out by source, so a user can take the whole
+        set rather than reading values off the map. Livestock rows
+        additionally carry the feed-crop emissions attributed to each
+        animal group and a with-feed factor.
+      </p>
+      <div style={{
+        border: '1px solid var(--rule)', borderRadius: 'var(--radius-sm)',
+        padding: '12px 14px', margin: '0 0 14px',
+      }}>
+        <p style={{ ...pStyle, margin: '0 0 8px' }}>
+          <a href="/tools/food-emissions/ef_admin1_2020.csv" style={linkStyle} download>
+            <strong>Admin-1 × commodity × source</strong></a>{' '}
+          — every subnational unit, 28,695 rows. The bulk download most
+          users want.
+        </p>
+        <p style={{ ...pStyle, margin: 0 }}>
+          <a href="/tools/food-emissions/ef_country_2020.csv" style={linkStyle} download>
+            <strong>Country × commodity × source</strong></a>{' '}
+          — national factors, 2,138 rows, same columns.
+        </p>
+      </div>
+      <p style={pStyle}>
+        Both files share a column layout, so they concatenate or join
+        without reshaping. Factors for an arbitrary area, including an
+        uploaded sourcing polygon, download from the Region Focus panel
+        instead, and those are scaled to the year selected on the map
+        rather than fixed at 2020. Admin-1 assignment comes from the
+        jurisdiction grid sampled at cell centres, so units are
+        approximate at borders, and rows below one kilotonne of
+        production are omitted because the ratio is unstable there.
+      </p>
+
       <h2 style={h2Style}>Area statistics and trends</h2>
       <p style={pStyle}>
         While the map displays gridded cells and admin-1 × biome units,
@@ -419,13 +455,6 @@ function FoodEmissionsMethods() {
         (deforestation, grassland conversion, the peat-drainage pulse) are
         not yet included; they join via the Cornerstone jurisdictional
         framework.
-        Emission factors (kg CO₂e per kg of commodity, 2020, by cropland
-        source):{' '}
-        <a href="/tools/food-emissions/ef_country_2020.csv" style={linkStyle} download>
-          country CSV</a>{' · '}
-        <a href="/tools/food-emissions/ef_admin1_2020.csv" style={linkStyle} download>
-          admin-1 CSV</a>; regional factors for any drawn circle download
-        from the Region Focus panel.
         Replication code and tests:{' '}
         <a
           href="https://github.com/Sustainable-Solutions-Lab/gridded-land-sector-emissions"

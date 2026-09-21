@@ -175,7 +175,6 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
   }
   const paleDriver = state.analysisDriver
   const setPaleDriver = (d) => dispatch({ type: Actions.SET_ANALYSIS_DRIVER, driver: d })
-  const [filterStats, setFilterStats] = useState({ count: null, mean: null, median: null, totalCount: null, allValues: [] })
   const [statewideValues, setStatewideValues] = useState([])
   const [opacityP95, setOpacityP95] = useState(null)
   const [tuning, setTuning] = useState(() => readStoredTuning() ?? { ...DEFAULT_TUNING })
@@ -865,7 +864,6 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             dispatch={dispatch}
             height="100%"
             onMapReady={(m) => setMapInstance(m)}
-            onFilterStats={setFilterStats}
             onToggleScheme={handleToggleScheme}
             isDark={isDark}
             opacityP95={opacityP95}

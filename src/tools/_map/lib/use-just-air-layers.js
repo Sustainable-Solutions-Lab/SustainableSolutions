@@ -19,11 +19,12 @@
  * a 1 km city pixel at z8.
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { buildColorScale, INTERPOLATORS } from './colormap.js'
 import { readVarValue, varValueExpr, varHasExpr } from './variable-value.js'
 import { getActiveVariable } from './get-active-variable.js'
 import { useYearFactors } from './year-factors.js'
+import { loadDistributions, peekDistributions, fixedColorRange } from './fixed-color-range.js'
 import { levelFor } from './analysis-levels.js'
 
 // Tiling-exact base radius for a 1 km cell — the natural Mercator-derived
@@ -212,6 +213,18 @@ export function useJustAirLayers(map, config, state, tuning) {
   // Year-scaled variables need the national factor table attached before
   // paint; until it loads they fall back to the reference-year base prop.
   const yearFactors = useYearFactors(config)
+  // The precomputed cell sample backs the colour scale (see
+  // lib/fixed-color-range.js). Kick the fetch off once; until it lands the
+  // range falls back to the variable's declared domain.
+  const distUrl = config.distributionsUrl
+  const [dist, setDist] = useState(() => peekDistributions(distUrl))
+  useEffect(() => {
+    if (!distUrl || dist) return undefined
+    let alive = true
+    loadDistributions(distUrl).then((d) => { if (alive && d) setDist(d) })
+    return () => { alive = false }
+  }, [distUrl, dist])
+  const distRef = useRef(dist); distRef.current = dist
   const resolved = getActiveVariable(config, state.activeLayer, state.activeDimensions)
   const attached = resolved?.scaled && yearFactors
     ? { ...resolved, scaled: { ...resolved.scaled, factors: yearFactors } }
@@ -228,6 +241,8 @@ export function useJustAirLayers(map, config, state, tuning) {
   isDarkRef.current = state.colorScheme === 'dark'
   const tuningRef = useRef(t)
   tuningRef.current = t
+  const yearFactorsRef = useRef(yearFactors)
+  yearFactorsRef.current = yearFactors
 
   // colorRangeRef caches the p99 of |value − zero| for the active variable
   // so the alpha-in-colormap math uses the actual data spread rather than
@@ -247,33 +262,8 @@ export function useJustAirLayers(map, config, state, tuning) {
       if (colorRangeLockedRef.current) return
       const v = variableRef.current
       if (!v || v.type === 'categorical') return
-      try {
-        const features = map.querySourceFeatures(SOURCE_ID, { sourceLayer })
-        if (features.length < 10) return
-        const values = features
-          .map((f) => f.properties?.[v.id])
-          .filter((x) => x != null && !isNaN(x))
-        if (values.length < 10) return
-        const zero = v.domain?.zero ?? v.domain?.min ?? 0
-        // Track each side of `zero` independently so the colormap can
-        // saturate asymmetrically when the data is skewed (e.g. PM₂.₅
-        // with most cells above the WHO 5 µg/m³ threshold should reach
-        // dark red sooner than dark blue).
-        const posDevs = values.filter((x) => x > zero).map((x) => x - zero).sort((a, b) => a - b)
-        const negDevs = values.filter((x) => x < zero).map((x) => zero - x).sort((a, b) => a - b)
-        const colorPct = v.colorPercentile ?? 0.99
-        const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(colorPct * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
-        // `colorMax` (and `colorMin` for diverging variables) lets a
-        // variable override the data-derived p99 with an explicit clean
-        // cap — e.g. population pinned at 1000 instead of ~862.
-        const maxPosDev = v.colorMax != null ? Math.max(v.colorMax - zero, 0) : p99(posDevs)
-        const maxNegDev = v.colorMin != null ? Math.max(zero - v.colorMin, 0) : p99(negDevs)
-        if (maxPosDev > 0 || maxNegDev > 0) {
-          colorRangeRef.current = { maxPosDev, maxNegDev }
-          if (values.length >= 100) colorRangeLockedRef.current = true
-          updatePaint()
-        }
-      } catch (_) { /* source not loaded yet */ }
+      const r = fixedColorRange(v, distRef.current, yearFactorsRef.current)
+      if (r) { colorRangeRef.current = r; colorRangeLockedRef.current = true }
     }
 
     function updatePaint() {
@@ -429,39 +419,11 @@ export function useJustAirLayers(map, config, state, tuning) {
     if (!map.getStyle?.()) return  // NOT isStyleLoaded() — unreliable with pmtiles
     colorRangeRef.current = null
     colorRangeLockedRef.current = false
-    let recomputed = null
-    try {
-      const v = variableRef.current
-      if (v && v.type !== 'categorical') {
-        const features = map.querySourceFeatures(SOURCE_ID, { sourceLayer })
-        if (features.length >= 30) {
-          // colorAnchorId: pin the color scale to another property's
-          // distribution (e.g. every animation year anchored to y2024), so
-          // frame-to-frame change shows as color change instead of being
-          // absorbed by a re-normalizing scale.
-          const rangeVar = v.colorAnchorId
-            ? { ...v, id: v.colorAnchorId, diffOf: undefined, scaled: undefined }
-            : v
-          const values = features
-            .map((f) => readVarValue(f.properties, rangeVar))
-            .filter((x) => x != null && !isNaN(x))
-          if (values.length >= 30) {
-            const zero = v.domain?.zero ?? v.domain?.min ?? 0
-            const posDevs = values.filter((x) => x > zero).map((x) => x - zero).sort((a, b) => a - b)
-            const negDevs = values.filter((x) => x < zero).map((x) => zero - x).sort((a, b) => a - b)
-            const colorPct = v.colorPercentile ?? 0.99
-            const p99 = (arr) => arr.length > 0 ? (arr[Math.floor(colorPct * (arr.length - 1))] ?? arr[arr.length - 1]) : 0
-            const maxPosDev = v.colorMax != null ? Math.max(v.colorMax - zero, 0) : p99(posDevs)
-            const maxNegDev = v.colorMin != null ? Math.max(zero - v.colorMin, 0) : p99(negDevs)
-            if (maxPosDev > 0 || maxNegDev > 0) {
-              recomputed = { maxPosDev, maxNegDev }
-              colorRangeRef.current = recomputed
-              colorRangeLockedRef.current = true
-            }
-          }
-        }
-      }
-    } catch (_) { /* ignore */ }
+    const recomputed = fixedColorRange(variableRef.current, distRef.current, yearFactorsRef.current)
+    if (recomputed) {
+      colorRangeRef.current = recomputed
+      colorRangeLockedRef.current = true
+    }
     function applyPaints() {
       for (const s of scales) {
         const layerId = `just-air-cells-${s.value}`
@@ -486,7 +448,7 @@ export function useJustAirLayers(map, config, state, tuning) {
     const settle = setTimeout(applyPaints, 300)
     return () => clearTimeout(settle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme, yearFactors, state.mapView, state.analysis, state.analysisDriver])
+  }, [map, state.activeLayer, state.activeDimensions, state.colorScheme, yearFactors, dist, state.mapView, state.analysis, state.analysisDriver])
 
   // ── Paint repaint when only the tuning sliders move ───────────────────
   // Re-emits circle-color / circle-radius using the EXISTING colorRange,

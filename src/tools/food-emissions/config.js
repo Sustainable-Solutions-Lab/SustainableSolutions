@@ -619,8 +619,8 @@ const config = {
   initiative: {
     name: 'Cornerstone',
     url: 'https://cornerstonedata.org/',
-    logo: '/logos/cornerstone/Cornerstone-Wordmark-1c.svg',
-    logoDark: '/logos/cornerstone/Cornerstone-Wordmark-1c-white.svg',
+    logo: '/logos/cornerstone/Cornerstone-Mark-1c.svg',
+    logoDark: '/logos/cornerstone/Cornerstone-Mark-1c-white.svg',
   },
   distributionsUrl: '/tools/food-emissions/distributions.json',
   // Per-country value ladders backing the gridded colour scale; see

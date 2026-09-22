@@ -458,41 +458,6 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             hardcoded, so other tools can name their own. The wordmark ships
             in a dark and a light cut; pick by theme rather than filtering,
             which muddies a one-colour mark. */}
-        {config.initiative && (
-          <div className="mt-6 pt-4 border-t border-rule">
-            <div
-              style={{
-                font: '10px "JetBrains Mono", ui-monospace, monospace',
-                letterSpacing: '0.14em', textTransform: 'uppercase',
-              }}
-              className="text-ink-3 mb-2"
-            >
-              {config.initiative.eyebrow ?? 'Part of'}
-            </div>
-            <a
-              href={config.initiative.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bare block"
-              style={{ lineHeight: 0 }}
-              aria-label={`${config.initiative.name} (opens in a new tab)`}
-            >
-              <img
-                src={state.colorScheme === 'dark' && config.initiative.logoDark
-                  ? config.initiative.logoDark
-                  : config.initiative.logo}
-                alt={config.initiative.name}
-                style={{ height: 22, width: 'auto', opacity: 0.85 }}
-              />
-            </a>
-            {config.initiative.note && (
-              <p className="text-ink-3 mt-2" style={{ fontSize: 11, lineHeight: 1.5 }}>
-                {config.initiative.note}
-              </p>
-            )}
-          </div>
-        )}
-
         {/* Repo links — bottom of the panel, matching the magnets explorer's
             footer pattern (octicon + mono repo name). Standard placement for
             all map tools. */}
@@ -528,6 +493,45 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
                 <span>Data archive on Zenodo <span style={{ opacity: 0.6, fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>{repoLinks.zenodo.replace(/^https?:\/\/(dx\.)?doi\.org\//, '')} ↗</span></span>
               </a>
             )}
+          </div>
+        )}
+
+        {/* The initiative this work belongs to, sitting with the repo links
+            because it is the same kind of statement: where the work lives and
+            who it is part of. Config-declared so other tools name their own. */}
+        {config.initiative && (
+          <div className="mt-5 pt-4 border-t border-rule">
+            <a
+              href={config.initiative.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bare block"
+              style={{ lineHeight: 0 }}
+              aria-label={`${config.initiative.name} (opens in a new tab)`}
+            >
+              <img
+                src={state.colorScheme === 'dark' && config.initiative.logoDark
+                  ? config.initiative.logoDark
+                  : config.initiative.logo}
+                alt={config.initiative.name}
+                style={{ height: 20, width: 'auto', opacity: 0.9 }}
+              />
+            </a>
+            <p className="text-ink-3 mt-2" style={{ fontSize: 11, lineHeight: 1.5 }}>
+              {config.initiative.note ?? (
+                <>
+                  This work is part of the{' '}
+                  <a
+                    href={config.initiative.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-ink-2 hover:text-ink"
+                  >
+                    {config.initiative.name} initiative ↗
+                  </a>
+                </>
+              )}
+            </p>
           </div>
         )}
       </div>

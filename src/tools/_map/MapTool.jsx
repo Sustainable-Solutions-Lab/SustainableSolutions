@@ -470,7 +470,17 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         // What the colors mean right now, when it isn't just the total.
         (() => {
           if (state.analysis === 'dominance') {
-            return (config.paleMap?.categorical ?? []).find((c) => c.id === state.analysisDriver)?.shortLabel
+            const cat = (config.paleMap?.categorical ?? [])
+              .find((c) => c.id === state.analysisDriver)
+            if (!cat) return null
+            // In compare mode this map is not the leader, it is where the
+            // leader CHANGED between the two years, coloured by whichever
+            // source or commodity took over. Saying "Top sources" over a
+            // difference map invites reading it as the level.
+            if (!domCompare) return cat.shortLabel
+            const s = cat.changeShortLabel
+              ?? `Change in ${cat.shortLabel.charAt(0).toLowerCase()}${cat.shortLabel.slice(1)}`
+            return s
           }
           // Analysis is the one net-change view; say that plainly.
           if (state.analysis === 'soc') return 'Soil carbon Δ, t CO₂e/yr'

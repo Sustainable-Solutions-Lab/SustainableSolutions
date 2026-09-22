@@ -33,7 +33,7 @@ export function ToolFooter({ config, repoLinks = null, isDark = true, compact = 
           className={[
             'block w-full text-left bg-transparent border-0 cursor-pointer p-0 mt-2',
             'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
-            'transition-colors hover:text-ink font-normal text-ink-3 no-underline',
+            'transition-colors hover:text-ink font-normal text-ink-3 no-underline no-rule',
           ].join(' ')}
           title={config.efDownload.title}
         >
@@ -50,7 +50,7 @@ export function ToolFooter({ config, repoLinks = null, isDark = true, compact = 
               href={repoLinks.github}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-ink-2 hover:text-ink border-b-0 inline-flex items-center"
+              className="text-ink-2 hover:text-ink border-b-0 no-rule inline-flex items-center"
               style={{ gap: 6, fontSize: 11 }}
             >
               <svg viewBox="0 0 16 16" width={13} height={13} fill="currentColor" aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -64,7 +64,7 @@ export function ToolFooter({ config, repoLinks = null, isDark = true, compact = 
               href={repoLinks.zenodo}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-ink-2 hover:text-ink border-b-0 inline-flex items-center"
+              className="text-ink-2 hover:text-ink border-b-0 no-rule inline-flex items-center"
               style={{ gap: 6, fontSize: 11 }}
             >
               <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -88,7 +88,7 @@ export function ToolFooter({ config, repoLinks = null, isDark = true, compact = 
           href={config.initiative.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-ink-2 hover:text-ink border-b-0 inline-flex items-center mt-2"
+          className="text-ink-2 hover:text-ink border-b-0 no-rule inline-flex items-center mt-2"
           // The C monogram alone, not the wordmark — the sentence already
           // says "Cornerstone", so the wordmark repeated it. Being square
           // rather than 3.8:1 it also costs almost no width, which is what

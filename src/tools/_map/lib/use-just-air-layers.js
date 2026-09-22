@@ -21,7 +21,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { buildColorScale, INTERPOLATORS } from './colormap.js'
-import { readVarValue, varValueExpr, varHasExpr } from './variable-value.js'
+import { readVarValue, varHasExpr } from './variable-value.js'
+import { cellIntensityExpr, toIntensityVariable, toIntensityRange } from './intensity.js'
 import { getActiveVariable } from './get-active-variable.js'
 import { useYearFactors } from './year-factors.js'
 import { loadColorSamples, peekColorSamples, fixedColorRange } from './fixed-color-range.js'
@@ -90,6 +91,11 @@ const NATIONAL_RADIUS_STOPS = [
 export const DEFAULT_TUNING = {
   alphaFloor: 0.10,
   alphaPower: 1.0,
+  // Floor under the whole ramp, for geometries where "transparent" would
+  // be misread. A faint cell among thousands reads as low; a transparent
+  // POLYGON reads as no data, which is a different claim — so the regional
+  // choropleth asks for a whisper instead of nothing. Cells leave it at 0.
+  alphaMin: 0,
   // Global multiplier on the baked per-zoom radius curve. Default 1.0
   // means "use the curve as iterated." Drag the dev-panel slider away
   // from 1.0 to scale every cell up/down uniformly without re-tuning
@@ -177,14 +183,15 @@ const EXTREME_SPLIT = 0.85
 // lighter stroke ring so the near-black top of SpectralHotDeep doesn't
 // sink into the navy basemap. Off in light mode, for diverging variables,
 // and until the data-derived color range is known.
-function buildStrokeExprs(variable, isDark, colorRange) {
+function buildStrokeExprs(rawVariable, isDark, colorRange, config) {
   const off = { width: 0, color: 'rgba(0,0,0,0)' }
-  if (!variable || !isDark || variable.diverging || !variable.extremeGlow) return off
-  const maxPos = colorRange?.maxPosDev
+  if (!rawVariable || !isDark || rawVariable.diverging || !rawVariable.extremeGlow) return off
+  const variable = toIntensityVariable(config, rawVariable)
+  const maxPos = toIntensityRange(config, rawVariable, colorRange)?.maxPosDev
   if (!maxPos || maxPos <= 0) return off
   const zero = variable.domain?.zero ?? variable.domain?.min ?? 0
   const thresh = zero + EXTREME_SPLIT * maxPos
-  const val = ['coalesce', ['to-number', varValueExpr(variable)], -1e15]
+  const val = ['coalesce', ['to-number', cellIntensityExpr(config, rawVariable)], -1e15]
   return {
     width: ['case', ['>=', val, thresh], 0.7, 0],
     color: 'rgba(248,248,232,0.5)',
@@ -274,8 +281,8 @@ export function useJustAirLayers(map, config, state, tuning) {
         if (!map.getLayer(layerId)) continue
         try {
           map.setPaintProperty(layerId, 'circle-color',
-            buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current))
-          const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, colorRangeRef.current)
+            buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current, config))
+          const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, colorRangeRef.current, config)
           map.setPaintProperty(layerId, 'circle-stroke-width', stroke.width)
           map.setPaintProperty(layerId, 'circle-stroke-color', stroke.color)
         } catch (_) { /* ignore */ }
@@ -320,10 +327,10 @@ export function useJustAirLayers(map, config, state, tuning) {
             minzoom: s.minZoom ?? 0,
             filter: ['==', ['coalesce', ['to-number', ['get', '_scale']], 0], s.value],
             paint: (() => {
-              const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, colorRangeRef.current)
+              const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, colorRangeRef.current, config)
               return {
                 'circle-radius':       s.radiusMode === 'cell' ? buildCellRadiusExpr(s, tuningRef.current) : buildRadiusExpr(tuningRef.current),
-                'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current),
+                'circle-color':        buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current, config),
                 'circle-opacity':      buildOpacityExpr(variableRef.current, s, hiddenRef.current),
                 'circle-stroke-width': stroke.width,
                 'circle-stroke-color': stroke.color,
@@ -430,10 +437,10 @@ export function useJustAirLayers(map, config, state, tuning) {
         const layerId = `just-air-cells-${s.value}`
         if (!map.getLayer(layerId)) continue
         try {
-          map.setPaintProperty(layerId, 'circle-color', buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current))
+          map.setPaintProperty(layerId, 'circle-color', buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current, config))
           map.setPaintProperty(layerId, 'circle-opacity', buildOpacityExpr(variableRef.current, s, hiddenRef.current))
           map.setPaintProperty(layerId, 'circle-radius',  radiusExprForLayer(layerId, config, tuningRef.current))
-          const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, colorRangeRef.current)
+          const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, colorRangeRef.current, config)
           map.setPaintProperty(layerId, 'circle-stroke-width', stroke.width)
           map.setPaintProperty(layerId, 'circle-stroke-color', stroke.color)
         } catch (err) {
@@ -462,7 +469,7 @@ export function useJustAirLayers(map, config, state, tuning) {
       const layerId = `just-air-cells-${s.value}`
       if (!map.getLayer(layerId)) continue
       try {
-        map.setPaintProperty(layerId, 'circle-color',  buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current))
+        map.setPaintProperty(layerId, 'circle-color',  buildColorExpr(variableRef.current, isDarkRef.current, colorRangeRef.current, tuningRef.current, config))
         map.setPaintProperty(layerId, 'circle-radius', radiusExprForLayer(layerId, config, tuningRef.current))
       } catch (err) {
         console.error('[useJustAirLayers] setPaintProperty (tuning)', layerId, err)
@@ -503,7 +510,17 @@ function withAlpha(rgbStr, alpha) {
   return rgbStr
 }
 
-function buildColorExpr(rawVariable, isDark, colorRange, tuning) {
+/**
+ * The value ramp, shared by both map views.
+ *
+ * `valueExpr` is the quantity the stops are read against. It defaults to
+ * the cell tiles' intensity expression; the regional choropleth passes the
+ * unit tiles' one (regional-layer.jsx) so a unit and a cell reading the
+ * same t CO₂e/km² get the same colour AND the same alpha off the same
+ * `colorRange`. Everything else — the colormap, the gating, the alpha
+ * floor and power — is the variable's own.
+ */
+export function buildColorExpr(rawVariable, isDark, colorRange, tuning, config, valueExpr = null) {
   const t_ = { ...DEFAULT_TUNING, ...(tuning ?? {}) }
   if (!rawVariable) return '#888888'
   // `darkColormap` lets a variable swap palettes when the page is in
@@ -511,9 +528,13 @@ function buildColorExpr(rawVariable, isDark, colorRange, tuning) {
   // black gets lost on a navy background) to Magma (black → cream,
   // high values pop instead). Falls through to the standard colormap
   // when no dark variant is set.
-  const variable = isDark && rawVariable.darkColormap
+  // Thresholds and the colour range come back in t CO₂e/km² for projects
+  // that declare config.intensity; everything below then works in that one
+  // quantity (lib/intensity.js). Projects without it pass through.
+  const variable = toIntensityVariable(config, isDark && rawVariable.darkColormap
     ? { ...rawVariable, colormap: rawVariable.darkColormap }
-    : rawVariable
+    : rawVariable)
+  const range = toIntensityRange(config, rawVariable, colorRange)
   if (variable.type === 'categorical') {
     const expr = ['match', ['get', variable.id]]
     for (const cat of variable.categories ?? []) expr.push(cat.id, cat.color)
@@ -533,8 +554,8 @@ function buildColorExpr(rawVariable, isDark, colorRange, tuning) {
   // Independent positive / negative p99 — when the data is skewed (e.g.
   // PM₂.₅ with most cells above the WHO 5 µg/m³ threshold) the colormap
   // saturates faster on whichever side has more spread.
-  const dataPos = colorRange?.maxPosDev
-  const dataNeg = colorRange?.maxNegDev
+  const dataPos = range?.maxPosDev
+  const dataNeg = range?.maxNegDev
   const maxPosDev = (dataPos != null && dataPos > 0) ? dataPos : Math.max(cfgMax - zero, 0.001)
   const maxNegDev = (dataNeg != null && dataNeg > 0) ? dataNeg : Math.max(zero - cfgMin, 0.001)
   // The COLOR stops are spread across this range. When dataDev is known,
@@ -571,13 +592,14 @@ function buildColorExpr(rawVariable, isDark, colorRange, tuning) {
   // sidebar chart clips out, so the user sees the same "above-floor"
   // population on both.
   const HARD_MIN = (!variable.diverging && variable.histogramMin != null) ? variable.histogramMin : null
+  const ALPHA_MIN = t_.alphaMin ?? 0
   function alphaForValue(v) {
     if (HARD_MIN != null && v < HARD_MIN) return 0
     const ti = v >= zero ? (v - zero) / maxPosDev : (zero - v) / maxNegDev
     const tc = Math.max(0, ti)
-    if (tc < ALPHA_FLOOR) return 0
+    if (tc < ALPHA_FLOOR) return ALPHA_MIN
     const tr = (tc - ALPHA_FLOOR) / (1 - ALPHA_FLOOR)
-    return Math.min(1, Math.pow(tr, ALPHA_POWER))
+    return Math.max(ALPHA_MIN, Math.min(1, Math.pow(tr, ALPHA_POWER)))
   }
 
   // Cells that don't carry the active variable (e.g. 9 km national cells
@@ -588,7 +610,7 @@ function buildColorExpr(rawVariable, isDark, colorRange, tuning) {
     return ['case', varHasExpr(variable), expr, 'rgba(0,0,0,0)']
   }
 
-  const expr = ['interpolate', ['linear'], varValueExpr(variable)]
+  const expr = ['interpolate', ['linear'], valueExpr ?? cellIntensityExpr(config, rawVariable)]
   const steps = 24
 
   if (variable.diverging) {

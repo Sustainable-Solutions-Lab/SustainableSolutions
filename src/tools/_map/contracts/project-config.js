@@ -169,6 +169,28 @@
  *                                                   handles the data layers instead.
  * @property {string}               [methodsPath]
  * @property {BoxOverlayConfig}     [boxOverlay]
+ * @property {IntensityConfig}      [intensity]     - opt-in: render extensive
+ *                                                   values per unit ground area so the
+ *                                                   gridded and regional views share one
+ *                                                   quantity, one colour range and one
+ *                                                   colorbar (_map/lib/intensity.js)
+ */
+
+/**
+ * Common intensity basis for a project whose stored values are totals per
+ * cell and per region. Absent = values paint as stored.
+ *
+ * @typedef {Object} IntensityConfig
+ * @property {string} unit         - display unit of the ratio, e.g. 't CO₂e/km²'
+ * @property {number} cellDeg      - fine-tier cell pitch in degrees
+ * @property {number} cellScaleKm  - the fine tier's `_scale` value; coarser tiers
+ *                                   scale as (`_scale` / cellScaleKm)²
+ * @property {number} refLat       - latitude the nominal cell area is taken at.
+ *                                   The cell tiles carry no coordinates, so this
+ *                                   constant stands in for the true, latitude-varying
+ *                                   area; pick the value-weighted mean latitude.
+ * @property {string} areaProp     - unit-tile property holding the region's ground
+ *                                   area in km² (exact, unlike the cell side)
  */
 
 /**

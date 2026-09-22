@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { ToolFooter } from './tool-footer.jsx'
 import { Actions } from '../../contracts/events.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
+import { toIntensityVariable } from '../../lib/intensity.js'
 import { LayerTabs } from './layer-tabs.jsx'
 import { DimensionControl, SourceCategoryControls } from './dimension-control.jsx'
 import { Legend } from './legend.jsx'
@@ -20,6 +21,10 @@ import { categoricalLegend } from '../../lib/analysis-categorical.js'
 export function Sidebar({ config, state, dispatch, allValues = [], companion = null, repoLinks = null, paleActive = false, setPaleActive = null, paleDriver = 'r_net', setPaleDriver = null, analysisEntries = [], colorRange = null }) {
   const [masksOpen, setMasksOpen] = useState(false)
   const activeVariable = getActiveVariable(config, state.activeLayer, state.activeDimensions)
+  // `allValues` and `colorRange` arrive from MapTool already on the map's
+  // display basis (t CO₂e/km² where config.intensity applies); the chart
+  // and legend need the variable's thresholds and unit label on it too.
+  const legendVariable = toIntensityVariable(config, activeVariable)
   const activeLayerConfig = config.layers.find((l) => l.id === state.activeLayer)
   const activeDimensionIds = activeLayerConfig?.dimensionIds ?? []
   const visibleDimensions = config.dimensions.filter(
@@ -323,7 +328,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           </div>
         ) : isEmissions && config.percentileFilter?.enabled && activeVariable && activeVariable.type !== 'categorical' && allValues.length > 0 ? (
           <DistributionChart
-            variable={activeVariable}
+            variable={legendVariable}
             allValues={allValues}
             percentileRange={state.percentileRange}
             dispatch={dispatch}
@@ -331,7 +336,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           />
         ) : isEmissions ? (
           <Legend
-            variable={activeVariable}
+            variable={legendVariable}
             allValues={allValues}
             colorRange={colorRange}
             isDark={state.colorScheme === 'dark'}

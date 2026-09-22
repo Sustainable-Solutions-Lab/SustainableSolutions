@@ -32,6 +32,11 @@
  * @property {Object}  [dimensionValues] - { [dimensionId]: optionId } — which dimension
  *                                        state activates this variable in its layer
  * @property {string}  [description] - shown as a tooltip in the sidebar
+ * @property {Object}  [detail]      - region-panel spec for a variable that is
+ *                                     not the project's headline quantity, e.g.
+ *                                     { label, rows: [{ prop, label }], sources }.
+ *                                     Present = the panel shows this instead of
+ *                                     its default breakdown.
  */
 
 /**

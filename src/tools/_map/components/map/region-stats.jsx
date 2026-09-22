@@ -17,6 +17,12 @@ import { useYearFactors } from '../../lib/year-factors.js'
 
 const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
 
+// Signed magnitudes: the management-attributable pilot layer is almost all
+// negative, and a bare `x < 10` test sent every one of those values down
+// the decimals path.
+const fmtQty = (x, digits) =>
+  (Math.abs(x) < 10 ? x.toFixed(digits) : Math.round(x).toLocaleString())
+
 // WWF terrestrial biome names — the unit tiles carry the number only.
 const BIOME_NAMES = {
   1: 'Tropical moist forests', 2: 'Tropical dry forests',
@@ -94,6 +100,45 @@ export function Composition({ props, taxonomy, isDark, max = 3, kinds = null }) 
           ))}
         </div>
       ))}
+    </div>
+  )
+}
+
+/**
+ * Detail block for a variable that is NOT land-management emissions
+ * (variable.detail) — the forest-carbon pilots. Shows the quantity the map
+ * is actually painting, both accounting options side by side, and which
+ * national inventory the region's plots came from, in place of the
+ * commodity / source decomposition.
+ */
+function PilotDetail({ detail, props, unit, isDark }) {
+  const rows = (detail.rows ?? []).filter((r) => props[r.prop] != null)
+  if (rows.length === 0) return null
+  const muted = isDark ? 'rgba(248,248,232,0.5)' : 'rgba(24,24,56,0.5)'
+  const text = isDark ? 'rgba(248,248,232,0.9)' : 'rgba(24,24,56,0.9)'
+  const source = detail.sources?.[props.country]
+  return (
+    <div style={{ marginTop: 7 }}>
+      <div style={{ fontSize: 8, letterSpacing: '0.08em', color: muted, marginBottom: 2 }}>
+        {(detail.label ?? 'Pilot').toUpperCase()}{unit ? ` · ${unit}` : ''}
+      </div>
+      {rows.map((r) => {
+        const v = Number(props[r.prop])
+        return (
+          <div key={r.prop} style={{ display: 'flex', alignItems: 'baseline', gap: 5, fontSize: 9 }}>
+            <span style={{ color: text, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {r.label}
+            </span>
+            <span style={{ color: v < 0 ? '#D53E4F' : '#3288BD', flexShrink: 0 }}>
+              {v > 0 ? '+' : v < 0 ? '−' : ''}{Math.abs(Math.round(v)).toLocaleString()}
+            </span>
+          </div>
+        )
+      })}
+      <div style={{ fontSize: 8, color: muted, marginTop: 3, lineHeight: 1.4 }}>
+        {source ? `${source}. ` : ''}Positive is a net removal, negative a
+        net loss. Not counted in any emissions total.
+      </div>
     </div>
   )
 }
@@ -209,8 +254,14 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
 
   if (!unit || state.mapView !== 'regional') return null
   const p = unit.props
+  // Variables that aren't land-management emissions carry their own panel
+  // spec (the forest-carbon pilots); everything below branches on it.
+  const detail = activeVariable?.detail ?? null
   const total = activeVariable ? readVarValue(p, activeVariable) : null
-  const intens = total != null && p.area_km2 ? (total * 1000) / p.area_km2 : null
+  // Emission props are kt CO2e, the pilot stock props t CO2e; both report
+  // intensity in t CO2e per km2.
+  const intens = total != null && p.area_km2
+    ? (total * (detail ? 1 : 1000)) / p.area_km2 : null
   const text = isDark ? 'rgba(248,248,232,0.9)' : 'rgba(24,24,56,0.9)'
   const muted = isDark ? 'rgba(248,248,232,0.5)' : 'rgba(24,24,56,0.5)'
 
@@ -245,14 +296,14 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
       )}
       <div style={{ fontSize: 13, fontWeight: 700 }}>
         {p.r_net != null ? null : total != null
-          ? activeVariable?.rawRead
-            ? `${total < 10 ? total.toFixed(2) : Math.round(total).toLocaleString()} ${activeVariable.unit ?? ''}`
+          ? (activeVariable?.rawRead || detail)
+            ? `${fmtQty(total, 2)} ${activeVariable.unit ?? ''}`
             : `${Math.round(total).toLocaleString()} kt CO₂e`
           : '—'}
       </div>
       <div style={{ fontSize: 9, color: muted }}>
         {!activeVariable?.rawRead && intens != null
-          ? `${intens < 10 ? intens.toFixed(1) : Math.round(intens).toLocaleString()} t CO₂e / km²` : ''}
+          ? `${fmtQty(intens, 1)} t CO₂e / km²` : ''}
       </div>
       {/* Mirrors the Region Focus panel: emissions modes get the twin
           by-source / by-commodity trend stacks + emission factors; the
@@ -263,35 +314,46 @@ export function RegionStats({ map, state, dispatch, activeVariable, isDark, conf
         <Composition props={p} taxonomy={config?.paleMap?.taxonomy} isDark={isDark}
           kinds={[state.analysisDriver === 'dom_commodity' ? 'Commodities' : 'Sources']} />
       )}
-      {state.analysis !== 'pale' && unitWeights && config?.areaTool?.trend && (
-        <TrendChart
-          trendConfig={config.areaTool.trend}
-          trendWeights={unitWeights}
-          isDark={isDark}
-          activeSourceId={activeVariable?.dimensionValues?.source ?? null}
-          title="Trend in emissions · by source"
-        />
-      )}
-      {state.analysis !== 'pale' && unitCommodityWeights && config?.areaTool?.trend && (
-        <CommodityTrendChart
-          trendConfig={config.areaTool.trend}
-          trendWeights={unitWeights}
-          commodityWeights={unitCommodityWeights}
-          taxonomy={config?.paleMap?.taxonomy}
-          isDark={isDark}
-          title="Trend in emissions · by commodity"
-        />
-      )}
-      {state.analysis !== 'pale' && config?.areaTool?.ef && unitCropSums && (
-        <EfSection
-          efConfig={config.areaTool.ef}
-          cropSums={unitCropSums}
-          commodityWeights={unitCommodityWeights}
-          factors={yearFactors}
-          year={selYear}
-          activeVariable={activeVariable}
-          isDark={isDark}
-        />
+      {/* A variable with its own detail spec (the forest-carbon pilots) is
+          not one of the emission sources these three sections decompose,
+          so it replaces them rather than sitting above them. */}
+      {detail ? (
+        state.analysis !== 'pale' && (
+          <PilotDetail detail={detail} props={p} unit={activeVariable?.unit} isDark={isDark} />
+        )
+      ) : (
+        <>
+          {state.analysis !== 'pale' && unitWeights && config?.areaTool?.trend && (
+            <TrendChart
+              trendConfig={config.areaTool.trend}
+              trendWeights={unitWeights}
+              isDark={isDark}
+              activeSourceId={activeVariable?.dimensionValues?.source ?? null}
+              title="Trend in emissions · by source"
+            />
+          )}
+          {state.analysis !== 'pale' && unitCommodityWeights && config?.areaTool?.trend && (
+            <CommodityTrendChart
+              trendConfig={config.areaTool.trend}
+              trendWeights={unitWeights}
+              commodityWeights={unitCommodityWeights}
+              taxonomy={config?.paleMap?.taxonomy}
+              isDark={isDark}
+              title="Trend in emissions · by commodity"
+            />
+          )}
+          {state.analysis !== 'pale' && config?.areaTool?.ef && unitCropSums && (
+            <EfSection
+              efConfig={config.areaTool.ef}
+              cropSums={unitCropSums}
+              commodityWeights={unitCommodityWeights}
+              factors={yearFactors}
+              year={selYear}
+              activeVariable={activeVariable}
+              isDark={isDark}
+            />
+          )}
+        </>
       )}
       {state.analysis === 'pale' && unitWeights && config?.areaTool?.trend && (
         <PaleSeriesChart

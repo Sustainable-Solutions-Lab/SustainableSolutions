@@ -618,7 +618,6 @@ const config = {
   // will take its LUC layer from is Cornerstone's.
   initiative: {
     name: 'Cornerstone',
-    eyebrow: 'Part of',
     url: 'https://cornerstonedata.org/',
     logo: '/logos/cornerstone/Cornerstone-Wordmark-1c.svg',
     logoDark: '/logos/cornerstone/Cornerstone-Wordmark-1c-white.svg',

@@ -87,13 +87,22 @@ export function parsePersonName(name: string): ParsedCitation | null {
  * Author can have FEWER givens than person (the citation may omit a middle
  * initial). Author may not have MORE — that would expand the person's name.
  */
-/** Compare two surnames, allowing a hyphenated form on either side to
- *  match the trailing segment on the other (e.g. roster "Navarro-Fofrich"
- *  matches a paper's "Fofrich, R."). */
+/** Compare two surnames, allowing a compound form on either side to match
+ *  the trailing segment on the other. Covers hyphenated surnames (roster
+ *  "Navarro-Fofrich" vs a paper's "Fofrich, R.") and the unhyphenated
+ *  Spanish-style form, where the two halves are separated by a space:
+ *  a paper's "Fofrich Navarro, Robert" parses its surname as the whole
+ *  "fofrich navarro", which has to match a roster surname of "navarro".
+ *
+ *  Loosening this only gets a pair past the surname test; matches() still
+ *  compares given names afterwards, so unrelated people who happen to share
+ *  a trailing surname segment are still rejected there. */
 function lastNamesMatch(a: string, p: string): boolean {
   if (a === p) return true
-  if (a.includes('-') && a.split('-').pop() === p) return true
-  if (p.includes('-') && p.split('-').pop() === a) return true
+  const isCompound = (s: string) => /[-\s]/.test(s)
+  const tail = (s: string) => s.split(/[-\s]+/).filter(Boolean).pop() ?? s
+  if (isCompound(a) && tail(a) === p) return true
+  if (isCompound(p) && tail(p) === a) return true
   return false
 }
 

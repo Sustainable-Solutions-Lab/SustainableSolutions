@@ -30,11 +30,18 @@ const R = 82             // globe radius
 //      than a logo.
 const VERT = `M ${C} 84 L ${C} 330`
 
-// 2 — horizontal crosshair, left to right, with the gap on the left arm.
-//     Two subpaths in one element. SVG restarts the dash pattern at each
-//     subpath, so the arms trace in parallel from their own left ends rather
-//     than as one sweep hopping the gap — the short arm lands first, and the
-//     gap is simply never drawn through.
+// 2 — horizontal crosshair: ONE sweep, left to right, that steps over the
+//     gap rather than drawing through it.
+//
+//     Two subpaths in a single element will not do this. SVG restarts the
+//     dash pattern at every subpath, so both arms trace at once from their
+//     own left ends and the mark reads as two strokes landing together
+//     instead of one hand crossing the page. So the arms are separate
+//     elements whose timings are laid end to end, each allotted its share
+//     of one window in proportion to its LENGTH — including the gap, which
+//     is allotted time but draws nothing. That keeps the nib moving at a
+//     constant speed across the full 248-unit span, which is what sells it
+//     as a single stroke.
 //
 //     Measured off LabLogo_print.png rather than estimated: along the bar
 //     row the artwork runs 221–701, gaps 702–846, and resumes at 847, while
@@ -46,7 +53,14 @@ const VERT = `M ${C} 84 L ${C} 330`
 //     The earlier 8-unit gap came from misreading the artwork gap as
 //     702–735; widening it to 20 was papering over that, and it left the
 //     stub this replaces.
-const HORIZ = `M 76 ${C} L 169.2 ${C} M 194.5 ${C} L 324 ${C}`
+// Span 76 -> 324 = 248 units: left arm 93.2 (37.6%), gap 25.3 (10.2%),
+// right arm 129.5 (52.2%). `draw` and `out` are those shares mapped onto
+// the sweep window 17-34% and the retreat window 62-84%, so the mark also
+// evaporates left to right, in the order it was laid down.
+const HORIZ = [
+  { d: `M 76 ${C} L 169.2 ${C}`, len: 93.2, draw: [17, 23.4], out: [62, 70.3] },
+  { d: `M 194.5 ${C} L 324 ${C}`, len: 129.5, draw: [25.1, 34], out: [72.5, 84] },
+]
 
 // 3 — the globe, one clockwise stroke from six o'clock: down at the bottom,
 //     round past nine, over the top and back. Sweep flag 1 is clockwise on
@@ -143,11 +157,15 @@ export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
           d={VERT} fill="none" stroke={ink} strokeWidth={SW} strokeLinecap="butt"
           style={{ strokeDasharray: 300, animation: `ssl-v ${CYCLE}ms linear infinite` }}
         />
-        {/* 2 — horizontal crosshair, broken on the left arm */}
-        <path
-          d={HORIZ} fill="none" stroke={ink} strokeWidth={SW} strokeLinecap="butt"
-          style={{ strokeDasharray: 300, animation: `ssl-h ${CYCLE}ms linear infinite` }}
-        />
+        {/* 2 — horizontal crosshair, one sweep across the gap */}
+        {HORIZ.map((h, i) => (
+          <path
+            key={i}
+            d={h.d} fill="none" stroke={ink} strokeWidth={SW} strokeLinecap="butt"
+            style={{ strokeDasharray: h.len,
+                     animation: `ssl-h${i} ${CYCLE}ms linear infinite` }}
+          />
+        ))}
         {/* 3 — the globe, clockwise */}
         <path
           d={GLOBE} fill="none" stroke="url(#ssl-globe)" strokeWidth={SW} strokeLinecap="round"
@@ -199,16 +217,17 @@ export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
           88%  { opacity: 0; }
           100% { stroke-dashoffset: -300; opacity: 0; }
         }
-        @keyframes ssl-h {
-          0%   { stroke-dashoffset: 300; opacity: 0; }
-          17%  { stroke-dashoffset: 300; opacity: 0; }
-          19%  { opacity: 1; }
-          34%  { stroke-dashoffset: 0; opacity: 1; }
-          62%  { stroke-dashoffset: 0; opacity: 1; }
-          84%  { stroke-dashoffset: -300; opacity: 0.25; }
-          91%  { opacity: 0; }
-          100% { stroke-dashoffset: -300; opacity: 0; }
-        }
+        ${HORIZ.map((h, i) => `
+        @keyframes ssl-h${i} {
+          0%   { stroke-dashoffset: ${h.len}; opacity: 0; }
+          ${h.draw[0]}%  { stroke-dashoffset: ${h.len}; opacity: 0; }
+          ${h.draw[0] + 0.5}%  { opacity: 1; }
+          ${h.draw[1]}%  { stroke-dashoffset: 0; opacity: 1; }
+          ${h.out[0]}%  { stroke-dashoffset: 0; opacity: 1; }
+          ${h.out[1]}%  { stroke-dashoffset: -${h.len}; opacity: 0.25; }
+          ${h.out[1] + 1.5}%  { opacity: 0; }
+          100% { stroke-dashoffset: -${h.len}; opacity: 0; }
+        }`).join('')}
         @keyframes ssl-g {
           0%   { stroke-dashoffset: 520; opacity: 0; }
           36%  { stroke-dashoffset: 520; opacity: 0; }

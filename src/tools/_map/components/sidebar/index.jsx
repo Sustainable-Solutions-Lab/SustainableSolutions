@@ -454,6 +454,45 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
           </a>
         )}
 
+        {/* Initiative the project belongs to. Config-declared rather than
+            hardcoded, so other tools can name their own. The wordmark ships
+            in a dark and a light cut; pick by theme rather than filtering,
+            which muddies a one-colour mark. */}
+        {config.initiative && (
+          <div className="mt-6 pt-4 border-t border-rule">
+            <div
+              style={{
+                font: '10px "JetBrains Mono", ui-monospace, monospace',
+                letterSpacing: '0.14em', textTransform: 'uppercase',
+              }}
+              className="text-ink-3 mb-2"
+            >
+              {config.initiative.eyebrow ?? 'Part of'}
+            </div>
+            <a
+              href={config.initiative.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bare block"
+              style={{ lineHeight: 0 }}
+              aria-label={`${config.initiative.name} (opens in a new tab)`}
+            >
+              <img
+                src={state.colorScheme === 'dark' && config.initiative.logoDark
+                  ? config.initiative.logoDark
+                  : config.initiative.logo}
+                alt={config.initiative.name}
+                style={{ height: 22, width: 'auto', opacity: 0.85 }}
+              />
+            </a>
+            {config.initiative.note && (
+              <p className="text-ink-3 mt-2" style={{ fontSize: 11, lineHeight: 1.5 }}>
+                {config.initiative.note}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Repo links — bottom of the panel, matching the magnets explorer's
             footer pattern (octicon + mono repo name). Standard placement for
             all map tools. */}

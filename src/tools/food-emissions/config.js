@@ -613,6 +613,16 @@ const config = {
   // `rclone copy build/tiles/food-emissions/food-emissions.pmtiles r2:ssl-data/food-emissions/`.
   tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/food-emissions.pmtiles',
   sourceLayer: 'food-emissions',
+  // The Cornerstone initiative (cornerstonedata.org) — this project is part
+  // of it, and the jurisdictional land-use-change framework the explorer
+  // will take its LUC layer from is Cornerstone's.
+  initiative: {
+    name: 'Cornerstone',
+    eyebrow: 'Part of',
+    url: 'https://cornerstonedata.org/',
+    logo: '/logos/cornerstone/Cornerstone-Wordmark-1c.svg',
+    logoDark: '/logos/cornerstone/Cornerstone-Wordmark-1c-white.svg',
+  },
   distributionsUrl: '/tools/food-emissions/distributions.json',
   // Per-country value ladders backing the gridded colour scale; see
   // _map/lib/fixed-color-range.js for why the global sample alone is not

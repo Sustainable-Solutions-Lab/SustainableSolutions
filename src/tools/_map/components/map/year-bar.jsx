@@ -48,7 +48,33 @@ export function YearBar({ config, state, dispatch, isDark , disableCompare = fal
   }
   function toggleCompare() {
     if (playing) dispatch({ type: Actions.SET_ANIMATING, dimensionId: null })
+    const turningOn = !compareOn
+    // The sliders cannot reach FROM == TO, but the state can already be
+    // there when compare is switched on (the year slider moves freely while
+    // it is off). Step FROM back so the mode never opens on the degenerate
+    // comparison.
+    if (turningOn && yearBDim && yearB === year) {
+      const i = Math.max(0, ids.indexOf(year))
+      setDim(yearBDim.id, ids[i > 0 ? i - 1 : Math.min(1, ids.length - 1)])
+    }
     setDim(yc.compareDimensionId, compareOn ? 'off' : 'on')
+  }
+
+  // Comparing a year with itself is a degenerate state — no change anywhere
+  // by construction — and it also exposes a MapLibre staleness bug in the
+  // dominance overlay, where cells keep colours evaluated under the previous
+  // year pair and a map that should be blank is not. Rather than let the
+  // sliders reach it, each one stops one step short of the other. This is a
+  // guard on the degenerate case, NOT a fix for the staleness; see
+  // components/map/level-layer.jsx.
+  const lastIdx = ids.length - 1
+  const idxOf = (v) => Math.max(0, ids.indexOf(v))
+  const boundsFor = (dimId) => {
+    if (!compareOn || !yearBDim) return { min: 0, max: lastIdx }
+    // FROM must stay below TO, and TO above FROM.
+    return dimId === yc.yearBDimensionId
+      ? { min: 0, max: Math.max(0, idxOf(year) - 1) }
+      : { min: Math.min(lastIdx, idxOf(yearB) + 1), max: lastIdx }
   }
 
   const sliderRow = (dimId, value, rowLabel) => (
@@ -64,8 +90,8 @@ export function YearBar({ config, state, dispatch, isDark , disableCompare = fal
       )}
       <input
         type="range"
-        min={0}
-        max={ids.length - 1}
+        min={boundsFor(dimId).min}
+        max={boundsFor(dimId).max}
         step={1}
         value={Math.max(0, ids.indexOf(value))}
         onChange={(e) => setDim(dimId, ids[Number(e.target.value)])}

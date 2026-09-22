@@ -89,8 +89,9 @@ export function ToolFooter({ config, repoLinks = null, isDark = true, compact = 
           target="_blank"
           rel="noopener noreferrer"
           className="text-ink-2 hover:text-ink border-b-0 inline-flex items-center mt-2"
-          // 11px and a 13px mark keep the whole line inside the 285px
-          // sidebar; at 12px the arrow orphans onto a second row.
+          // 11px text keeps the whole line inside the 285px sidebar; at
+          // 12px the arrow orphans onto a second row. The mark can run a
+          // little larger than the text without pushing it over.
           style={{ gap: 6, fontSize: 11 }}
           aria-label={`${config.initiative.name} (opens in a new tab)`}
         >
@@ -99,7 +100,7 @@ export function ToolFooter({ config, repoLinks = null, isDark = true, compact = 
               ? config.initiative.logoDark
               : config.initiative.logo}
             alt=""
-            style={{ height: 13, width: 'auto', flexShrink: 0, opacity: 0.9 }}
+            style={{ height: 16, width: 'auto', flexShrink: 0, opacity: 0.9 }}
           />
           <span>{config.initiative.note ?? <>Part of the {config.initiative.name} initiative ↗</>}</span>
         </a>

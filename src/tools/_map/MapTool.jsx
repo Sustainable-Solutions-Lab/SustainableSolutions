@@ -946,8 +946,11 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           <div
             className="block md:hidden absolute z-10"
             style={{
-              // Just above the year bar pinned at the bottom of the map.
-              bottom: 70,
+              // Just above the year bar, which is pinned at bottom:18 and
+              // grows a second slider row in compare mode - about 30px
+              // taller. At a fixed 70 the categorical legends, which are the
+              // tall ones, ran under it.
+              bottom: compareOn ? 104 : 70,
               right: 8,
               width: 160,
               background: isDark ? 'rgba(12, 12, 28, 0.92)' : 'rgba(248, 248, 232, 0.92)',

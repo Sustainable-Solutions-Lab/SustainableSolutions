@@ -336,7 +336,19 @@ async function fetchTab(tabName, { env, required }) {
   let source;
 
   if (url) {
-    const res = await fetch(url, { redirect: 'follow' });
+    // Google serves the published CSV through a CDN that will hand back a
+    // snapshot several minutes old, so a build kicked off moments after a
+    // sheet edit can bake in stale data and look like "the deploy didn't
+    // work". A unique query param plus no-store defeats that edge cache.
+    // Google ignores unknown params on the /pub endpoint.
+    // (Google's own publish-to-web republish interval is still upstream of
+    // us; this removes our cache hop, not theirs.)
+    const bust = `${url.includes('?') ? '&' : '?'}_cb=${Date.now()}`;
+    const res = await fetch(url + bust, {
+      redirect: 'follow',
+      cache: 'no-store',
+      headers: { 'cache-control': 'no-cache', pragma: 'no-cache' },
+    });
     if (!res.ok) {
       throw new Error(`[fetch-sheets] ${tabName} fetch failed: ${res.status} ${res.statusText}`);
     }

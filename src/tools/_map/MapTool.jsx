@@ -27,6 +27,7 @@ import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
 import { MethodsPanel } from './components/methods-panel.jsx'
 import { MapBusy } from './components/map/map-busy.jsx'
+import { ToolFooter } from './components/sidebar/tool-footer.jsx'
 import { loadColorSamples, peekColorSamples, fixedColorRange } from './lib/fixed-color-range.js'
 import { DevControls, shouldShowDevControls, readStoredTuning } from './components/dev-controls.jsx'
 import { DEFAULT_TUNING } from './lib/use-just-air-layers.js'
@@ -907,6 +908,17 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
         >
           Read Methods
         </button>
+
+        {/* Same end-matter the desktop sidebar carries. The sidebar is
+            `hidden md:flex`, so on a phone it is not rendered at all - these
+            have to be placed into the drawer explicitly or they simply do
+            not exist on mobile. */}
+        <ToolFooter
+          config={config}
+          repoLinks={repoLinks}
+          isDark={isDark}
+          compact
+        />
         </>
       }
     >

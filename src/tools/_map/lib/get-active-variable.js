@@ -84,7 +84,7 @@ export function getActiveVariable(config, activeLayer, activeDimensions) {
         colorMax: cap,
         colorMin: -cap,
         label: `${v.label} — cumulative ${a}–${b}`,
-        note: `Cumulative soil-carbon change ${a}–${b}, t CO₂e per cell (piecewise from three period rates). Red = net loss (counted in emissions); blue = net gain (context only, not credited).`,
+        note: `Cumulative soil-carbon change ${a}–${b}, t CO₂e per km² (piecewise from three period rates). Red = net loss (counted in emissions); blue = net gain (context only, not credited).`,
       }
     }
     const pp = props[segFor(clampY(year))]

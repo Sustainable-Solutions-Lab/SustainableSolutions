@@ -33,6 +33,8 @@ export function makeLevelVariable(lvl) {
     unit: lvl.unit,
     colormap: lvl.colormap ?? 'SpectralHotDeep',
     diverging: false,
+    // Already a per-area ratio: lib/intensity.js leaves it alone.
+    intensive: true,
     domain: { min: 0, max: 1 },
     alphaFloor: 0.02,
     alphaPower: 0.5,

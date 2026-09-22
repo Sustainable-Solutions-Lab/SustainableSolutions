@@ -524,11 +524,27 @@ const config = {
     },
   },
 
+  // ── Common intensity basis ──────────────────────────────────────────────
+  // Both map views colour by t CO₂e per km² of GROUND (not of cropland),
+  // off one range, so a cell and a region reading the same number read the
+  // same colour — the region simply averages over far more ground, which is
+  // why its distribution is the tighter of the two. See _map/lib/intensity.js.
+  intensity: {
+    unit: 't CO₂e/km²',
+    // The cell tiles carry no latitude and MapLibre cannot read a feature's
+    // coordinates, so the gridded denominator is the exact spherical area
+    // of a 0.25° cell at 29.7° — the emissions-weighted mean latitude of
+    // the 202,970 exported cells, giving 671 km² against a true spread of
+    // 96–773 km². The coarse tier is handled from `_scale`.
+    cellDeg: 0.25,
+    cellScaleKm: 28,
+    refLat: 29.7,
+    // The unit tiles carry their own ground area, so that side is exact.
+    areaProp: 'area_km2',
+  },
+
   // ── Regional map view: admin-1 x biome unit choropleth ──────────────────
   regionalView: {
-    // Fixed global colour scale, precomputed over every unit so the ramp
-    // never depends on the viewport (pipeline/export_unit_values.py).
-    scalesUrl: '/tools/food-emissions/unit-scales.json',
     tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/unit-values.pmtiles',
     sourceLayer: 'unit-values',
   },

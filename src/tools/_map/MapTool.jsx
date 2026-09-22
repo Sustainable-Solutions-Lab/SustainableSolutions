@@ -29,6 +29,7 @@ import { MethodsPanel } from './components/methods-panel.jsx'
 import { MapBusy } from './components/map/map-busy.jsx'
 import { ToolFooter } from './components/sidebar/tool-footer.jsx'
 import { loadColorSamples, peekColorSamples, fixedColorRange } from './lib/fixed-color-range.js'
+import { toIntensityVariable, toIntensityRange, toIntensityValues } from './lib/intensity.js'
 import { DevControls, shouldShowDevControls, readStoredTuning } from './components/dev-controls.jsx'
 import { DEFAULT_TUNING } from './lib/use-just-air-layers.js'
 
@@ -240,6 +241,19 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     () => fixedColorRange(activeVariable, colorSamples, toolYearFactors),
     [activeVariable, colorSamples, toolYearFactors],
   )
+  // The colorbar describes the quantity BOTH views paint. For projects on a
+  // common intensity basis (config.intensity) that is t CO₂e/km², so the
+  // variable's thresholds, the painted range and the per-cell value sample
+  // all get restated in it before the legend and the distribution chart see
+  // them (lib/intensity.js). Everyone else passes through unchanged.
+  const legendVariable = useMemo(
+    () => toIntensityVariable(config, activeVariable), [config, activeVariable])
+  const legendRange = useMemo(
+    () => toIntensityRange(config, activeVariable, paintColorRange),
+    [config, activeVariable, paintColorRange])
+  const legendValues = useMemo(
+    () => toIntensityValues(config, activeVariable, statewideValues),
+    [config, activeVariable, statewideValues])
   // Change drivers render the LMDI unit polygons; level and dominance
   // drivers repaint the active view (cells or units).
   // A driver shows its LMDI change polygons only when it is NOT being
@@ -625,7 +639,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           config={config}
           state={state}
           dispatch={dispatch}
-          allValues={statewideValues}
+          allValues={legendValues}
           companion={companion}
           repoLinks={repoLinks}
           paleActive={paleActive}
@@ -633,7 +647,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
           paleDriver={paleDriver}
           setPaleDriver={setPaleDriver}
           analysisEntries={categoricalEntryList}
-          colorRange={paintColorRange}
+          colorRange={legendRange}
         />
       }
       drawer={
@@ -980,7 +994,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
                 ))}
               </div>
             ) : (
-              <MobileLegend variable={activeVariable} allValues={statewideValues} colorRange={paintColorRange} isDark={isDark} />
+              <MobileLegend variable={legendVariable} allValues={legendValues} colorRange={legendRange} isDark={isDark} />
             )}
           </div>
 
@@ -1013,6 +1027,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
               isDark={isDark}
               suppressed={analysisIsChange}
               socPaint={socRegionalPaint}
+              colorRange={paintColorRange}
             />
           )}
           {config.regionalView && (

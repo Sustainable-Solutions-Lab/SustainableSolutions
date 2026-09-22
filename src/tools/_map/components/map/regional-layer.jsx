@@ -2,10 +2,12 @@
  * components/map/regional-layer.jsx
  *
  * Regional map view (config.regionalView): the admin-1 x biome units as a
- * choropleth of the ACTIVE Source x Commodity selection — the same variable
- * resolution, year scaling, and colormap as the gridded cells, painted on
- * unit polygons and colored by per-area intensity (t CO2e per km2 of unit)
- * so large and small units compare fairly.
+ * choropleth of the ACTIVE Source x Commodity selection — the same
+ * variable resolution, year scaling, colormap, colour RANGE and alpha ramp
+ * as the gridded cells, painted on unit polygons and read against the same
+ * quantity: t CO2e per km2 of ground (lib/intensity.js). A unit and a cell
+ * that both read 200 t/km2 paint the same colour; the unit simply averages
+ * over far more ground, so its distribution is the tighter one.
  *
  * Hover/tap shows the unit's total and intensity; click selects the unit
  * (outline + Actions.SELECT_UNIT, which opens the region statistics panel).
@@ -20,8 +22,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Actions } from '../../contracts/events.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { useYearFactors } from '../../lib/year-factors.js'
-import { varValueExpr, varHasExpr, readVarValue } from '../../lib/variable-value.js'
-import { INTERPOLATORS } from '../../lib/colormap.js'
+import { varValueExpr, readVarValue } from '../../lib/variable-value.js'
+import { unitIntensityExpr } from '../../lib/intensity.js'
+import { buildColorExpr } from '../../lib/use-just-air-layers.js'
 import { levelFor, makeLevelVariable, levelColorExpr } from '../../lib/analysis-levels.js'
 import { categoricalFor, categoricalEntries, categoricalColorExpr, categoricalOpacityExpr, categoricalChangeColorExpr, categoricalChangeMagnitudeExpr, composition } from '../../lib/analysis-categorical.js'
 
@@ -29,37 +32,6 @@ const SRC = 'unit-values'
 const FILL = 'unit-values-fill'
 const LINE = 'unit-values-line'
 const SEL = 'unit-values-selected'
-
-// Global colour scale, precomputed over every unit at build time
-// (pipeline/export_unit_values.py -> unit-scales.json). Fixed for all
-// viewports and all visitors: the scale must not depend on what happens
-// to be on screen.
-let SCALES = null
-let scalesPromise = null
-function loadScales(url) {
-  if (SCALES || !url) return
-  if (!scalesPromise) {
-    scalesPromise = fetch(url).then((r) => (r.ok ? r.json() : null))
-      .then((d) => { SCALES = d || {} }).catch(() => { SCALES = {} })
-  }
-}
-
-/** Fixed max for a variable: its declared colorMax, else the global p95. */
-function globalMax(v) {
-  if (v?.colorMax != null) return v.colorMax
-  const terms = v?.yearTerms ?? []
-  if (!SCALES || !terms.length) return null
-  // Single-term variables read their own precomputed percentile. Multi-term
-  // ones (totals, LSRS categories) sum the parts: p95 of a sum is not the
-  // sum of p95s, but it is deterministic and errs toward a cooler map,
-  // which is the right way to be wrong for a legend.
-  let s = 0
-  for (const term of terms) {
-    const val = SCALES[term.prop]
-    if (val != null) s += val
-  }
-  return s > 0 ? s : null
-}
 
 /**
  * Selection filter. unit_id alone collided across tile vintages and
@@ -77,13 +49,12 @@ function selectionFilter(su) {
     ['==', ['get', 'country'], su.props?.country ?? '']]
 }
 
-function withAlpha(rgbStr, a) {
-  if (rgbStr.startsWith('rgb(')) return rgbStr.replace('rgb(', 'rgba(').replace(')', `,${a.toFixed(3)})`)
-  return rgbStr
-}
-
-export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed = false, socPaint = null }) {
+export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed = false, socPaint = null, colorRange = null }) {
   // suppressed: an Analysis overlay (PALE) owns the polygons right now.
+  // colorRange: the range the gridded cells are painted with (MapTool's
+  // fixedColorRange, in stored per-cell units — buildColorExpr restates it
+  // per km² the same way for both views). Shared deliberately: it is the
+  // whole point that the two views saturate at the same number.
   const active = state.mapView === 'regional' && !suppressed
   const yearFactors = useYearFactors(config)
   const resolved = getActiveVariable(config, state.activeLayer, state.activeDimensions)
@@ -113,21 +84,12 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
         to: Number(state.activeDimensions?.year ?? 2024) }
     : null
   Object.assign(refs.current, { active, variable, isDark, catEntries, domCompare,
-    socPaint: socPaint ?? null,
+    socPaint: socPaint ?? null, colorRange,
     percentileRange: state.percentileRange,
     selectedId: state.selectedUnit?.id ?? null,
     // the whole unit, so a layer re-created outside React can rebuild the
     // compound selection filter rather than falling back to unit_id alone
     selectedUnit: state.selectedUnit ?? null, dispatch })
-
-  // Fill metric: level analyses ARE ratios already; the standard view
-  // divides the (year-scaled) total by unit area -> t/km2.
-  const intensityExpr = useMemo(() => {
-    if (!variable) return 0
-    if (variable.rawExpr) return variable.rawExpr
-    return ['/', ['*', ['to-number', varValueExpr(variable)], 1000],
-            ['max', 1, ['to-number', ['get', 'area_km2']]]]
-  }, [variable])
 
   // ── Source + layers ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -167,58 +129,26 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
         return
       }
       try { map.setPaintProperty(FILL, 'fill-opacity', 1) } catch {}
-      // Diverging variables (soil carbon, the forest-carbon pilots):
-      // signed per-km2 choropleth. Stops come from the variable's OWN
-      // colormap, the same way the sequential branch below does it — a
-      // fixed Spectral ramp here painted orange and teal for layers whose
-      // colorbar is RdBu, so a colour read off the bar meant nothing.
-      if (v.diverging) {
-        // soc and forest props are t CO2e (not kt like the emission
-        // sums): t per km2
-        const val = ['/', ['to-number', varValueExpr(v)],
-                     ['max', 1, ['to-number', ['get', 'area_km2']]]]
-        const r = Math.max(0.5, (v.colorMax ?? v.domain?.max ?? 1500) / 500)
-        const interp = INTERPOLATORS[dark && v.darkColormap ? v.darkColormap : (v.colormap ?? 'RdBu')]
-          ?? INTERPOLATORS.RdBu
-        const expr = ['interpolate', ['linear'], val]
-        const steps = 16
-        for (let i = 0; i <= steps; i++) {
-          const t = i / steps
-          // Alpha tracks the distance from zero, so the crossing stays a
-          // whisper and both arms saturate at ±r.
-          const a = 0.06 + 0.89 * Math.abs(2 * t - 1)
-          expr.push(-r + 2 * r * t, withAlpha(interp(t), a))
-        }
-        try {
-          // Gate on the prop the way the sequential branch does: the
-          // forest pilots cover three countries, and ungated every other
-          // unit painted the ramp's zero colour — a measured zero, not
-          // "no data".
-          map.setPaintProperty(FILL, 'fill-color',
-            ['case', varHasExpr(v), expr, 'rgba(0,0,0,0)'])
-          map.setPaintProperty(FILL, 'fill-opacity', 0.85)
-          map.setFilter(FILL, null)
-        } catch {}
-        return
-      }
-      if (v.rawExpr) {
+      // Level analyses are ratios already and bring their own fixed ramp.
+      if (v.rawExpr && !v.diverging) {
         try { map.setPaintProperty(FILL, 'fill-color', levelColorExpr(v, dark)) } catch {}
         try { map.setFilter(FILL, null) } catch {}
         return
       }
-      const interp = INTERPOLATORS[dark && v.darkColormap ? v.darkColormap : (v.colormap ?? 'SpectralHot')]
-        ?? INTERPOLATORS.SpectralHot
-      const max = globalMax(v) ?? 20
-      const expr = ['interpolate', ['linear'], intensityExpr]
-      const steps = 18
-      for (let i = 0; i <= steps; i++) {
-        const t = i / steps
-        const a = t < 0.04 ? 0.1 : Math.min(0.85, 0.2 + 0.75 * Math.pow(t, 0.6))
-        expr.push((t * max) || i * 1e-6, withAlpha(interp(t), a))
-      }
+      // Everything else — the emission sums, soil carbon, the forest-carbon
+      // pilots — goes through the gridded cells' OWN ramp builder, read
+      // against the unit's t CO2e/km2 instead of the cell's and off the
+      // same colour range. One scale, one colorbar, two geometries; the
+      // regional map no longer needs a divisor of its own (it used
+      // colorMax/500, a nominal quarter-degree cell area that had drifted
+      // 16x from the pooled forest layers).
       try {
-        map.setPaintProperty(FILL, 'fill-color', ['case', varHasExpr(v), expr, 'rgba(0,0,0,0)'])
+        map.setPaintProperty(FILL, 'fill-color',
+          buildColorExpr(v, dark, refs.current.colorRange, { alphaMin: 0.1 }, config,
+                         unitIntensityExpr(config, v)))
+        map.setFilter(FILL, null)
       } catch {}
+      if (v.diverging) return
       // Percentile mask on the unit's value (not intensity): recompute
       // threshold from rendered features.
       try {
@@ -249,7 +179,6 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
         if (!map.getSource(SRC)) {
           map.addSource(SRC, { type: 'vector', url: `pmtiles://${config.regionalView.tilesUrl}` })
         }
-        loadScales(config.regionalView.scalesUrl)
         const sl = config.regionalView.sourceLayer ?? SRC
         map.addLayer({ id: FILL, type: 'fill', source: SRC, 'source-layer': sl,
                        paint: { 'fill-color': 'rgba(0,0,0,0)' } })
@@ -324,7 +253,7 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
     try { for (const id of [FILL, LINE, SEL]) map.setLayoutProperty(id, 'visibility', vis) } catch {}
     if (active) refs.current.repaint?.()
     if (!active) setTip(null)
-  }, [map, active, variable, isDark, state.percentileRange, suppressed, catEntries])
+  }, [map, active, variable, isDark, state.percentileRange, suppressed, catEntries, colorRange])
 
   // selection outline
   useEffect(() => {

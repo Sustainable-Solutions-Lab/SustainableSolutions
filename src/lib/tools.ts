@@ -6,8 +6,18 @@ import type { Publication, Tool } from './types';
 // initiatives etc.) — fall back to the /tools index for the link.
 export const TOOLS_WITHOUT_DETAIL_PAGE = new Set(['cornerstone']);
 
+// Canonical external home for initiatives that have no /tools/<slug> page, so
+// cross-page references (companion-effort pointers on the home page, companion
+// -tool links on publication cards) land on the project itself rather than the
+// generic /tools index. The sheet's `link` column still wins over this, so
+// filling that cell overrides the fallback without a code change.
+export const TOOL_HOMEPAGES: Record<string, string> = {
+  cornerstone: 'https://cornerstonedata.org/',
+};
+
 export function toolHref(t: Tool): string {
   if (t.link) return t.link;
+  if (TOOL_HOMEPAGES[t.slug]) return TOOL_HOMEPAGES[t.slug];
   if (TOOLS_WITHOUT_DETAIL_PAGE.has(t.slug)) return '/tools';
   return `/tools/${t.slug}`;
 }

@@ -35,9 +35,18 @@ const VERT = `M ${C} 84 L ${C} 330`
 //     subpath, so the arms trace in parallel from their own left ends rather
 //     than as one sweep hopping the gap — the short arm lands first, and the
 //     gap is simply never drawn through.
-//     The artwork's gap scales to about 8 units here, but at this size an
-//     11-unit stroke all but closes it, so it is opened to 20 to survive.
-const HORIZ = `M 76 ${C} L 152 ${C} M 172 ${C} L 324 ${C}`
+//
+//     Measured off LabLogo_print.png rather than estimated: along the bar
+//     row the artwork runs 221–701, gaps 702–846, and resumes at 847, while
+//     the vertical member spans 847–909. So the gap ends exactly AT the
+//     vertical's left edge — there is no stub between the two. Scaling by
+//     stroke width (11/63) puts the gap at 25 units ending on 194.5, which
+//     is precisely where our own vertical member begins.
+//
+//     The earlier 8-unit gap came from misreading the artwork gap as
+//     702–735; widening it to 20 was papering over that, and it left the
+//     stub this replaces.
+const HORIZ = `M 76 ${C} L 169.2 ${C} M 194.5 ${C} L 324 ${C}`
 
 // 3 — the globe, one clockwise stroke from six o'clock: down at the bottom,
 //     round past nine, over the top and back. Sweep flag 1 is clockwise on

@@ -167,18 +167,35 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
         return
       }
       try { map.setPaintProperty(FILL, 'fill-opacity', 1) } catch {}
-      // Diverging variables (soil carbon): signed per-km2 choropleth.
+      // Diverging variables (soil carbon, the forest-carbon pilots):
+      // signed per-km2 choropleth. Stops come from the variable's OWN
+      // colormap, the same way the sequential branch below does it — a
+      // fixed Spectral ramp here painted orange and teal for layers whose
+      // colorbar is RdBu, so a colour read off the bar meant nothing.
       if (v.diverging) {
-        // soc props are t CO2e (not kt like the emission sums): t per km2
+        // soc and forest props are t CO2e (not kt like the emission
+        // sums): t per km2
         const val = ['/', ['to-number', varValueExpr(v)],
                      ['max', 1, ['to-number', ['get', 'area_km2']]]]
         const r = Math.max(0.5, (v.colorMax ?? v.domain?.max ?? 1500) / 500)
-        const neutral = dark ? 'rgba(248,248,232,0.06)' : 'rgba(24,24,56,0.06)'
+        const interp = INTERPOLATORS[dark && v.darkColormap ? v.darkColormap : (v.colormap ?? 'RdBu')]
+          ?? INTERPOLATORS.RdBu
+        const expr = ['interpolate', ['linear'], val]
+        const steps = 16
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps
+          // Alpha tracks the distance from zero, so the crossing stays a
+          // whisper and both arms saturate at ±r.
+          const a = 0.06 + 0.89 * Math.abs(2 * t - 1)
+          expr.push(-r + 2 * r * t, withAlpha(interp(t), a))
+        }
         try {
-          map.setPaintProperty(FILL, 'fill-color', ['interpolate', ['linear'], val,
-            -r, 'rgba(213,62,79,0.95)', -r / 8, 'rgba(253,174,97,0.6)',
-            0, neutral,
-            r / 8, 'rgba(102,194,165,0.6)', r, 'rgba(50,136,189,0.95)'])
+          // Gate on the prop the way the sequential branch does: the
+          // forest pilots cover three countries, and ungated every other
+          // unit painted the ramp's zero colour — a measured zero, not
+          // "no data".
+          map.setPaintProperty(FILL, 'fill-color',
+            ['case', varHasExpr(v), expr, 'rgba(0,0,0,0)'])
           map.setPaintProperty(FILL, 'fill-opacity', 0.85)
           map.setFilter(FILL, null)
         } catch {}

@@ -154,6 +154,24 @@ function makeVariable({ source, crop }) {
       alphaPower: 0.3,
       yearTerms: [{ prop: source, src: source }],
       constantInTime: true,
+      // The region panel decomposes land-management emissions (by source,
+      // by commodity, emission factors). Forest vegetation carbon is a
+      // different quantity, so it declares what its own panel says and
+      // gets none of theirs (_map/components/map/region-stats.jsx).
+      detail: {
+        label: 'Forest carbon pilot',
+        rows: [
+          { prop: 'fmlp', label: 'Net stock change (opt. 1)' },
+          { prop: 'fab', label: 'Management-attributable (opt. 2)' },
+        ],
+        // Which national inventory the region's plots came from, keyed by
+        // the unit tiles' country name.
+        sources: {
+          'United States of America': 'USDA Forest Inventory & Analysis',
+          France: 'IGN Inventaire forestier national',
+          Spain: 'Inventario Forestal Nacional',
+        },
+      },
       note: isMlp
         ? 'Pilot (44 US states, France, Spain): net live-aboveground carbon change on forestland from ~334,000 paired national-inventory re-measurements (USDA FIA, French IGN, Spanish IFN) — the managed-land-proxy accounting option. Red = net loss, blue = net removal. Research preview pending the LSRS forestry standard; not counted in any total.'
         : 'Pilot (44 US states, France, Spain): carbon flux attributable to forest management — the activity-based accounting option: observed flux on managed stands minus a matched counterfactual with no management, so ambient regrowth and CO₂ fertilization drop out. Management is identified from each inventory\u2019s own records of felling and stand treatment. Red = attributable emissions, blue = attributable gain. Research preview pending the LSRS forestry standard; not counted in any total.',

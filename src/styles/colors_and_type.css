@@ -434,6 +434,19 @@ a.bare:hover {
   margin-bottom: 0;
 }
 
+/* Links that carry their own hover treatment — an icon row, a wordmark —
+   and must never grow a rule. a:hover above swaps the 1px border for 2px
+   and pulls a -1px margin to compensate; that nets out on a text link but
+   still reflows a flex row by a pixel, which is the jitter you feel moving
+   down the sidebar footer. .bare already cancels it but forces opacity 0.7
+   with it, which fights a colour-based hover, so this is the half of .bare
+   worth having on its own. Both selectors outspecify a:hover. */
+a.no-rule,
+a.no-rule:hover {
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
 /* Altmetric and Dimensions badge embeds inject their own <a> tags. The
    global a{border-bottom} rule turns those into underlined boxes which
    doesn't match the badge aesthetic. Strip the underline inside both. */

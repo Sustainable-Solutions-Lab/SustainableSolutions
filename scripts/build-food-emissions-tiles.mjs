@@ -6,7 +6,7 @@
 //   {SRC}/food_emissions_cells.geojsonl   0.25° cell centroids, one Feature/line
 //   {SRC}/meta.json
 // See "Gridded LM/pipeline/export_explorer_cells.py" for the feature model
-// (per-source kt CO₂e, per-variant totals + intensities, ha, m49, _scale=28).
+// (per-source kt CO₂e, per-variant totals + intensities, ha, m49, km2, _scale=28).
 //
 // Output:
 //   build/tiles/food-emissions/food-emissions.pmtiles   (upload to R2 for prod)
@@ -68,6 +68,28 @@ async function main() {
 
   copyFileSync(pmt, resolve(PUBLIC_DIR, 'food-emissions.pmtiles'));
 
+  // ── Both sample files below ship INTENSITIES, not per-cell totals ──────
+  //
+  // Every value is divided here by its OWN cell's km², because that is the
+  // only place the cell's area is known: the runtime paints intensity but a
+  // MapLibre expression cannot read a feature's coordinates, and these
+  // samples arrive at the client detached from the cells they came from.
+  //
+  // The map divides by the same `km2` prop in _map/lib/intensity.js, so the
+  // histogram, the colour range and the paint are finally one quantity. The
+  // counterpart there is `sampleFactor`, which applies ONLY the stored-unit
+  // → tonnes multiplier and deliberately no area — dividing again would
+  // double-count and put them back on different scales.
+  //
+  // Values stay in the property's stored unit per km² (kt/km² for the
+  // emission sums, t/km² for soil carbon and the forest pilots).
+  //
+  // One latent trap if this is ever revisited: fixed-color-range.js measures
+  // deviations of these samples from `domain.zero`, a config number authored
+  // per cell. Every zero is currently 0, so no conversion is needed; a
+  // non-zero one would have to be scaled to match.
+  const SKIP = new Set(['_scale', 'm49', 'ha', 'km2']);
+
   // Distributions: a value sample per numeric variable, consumed by the
   // sidebar distribution chart / colorbar (config.distributionsUrl).
   console.log('Sampling distributions…');
@@ -78,11 +100,13 @@ async function main() {
   for (let i = 0; i < raw.length; i += step) {
     const props = JSON.parse(raw[i]).properties;
     if (props._scale !== 28) continue; // stats ride the 0.25° tier only
+    const km2 = props.km2;
+    if (!(km2 > 0)) continue;          // no area, no intensity
     for (const [k, v] of Object.entries(props)) {
-      if (k === '_scale' || k === 'm49' || k === 'ha') continue;
+      if (SKIP.has(k)) continue;
       if (typeof v !== 'number' || !isFinite(v) || v === 0) continue;
       keys.add(k);
-      (sample[k] ??= []).push(v);
+      (sample[k] ??= []).push(v / km2);
     }
   }
   await fs.writeFile(
@@ -116,10 +140,12 @@ async function main() {
     if (props._scale !== 28) continue;
     const m49 = props.m49;
     if (m49 == null) continue;
+    const km2 = props.km2;
+    if (!(km2 > 0)) continue;
     for (const [k, v] of Object.entries(props)) {
-      if (k === '_scale' || k === 'm49' || k === 'ha') continue;
+      if (SKIP.has(k)) continue;
       if (typeof v !== 'number' || !isFinite(v) || v === 0) continue;
-      ((byCountry[k] ??= {})[m49] ??= []).push(v);
+      ((byCountry[k] ??= {})[m49] ??= []).push(v / km2);
     }
   }
   const ladders = {};

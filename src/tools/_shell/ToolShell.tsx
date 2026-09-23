@@ -22,6 +22,7 @@
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { BusyOverlay } from './busy-overlay.jsx';
 
 // Single-line + ellipsis, inline so it wins over the design system's
 // unlayered `text-wrap` rules (which reset wrap mode and defeat `truncate`).
@@ -56,6 +57,16 @@ export type ToolShellProps = {
   mainScroll?: boolean;
   /** Show the summary line in the mobile header (default true). */
   headerSummary?: boolean;
+  /**
+   * Veil the main area with the lab mark while something slow runs. Any
+   * tool with a laggy step gets the standard treatment from this rather
+   * than inventing a spinner. Tools needing to place the overlay
+   * themselves — the map tunes its z-order against other in-map overlays —
+   * import BusyOverlay directly instead.
+   */
+  busy?: boolean;
+  /** Verb under the mark while `busy` (default "Working"). */
+  busyLabel?: string;
   /** Controlled drawer state (optional). */
   drawerOpen?: boolean;
   onDrawerOpenChange?: (open: boolean) => void;
@@ -75,6 +86,8 @@ export default function ToolShell({
   surface = 'paper-2',
   mainScroll = false,
   headerSummary = true,
+  busy = false,
+  busyLabel,
   drawerOpen,
   onDrawerOpenChange,
   defaultDrawerOpen = false,
@@ -191,6 +204,7 @@ export default function ToolShell({
         )}
         <div className={`relative min-w-0 flex-1 ${mainScroll ? 'overflow-y-auto' : 'overflow-hidden'}`}>
           {children}
+          {busy && <BusyOverlay busy label={busyLabel} />}
         </div>
       </div>
 

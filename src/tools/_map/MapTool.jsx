@@ -26,7 +26,7 @@ import { CityEquityChart } from './components/sidebar/city-equity-chart.jsx'
 import { AreaTool } from './components/area-tool/index.jsx'
 import { StatsPanel } from './components/area-tool/stats-panel.jsx'
 import { MethodsPanel } from './components/methods-panel.jsx'
-import { MapBusy } from './components/map/map-busy.jsx'
+import { BusyOverlay } from '../_shell/busy-overlay.jsx'
 import { ToolFooter } from './components/sidebar/tool-footer.jsx'
 import { loadColorSamples, peekColorSamples, fixedColorRange } from './lib/fixed-color-range.js'
 import { toIntensityVariable, toIntensityRange, toIntensityValues } from './lib/intensity.js'
@@ -1008,8 +1008,11 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
             />
           )}
 
-          {/* Busy veil over the map while a paint-key change is applied. */}
-          <MapBusy busy={mapBusy} isDark={isDark} />
+          {/* Busy veil over the map while a paint-key change is applied.
+              Rendered here rather than via ToolShell's `busy` prop because
+              its z-order is tuned against the other in-map overlays; the
+              shell would render it after all of them. */}
+          <BusyOverlay busy={mapBusy} label="Redrawing" />
 
           {/* Always-on year control — config-gated (yearControl) */}
           {config.yearControl && !paleActive && (

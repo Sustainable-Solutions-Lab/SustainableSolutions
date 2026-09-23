@@ -1,8 +1,11 @@
 /**
- * components/map/map-busy.jsx
+ * _shell/busy-overlay.jsx
  *
- * Shown while the map redraws: toggling compare, switching an improved crop
- * mask, changing source, commodity or year.
+ * The standard "working on it" veil for any tool with a laggy step — the map
+ * redrawing, a heavy dataset loading, a model run. Tools that render through
+ * ToolShell get it from its `busy` prop; tools that need to place it
+ * themselves (the map tunes its z-order against other in-map overlays) can
+ * import and render it directly.
  *
  * The mark is the lab logo drawn the way you would draw it by hand — the
  * crosshair first, in two perpendicular strokes, the horizontal one broken by
@@ -12,6 +15,12 @@
  * drying off. Nothing ever
  * completes, which is the point: it signals work in progress without implying
  * a fraction of it we cannot measure.
+ *
+ * Drawn in a single ink — `currentColor`, inherited from the container's
+ * `var(--ink)`. The logo's green-to-teal globe and orange satellites are
+ * deliberately dropped: at 116px over live content the colour read as a
+ * second thing happening rather than as the lab mark, and one ink also means
+ * the overlay needs no theme prop, since the token already flips.
  *
  * Geometry is hand-built from LabLogo_print.ai rather than converted, because
  * a converted file gives filled outlines — every shape a closed contour to be
@@ -101,19 +110,13 @@ const ORBIT_STEP = 6     // spacing between arrivals, % of cycle
 const ORBIT_DRAW = 7     // how long a streak takes to trace, % of cycle
 const ORBIT_OUT = 92     // all of them leave together
 
-// Logo colours: navy structure (cream on a dark map so it stays visible),
-// the globe's green-to-teal, and the satellites' orange core.
-const GREEN = '#48A848'
-const TEAL  = '#78C8D8'
-const AMBER = '#E87828'
-
 const CYCLE = 3120       // ms for one full draw-and-evaporate pass
 
 // Each element's slice of the cycle, as percentages. Strokes overlap: the
 // crosshair is already fading before the satellites land.
 const SW = 11            // crosshair / globe stroke width
 
-export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
+export function BusyOverlay({ busy, label = 'Working' }) {
   // Render on the SAME commit that sets busy. Gating visibility on state set
   // inside an effect meant the veil needed a second render pass, and that
   // pass sat behind the very work it was meant to cover. `linger` only
@@ -126,8 +129,6 @@ export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
   }, [busy])
 
   if (!busy && !linger) return null
-  const ink = isDark ? '#F8F8E8' : '#181838'
-  const veil = isDark ? 'rgba(12,12,28,0.34)' : 'rgba(248,248,232,0.42)'
 
   return (
     <div
@@ -137,38 +138,32 @@ export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
         position: 'absolute', inset: 0, zIndex: 9,
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        gap: 16, pointerEvents: 'none', background: veil,
+        gap: 16, pointerEvents: 'none',
+        // Both from tokens, so light and dark are handled by the design
+        // system rather than by a prop the caller has to thread through.
+        color: 'var(--ink)',
+        background: 'color-mix(in srgb, var(--paper) 62%, transparent)',
         opacity: busy ? 1 : 0, transition: 'opacity 200ms ease',
       }}
     >
       <svg viewBox="0 0 400 400" width="116" height="116" aria-hidden="true">
-        <defs>
-          {/* Left half green, right half blue, as the globe is drawn. */}
-          <linearGradient id="ssl-globe" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={GREEN} />
-            <stop offset="52%" stopColor={GREEN} />
-            <stop offset="53%" stopColor={TEAL} />
-            <stop offset="100%" stopColor={TEAL} />
-          </linearGradient>
-        </defs>
-
         {/* 1 — vertical crosshair */}
         <path
-          d={VERT} fill="none" stroke={ink} strokeWidth={SW} strokeLinecap="butt"
+          d={VERT} fill="none" stroke="currentColor" strokeWidth={SW} strokeLinecap="butt"
           style={{ strokeDasharray: 300, animation: `ssl-v ${CYCLE}ms linear infinite` }}
         />
         {/* 2 — horizontal crosshair, one sweep across the gap */}
         {HORIZ.map((h, i) => (
           <path
             key={i}
-            d={h.d} fill="none" stroke={ink} strokeWidth={SW} strokeLinecap="butt"
+            d={h.d} fill="none" stroke="currentColor" strokeWidth={SW} strokeLinecap="butt"
             style={{ strokeDasharray: h.len,
                      animation: `ssl-h${i} ${CYCLE}ms linear infinite` }}
           />
         ))}
         {/* 3 — the globe, clockwise */}
         <path
-          d={GLOBE} fill="none" stroke="url(#ssl-globe)" strokeWidth={SW} strokeLinecap="round"
+          d={GLOBE} fill="none" stroke="currentColor" strokeWidth={SW} strokeLinecap="round"
           style={{ strokeDasharray: 520, animation: `ssl-g ${CYCLE}ms linear infinite` }}
         />
         {/* 4 — the orbit, arriving clockwise from six o'clock */}
@@ -176,7 +171,7 @@ export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
           <g key={i} style={{ animation: `ssl-orbit-${i} ${CYCLE}ms linear infinite` }}>
             {s.streak && (
               <path
-                d={s.streak} fill="none" stroke={ink} strokeWidth={7} strokeLinecap="round"
+                d={s.streak} fill="none" stroke="currentColor" strokeWidth={7} strokeLinecap="round"
                 style={{ strokeDasharray: 200, animation: `ssl-trail-${i} ${CYCLE}ms linear infinite` }}
               />
             )}
@@ -185,10 +180,11 @@ export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
                  reads as one motion rather than a dot and a line arriving
                  together. Elements with no streak simply appear. */
               <g style={{ animation: `ssl-sat-${i} ${CYCLE}ms linear infinite` }}>
-                {/* The logo rings each orange core in navy. On a dark veil a
-                    filled disc would invert that; a ring keeps the reading. */}
-                <circle cx={s.cx} cy={s.cy} r={s.r - 4} fill="none" stroke={ink} strokeWidth={7} />
-                <circle cx={s.cx} cy={s.cy} r={s.k} fill={AMBER} />
+                {/* A ring around a smaller disc, both in the one ink. The
+                    gap between them is what keeps the satellite legible now
+                    that colour no longer separates core from ring. */}
+                <circle cx={s.cx} cy={s.cy} r={s.r - 4} fill="none" stroke="currentColor" strokeWidth={7} />
+                <circle cx={s.cx} cy={s.cy} r={s.k} fill="currentColor" />
               </g>
             )}
           </g>
@@ -199,7 +195,7 @@ export function MapBusy({ busy, isDark = true, label = 'Redrawing' }) {
         style={{
           font: '10px "JetBrains Mono", ui-monospace, monospace',
           letterSpacing: '0.16em', textTransform: 'uppercase',
-          color: ink, opacity: 0.6,
+          color: 'currentColor', opacity: 0.6,
         }}
       >
         {label}

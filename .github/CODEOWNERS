@@ -1,0 +1,5 @@
+# Every pull request requests Steve's review automatically, and main's
+# branch protection requires it before merging. Add owners for a
+# subtree below if that ever becomes a bottleneck — a later line wins,
+# so a more specific path overrides this one.
+*       @ProfFate

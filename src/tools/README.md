@@ -49,6 +49,13 @@ copying layout from an existing tool:
   `onDrawerOpenChange` when the tool closes the drawer itself (e.g.
   contrails closes it when an assessment starts).
 
+  `busy` veils the main area with the animated lab mark while something
+  slow runs — a laggy paint, a heavy dataset, a model run. Use it rather
+  than inventing a spinner; a tool needing to place the overlay itself
+  (the map tunes its z-order against other in-map overlays) imports
+  `BusyOverlay` from `_shell/busy-overlay.jsx` directly. It is drawn in a
+  single ink off `currentColor`/`var(--ink)`, so it takes no theme prop.
+
 Both firemap (firefuels, just-air) and contrails render through the
 shell.
 

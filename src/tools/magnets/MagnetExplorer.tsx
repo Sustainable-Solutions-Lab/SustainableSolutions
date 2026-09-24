@@ -156,13 +156,17 @@ function Slider({ label, value, max, min = 0, onChange, fmt, desc }: {
 // bottom by `marginTop: auto`. Without this the cards are the same height but
 // their text floats at different offsets, which reads as misalignment.
 const CARD: CSSProperties = {
-  border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px',
+  border: '1px solid var(--rule)', borderRadius: 10, padding: '11px 13px',
   background: 'var(--paper)', height: '100%', display: 'flex', flexDirection: 'column',
 };
+const CARD_LABEL: CSSProperties = { fontSize: 11, opacity: 0.6, marginBottom: 3, lineHeight: 1.25 };
 const CARD_SUB: CSSProperties = {
-  font: '400 9.5px var(--font-mono)', opacity: 0.5, marginTop: 'auto',
-  paddingTop: 5, letterSpacing: '0.03em',
+  font: '400 9px var(--font-mono)', opacity: 0.5, marginTop: 'auto',
+  paddingTop: 4, letterSpacing: '0.03em',
 };
+const CARD_VALUE = (small?: boolean) =>
+  ({ font: `600 ${small ? 14 : 21}px var(--font-mono)`, lineHeight: 1.15,
+     display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }) as CSSProperties;
 
 function ScoreCard({ label, value, sub, valueColor, small, chip, delta, deltaColor }: {
   label: string; value: string; sub?: string; valueColor: string; small?: boolean; chip?: boolean;
@@ -170,10 +174,10 @@ function ScoreCard({ label, value, sub, valueColor, small, chip, delta, deltaCol
 }) {
   return (
     <div style={CARD}>
-      <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
-      <div style={{ font: `600 ${small ? 15 : 24}px var(--font-mono)`, lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+      <div style={CARD_LABEL}>{label}</div>
+      <div style={CARD_VALUE(small)}>
         <span style={chip ? { ...riskChip(valueColor), display: 'inline-block' } : { color: valueColor }}>{value}</span>
-        {delta && <span style={{ fontSize: 13, fontWeight: 600, color: deltaColor ?? 'var(--ink-3)' }}>{delta}</span>}
+        {delta && <span style={{ fontSize: 12, fontWeight: 600, color: deltaColor ?? 'var(--ink-3)' }}>{delta}</span>}
       </div>
       {sub && <div style={CARD_SUB}>{sub}</div>}
     </div>
@@ -187,29 +191,29 @@ function ScoreCard({ label, value, sub, valueColor, small, chip, delta, deltaCol
 function ScoreCardTotal({ label, value, valueColor, sub, delta, deltaColor, parts }: {
   label: string; value: string; valueColor: string; sub?: string;
   delta?: string; deltaColor?: string;
-  parts: { label: string; value: string }[];
+  parts: { label: string; short: string; value: string }[];
 }) {
   return (
     <div style={CARD}>
-      <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
-      <div style={{ font: '600 24px var(--font-mono)', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+      <div style={CARD_LABEL}>{label}</div>
+      {/* Parts sit INLINE with the headline, not stacked beneath it. Stacked they
+          added ~35px, and since gridAutoRows matches every row to the tallest
+          card, this one card was inflating the whole strip. The full arithmetic
+          (class index x weight) moves to the title attribute. */}
+      <div style={CARD_VALUE()}>
         <span style={{ ...riskChip(valueColor), display: 'inline-block' }}>{value}</span>
-        {delta && <span style={{ fontSize: 13, fontWeight: 600, color: deltaColor ?? 'var(--ink-3)' }}>{delta}</span>}
+        {delta && <span style={{ fontSize: 12, fontWeight: 600, color: deltaColor ?? 'var(--ink-3)' }}>{delta}</span>}
+        <span title={parts.map((x) => `${x.label} = ${x.value}`).join('    ')}
+          style={{ font: '400 10px var(--font-mono)', opacity: 0.62, whiteSpace: 'nowrap', cursor: 'help' }}>
+          {parts.map((x, i) => (
+            <span key={x.short}>
+              {i > 0 && <span style={{ opacity: 0.5 }}> · </span>}
+              <b style={{ fontWeight: 600, opacity: 0.9 }}>{x.value}</b> {x.short}
+            </span>
+          ))}
+        </span>
       </div>
-      {/* The parts sit at the bottom, where every other card's footnote sits, so
-          the decomposition does not make this card read as taller than its row. */}
-      <div style={{ display: 'flex', gap: 12, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
-        {parts.map((p, i) => (
-          <div key={p.label} style={{ display: 'flex', gap: 12, flex: '1 1 0', minWidth: 0 }}>
-            {i > 0 && <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--rule)', marginLeft: -6 }} />}
-            <div style={{ minWidth: 0 }}>
-              <div style={{ font: '600 13px var(--font-mono)', color: 'var(--ink)' }}>{p.value}</div>
-              <div style={{ font: '400 9px var(--font-mono)', opacity: 0.5, marginTop: 2, letterSpacing: '0.03em' }}>{p.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-      {sub && <div style={{ ...CARD_SUB, marginTop: 6 }}>{sub}</div>}
+      {sub && <div style={CARD_SUB}>{sub}</div>}
     </div>
   );
 }
@@ -228,18 +232,17 @@ function ScoreCard2({ label, a, b, small, chip }: {
           risk steps are ~1.2:1 against the cream surface as plain text, i.e.
           unreadable; the chip background is what makes them legible, so any
           value carrying a risk colour needs it. */}
-      <div style={{ font: `600 ${small ? 14 : 24}px var(--font-mono)`, lineHeight: 1.2, color: chip ? undefined : h.color,
-                    display: 'flex', alignItems: 'baseline', gap: 5, flexWrap: 'wrap' }}>
+      <div style={{ ...CARD_VALUE(small), color: chip ? undefined : h.color, gap: 5 }}>
         <span style={chip ? { ...riskChip(h.color), display: 'inline-block' } : undefined}>{h.value}</span>
-        {h.delta && <span style={{ fontSize: 12, fontWeight: 600, color: h.deltaColor ?? 'var(--ink-3)' }}>{h.delta}</span>}
+        {h.delta && <span style={{ fontSize: 11.5, fontWeight: 600, color: h.deltaColor ?? 'var(--ink-3)' }}>{h.delta}</span>}
       </div>
-      <div style={{ font: '400 9.5px var(--font-mono)', opacity: 0.5, marginTop: 5, letterSpacing: '0.03em' }}>{h.label}</div>
+      <div style={{ font: '400 9px var(--font-mono)', opacity: 0.5, marginTop: 4, letterSpacing: '0.03em' }}>{h.label}</div>
     </div>
   );
   return (
     <div style={CARD}>
-      <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
-      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginTop: 'auto' }}>
+      <div style={CARD_LABEL}>{label}</div>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 'auto' }}>
         {half(a)}
         <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--rule)' }} />
         {half(b)}
@@ -757,9 +760,9 @@ export default function MagnetExplorer() {
             <ScoreCardTotal label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)}
               {...(pin ? deltaOf(tri, pin.tri, (v) => v.toFixed(2), true, 0.004) : {})}
               parts={[
-                { label: `heavy · ${triHeavy.toFixed(2)} × ${RE_CLASS_WEIGHT.heavy}`,
+                { short: 'heavy', label: `heavy ${triHeavy.toFixed(2)} × ${RE_CLASS_WEIGHT.heavy}`,
                   value: (RE_CLASS_WEIGHT.heavy * triHeavy).toFixed(2) },
-                { label: `light · ${triLight.toFixed(2)} × ${RE_CLASS_WEIGHT.light}`,
+                { short: 'light', label: `light ${triLight.toFixed(2)} × ${RE_CLASS_WEIGHT.light}`,
                   value: (RE_CLASS_WEIGHT.light * triLight).toFixed(2) },
               ]}
               sub={pin ? 'vs pinned scenario' : undefined} />

@@ -64,8 +64,18 @@ function StackedArea({ series, ymax, ylabel, mag, ndpr, dytb, cls }: {
       ...lower.map((_, i) => `L${xi(YEARS.length - 1 - i)},${yv(lower[YEARS.length - 1 - i])}`), 'Z',
     ].join(' ');
     for (let i = 0; i < YEARS.length; i++) lower[i] = top[i];
-    return <path key={s.key} d={d} fill={s.color} fillOpacity={0.85} />;
+    // 2px surface-coloured stroke = the spacer between stacked segments, so two
+    // bands never read as one shape where they touch.
+    return <path key={s.key} d={d} fill={s.color} fillOpacity={0.85}
+                 stroke="var(--paper)" strokeWidth={2} strokeLinejoin="round" />;
   });
+  // Per-sector values at the hovered year, biggest first. Identity must never be
+  // colour alone: non-adjacent bands in this 7-series stack are not all separable
+  // (see docs/13), so the tooltip names every sector it draws.
+  const atYear = hi == null ? [] : series
+    .map((s) => ({ key: s.key, color: s.color, v: s.values[hi] ?? 0 }))
+    .filter((r) => r.v > 0.05)
+    .sort((a, b) => b.v - a.v);
   const kt = (v: number) => (v >= 10 ? v.toFixed(0) : v.toFixed(1));
   const wrapW = wrapRef.current?.clientWidth ?? 0;
   const flip = hi != null && xi(hi) / W > 0.6;
@@ -94,6 +104,16 @@ function StackedArea({ series, ymax, ylabel, mag, ndpr, dytb, cls }: {
           boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 6px 18px rgba(0,0,0,0.10)', padding: '6px 9px', whiteSpace: 'nowrap',
         }}>
           <div style={{ font: '600 11px var(--font-mono)', marginBottom: 4 }}>{YEARS[hi]}</div>
+          {atYear.map((r) => (
+            <div key={r.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, fontSize: 11 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: r.color, flexShrink: 0 }} />
+                {SECTOR_LABEL[r.key] ?? r.key}
+              </span>
+              <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.8 }}>{kt(r.v)}</span>
+            </div>
+          ))}
+          <div style={{ borderTop: '1px solid var(--rule)', margin: '5px 0 4px' }} />
           {([['Magnet (finished)', mag[hi], cls === 'total'], ['Nd/Pr oxide', ndpr[hi], cls === 'light'], ['Dy/Tb oxide', dytb[hi], cls === 'heavy']] as const).map(([lbl, v, on]) => (
             <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', gap: 14, fontSize: 11, fontWeight: on ? 700 : 400, opacity: on ? 1 : 0.7 }}>
               <span>{lbl}</span><span style={{ fontFamily: 'var(--font-mono)' }}>{kt(v ?? 0)} kt</span>

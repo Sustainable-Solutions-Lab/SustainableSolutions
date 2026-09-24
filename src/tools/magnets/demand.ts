@@ -59,9 +59,19 @@ export const SECTOR_LABEL: Record<string, string> = {
   ev_traction: 'EV traction', wind_offshore: 'Offshore wind', wind_onshore: 'Onshore wind',
   robotics: 'Robotics', electronics: 'Electronics', hvac_ebike: 'HVAC / e-bike', defense_aero: 'Defense',
 };
+// Spectral hues, assigned so the colours that TOUCH in the stacked area are the
+// distinct ones. Bands stack largest-at-the-bottom, so adjacency follows sector
+// size, not this declaration order. The previous assignment put #ABDDA4 next to
+// #FEE08B on the two LARGEST bands: OKLab dE 11.0 against a normal-vision floor
+// of 15, and 5.1 for protanopes against a floor of 8 — the two biggest sectors
+// were effectively one band. Rotating robotics/electronics/hvac_ebike lifts the
+// worst touching pair to 26.8 / 16.4. EV, both winds, and defense keep their
+// semantic colours.
+//   Verify with:  PYTHONPATH=. python -m analysis.palette_check   (model repo)
+//   Rationale + the all-pairs caveat: docs/13_explorer_redesign.md
 export const SECTOR_COLOR: Record<string, string> = {
-  ev_traction: '#3288BD', wind_offshore: '#5E4FA2', wind_onshore: '#66C2A5', robotics: '#F46D43',
-  electronics: '#FEE08B', hvac_ebike: '#ABDDA4', defense_aero: '#D53E4F',
+  ev_traction: '#3288BD', wind_offshore: '#5E4FA2', wind_onshore: '#66C2A5', robotics: '#FEE08B',
+  electronics: '#ABDDA4', hvac_ebike: '#F46D43', defense_aero: '#D53E4F',
 };
 
 function downshift(mix: Record<string, number>, amount: number): Record<string, number> {

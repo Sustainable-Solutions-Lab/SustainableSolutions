@@ -151,18 +151,31 @@ function Slider({ label, value, max, min = 0, onChange, fmt, desc }: {
   );
 }
 
+// Every scorecard is a full-height flex column so the grid's equal rows are
+// filled rather than just matched: caption at the top, footnote pinned to the
+// bottom by `marginTop: auto`. Without this the cards are the same height but
+// their text floats at different offsets, which reads as misalignment.
+const CARD: CSSProperties = {
+  border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px',
+  background: 'var(--paper)', height: '100%', display: 'flex', flexDirection: 'column',
+};
+const CARD_SUB: CSSProperties = {
+  font: '400 9.5px var(--font-mono)', opacity: 0.5, marginTop: 'auto',
+  paddingTop: 5, letterSpacing: '0.03em',
+};
+
 function ScoreCard({ label, value, sub, valueColor, small, chip, delta, deltaColor }: {
-  label: string; value: string; sub: string; valueColor: string; small?: boolean; chip?: boolean;
+  label: string; value: string; sub?: string; valueColor: string; small?: boolean; chip?: boolean;
   delta?: string; deltaColor?: string;
 }) {
   return (
-    <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px', background: 'var(--paper)' }}>
+    <div style={CARD}>
       <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
       <div style={{ font: `600 ${small ? 15 : 24}px var(--font-mono)`, lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
         <span style={chip ? { ...riskChip(valueColor), display: 'inline-block' } : { color: valueColor }}>{value}</span>
         {delta && <span style={{ fontSize: 13, fontWeight: 600, color: deltaColor ?? 'var(--ink-3)' }}>{delta}</span>}
       </div>
-      <div style={{ font: '400 9.5px var(--font-mono)', opacity: 0.5, marginTop: 5, letterSpacing: '0.03em' }}>{sub}</div>
+      {sub && <div style={CARD_SUB}>{sub}</div>}
     </div>
   );
 }
@@ -172,18 +185,20 @@ function ScoreCard({ label, value, sub, valueColor, small, chip, delta, deltaCol
  *  is 0.6*heavy + 0.4*light, so the two parts SUM to the number above them —
  *  worth showing, since which class drives the index is the whole argument. */
 function ScoreCardTotal({ label, value, valueColor, sub, delta, deltaColor, parts }: {
-  label: string; value: string; valueColor: string; sub: string;
+  label: string; value: string; valueColor: string; sub?: string;
   delta?: string; deltaColor?: string;
   parts: { label: string; value: string }[];
 }) {
   return (
-    <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px', background: 'var(--paper)' }}>
+    <div style={CARD}>
       <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
       <div style={{ font: '600 24px var(--font-mono)', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
         <span style={{ ...riskChip(valueColor), display: 'inline-block' }}>{value}</span>
         {delta && <span style={{ fontSize: 13, fontWeight: 600, color: deltaColor ?? 'var(--ink-3)' }}>{delta}</span>}
       </div>
-      <div style={{ display: 'flex', gap: 12, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
+      {/* The parts sit at the bottom, where every other card's footnote sits, so
+          the decomposition does not make this card read as taller than its row. */}
+      <div style={{ display: 'flex', gap: 12, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
         {parts.map((p, i) => (
           <div key={p.label} style={{ display: 'flex', gap: 12, flex: '1 1 0', minWidth: 0 }}>
             {i > 0 && <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--rule)', marginLeft: -6 }} />}
@@ -194,7 +209,7 @@ function ScoreCardTotal({ label, value, valueColor, sub, delta, deltaColor, part
           </div>
         ))}
       </div>
-      <div style={{ font: '400 9.5px var(--font-mono)', opacity: 0.5, marginTop: 6, letterSpacing: '0.03em' }}>{sub}</div>
+      {sub && <div style={{ ...CARD_SUB, marginTop: 6 }}>{sub}</div>}
     </div>
   );
 }
@@ -202,25 +217,29 @@ function ScoreCardTotal({ label, value, valueColor, sub, delta, deltaColor, part
 /** Two related readouts in one card. Keeps the scorecard grid on an even count
  *  (seven cards left an orphan on the last row) and pairs the two numbers that
  *  answer the same question: how much of US demand is met, and from where. */
-function ScoreCard2({ label, a, b, small }: {
-  label: string; small?: boolean;
+function ScoreCard2({ label, a, b, small, chip }: {
+  label: string; small?: boolean; chip?: boolean;
   a: { label: string; value: string; color: string; delta?: string; deltaColor?: string };
   b: { label: string; value: string; color: string; delta?: string; deltaColor?: string };
 }) {
   const half = (h: typeof a) => (
     <div style={{ flex: '1 1 0', minWidth: 0 }}>
-      <div style={{ font: `600 ${small ? 14 : 24}px var(--font-mono)`, lineHeight: 1.2, color: h.color,
+      {/* chip = risk-tinted background behind the value. The amber and yellow
+          risk steps are ~1.2:1 against the cream surface as plain text, i.e.
+          unreadable; the chip background is what makes them legible, so any
+          value carrying a risk colour needs it. */}
+      <div style={{ font: `600 ${small ? 14 : 24}px var(--font-mono)`, lineHeight: 1.2, color: chip ? undefined : h.color,
                     display: 'flex', alignItems: 'baseline', gap: 5, flexWrap: 'wrap' }}>
-        <span>{h.value}</span>
+        <span style={chip ? { ...riskChip(h.color), display: 'inline-block' } : undefined}>{h.value}</span>
         {h.delta && <span style={{ fontSize: 12, fontWeight: 600, color: h.deltaColor ?? 'var(--ink-3)' }}>{h.delta}</span>}
       </div>
       <div style={{ font: '400 9.5px var(--font-mono)', opacity: 0.5, marginTop: 5, letterSpacing: '0.03em' }}>{h.label}</div>
     </div>
   );
   return (
-    <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px', background: 'var(--paper)' }}>
+    <div style={CARD}>
       <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
-      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginTop: 'auto' }}>
         {half(a)}
         <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--rule)' }} />
         {half(b)}
@@ -730,7 +749,11 @@ export default function MagnetExplorer() {
 
           {/* 6 — story scorecard: headline risk, the tightest chokepoint, the best
               lever to buy it down, plus import dependence + unmet. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 26 }}>
+          {/* gridAutoRows: 1fr makes EVERY row as tall as the tallest card in the
+              whole strip, not just its own row. Rows size independently by
+              default, so the decomposed cards made their row visibly deeper than
+              the others. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gridAutoRows: '1fr', gap: 12, marginTop: 26 }}>
             <ScoreCardTotal label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)}
               {...(pin ? deltaOf(tri, pin.tri, (v) => v.toFixed(2), true, 0.004) : {})}
               parts={[
@@ -739,7 +762,7 @@ export default function MagnetExplorer() {
                 { label: `light · ${triLight.toFixed(2)} × ${RE_CLASS_WEIGHT.light}`,
                   value: (RE_CLASS_WEIGHT.light * triLight).toFixed(2) },
               ]}
-              sub={pin ? 'vs pinned · parts sum to the index' : '0 secure → 1 exposed · parts sum to the index'} />
+              sub={pin ? 'vs pinned scenario' : undefined} />
             <ScoreCard label="US cost of supply" value={musd(usCostReal)} valueColor="var(--ink)"
               {...(pin
                 ? deltaOf(usCostReal, pin.cost, (v) => musd(v), true, 50)
@@ -748,7 +771,7 @@ export default function MagnetExplorer() {
               sub={pin ? '2026–35 NPV · vs pinned' : '2026–35 NPV · Δ vs do-nothing'} />
             {/* Split by class: the binding stage is usually NOT the same for the
                 two fractions, and which one it is per class is the actionable bit. */}
-            <ScoreCard2 label="Tightest chokepoint" small
+            <ScoreCard2 label="Tightest chokepoint" small chip
               a={{ label: `Dy/Tb · stage TRI ${cpHeavy.tri.toFixed(2)}`,
                    value: cpHeavy.label.split(' ')[0], color: riskColor(cpHeavy.tri) }}
               b={{ label: `Nd/Pr · stage TRI ${cpLight.tri.toFixed(2)}`,

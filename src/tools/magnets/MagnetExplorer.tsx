@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE, ensurePriceFloorSlices, priceFloorReady } from './interp';
 import { integratedTRI, integratedRE, stageBreakdownClass, riskColor, riskChip } from './tri';
-import ScenarioBar from './ScenarioBar';
+import ScenarioBar, { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
 // sheet rather than a sticky sidebar that would overlay the plots.
@@ -224,6 +224,15 @@ export default function MagnetExplorer() {
     if (isMobile) setSheetOpen(true);
     document.getElementById('demand-builder')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [isMobile]);
+
+  // ── pin & compare ────────────────────────────────────────────────────────
+  // Every claim this tool supports is comparative ("the lever buys you X"), but
+  // there was no way to hold one scenario and read another against it. That is
+  // also how a duplicated quarter of the grid went unnoticed. Pin snapshots the
+  // coordinates and the headline metrics; the scorecards then read as deltas.
+  type Pin = { coords: Record<AxisKey, number>; tri: number; cost: number;
+               imp: number; touch: number; unmet: number };
+  const [pin, setPin] = useState<Pin | null>(null);
   const [infoCost, setInfoCost] = useState(false);   // ⓘ toggle for the cost-bar method note
   const [rcostOpen, setRcostOpen] = useState(false); // ＋/－ for the recycling-cost stress-test
   const [resetFlash, setResetFlash] = useState(false); // brief confirm-flash on "reset to baseline"
@@ -290,6 +299,37 @@ export default function MagnetExplorer() {
   const projDelta = proxyTouch(feocSupplyR) - proxyTouch(feocSupplyBase);
   const feocBase = (feocIsHeavy ? heavyFeoc : sc.kpis.china_exposed_pct ?? 0) / 100;
   const chinaTouch = Math.min(1, Math.max(0, feocBase + projDelta));
+
+  // Current grid coordinates, and the snapshot/compare helpers that read against
+  // a pinned set. Deltas are signed so that NEGATIVE always means "better" for
+  // the metrics where lower is better (all of these except none, today).
+  const coords: Record<AxisKey, number> = {
+    make, source, rec, china, rcost, pfloor,
+    dytb: demand.dytb_intensity, dscale: demand.demand_scale,
+  };
+  const changed = pin ? axisDiff(coords, pin.coords) : [];
+  const doPin = () => setPin({
+    coords, tri, cost: usCostReal, imp: sc.kpis.us_import_pct ?? 0,
+    touch: chinaTouch, unmet: usUnmet,
+  });
+  const restorePin = () => {
+    if (!pin) return;
+    const c = pin.coords;
+    setMake(c.make); setSource(c.source); setRec(c.rec);
+    setChina(c.china); setRcost(c.rcost); setPfloor(c.pfloor);
+    // dytb/dscale are derived; they follow once the demand controls are reset,
+    // which the user does in the builder. Flag it rather than silently diverge.
+  };
+  /** Signed delta string + colour, given "is lower better". */
+  const deltaOf = (cur: number, was: number, fmt: (v: number) => string, lowerBetter = true, eps = 0) => {
+    const d = cur - was;
+    if (Math.abs(d) <= eps) return { delta: 'no change', deltaColor: 'var(--ink-3)' };
+    const good = lowerBetter ? d < 0 : d > 0;
+    return {
+      delta: `${d > 0 ? '+' : '−'}${fmt(Math.abs(d))} vs pin`,
+      deltaColor: good ? 'var(--brand-green)' : WORSE,
+    };
+  };
 
   // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
   // lever buys in integrated trade-risk reduction per real dollar (TRI per $).
@@ -492,11 +532,36 @@ export default function MagnetExplorer() {
           {/* 0 — where you are in the 8-axis grid. Two of these axes have no slider
               (they come from the Demand Builder), so without this the coordinates
               are unreadable — see ScenarioBar's header note. */}
-          <ScenarioBar
-            values={{ make, source, rec, china, rcost, pfloor,
-                      dytb: demand.dytb_intensity, dscale: demand.demand_scale }}
-            onJumpToDemand={jumpToDemand}
-          />
+          <ScenarioBar values={coords} onJumpToDemand={jumpToDemand} />
+
+          {/* Pin one scenario, then read every headline against it. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '-4px 0 16px' }}>
+            <button onClick={pin ? () => setPin(null) : doPin}
+              title={pin ? 'Stop comparing' : 'Snapshot this scenario and show every headline as a change against it'}
+              style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.05em', textTransform: 'uppercase',
+                       padding: '5px 10px', borderRadius: 6, cursor: 'pointer',
+                       border: `1px solid ${pin ? 'var(--accent)' : 'var(--rule-strong)'}`,
+                       background: pin ? 'var(--accent)' : 'transparent',
+                       color: pin ? 'var(--paper)' : 'var(--ink)' }}>
+              {pin ? 'Comparing — clear' : 'Pin scenario'}
+            </button>
+            {pin && (
+              <span style={{ fontSize: 11, opacity: 0.7, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {changed.length === 0
+                  ? 'identical to the pinned scenario'
+                  : <>changed: {changed.map((k) => (
+                      <b key={k} style={{ fontWeight: 600 }}>
+                        {AXIS_LABEL[k]} {AXIS_FMT[k](pin.coords[k])}&rarr;{AXIS_FMT[k](coords[k])}
+                      </b>
+                    )).reduce((a, b) => <>{a}, {b}</>)}</>}
+                <button onClick={restorePin}
+                  title="Put the six supply sliders back to their pinned values. Dy/Tb intensity and demand scale are derived from the Demand Builder, so they stay put and will still be listed as changed."
+                  style={{ font: '500 10px var(--font-mono)', padding: '2px 7px', borderRadius: 5,
+                           border: '1px solid var(--rule-strong)', background: 'transparent',
+                           color: 'var(--ink)', cursor: 'pointer' }}>restore supply axes</button>
+              </span>
+            )}
+          </div>
 
           {/* 1 — the whole chain first, so users learn the stages + connections.
               Flows are real-world-anchored (selected projects locked in, China residual). */}
@@ -571,17 +636,27 @@ export default function MagnetExplorer() {
           {/* 6 — story scorecard: headline risk, the tightest chokepoint, the best
               lever to buy it down, plus import dependence + unmet. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 26 }}>
-            <ScoreCard label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)} chip sub="0 secure → 1 exposed" />
+            <ScoreCard label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)} chip
+              {...(pin ? deltaOf(tri, pin.tri, (v) => v.toFixed(2), true, 0.004) : {})}
+              sub={pin ? 'vs pinned scenario' : '0 secure → 1 exposed'} />
             <ScoreCard label="US cost of supply" value={musd(usCostReal)} valueColor="var(--ink)"
-              delta={`${npvDelta >= 0 ? '+' : '−'}${musd(Math.abs(npvDelta))}`}
-              deltaColor={npvDelta > 50 ? WORSE : npvDelta < -50 ? 'var(--brand-green)' : 'var(--ink-3)'}
-              sub="2026–35 NPV · Δ vs do-nothing" />
+              {...(pin
+                ? deltaOf(usCostReal, pin.cost, (v) => musd(v), true, 50)
+                : { delta: `${npvDelta >= 0 ? '+' : '−'}${musd(Math.abs(npvDelta))}`,
+                    deltaColor: npvDelta > 50 ? WORSE : npvDelta < -50 ? 'var(--brand-green)' : 'var(--ink-3)' })}
+              sub={pin ? '2026–35 NPV · vs pinned' : '2026–35 NPV · Δ vs do-nothing'} />
             <ScoreCard label="Tightest chokepoint" value={`${chokepoint.elem} ${chokepoint.label.split(' ')[0].toLowerCase()}`} valueColor={riskColor(chokepoint.tri)} chip small sub={`stage TRI ${chokepoint.tri.toFixed(2)}`} />
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : leversExhausted ? 'all spent' : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : leversExhausted ? 'at the security floor — only demand-side moves left' : 'raise the China restriction'} />
-            <ScoreCard label="US magnets imported" value={pct(sc.kpis.us_import_pct)} valueColor="var(--ink)" sub="2035" />
-            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip sub={feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
-            <ScoreCard label="US unmet demand" value={`${usUnmet.toFixed(0)} kt`} valueColor={usUnmet > 0.05 ? WORSE : 'var(--ink)'} sub="2026–35 cumulative" />
+            <ScoreCard label="US magnets imported" value={pct(sc.kpis.us_import_pct)} valueColor="var(--ink)"
+              {...(pin ? deltaOf(sc.kpis.us_import_pct ?? 0, pin.imp, (v) => `${v.toFixed(0)} pp`, true, 0.4) : {})}
+              sub={pin ? '2035 · vs pinned' : '2035'} />
+            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip
+              {...(pin ? deltaOf(chinaTouch * 100, pin.touch * 100, (v) => `${v.toFixed(1)} pp`, true, 0.05) : {})}
+              sub={pin ? 'vs pinned' : feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
+            <ScoreCard label="US unmet demand" value={`${usUnmet.toFixed(0)} kt`} valueColor={usUnmet > 0.05 ? WORSE : 'var(--ink)'}
+              {...(pin ? deltaOf(usUnmet, pin.unmet, (v) => `${v.toFixed(1)} kt`, true, 0.05) : {})}
+              sub={pin ? '2026–35 cumulative · vs pinned' : '2026–35 cumulative'} />
           </div>
         </main>
       </div>

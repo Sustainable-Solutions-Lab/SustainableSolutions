@@ -167,6 +167,36 @@ function ScoreCard({ label, value, sub, valueColor, small, chip, delta, deltaCol
   );
 }
 
+/** Two related readouts in one card. Keeps the scorecard grid on an even count
+ *  (seven cards left an orphan on the last row) and pairs the two numbers that
+ *  answer the same question: how much of US demand is met, and from where. */
+function ScoreCard2({ label, a, b }: {
+  label: string;
+  a: { label: string; value: string; color: string; delta?: string; deltaColor?: string };
+  b: { label: string; value: string; color: string; delta?: string; deltaColor?: string };
+}) {
+  const half = (h: typeof a) => (
+    <div style={{ flex: '1 1 0', minWidth: 0 }}>
+      <div style={{ font: '600 24px var(--font-mono)', lineHeight: 1.2, color: h.color,
+                    display: 'flex', alignItems: 'baseline', gap: 5, flexWrap: 'wrap' }}>
+        <span>{h.value}</span>
+        {h.delta && <span style={{ fontSize: 12, fontWeight: 600, color: h.deltaColor ?? 'var(--ink-3)' }}>{h.delta}</span>}
+      </div>
+      <div style={{ font: '400 9.5px var(--font-mono)', opacity: 0.5, marginTop: 5, letterSpacing: '0.03em' }}>{h.label}</div>
+    </div>
+  );
+  return (
+    <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px', background: 'var(--paper)' }}>
+      <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
+      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+        {half(a)}
+        <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--rule)' }} />
+        {half(b)}
+      </div>
+    </div>
+  );
+}
+
 export default function MagnetExplorer() {
   const [make, setMake] = useState(0);       // component prong: US-made magnets
   const [source, setSource] = useState(0);   // mineral prong: non-China sourcing
@@ -322,17 +352,22 @@ export default function MagnetExplorer() {
     // which the user does in the builder. Flag it rather than silently diverge.
   };
   // Reference end of the light-vs-heavy dumbbells: the pinned scenario if there
-  // is one, otherwise the same scenario with the restriction lifted. Run through
-  // the SAME project reconciliation as scR, or the two ends would not be
-  // comparable (one would count selected US projects and the other would not).
+  // is one, otherwise the same scenario with the restriction lifted.
+  //
+  // Both ends are the RAW modelled scenario, deliberately NOT run through
+  // reconcileUsSupplyRe. That function treats alloy and magnet as
+  // element-agnostic ("one plant makes both") and assigns each class the
+  // aggregate, so reconciled light and heavy are identical at exactly the two
+  // stages where this panel's argument lives. The raw grid keeps them apart
+  // (light magnet 0.83 vs heavy 0.89), and it is also what the paper figure
+  // plots, so the two agree. Both ends are raw, so they stay comparable.
   const lhReference = useMemo(() => {
     const r = pin ? pin.coords : { ...coords, china: 0 };
-    const base = applyStockpile(interpScenario({
+    return applyStockpile(interpScenario({
       make: r.make, source: r.source, rec: r.rec, china: r.china,
       rcost: r.rcost, dytb: r.dytb, dscale: r.dscale, pfloor: r.pfloor,
     }), stockpile);
-    return { ...base, us_supply_re: reconcileUsSupplyRe(base, activeProjects) };
-  }, [pin, make, source, rec, china, rcost, pfloor, demand, stockpile, activeProjects]);
+  }, [pin, make, source, rec, china, rcost, pfloor, demand, stockpile]);
 
   /** Signed delta string + colour, given "is lower better". */
   const deltaOf = (cur: number, was: number, fmt: (v: number) => string, lowerBetter = true, eps = 0) => {
@@ -650,7 +685,7 @@ export default function MagnetExplorer() {
           {/* 5b — light vs heavy: the live counterpart of the paper's
               fig_light_vs_heavy. Hidden automatically on pre-2026-09 grids,
               which carry no light-class provenance worth plotting. */}
-          <LightHeavyPanel sc={scR} reference={lhReference} alliedHHI={alliedHHIMap}
+          <LightHeavyPanel sc={sc} reference={lhReference} alliedHHI={alliedHHIMap}
             refLabel={pin ? 'pinned scenario' : 'open market'} />
 
           {/* 6 — story scorecard: headline risk, the tightest chokepoint, the best
@@ -668,15 +703,19 @@ export default function MagnetExplorer() {
             <ScoreCard label="Tightest chokepoint" value={`${chokepoint.elem} ${chokepoint.label.split(' ')[0].toLowerCase()}`} valueColor={riskColor(chokepoint.tri)} chip small sub={`stage TRI ${chokepoint.tri.toFixed(2)}`} />
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : leversExhausted ? 'all spent' : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : leversExhausted ? 'at the security floor — only demand-side moves left' : 'raise the China restriction'} />
-            <ScoreCard label="US magnets imported" value={pct(sc.kpis.us_import_pct)} valueColor="var(--ink)"
-              {...(pin ? deltaOf(sc.kpis.us_import_pct ?? 0, pin.imp, (v) => `${v.toFixed(0)} pp`, true, 0.4) : {})}
-              sub={pin ? '2035 · vs pinned' : '2035'} />
             <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip
               {...(pin ? deltaOf(chinaTouch * 100, pin.touch * 100, (v) => `${v.toFixed(1)} pp`, true, 0.05) : {})}
               sub={pin ? 'vs pinned' : feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
-            <ScoreCard label="US unmet demand" value={`${usUnmet.toFixed(0)} kt`} valueColor={usUnmet > 0.05 ? WORSE : 'var(--ink)'}
-              {...(pin ? deltaOf(usUnmet, pin.unmet, (v) => `${v.toFixed(1)} kt`, true, 0.05) : {})}
-              sub={pin ? '2026–35 cumulative · vs pinned' : '2026–35 cumulative'} />
+            {/* Paired: both answer "is US demand met, and from where". Merging
+                them also takes the grid from seven cards to six, so the last row
+                no longer leaves an orphan. */}
+            <ScoreCard2 label="US demand met"
+              a={{ label: pin ? 'imported 2035 · vs pin' : 'imported · 2035',
+                   value: pct(sc.kpis.us_import_pct), color: 'var(--ink)',
+                   ...(pin ? deltaOf(sc.kpis.us_import_pct ?? 0, pin.imp, (v) => `${v.toFixed(0)} pp`, true, 0.4) : {}) }}
+              b={{ label: pin ? 'unmet 26–35 · vs pin' : 'unmet · 2026–35 cum.',
+                   value: `${usUnmet.toFixed(0)} kt`, color: usUnmet > 0.05 ? WORSE : 'var(--ink)',
+                   ...(pin ? deltaOf(usUnmet, pin.unmet, (v) => `${v.toFixed(1)} kt`, true, 0.05) : {}) }} />
           </div>
         </main>
       </div>

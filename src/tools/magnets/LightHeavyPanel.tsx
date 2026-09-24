@@ -101,6 +101,12 @@ export default function LightHeavyPanel(
   { sc: any; reference: any; refLabel: string; alliedHHI?: Record<string, number> },
 ) {
   if (!sc?.us_supply_re || !reference?.us_supply_re) return null;   // no class split at all
+  // Is there any contrast to draw? At the default (restriction 0, nothing
+  // pinned) the reference IS the current scenario, so every line is zero length.
+  const moved = CLASSES.some(({ cls }) => {
+    const a = chinaByStage(reference, cls), b = chinaByStage(sc, cls);
+    return a.some((v, i) => Math.abs(b[i] - v) > 0.02);
+  });
   if (!lightProvenanceUsable(sc) || !lightProvenanceUsable(reference)) {
     return (
       <section style={{ border: '1px dashed var(--rule-strong)', borderRadius: 10, padding: '14px 18px', background: 'var(--paper)', marginTop: 22 }}>
@@ -126,7 +132,9 @@ export default function LightHeavyPanel(
         Each line runs from the {refLabel} to your scenario. Heavy tends to move off China at
         every stage; light often moves only at magnet making, because the US can switch to
         third-country magnets that are still built on Chinese light oxide. Note that heavy
-        starts as the more exposed class.
+        starts as the more exposed class. Modelled supply, before the project overlay:
+        alloy and magnet plants are element-agnostic once projects are reconciled, which
+        would erase the light/heavy difference at exactly those stages.
       </p>
       <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap' }}>
         {CLASSES.map(({ cls, title }) => (
@@ -138,17 +146,29 @@ export default function LightHeavyPanel(
             refLabel={refLabel} />
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10, fontSize: 10.5, opacity: 0.7 }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 14, height: 2, background: GREEN, borderRadius: 1 }} /> moves off China
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 14, height: 2, background: RED, borderRadius: 1 }} /> moves toward China
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 14, height: 2, background: 'var(--ink-3)', borderRadius: 1 }} /> unchanged
-        </span>
-      </div>
+      {/* With no contrast set, every dumbbell is zero length and every mark is
+          neutral. Showing a colour key for movement that cannot happen just
+          invites the question "what are these colours?", so say what to do
+          instead. */}
+      {moved ? (
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10, fontSize: 10.5, opacity: 0.7 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 14, height: 2, background: GREEN, borderRadius: 1 }} /> moves off China
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 14, height: 2, background: RED, borderRadius: 1 }} /> moves toward China
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 14, height: 2, background: 'var(--ink-3)', borderRadius: 1 }} /> unchanged
+          </span>
+        </div>
+      ) : (
+        <div style={{ marginTop: 10, fontSize: 10.5, opacity: 0.65, lineHeight: 1.45 }}>
+          Dots are today’s position. Raise the <b style={{ fontWeight: 600 }}>China export restriction</b>{' '}
+          slider, or <b style={{ fontWeight: 600 }}>pin a scenario</b> and change something, and each dot
+          grows into a line showing which way that stage moved.
+        </div>
+      )}
     </section>
   );
 }

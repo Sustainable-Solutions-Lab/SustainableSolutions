@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE, ensurePriceFloorSlices, priceFloorReady } from './interp';
 import { integratedTRI, integratedRE, stageBreakdownClass, riskColor, riskChip } from './tri';
+import ScenarioBar from './ScenarioBar';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
 // sheet rather than a sticky sidebar that would overlay the plots.
@@ -217,6 +218,12 @@ export default function MagnetExplorer() {
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
+  // The two derived axes have no slider here; their chips send you to the control
+  // that actually moves them (the sheet on mobile, the builder on desktop).
+  const jumpToDemand = useCallback(() => {
+    if (isMobile) setSheetOpen(true);
+    document.getElementById('demand-builder')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [isMobile]);
   const [infoCost, setInfoCost] = useState(false);   // ⓘ toggle for the cost-bar method note
   const [rcostOpen, setRcostOpen] = useState(false); // ＋/－ for the recycling-cost stress-test
   const [resetFlash, setResetFlash] = useState(false); // brief confirm-flash on "reset to baseline"
@@ -408,7 +415,9 @@ export default function MagnetExplorer() {
 
       {/* Desktop: full demand builder. Mobile: just the total chart here (it stays
           on the page for live feedback); the demand controls live in the sheet. */}
-      <DemandBuilder mode={isMobile ? 'chart' : 'full'} scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
+      <div id="demand-builder">
+        <DemandBuilder mode={isMobile ? 'chart' : 'full'} scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
+      </div>
 
       <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 12px' }}>Supply explorer</h2>
 
@@ -480,6 +489,15 @@ export default function MagnetExplorer() {
         </aside>
 
         <main>
+          {/* 0 — where you are in the 8-axis grid. Two of these axes have no slider
+              (they come from the Demand Builder), so without this the coordinates
+              are unreadable — see ScenarioBar's header note. */}
+          <ScenarioBar
+            values={{ make, source, rec, china, rcost, pfloor,
+                      dytb: demand.dytb_intensity, dscale: demand.demand_scale }}
+            onJumpToDemand={jumpToDemand}
+          />
+
           {/* 1 — the whole chain first, so users learn the stages + connections.
               Flows are real-world-anchored (selected projects locked in, China residual). */}
           <FlowDiagram flows={rwFlows} active={activeProjects} />

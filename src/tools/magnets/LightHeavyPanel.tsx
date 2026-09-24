@@ -21,6 +21,12 @@
 import { TRI_STAGES, classTRI } from './tri';
 
 const GREEN = '#66C2A5', RED = '#D53E4F', NEUTRAL = 'var(--ink-3)';
+/** Movement smaller than this reads as "unchanged". The grid solves the
+ *  restriction axis at 0/.5/.6/.7/.85/1 and the tool interpolates between those
+ *  points, so a couple of points of drift is interpolation, not a finding.
+ *  Calling a 0.03 wobble "moves toward China" invites exactly the question it
+ *  should be answering. */
+const DEADBAND = 0.05;
 const CLASSES: { cls: 'light' | 'heavy'; title: string }[] = [
   { cls: 'light', title: 'Light REE (Nd/Pr)' },
   { cls: 'heavy', title: 'Heavy REE (Dy/Tb)' },
@@ -72,7 +78,7 @@ function Panel({ cls, title, cur, ref_, curTRI, refTRI, refLabel }: {
         ))}
         {TRI_STAGES.map((s, i) => {
           const a = ref_[i], b = cur[i], moved = b - a;
-          const col = moved < -0.02 ? GREEN : moved > 0.02 ? RED : NEUTRAL;
+          const col = moved < -DEADBAND ? GREEN : moved > DEADBAND ? RED : NEUTRAL;
           return (
             <g key={s.key}>
               <text x={PADL - 8} y={y(i)} textAnchor="end" dominantBaseline="central"
@@ -82,8 +88,10 @@ function Panel({ cls, title, cur, ref_, curTRI, refTRI, refLabel }: {
               <line x1={x(a)} y1={y(i)} x2={x(b)} y2={y(i)} stroke={col} strokeWidth={2} strokeLinecap="round" />
               <circle cx={x(a)} cy={y(i)} r={3.6} fill="var(--paper)" stroke="var(--ink-2)" strokeWidth={1.3} />
               <circle cx={x(b)} cy={y(i)} r={4} fill={col} stroke="var(--paper)" strokeWidth={1} />
-              <text x={x(b) + (b >= a ? 8 : -8)} y={y(i)} textAnchor={b >= a ? 'start' : 'end'}
-                dominantBaseline="central"
+              {/* Always to the right of BOTH dots. Anchoring to the current dot
+                  made the label jump sides the instant a and b crossed, which
+                  looks like a data change when only the ordering flipped. */}
+              <text x={x(Math.max(a, b)) + 8} y={y(i)} textAnchor="start" dominantBaseline="central"
                 style={{ font: `600 8.5px var(--font-mono)`, fill: col }}>{b.toFixed(2)}</text>
             </g>
           );
@@ -150,6 +158,19 @@ export default function LightHeavyPanel(
           neutral. Showing a colour key for movement that cannot happen just
           invites the question "what are these colours?", so say what to do
           instead. */}
+      {/* Past roughly a 70% restriction the model stops substituting and starts
+          going short, so China's share of what the US actually RECEIVES climbs
+          even though Chinese tonnage is falling: the denominator is shrinking.
+          Without this note a rising red line reads as a bug. */}
+      {(sc?.kpis?.us_unmet_kt ?? 0) > 0.05 && (
+        <div style={{ marginTop: 10, padding: '7px 10px', borderRadius: 6,
+                      border: '1px solid var(--rule-strong)', fontSize: 10.5, opacity: 0.8, lineHeight: 1.45 }}>
+          <b style={{ fontWeight: 600 }}>{(sc.kpis.us_unmet_kt).toFixed(1)} kt of US demand goes unmet here.</b>{' '}
+          These are shares of what the US actually receives, so once the chain goes short the
+          non-Chinese alternatives are exhausted and China’s <i>share</i> can rise even as its
+          tonnage falls. Read alongside unmet demand, not on its own.
+        </div>
+      )}
       {moved ? (
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10, fontSize: 10.5, opacity: 0.7 }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>

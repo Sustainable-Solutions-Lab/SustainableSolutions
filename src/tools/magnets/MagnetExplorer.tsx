@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'r
 import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE, ensurePriceFloorSlices, priceFloorReady } from './interp';
 import { integratedTRI, integratedRE, stageBreakdownClass, riskColor, riskChip } from './tri';
 import ScenarioBar, { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
+import LightHeavyPanel from './LightHeavyPanel';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
 // sheet rather than a sticky sidebar that would overlay the plots.
@@ -320,6 +321,19 @@ export default function MagnetExplorer() {
     // dytb/dscale are derived; they follow once the demand controls are reset,
     // which the user does in the builder. Flag it rather than silently diverge.
   };
+  // Reference end of the light-vs-heavy dumbbells: the pinned scenario if there
+  // is one, otherwise the same scenario with the restriction lifted. Run through
+  // the SAME project reconciliation as scR, or the two ends would not be
+  // comparable (one would count selected US projects and the other would not).
+  const lhReference = useMemo(() => {
+    const r = pin ? pin.coords : { ...coords, china: 0 };
+    const base = applyStockpile(interpScenario({
+      make: r.make, source: r.source, rec: r.rec, china: r.china,
+      rcost: r.rcost, dytb: r.dytb, dscale: r.dscale, pfloor: r.pfloor,
+    }), stockpile);
+    return { ...base, us_supply_re: reconcileUsSupplyRe(base, activeProjects) };
+  }, [pin, make, source, rec, china, rcost, pfloor, demand, stockpile, activeProjects]);
+
   /** Signed delta string + colour, given "is lower better". */
   const deltaOf = (cur: number, was: number, fmt: (v: number) => string, lowerBetter = true, eps = 0) => {
     const d = cur - was;
@@ -632,6 +646,12 @@ export default function MagnetExplorer() {
               <TradeRiskPanel sc={scR} levers={securityLevers} alliedHHI={alliedHHIMap} />
             </div>
           </section>
+
+          {/* 5b — light vs heavy: the live counterpart of the paper's
+              fig_light_vs_heavy. Hidden automatically on pre-2026-09 grids,
+              which carry no light-class provenance worth plotting. */}
+          <LightHeavyPanel sc={scR} reference={lhReference} alliedHHI={alliedHHIMap}
+            refLabel={pin ? 'pinned scenario' : 'open market'} />
 
           {/* 6 — story scorecard: headline risk, the tightest chokepoint, the best
               lever to buy it down, plus import dependence + unmet. */}

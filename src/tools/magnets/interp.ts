@@ -62,6 +62,13 @@ export const AXES = {
   pfloorMax: Math.max(...(AX.price_floor ?? [0])),  // US price floor: 0=off … 1=full ex-China premium
 };
 
+/** Every axis's solved grid points, ascending — the domain the scenario bar draws.
+ *  Two of these (dytb, dscale) have no slider: they are computed from the Demand
+ *  Builder, which is exactly why the bar has to show them. */
+export const AXIS_DOMAIN = Object.fromEntries(
+  FIELD_AXIS.map(([f, a]) => [f, [...(AX[a] ?? [0])].sort((x, y) => x - y)]),
+) as Record<AxisField, number[]>;
+
 type Point = { make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number; pfloor?: number };
 const key = (s: Point) =>
   `${s.make}|${s.source}|${s.rec}|${s.dytb}|${s.china}|${s.rcost}|${s.dscale}|${s.pfloor ?? 0}`;

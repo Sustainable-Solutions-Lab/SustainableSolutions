@@ -7,13 +7,29 @@ import type { Spec } from '../types';
 
 export function timeSeriesCsv(data: DerivedData, spec: Spec): string {
   const rows: string[][] = [];
-  const seriesKeys = data.series.map((s) => s.label);
-  rows.push(['year', ...seriesKeys, `units=${data.units}`].slice(0, seriesKeys.length + 1));
-  // Re-emit a clean header without the trailing units note:
-  rows[0] = ['year', ...seriesKeys];
+  // A projected series carries its uncertainty band alongside the median, so
+  // the export widens to four extra columns for those series only.
+  const banded = data.series.map((s) => s.points.some((p) => p.lo != null || p.loOuter != null));
+  const header = ['year'];
+  data.series.forEach((s, i) => {
+    header.push(s.label);
+    if (banded[i]) header.push(`${s.label} (lo)`, `${s.label} (hi)`, `${s.label} (min)`, `${s.label} (max)`);
+  });
+  rows.push(header);
   for (let i = 0; i < data.years.length; i++) {
-    const year = data.years[i];
-    const cells = [String(year), ...data.series.map((s) => formatCell(s.points[i]?.value))];
+    const cells = [String(data.years[i])];
+    data.series.forEach((s, si) => {
+      const p = s.points[i];
+      cells.push(formatCell(p?.value));
+      if (banded[si]) {
+        cells.push(
+          formatCell(p?.lo ?? null),
+          formatCell(p?.hi ?? null),
+          formatCell(p?.loOuter ?? null),
+          formatCell(p?.hiOuter ?? null),
+        );
+      }
+    });
     rows.push(cells);
   }
   return prepend(toCsv(rows), commentLines(spec, data.units));

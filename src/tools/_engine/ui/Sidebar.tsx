@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ChartType, ExplorerConfig, MeasureName, PresetSpec, Spec } from '../types';
+import type {
+  ChartType,
+  DriverName,
+  ExplorerConfig,
+  MeasureName,
+  PresetSpec,
+  ScenarioName,
+  Spec,
+} from '../types';
+import { DRIVER_LABELS } from '../types';
 import { useSpecStoreHook } from '../store/context';
 import { useLazyLayer } from '../data/lazy-context';
 
@@ -34,15 +43,33 @@ export default function Sidebar({ config, meta, countries }: Props) {
         </Section>
       )}
 
-      <Section title="Chart">
-        <ChartTypeToggle chartTypes={config.chartTypes} active={spec.chart} />
-      </Section>
+      {config.projectionEnd != null && (
+        <Section title="Series">
+          <SeriesPicker active={spec.driver} />
+        </Section>
+      )}
 
-      <Section title={spec.chart === 'scatter' || spec.chart === 'contour' ? 'Y measure' : 'Measure'}>
-        <MeasurePicker config={config} active={spec.measure} field="measure" geoLevel={geoLevel} />
-      </Section>
+      {spec.driver && (
+        <Section title="Scenario">
+          <ScenarioPicker active={spec.scenario ?? 'range'} />
+        </Section>
+      )}
 
-      {(spec.chart === 'scatter' || spec.chart === 'contour') && (
+      {!spec.driver && (
+        <Section title="Chart">
+          <ChartTypeToggle chartTypes={config.chartTypes} active={spec.chart} />
+        </Section>
+      )}
+
+      {!spec.driver && (
+        <Section
+          title={spec.chart === 'scatter' || spec.chart === 'contour' ? 'Y measure' : 'Measure'}
+        >
+          <MeasurePicker config={config} active={spec.measure} field="measure" geoLevel={geoLevel} />
+        </Section>
+      )}
+
+      {!spec.driver && (spec.chart === 'scatter' || spec.chart === 'contour') && (
         <Section title="X measure">
           <MeasurePicker
             config={config}
@@ -54,7 +81,7 @@ export default function Sidebar({ config, meta, countries }: Props) {
       )}
 
 
-      {(spec.chart === 'treemap' || spec.chart === 'choropleth') && (
+      {!spec.driver && (spec.chart === 'treemap' || spec.chart === 'choropleth') && (
         <Section title="Year">
           <SingleYearPicker
             min={meta.years[0]}
@@ -79,6 +106,7 @@ export default function Sidebar({ config, meta, countries }: Props) {
         )}
       </Collapsible>
 
+      {!spec.driver && (
       <Collapsible
         title="Material"
         summary={materialSummary(
@@ -94,11 +122,16 @@ export default function Sidebar({ config, meta, countries }: Props) {
           selected={spec.filters.material ?? []}
         />
       </Collapsible>
+      )}
 
       <Section title="Year range">
         <YearRangeSlider
           min={meta.years[0]}
-          max={meta.years[meta.years.length - 1]}
+          max={
+            spec.driver
+              ? (config.projectionEnd ?? meta.years[meta.years.length - 1])
+              : meta.years[meta.years.length - 1]
+          }
           value={spec.yearRange}
         />
       </Section>
@@ -213,6 +246,60 @@ function ChartTypeToggle({ chartTypes, active }: { chartTypes: ChartType[]; acti
       {chartTypes.map((c) => (
         <option key={c} value={c}>
           {CHART_LABELS[c] ?? c}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+
+// Materials or one of the socio-economic drivers behind them. Only shown for
+// tools that ship a projection layer; drivers are what currently run past the
+// observed record.
+function SeriesPicker({ active }: { active?: DriverName }) {
+  const useStore = useSpecStoreHook();
+  const setDriver = useStore(
+    (s: { setDriver: (d: DriverName | undefined) => void }) => s.setDriver,
+  );
+  return (
+    <select
+      className="explorer-preset-select"
+      value={active ?? 'materials'}
+      onChange={(e) =>
+        setDriver(e.target.value === 'materials' ? undefined : (e.target.value as DriverName))
+      }
+    >
+      <option value="materials">Material flows</option>
+      {(Object.keys(DRIVER_LABELS) as DriverName[]).map((d) => (
+        <option key={d} value={d}>
+          {DRIVER_LABELS[d]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+const SCENARIO_LABELS: Record<ScenarioName, string> = {
+  range: 'SSP1–5 range',
+  SSP1: 'SSP1 — sustainability',
+  SSP2: 'SSP2 — middle of the road',
+  SSP3: 'SSP3 — regional rivalry',
+  SSP4: 'SSP4 — inequality',
+  SSP5: 'SSP5 — fossil-fuelled development',
+};
+
+function ScenarioPicker({ active }: { active: ScenarioName }) {
+  const useStore = useSpecStoreHook();
+  const setScenario = useStore((s: { setScenario: (x: ScenarioName) => void }) => s.setScenario);
+  return (
+    <select
+      className="explorer-preset-select"
+      value={active}
+      onChange={(e) => setScenario(e.target.value as ScenarioName)}
+    >
+      {(Object.keys(SCENARIO_LABELS) as ScenarioName[]).map((sc) => (
+        <option key={sc} value={sc}>
+          {SCENARIO_LABELS[sc]}
         </option>
       ))}
     </select>

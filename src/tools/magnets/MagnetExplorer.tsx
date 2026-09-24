@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE, ensurePriceFloorSlices, priceFloorReady } from './interp';
-import { integratedTRI, integratedRE, stageBreakdownClass, riskColor, riskChip } from './tri';
+import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
 import ScenarioBar, { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import LightHeavyPanel from './LightHeavyPanel';
 
@@ -167,17 +167,49 @@ function ScoreCard({ label, value, sub, valueColor, small, chip, delta, deltaCol
   );
 }
 
+/** A headline number with its two additive parts underneath, same hairline
+ *  motif as ScoreCard2. Used for the trade-risk index, where the total really
+ *  is 0.6*heavy + 0.4*light, so the two parts SUM to the number above them —
+ *  worth showing, since which class drives the index is the whole argument. */
+function ScoreCardTotal({ label, value, valueColor, sub, delta, deltaColor, parts }: {
+  label: string; value: string; valueColor: string; sub: string;
+  delta?: string; deltaColor?: string;
+  parts: { label: string; value: string }[];
+}) {
+  return (
+    <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px', background: 'var(--paper)' }}>
+      <div style={{ fontSize: 11.5, opacity: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
+      <div style={{ font: '600 24px var(--font-mono)', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+        <span style={{ ...riskChip(valueColor), display: 'inline-block' }}>{value}</span>
+        {delta && <span style={{ fontSize: 13, fontWeight: 600, color: deltaColor ?? 'var(--ink-3)' }}>{delta}</span>}
+      </div>
+      <div style={{ display: 'flex', gap: 12, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
+        {parts.map((p, i) => (
+          <div key={p.label} style={{ display: 'flex', gap: 12, flex: '1 1 0', minWidth: 0 }}>
+            {i > 0 && <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--rule)', marginLeft: -6 }} />}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ font: '600 13px var(--font-mono)', color: 'var(--ink)' }}>{p.value}</div>
+              <div style={{ font: '400 9px var(--font-mono)', opacity: 0.5, marginTop: 2, letterSpacing: '0.03em' }}>{p.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ font: '400 9.5px var(--font-mono)', opacity: 0.5, marginTop: 6, letterSpacing: '0.03em' }}>{sub}</div>
+    </div>
+  );
+}
+
 /** Two related readouts in one card. Keeps the scorecard grid on an even count
  *  (seven cards left an orphan on the last row) and pairs the two numbers that
  *  answer the same question: how much of US demand is met, and from where. */
-function ScoreCard2({ label, a, b }: {
-  label: string;
+function ScoreCard2({ label, a, b, small }: {
+  label: string; small?: boolean;
   a: { label: string; value: string; color: string; delta?: string; deltaColor?: string };
   b: { label: string; value: string; color: string; delta?: string; deltaColor?: string };
 }) {
   const half = (h: typeof a) => (
     <div style={{ flex: '1 1 0', minWidth: 0 }}>
-      <div style={{ font: '600 24px var(--font-mono)', lineHeight: 1.2, color: h.color,
+      <div style={{ font: `600 ${small ? 14 : 24}px var(--font-mono)`, lineHeight: 1.2, color: h.color,
                     display: 'flex', alignItems: 'baseline', gap: 5, flexWrap: 'wrap' }}>
         <span>{h.value}</span>
         {h.delta && <span style={{ fontSize: 12, fontWeight: 600, color: h.deltaColor ?? 'var(--ink-3)' }}>{h.delta}</span>}
@@ -450,6 +482,14 @@ export default function MagnetExplorer() {
     ...stageBreakdownClass(scR, 'light', alliedHHIMap).map((s) => ({ ...s, elem: 'Nd/Pr' })),
   ];
   const chokepoint = cpStages.reduce((a, b) => (b.tri > a.tri ? b : a), cpStages[0]);
+  // Per-class views of the same two statistics, for the split cards. The TRI
+  // parts are the WEIGHTED contributions (0.6*heavy, 0.4*light), so they sum to
+  // the headline index rather than being two unrelated numbers beside it.
+  const worstIn = (cls: 'light' | 'heavy') =>
+    stageBreakdownClass(scR, cls, alliedHHIMap).reduce((a, b) => (b.tri > a.tri ? b : a));
+  const cpHeavy = worstIn('heavy'), cpLight = worstIn('light');
+  const triHeavy = classTRI(scR, 'heavy', alliedHHIMap);
+  const triLight = classTRI(scR, 'light', alliedHHIMap);
   // MARGINAL TRI benefit of each lever FROM THE CURRENT state (vs securityLevers' from-
   // no-policy benefit). This makes the KPI truly dynamic: a lever that's exhausted —
   // slider maxed, project built, or already satisfied by ANOTHER lever (e.g. maxing
@@ -691,16 +731,28 @@ export default function MagnetExplorer() {
           {/* 6 — story scorecard: headline risk, the tightest chokepoint, the best
               lever to buy it down, plus import dependence + unmet. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 26 }}>
-            <ScoreCard label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)} chip
+            <ScoreCardTotal label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)}
               {...(pin ? deltaOf(tri, pin.tri, (v) => v.toFixed(2), true, 0.004) : {})}
-              sub={pin ? 'vs pinned scenario' : '0 secure → 1 exposed'} />
+              parts={[
+                { label: `heavy · ${triHeavy.toFixed(2)} × ${RE_CLASS_WEIGHT.heavy}`,
+                  value: (RE_CLASS_WEIGHT.heavy * triHeavy).toFixed(2) },
+                { label: `light · ${triLight.toFixed(2)} × ${RE_CLASS_WEIGHT.light}`,
+                  value: (RE_CLASS_WEIGHT.light * triLight).toFixed(2) },
+              ]}
+              sub={pin ? 'vs pinned · parts sum to the index' : '0 secure → 1 exposed · parts sum to the index'} />
             <ScoreCard label="US cost of supply" value={musd(usCostReal)} valueColor="var(--ink)"
               {...(pin
                 ? deltaOf(usCostReal, pin.cost, (v) => musd(v), true, 50)
                 : { delta: `${npvDelta >= 0 ? '+' : '−'}${musd(Math.abs(npvDelta))}`,
                     deltaColor: npvDelta > 50 ? WORSE : npvDelta < -50 ? 'var(--brand-green)' : 'var(--ink-3)' })}
               sub={pin ? '2026–35 NPV · vs pinned' : '2026–35 NPV · Δ vs do-nothing'} />
-            <ScoreCard label="Tightest chokepoint" value={`${chokepoint.elem} ${chokepoint.label.split(' ')[0].toLowerCase()}`} valueColor={riskColor(chokepoint.tri)} chip small sub={`stage TRI ${chokepoint.tri.toFixed(2)}`} />
+            {/* Split by class: the binding stage is usually NOT the same for the
+                two fractions, and which one it is per class is the actionable bit. */}
+            <ScoreCard2 label="Tightest chokepoint" small
+              a={{ label: `Dy/Tb · stage TRI ${cpHeavy.tri.toFixed(2)}`,
+                   value: cpHeavy.label.split(' ')[0], color: riskColor(cpHeavy.tri) }}
+              b={{ label: `Nd/Pr · stage TRI ${cpLight.tri.toFixed(2)}`,
+                   value: cpLight.label.split(' ')[0], color: riskColor(cpLight.tri) }} />
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : leversExhausted ? 'all spent' : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : leversExhausted ? 'at the security floor — only demand-side moves left' : 'raise the China restriction'} />
             <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip

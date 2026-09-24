@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, DEMAND_KT_REF, US_DEMAND_SHARE, ensurePriceFloorSlices, priceFloorReady } from './interp';
+import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, ensurePriceFloorSlices, priceFloorReady } from './interp';
 import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
 import ScenarioBar, { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
-import LightHeavyPanel from './LightHeavyPanel';
+import DemandChips from './DemandChips';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
 // sheet rather than a sticky sidebar that would overlay the plots.
@@ -48,7 +48,6 @@ function consumerPremium(path: { us_mix?: Record<string, number[]>; us_mix_re?: 
   return tot;
 }
 import FlowDiagram from './FlowDiagram';
-import PathwayCharts from './PathwayCharts';
 import DemandBuilder from './DemandBuilder';
 import { allScenario, demandSummary, DEFAULT_LEVERS, type PerSectorScenario, type Levers } from './demand';
 import TradeRiskPanel from './TradeRiskPanel';
@@ -303,6 +302,7 @@ export default function MagnetExplorer() {
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [demandOpen, setDemandOpen] = useState(false);   // sector detail + demand levers
   // The two derived axes have no slider here; their chips send you to the control
   // that actually moves them (the sheet on mobile, the builder on desktop).
   const jumpToDemand = useCallback(() => {
@@ -405,23 +405,6 @@ export default function MagnetExplorer() {
     // dytb/dscale are derived; they follow once the demand controls are reset,
     // which the user does in the builder. Flag it rather than silently diverge.
   };
-  // Reference end of the light-vs-heavy dumbbells: the pinned scenario if there
-  // is one, otherwise the same scenario with the restriction lifted.
-  //
-  // Both ends are the RAW modelled scenario, deliberately NOT run through
-  // reconcileUsSupplyRe. That function treats alloy and magnet as
-  // element-agnostic ("one plant makes both") and assigns each class the
-  // aggregate, so reconciled light and heavy are identical at exactly the two
-  // stages where this panel's argument lives. The raw grid keeps them apart
-  // (light magnet 0.83 vs heavy 0.89), and it is also what the paper figure
-  // plots, so the two agree. Both ends are raw, so they stay comparable.
-  const lhReference = useMemo(() => {
-    const r = pin ? pin.coords : { ...coords, china: 0 };
-    return applyStockpile(interpScenario({
-      make: r.make, source: r.source, rec: r.rec, china: r.china,
-      rcost: r.rcost, dytb: r.dytb, dscale: r.dscale, pfloor: r.pfloor,
-    }), stockpile);
-  }, [pin, make, source, rec, china, rcost, pfloor, demand, stockpile]);
 
   /** Signed delta string + colour, given "is lower better". */
   const deltaOf = (cur: number, was: number, fmt: (v: number) => string, lowerBetter = true, eps = 0) => {
@@ -564,10 +547,18 @@ export default function MagnetExplorer() {
         </p>
       </header>
 
-      {/* Desktop: full demand builder. Mobile: just the total chart here (it stays
-          on the page for live feedback); the demand controls live in the sheet. */}
-      <div id="demand-builder">
-        <DemandBuilder mode={isMobile ? 'chart' : 'full'} scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
+      {/* Demand is an assumption about the world, not a US policy choice, so it
+          is one line of chips. The full builder — which this page used to lead
+          with — is one click away for anyone who wants sector detail or the
+          demand levers. */}
+      <div id="demand-builder" style={{ marginBottom: 18 }}>
+        <DemandChips scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv}
+          open={demandOpen} setOpen={setDemandOpen} />
+        {demandOpen && (
+          <div style={{ marginTop: 12 }}>
+            <DemandBuilder mode={isMobile ? 'chart' : 'full'} scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
+          </div>
+        )}
       </div>
 
       <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 12px' }}>Supply explorer</h2>
@@ -678,10 +669,40 @@ export default function MagnetExplorer() {
               Flows are real-world-anchored (selected projects locked in, China residual). */}
           <FlowDiagram flows={rwFlows} active={activeProjects} />
 
-          {/* 2 — how that chain meets US magnet demand over time + the US ramp
-              (desktop only — trimmed on mobile for a leaner essentials view) */}
-          {!isMobile && <PathwayCharts sc={scR} years={YEARS} hiCoercShare={demand.hiCoercShare}
-            usDemandMax={US_DEMAND_SHARE * Math.max(...DEMAND_KT_REF) * 1.45} />}
+          {/* The four KPIs that summarise the Sankey sit directly under it: this is
+              the picture of what happens with NO US intervention. The time-trend
+              (PathwayCharts), the light/heavy dumbbells and the cost breakdown all
+              moved out of the default view; cost belongs with the interventions in
+              part 2, and the other two are detail rather than headline. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gridAutoRows: '1fr', gap: 12, marginTop: 16 }}>
+            <ScoreCardTotal label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)}
+              {...(pin ? deltaOf(tri, pin.tri, (v) => v.toFixed(2), true, 0.004) : {})}
+              parts={[
+                { short: 'heavy', label: `heavy ${triHeavy.toFixed(2)} × ${RE_CLASS_WEIGHT.heavy}`,
+                  value: (RE_CLASS_WEIGHT.heavy * triHeavy).toFixed(2) },
+                { short: 'light', label: `light ${triLight.toFixed(2)} × ${RE_CLASS_WEIGHT.light}`,
+                  value: (RE_CLASS_WEIGHT.light * triLight).toFixed(2) },
+              ]}
+              sub={pin ? 'vs pinned scenario' : undefined} />
+            <ScoreCard2 label="Tightest chokepoint" small chip
+              a={{ label: `Dy/Tb · stage TRI ${cpHeavy.tri.toFixed(2)}`,
+                   value: cpHeavy.label.split(' ')[0], color: riskColor(cpHeavy.tri) }}
+              b={{ label: `Nd/Pr · stage TRI ${cpLight.tri.toFixed(2)}`,
+                   value: cpLight.label.split(' ')[0], color: riskColor(cpLight.tri) }} />
+            {/* Light has no flow-traced twin in the deployed grid yet (the model now
+                emits china_exposed_light_pct; it lands at the next regrid), so this
+                stays a single figure rather than an invented split. */}
+            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip
+              {...(pin ? deltaOf(chinaTouch * 100, pin.touch * 100, (v) => `${v.toFixed(1)} pp`, true, 0.05) : {})}
+              sub={pin ? 'vs pinned' : feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
+            <ScoreCard2 label="US demand met"
+              a={{ label: pin ? 'imported 2035 · vs pin' : 'imported · 2035',
+                   value: pct(sc.kpis.us_import_pct), color: 'var(--ink)',
+                   ...(pin ? deltaOf(sc.kpis.us_import_pct ?? 0, pin.imp, (v) => `${v.toFixed(0)} pp`, true, 0.4) : {}) }}
+              b={{ label: pin ? 'unmet 26–35 · vs pin' : 'unmet · 2026–35 cum.',
+                   value: `${usUnmet.toFixed(0)} kt`, color: usUnmet > 0.05 ? WORSE : 'var(--ink)',
+                   ...(pin ? deltaOf(usUnmet, pin.unmet, (v) => `${v.toFixed(1)} kt`, true, 0.05) : {}) }} />
+          </div>
 
           {/* 3 — combined "Cost and security" section: cost bar (real NPV) + the
               trade-risk index + cost-of-security ROI, in one block; notes behind ⓘ. */}
@@ -744,56 +765,26 @@ export default function MagnetExplorer() {
             </div>
           </section>
 
-          {/* 5b — light vs heavy: the live counterpart of the paper's
-              fig_light_vs_heavy. Hidden automatically on pre-2026-09 grids,
-              which carry no light-class provenance worth plotting. */}
-          <LightHeavyPanel sc={sc} reference={lhReference} alliedHHI={alliedHHIMap}
-            refLabel={pin ? 'pinned scenario' : 'open market'} />
 
-          {/* 6 — story scorecard: headline risk, the tightest chokepoint, the best
-              lever to buy it down, plus import dependence + unmet. */}
-          {/* gridAutoRows: 1fr makes EVERY row as tall as the tallest card in the
-              whole strip, not just its own row. Rows size independently by
-              default, so the decomposed cards made their row visibly deeper than
-              the others. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gridAutoRows: '1fr', gap: 12, marginTop: 26 }}>
-            <ScoreCardTotal label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)}
-              {...(pin ? deltaOf(tri, pin.tri, (v) => v.toFixed(2), true, 0.004) : {})}
-              parts={[
-                { short: 'heavy', label: `heavy ${triHeavy.toFixed(2)} × ${RE_CLASS_WEIGHT.heavy}`,
-                  value: (RE_CLASS_WEIGHT.heavy * triHeavy).toFixed(2) },
-                { short: 'light', label: `light ${triLight.toFixed(2)} × ${RE_CLASS_WEIGHT.light}`,
-                  value: (RE_CLASS_WEIGHT.light * triLight).toFixed(2) },
-              ]}
-              sub={pin ? 'vs pinned scenario' : undefined} />
+          {/* ── Part 2: what interventions buy ───────────────────────────────
+              Everything above characterises the world with no US action. These
+              two are the only headline numbers that belong to the intervention
+              question: what it costs, and what to pull next. */}
+          <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '30px 0 4px' }}>
+            What interventions buy
+          </h2>
+          <p style={{ fontSize: 11.5, opacity: 0.65, margin: '0 0 12px', maxWidth: 620, lineHeight: 1.45 }}>
+            Cost of the security choices made above, and the cheapest remaining move.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gridAutoRows: '1fr', gap: 12 }}>
             <ScoreCard label="US cost of supply" value={musd(usCostReal)} valueColor="var(--ink)"
               {...(pin
                 ? deltaOf(usCostReal, pin.cost, (v) => musd(v), true, 50)
                 : { delta: `${npvDelta >= 0 ? '+' : '−'}${musd(Math.abs(npvDelta))}`,
                     deltaColor: npvDelta > 50 ? WORSE : npvDelta < -50 ? 'var(--brand-green)' : 'var(--ink-3)' })}
               sub={pin ? '2026–35 NPV · vs pinned' : '2026–35 NPV · Δ vs do-nothing'} />
-            {/* Split by class: the binding stage is usually NOT the same for the
-                two fractions, and which one it is per class is the actionable bit. */}
-            <ScoreCard2 label="Tightest chokepoint" small chip
-              a={{ label: `Dy/Tb · stage TRI ${cpHeavy.tri.toFixed(2)}`,
-                   value: cpHeavy.label.split(' ')[0], color: riskColor(cpHeavy.tri) }}
-              b={{ label: `Nd/Pr · stage TRI ${cpLight.tri.toFixed(2)}`,
-                   value: cpLight.label.split(' ')[0], color: riskColor(cpLight.tri) }} />
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : leversExhausted ? 'all spent' : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : leversExhausted ? 'at the security floor — only demand-side moves left' : 'raise the China restriction'} />
-            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip
-              {...(pin ? deltaOf(chinaTouch * 100, pin.touch * 100, (v) => `${v.toFixed(1)} pp`, true, 0.05) : {})}
-              sub={pin ? 'vs pinned' : feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
-            {/* Paired: both answer "is US demand met, and from where". Merging
-                them also takes the grid from seven cards to six, so the last row
-                no longer leaves an orphan. */}
-            <ScoreCard2 label="US demand met"
-              a={{ label: pin ? 'imported 2035 · vs pin' : 'imported · 2035',
-                   value: pct(sc.kpis.us_import_pct), color: 'var(--ink)',
-                   ...(pin ? deltaOf(sc.kpis.us_import_pct ?? 0, pin.imp, (v) => `${v.toFixed(0)} pp`, true, 0.4) : {}) }}
-              b={{ label: pin ? 'unmet 26–35 · vs pin' : 'unmet · 2026–35 cum.',
-                   value: `${usUnmet.toFixed(0)} kt`, color: usUnmet > 0.05 ? WORSE : 'var(--ink)',
-                   ...(pin ? deltaOf(usUnmet, pin.unmet, (v) => `${v.toFixed(1)} kt`, true, 0.05) : {}) }} />
           </div>
         </main>
       </div>

@@ -26,6 +26,7 @@ import { screen, PRICE_WORLDS, HAS_META, hurdleRate, PLANNER_RATE, priceSensitiv
          type Buildout, type Verdict } from './projectFinance';
 import { stageBreakdown, stageBreakdownClass, riskColor, riskChip } from './tri';
 import type { Scenario } from './interp';
+import BankabilityFrontier from './BankabilityFrontier';
 
 /** Stage -> the flow interface whose mass it produces. Used to express a stage's
  *  capacity in units of ONE rare-earth class, by the share of that interface's
@@ -83,7 +84,9 @@ const STIPPLE = {
 
 export default function CapacityPanel({ buildout, incumbent, priceWorld, onPriceWorld,
                                         rate, onRate, instruments, onInstruments,
-                                        sc, alliedHHI, reClass, onReClass }: {
+                                        sc, alliedHHI, reClass, onReClass,
+                                        costMult, onCostMult, foakMult, onFoakMult,
+                                        provenancePremium, onProvenancePremium }: {
   buildout: Buildout[] | undefined;
   incumbent: Record<string, Incumbent[]>;
   priceWorld: string;
@@ -96,6 +99,12 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
   alliedHHI?: Record<string, number>;
   reClass: ReClass;
   onReClass: (c: ReClass) => void;
+  costMult: number;
+  onCostMult: (v: number) => void;
+  foakMult: number;
+  onFoakMult: (v: number) => void;
+  provenancePremium: number;
+  onProvenancePremium: (v: number) => void;
 }) {
   if (!buildout) {
     return (
@@ -140,6 +149,7 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
     offtake: instruments.offtake,
     floorInterface: instruments.floor ? 'magnet' : null,
     creditSupport: instruments.guarantee ? 1 : 0,
+    costMult, foakMult, provenancePremium,
   });
   const byStage = (s: string) => verdicts.filter((v) => v.stage === s);
   const incKt = (s: string) => (incumbent[s] ?? []).reduce((a, f) => a + f.kt, 0);
@@ -202,6 +212,32 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
         <span style={{ fontSize: 10.5, opacity: 0.55 }}>
           planner {(PLANNER_RATE * 100).toFixed(0)}% · US default {(hurdleRate('USA') * 100).toFixed(0)}%
         </span>
+        {/* The calibration the US conclusion turns on. Fixed values invite the
+            reader to believe them; these are the numbers we are least sure of. */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}
+          title="Scales the US regional cost disadvantage (opex and fixed). 1x is as calibrated: 1.6x China at the magnet stage.">
+          <span style={{ whiteSpace: 'nowrap' }}>US cost</span>
+          <input type="range" min={0.5} max={2.5} step={0.05} value={costMult}
+            onChange={(e) => onCostMult(parseFloat(e.target.value))}
+            style={{ width: 110, accentColor: 'var(--accent)' }} />
+          <span style={{ font: '600 11px var(--font-mono)', minWidth: 34 }}>{costMult.toFixed(2)}×</span>
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}
+          title="Scales the first-of-a-kind premium ABOVE one. 0 = a US plant builds like an nth-of-a-kind; 1 = as calibrated (1.3x at the magnet stage); 2 = twice the penalty.">
+          <span style={{ whiteSpace: 'nowrap' }}>FOAK</span>
+          <input type="range" min={0} max={2.5} step={0.05} value={foakMult}
+            onChange={(e) => onFoakMult(parseFloat(e.target.value))}
+            style={{ width: 110, accentColor: 'var(--accent)' }} />
+          <span style={{ font: '600 11px var(--font-mono)', minWidth: 34 }}>{foakMult.toFixed(2)}×</span>
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}
+          title="What a buyer pays extra, per kg of finished magnet, for supply that never touched China. The model charges the ex-China premium to the US as a COST but never credits it as revenue to an ex-China producer; this is that missing side. No defensible default, so it starts at zero.">
+          <span style={{ whiteSpace: 'nowrap' }}>Provenance premium</span>
+          <input type="range" min={0} max={60} step={1} value={provenancePremium}
+            onChange={(e) => onProvenancePremium(parseFloat(e.target.value))}
+            style={{ width: 110, accentColor: 'var(--accent)' }} />
+          <span style={{ font: '600 11px var(--font-mono)', minWidth: 46 }}>${provenancePremium.toFixed(0)}/kg</span>
+        </label>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {INSTRUMENTS.map((i) => {
             const on = !!instruments[i.key];
@@ -400,6 +436,10 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
           </span>
         )}
       </div>
+
+      <BankabilityFrontier rows={us} priceWorld={priceWorld} rate={rate}
+        instruments={instruments} costMult={costMult} foakMult={foakMult}
+        provenancePremium={provenancePremium} />
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12,
                     font: '400 10px var(--font-mono)', opacity: 0.65 }}>

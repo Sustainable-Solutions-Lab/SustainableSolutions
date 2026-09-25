@@ -260,7 +260,17 @@ export default function MagnetExplorer() {
   const [make, setMake] = useState(0);       // component prong: US-made magnets
   const [source, setSource] = useState(0);   // mineral prong: non-China sourcing
   const [rec, setRec] = useState(0);         // recycling collection rate
-  const [china, setChina] = useState(0);     // China export-restriction severity
+  // BASE CASE is a partially restricted world, not an open market. The study
+  // exists because buyers are already paying to hedge Chinese supply, and an
+  // undisrupted default answers a question nobody is asking: of course the
+  // least-cost plan builds no US capacity when China exports freely. 0.6 is the
+  // paper's canonical reference cell (the 83%-heavy-FEOC exposure figure), so the
+  // tool opens on the same world the written results describe.
+  //
+  // Note what it does NOT fix: with no intervention the planner asks for no US
+  // capacity at ANY restriction below 0.85, so the actor panel opens with nothing
+  // to screen. That is the finding, not a defect, and the panel says so.
+  const [china, setChina] = useState(0.6);   // China export-restriction severity
   const [rcost, setRcost] = useState(AXES.rcostMin); // US recycling cost factor
   const [stockpile, setStockpile] = useState(0);     // strategic stockpile size (kt)
   const [pfloor, setPfloor] = useState(0);           // US price floor on China imports (0 / .5 / 1)
@@ -276,6 +286,11 @@ export default function MagnetExplorer() {
   // removes it is priced. Both endpoints are solved; between them we blend.
   const [abunlock, setAbunlock] = useState(0);
   const [rdCostPerKg, setRdCostPerKg] = useState(50);   // $ per kg of capability unlocked
+  // The actor-side calibration. Exposed rather than fixed because these are the
+  // numbers the US conclusion turns on and the ones we are least sure of.
+  const [costMult, setCostMult] = useState(1);            // x the US cost disadvantage
+  const [foakMult, setFoakMult] = useState(1);            // x the FOAK premium above one
+  const [provenancePremium, setProvenancePremium] = useState(0);   // $/kg for non-China supply
   const [ceilingReady, setCeilingReady] = useState(abatementCeilingReady());
   const loadCeiling = () => ensureAbatementCeilingSlices().then(() => setCeilingReady(true));
   useEffect(() => {
@@ -716,7 +731,7 @@ export default function MagnetExplorer() {
           <ProjectsAside future={futureSel} onToggle={toggleFuture} onSetGroup={setProjectGroup} />
 
           <button onClick={() => {
-              setMake(0); setSource(0); setRec(0); setChina(0); setRcost(AXES.rcostMin); setStockpile(0); setPfloor(0); setFutureSel(new Set(DEFAULT_FUTURE));
+              setMake(0); setSource(0); setRec(0); setChina(0.6); setRcost(AXES.rcostMin); setStockpile(0); setPfloor(0); setFutureSel(new Set(DEFAULT_FUTURE));
               setResetFlash(true); window.setTimeout(() => setResetFlash(false), 650);
             }}
             style={{ marginTop: 14, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em',
@@ -823,7 +838,10 @@ export default function MagnetExplorer() {
             rate={hurdle} onRate={setHurdle}
             instruments={instruments} onInstruments={setInstruments}
             sc={scR} alliedHHI={alliedHHIMap}
-            reClass={reClass} onReClass={setReClass} />
+            reClass={reClass} onReClass={setReClass}
+            costMult={costMult} onCostMult={setCostMult}
+            foakMult={foakMult} onFoakMult={setFoakMult}
+            provenancePremium={provenancePremium} onProvenancePremium={setProvenancePremium} />
 
           {/* 4 — what the interventions bought. Sits between the actor verdict and
               the price tag: the levers are pulled in the sidebar, their effect on

@@ -39,18 +39,30 @@ export const TRANCHE_LABEL: Record<string, string> = {
 export const premiumAt = (severity: number, costFactor = 1): number =>
   EXCHINA_PREMIUM * Math.max(0, Math.min(1, severity)) * 1;
 
+/** The aspirational ceiling: every sector reaches the best availability any
+ *  sector demonstrates. Mirrors sector_abatement.aggregate_tranches at unlock=1,
+ *  where each mechanism's fraction rises to the same best-in-class value, so the
+ *  three tranches converge and the total lands at 45% — the old flat curve. */
+const ASPIRATIONAL_TOTAL = 0.45;
+export function tranchesAt(unlock: number): Tranche[] {
+  if (!unlock) return TRANCHES;
+  const each = ASPIRATIONAL_TOTAL / TRANCHES.length;
+  return TRANCHES.map((t) => ({ ...t, frac: t.frac + unlock * (each - t.frac) }));
+}
+
 /**
  * Share of Dy/Tb thrifted out at this premium: every option cheaper than the
  * price you would otherwise pay. A STEP function, which is the honest shape —
  * thrifting options are discrete technologies, not a smooth response.
  */
-export function abatedShare(premium: number, costFactor = 1): number {
-  return TRANCHES.reduce((a, t) => a + (t.cost * costFactor < premium ? t.frac : 0), 0);
+export function abatedShare(premium: number, costFactor = 1, unlock = 0): number {
+  return tranchesAt(unlock)
+    .reduce((a, t) => a + (t.cost * costFactor < premium ? t.frac : 0), 0);
 }
 
 /** Which options are worth installing at this premium, cheapest first. */
-export function bindingTranches(premium: number, costFactor = 1): Tranche[] {
-  return TRANCHES.filter((t) => t.cost * costFactor < premium)
+export function bindingTranches(premium: number, costFactor = 1, unlock = 0): Tranche[] {
+  return tranchesAt(unlock).filter((t) => t.cost * costFactor < premium)
     .sort((a, b) => a.cost - b.cost);
 }
 

@@ -35,6 +35,15 @@ export type Scenario = {
     cost_annual: number[];
     primary_dytb: number[];
   };
+  // The planner's US expansions, one row per facility, carrying everything the
+  // client-side project screen needs (capacity, utilisation, unit opex, fixed
+  // cost). Optional: only present once the grid is regenerated with the buildout
+  // emit; CapacityPanel shows a "needs a newer grid" note otherwise.
+  buildout?: { f: string; s: string; r: string; kt: number; u: number; v: number;
+               fx: number; n: number; basket?: Record<string, number> }[];
+  // Interface flows at each snapshot year, so the Sankey can be stepped through
+  // time rather than only showing the final year. Optional, as above.
+  flows_by_year?: Record<string, Record<string, Flow[]>>;
   _di?: Record<string, number>;   // per-stage DI override from a reserve-developing overlay
 };
 
@@ -209,7 +218,47 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
       }
     return out;
   };
+  // The planner's US expansions, blended per facility. EXTENSIVE fields (kt, fx,
+  // n) weighted-sum, so a facility that only builds in some corners of the
+  // bracket interpolates down to a partial build. INTENSIVE fields (u, v) are
+  // averaged over the weight where the facility actually appears — weighted-
+  // summing a $/kg would hand the screen a unit cost scaled by the blend weight.
+  const wBuildout = (): Scenario['buildout'] => {
+    if (!ps.some((p) => (p.s as any).buildout?.length)) return undefined;
+    const acc = new Map<string, { b: any; w: number }>();
+    for (const { s, w } of ps) for (const b of (s as any).buildout ?? []) {
+      const k = `${b.f}|${b.s}|${b.r}`;
+      const e = acc.get(k) ?? { b: { ...b, kt: 0, fx: 0, n: 0, u: 0, v: 0 }, w: 0 };
+      for (const f of ['kt', 'fx', 'n'] as const) e.b[f] += (b[f] ?? 0) * w;
+      for (const f of ['u', 'v'] as const) e.b[f] += (b[f] ?? 0) * w;   // normalised below
+      e.w += w;
+      acc.set(k, e);
+    }
+    return [...acc.values()]
+      .map(({ b, w }) => ({ ...b, u: w > 0 ? b.u / w : 0, v: w > 0 ? b.v / w : 0 }))
+      .filter((b) => b.kt > 0.005);
+  };
+  // Snapshot-year flows: the same weighted merge as `flows`, one year at a time.
+  const wFlowsByYear = (): Scenario['flows_by_year'] => {
+    if (!ps.some((p) => (p.s as any).flows_by_year)) return undefined;
+    const m = new Map<string, number>();   // year|iface|from|to → value
+    for (const { s, w } of ps) {
+      const fby = (s as any).flows_by_year ?? {};
+      for (const y in fby) for (const iface in fby[y]) for (const f of fby[y][iface]) {
+        const k = `${y}|${iface}|${f.from}|${f.to}`;
+        m.set(k, (m.get(k) || 0) + f.value * w);
+      }
+    }
+    const out: any = {};
+    for (const [k, v] of m) {
+      if (v < 0.05) continue;
+      const [y, iface, from, to] = k.split('|');
+      ((out[y] ??= {})[iface] ??= []).push({ from, to, value: v });
+    }
+    return out;
+  };
   return {
+    buildout: wBuildout(), flows_by_year: wFlowsByYear(),
     make: base.make, source: base.source, rec: base.rec, dytb: base.dytb, china: base.china,
     rcost: base.rcost, pfloor: base.pfloor,
     dscale: base.dscale, kpis: wDict('kpis'), cost: wDict('cost'), us_cost: wDict('us_cost'),

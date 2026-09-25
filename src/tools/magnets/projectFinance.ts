@@ -62,6 +62,7 @@ export function pricesFromOxide(ndpr: number, dytb: number,
   return { ...C.prices, oxide_NdPr: ndpr, oxide_DyTb: dytb, alloy, magnet: alloy + magnetConv };
 }
 
+export const MAGNET_CONVERSION_DEFAULT = 25;
 const OXIDE_CHINA = { ndpr: 113, dytb: 285 };      // Chinese domestic benchmark
 const OXIDE_EXCHINA = { ndpr: 184, dytb: 1625 };   // ex-China, post-2025 bifurcation
 
@@ -80,10 +81,32 @@ export const PRICE_WORLDS: Record<string, Prices> = {
  * parity. `spread` = 0 is the Chinese benchmark, 1 is today's ex-China level,
  * 2 is twice today's gap.
  */
-export const priceAtSpread = (spread: number): Prices => pricesFromOxide(
-  OXIDE_CHINA.ndpr + spread * (OXIDE_EXCHINA.ndpr - OXIDE_CHINA.ndpr),
-  OXIDE_CHINA.dytb + spread * (OXIDE_EXCHINA.dytb - OXIDE_CHINA.dytb),
-);
+export const priceAtSpread = (spread: number, magnetConv = MAGNET_CONVERSION_DEFAULT): Prices =>
+  pricesFromOxide(
+    OXIDE_CHINA.ndpr + spread * (OXIDE_EXCHINA.ndpr - OXIDE_CHINA.ndpr),
+    OXIDE_CHINA.dytb + spread * (OXIDE_EXCHINA.dytb - OXIDE_CHINA.dytb),
+    15, magnetConv,
+  );
+
+/**
+ * The magnet CONVERSION SPREAD, $/kg: what turning alloy into a finished magnet
+ * is worth, over and above the alloy consumed.
+ *
+ * This single number is why the least-cost plan looks bankable almost everywhere,
+ * and it deserves to be a control rather than a constant. The model gives EVERY
+ * region the same spread — a US plant sells at the same world magnet price as a
+ * Chinese one and buys alloy at the same world price — so China's lower cost
+ * makes it MORE profitable without making the US plant UNprofitable. There is no
+ * mechanism by which a cheaper Chinese producer depresses the price a US plant
+ * receives, because the planner allocates quantities and the screen only asks
+ * whether NPV clears at world prices. It tests ABSOLUTE VIABILITY, not
+ * COMPETITIVENESS.
+ *
+ * At the calibrated $25/kg, US conversion costs $11-12/kg all-in, so the margin
+ * is comfortable. US projects stop clearing below roughly $15/kg. Worth knowing
+ * when judging $25: it implies a Chinese converter earns ~$18/kg on ~$7/kg of
+ * cost, which is a fat markup for a commodity step.
+ */
 
 /** What today's ex-China spread is worth per kg of FINISHED MAGNET — the oxide
  *  price gap carried through the bill of materials. This is the concrete number

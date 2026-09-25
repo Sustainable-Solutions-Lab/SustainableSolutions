@@ -22,18 +22,18 @@ const NX = 13, NY = 11;
 const PREM_MAX = 60;    // $/kg of finished magnet
 const COST_MAX = 3.5;   // multiple of the calibrated US disadvantage
 
-export default function BankabilityFrontier({ rows, priceSpread, rate, instruments,
+export default function BankabilityFrontier({ rows, priceSpread, conversion, rate, instruments,
                                               costMult, foakMult, provenancePremium }: {
   rows: Buildout[];
   priceSpread: number;
+  conversion: number;
   rate: number;
   instruments: Record<string, boolean>;
   costMult: number;
   foakMult: number;
   provenancePremium: number;
 }) {
-  if (!rows.length) return null;
-  const prices = priceAtSpread(priceSpread);
+  const prices = priceAtSpread(priceSpread, conversion);
   const asked = rows.reduce((a, b) => a + b.kt, 0) || 1;
 
   /** Share of requested capacity that clears, at one (premium, cost) pair. */
@@ -50,8 +50,9 @@ export default function BankabilityFrontier({ rows, priceSpread, rate, instrumen
 
   const xs = Array.from({ length: NX }, (_, i) => (i / (NX - 1)) * PREM_MAX);
   const ys = Array.from({ length: NY }, (_, j) => 0.5 + (j / (NY - 1)) * (COST_MAX - 0.5));
+  const empty = rows.length === 0;
   const cell = (s: number) =>
-    s >= 0.999 ? 'var(--brand-green)' : s <= 0.001 ? '#D53E4F' : '#FDAE61';
+    s < 0 ? 'var(--paper-2)' : s >= 0.999 ? 'var(--brand-green)' : s <= 0.001 ? '#D53E4F' : '#FDAE61';
 
   // Where the operating point sits, so the reader can see how far it is from the line.
   const px = Math.max(0, Math.min(1, provenancePremium / PREM_MAX)) * 100;
@@ -65,9 +66,11 @@ export default function BankabilityFrontier({ rows, priceSpread, rate, instrumen
                        textTransform: 'uppercase', opacity: 0.55 }}>
           Bankability frontier
         </span>
-        <span style={{ fontSize: 10, opacity: 0.5 }}>
-          every cell is a closed-form NPV — no solve, no extra grid
-        </span>
+        {empty && (
+          <span style={{ fontSize: 10.5, opacity: 0.55 }}>
+            the plan asks for no US capacity here — nothing to screen
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
@@ -75,17 +78,26 @@ export default function BankabilityFrontier({ rows, priceSpread, rate, instrumen
                       transform: 'rotate(180deg)', textAlign: 'center', paddingBottom: 14 }}>
           US cost disadvantage →
         </div>
+        {/* value ticks, so the vertical axis is as readable as the horizontal */}
+        <div style={{ display: 'grid', gridTemplateRows: `repeat(${NY}, 14px)`, gap: 1,
+                      font: '400 8.5px var(--font-mono)', opacity: 0.45, textAlign: 'right' }}>
+          {ys.slice().reverse().map((cm, j) => (
+            <span key={cm} style={{ lineHeight: '14px' }}>
+              {j % 2 === 0 ? `${cm.toFixed(1)}×` : ''}
+            </span>
+          ))}
+        </div>
         <div style={{ flex: 1 }}>
           <div style={{ position: 'relative', display: 'grid', gap: 1,
                         gridTemplateColumns: `repeat(${NX}, 1fr)`,
                         gridTemplateRows: `repeat(${NY}, 14px)` }}>
             {ys.slice().reverse().map((cm) => xs.map((prem) => {
-              const s = fundedShare(prem, cm);
+              const s = empty ? -1 : fundedShare(prem, cm);
               return (
                 <div key={`${cm}-${prem}`}
                   title={`provenance premium $${prem.toFixed(0)}/kg · US cost ${cm.toFixed(2)}× → `
                     + `${(s * 100).toFixed(0)}% of requested capacity funded`}
-                  style={{ background: cell(s), opacity: 0.55 + 0.45 * s, borderRadius: 1 }} />
+                  style={{ background: cell(s), opacity: s < 0 ? 1 : 0.55 + 0.45 * s, borderRadius: 1 }} />
               );
             }))}
             {/* the reader's current assumptions */}
@@ -106,7 +118,7 @@ export default function BankabilityFrontier({ rows, priceSpread, rate, instrumen
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8,
                     font: '400 10px var(--font-mono)', opacity: 0.65 }}>
         <span><span style={{ display: 'inline-block', width: 10, height: 8,
-                             background: 'var(--brand-green)' }} /> all requested capacity funded</span>
+                             background: 'var(--brand-green)' }} /> funded</span>
         <span><span style={{ display: 'inline-block', width: 10, height: 8,
                              background: '#FDAE61' }} /> partly</span>
         <span><span style={{ display: 'inline-block', width: 10, height: 8,

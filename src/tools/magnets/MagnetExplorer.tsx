@@ -7,7 +7,7 @@ import DemandChips from './DemandChips';
 import AbatementReadout from './AbatementReadout';
 import CapacityPanel, { type ReClass } from './CapacityPanel';
 import RdValuePanel from './RdValuePanel';
-import { hurdleRate, RELIEF_DEFAULTS } from './projectFinance';
+import { hurdleRate, RELIEF_DEFAULTS, MAGNET_CONVERSION_DEFAULT } from './projectFinance';
 import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
@@ -383,6 +383,7 @@ export default function MagnetExplorer() {
   // Oxide prices as a multiple of TODAY'S ex-China spread: 1 = the market as it
   // actually is, which is the right default for a study about hedging that market.
   const [priceSpread, setPriceSpread] = useState(1);
+  const [conversion, setConversion] = useState(MAGNET_CONVERSION_DEFAULT);
   // Actor-mode controls. The hurdle rate IS the actor/planner distinction — there
   // is no separate mode switch — so it defaults to the US firm rate and can be
   // dragged down to the planner's, which reproduces planner mode exactly.
@@ -882,6 +883,7 @@ export default function MagnetExplorer() {
                 return acc;
               }, {} as Record<string, { stage: string; name: string; kt: number; note?: string }[]>)}
             priceSpread={priceSpread} onPriceSpread={setPriceSpread}
+            conversion={conversion} onConversion={setConversion}
             rate={hurdle} onRate={setHurdle}
             instruments={instruments} onInstruments={setInstruments}
             sc={scR} alliedHHI={alliedHHIMap}
@@ -897,9 +899,41 @@ export default function MagnetExplorer() {
           <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '30px 0 4px' }}>
             What interventions buy
           </h2>
-          <p style={{ fontSize: 11.5, opacity: 0.65, margin: '0 0 12px', maxWidth: 620, lineHeight: 1.45 }}>
-            Cost of the security choices made above, and the cheapest remaining move.
+          <p style={{ fontSize: 11.5, opacity: 0.65, margin: '0 0 14px', maxWidth: 680, lineHeight: 1.45 }}>
+            Two different things, and conflating them is how a tool starts implying that
+            security is free. A lever can improve the <b>plan</b> — less China-exposed
+            demand, lower trade risk — and separately improve whether <b>firms will fund
+            the plan</b>. The first is above the line, the second below it.
           </p>
+
+          {/* PLANNER side: what the chosen levers did to exposure and risk. Both are
+              read against the do-nothing world at the same demand and threat, so the
+              delta is the security the choices bought. */}
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em',
+                        textTransform: 'uppercase', color: 'var(--cardinal)', opacity: 0.85,
+                        margin: '0 0 7px' }}>
+            Planner — security bought
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+                        gridAutoRows: '1fr', gap: 12, marginBottom: 18 }}>
+            <ScoreCard label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)} chip
+              sub="demand-weighted 2026–35 · lower is secure" />
+            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)}
+              valueColor={riskColor(chinaTouch)} chip
+              sub={`flow-traced · ${flowYear}`} />
+            <ScoreCard label="Unmet demand" value={`${usUnmet.toFixed(1)} kt`}
+              valueColor={usUnmet > 0.05 ? WORSE : 'var(--ink)'}
+              sub="2026–35 cumulative · what no lever covered" />
+          </div>
+
+          {/* ACTOR side: the stage-resolved gap between what the plan calls for and
+              what anyone would fund. The bars and frontier above are the detail; this
+              is the one-line score. */}
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em',
+                        textTransform: 'uppercase', color: 'var(--cardinal)', opacity: 0.85,
+                        margin: '0 0 7px' }}>
+            Actor — gap closed
+          </div>
           <AbatementReadout china={china} unlock={abunlock} />
 
           {HAS_ABATEMENT_CEILING && (

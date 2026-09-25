@@ -53,9 +53,6 @@ export default function ProjectsAside({ future, onToggle, onSetGroup }: {
   const construction = FUTURE_PROJECTS.filter((p) => tier(p) === 'construction');
   const planned = FUTURE_PROJECTS.filter((p) => tier(p) === 'planned');
   const nOn = (list: Project[]) => list.filter((p) => future.has(p.id)).length;
-  const subhead = (t: string) => (
-    <div style={{ font: '600 9.5px var(--font-mono)', letterSpacing: '0.05em', textTransform: 'uppercase', opacity: 0.55, margin: '8px 0 4px' }}>{t}</div>
-  );
   const grp = (t: Tier, list: Project[]) => { const on = nOn(list); return { on, list, allOn: on === list.length, t }; };
   const groups: [string, ReturnType<typeof grp>][] = [
     ['Ramping', grp('ramping', ramping)], ['Construction', grp('construction', construction)], ['Planned', grp('planned', planned)],
@@ -63,24 +60,31 @@ export default function ProjectsAside({ future, onToggle, onSetGroup }: {
   return (
     <div>
       <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Projects assumed built</div>
-      <div style={{ display: 'flex', gap: 5 }}>
+      {/* Buttons and their lists share ONE grid, so each tier's projects open in a
+          column directly under the button that toggles them. Stacked vertically
+          they ran the page several screens longer on a single click, and the
+          association between a list and its group button was left to memory. */}
+      <div style={{ display: 'grid', gap: '5px 16px',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+                    alignItems: 'start' }}>
         {groups.map(([label, g]) => (
           <GroupButton key={label} label={label} count={g.on} total={g.list.length} allOn={g.allOn}
             onClick={() => onSetGroup(g.t, !g.allOn)} />
         ))}
+        {custOpen && groups.map(([label, g]) => (
+          <div key={`${label}-list`}>
+            {g.list.map((p) => (
+              <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />
+            ))}
+          </div>
+        ))}
       </div>
-      <details style={{ marginTop: 8 }} onToggle={(e) => setCustOpen((e.target as HTMLDetailsElement).open)}>
-        <summary style={{ fontSize: 11, opacity: 0.6, cursor: 'pointer', listStyle: 'none' }}>{custOpen ? '－' : '＋'} Customize project expansion</summary>
-        <div style={{ marginTop: 4 }}>
-          {subhead('Recently online (ramping)')}
-          {ramping.map((p) => <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />)}
-          {subhead('Under construction')}
-          {construction.map((p) => <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />)}
-          {subhead('Planned')}
-          {planned.map((p) => <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />)}
-        </div>
-      </details>
-      <p style={{ fontSize: 10, opacity: 0.5, margin: '6px 0 0', lineHeight: 1.4 }}>
+      <button onClick={() => setCustOpen((o) => !o)}
+        style={{ font: '500 11px var(--font-mono)', opacity: 0.6, cursor: 'pointer',
+                 background: 'transparent', border: 'none', padding: '6px 0 0' }}>
+        {custOpen ? '－ hide individual projects' : '＋ choose individual projects'}
+      </button>
+      <p style={{ fontSize: 10, opacity: 0.5, margin: '8px 0 0', lineHeight: 1.45, maxWidth: 'none' }}>
         An assumption about which projects are <b>destined to get built</b>, whatever the
         economics say. Operating plants are always in. Anything you add here is treated the
         same way: its capacity floors the least-cost chain above, and actor mode books it as

@@ -9,9 +9,8 @@
  *
  * The three chips are the IEA scenarios, ordered by how much magnet demand they
  * imply. Each shows its resulting demand multiplier so the choice is legible
- * rather than a bare label. "Customise" opens the full builder, which is the
- * view the page used to lead with, and any hand-tuning there is reflected back
- * here as a fourth, custom state.
+ * rather than a bare label. "See sectoral detail" opens the per-sector breakdown, and any hand-set
+ * scenario there is reflected back here as a fourth, custom state.
  */
 import { SCENARIO_LABEL, allScenario, demandSummary, DEFAULT_LEVERS,
          type Levers, type PerSectorScenario } from './demand';
@@ -69,14 +68,11 @@ export default function DemandChips({ scenario, setScenario, lv, setLv, open, se
           Custom
         </span>
       )}
-      <span style={{ fontSize: 10, opacity: 0.5, marginLeft: 2 }}>
-        (the two demand axes the supply grid is solved over)
-      </span>
       <button onClick={() => setOpen(!open)}
-        title={open ? 'Hide the sector detail and demand levers' : 'Tune demand by sector, grade mix and the four demand levers'}
+        title={open ? 'Hide the per-sector detail' : 'Show how the scenario breaks down by end-use sector'}
         style={{ font: '500 10.5px var(--font-mono)', padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
                  border: '1px solid var(--rule)', background: 'transparent', color: 'var(--ink)', opacity: 0.75 }}>
-        {open ? '− customise' : '+ customise'}
+        {open ? '− sectoral detail' : '+ see sectoral detail'}
       </button>
     </div>
   );

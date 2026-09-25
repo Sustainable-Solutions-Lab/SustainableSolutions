@@ -1,5 +1,5 @@
 /**
- * The thrifting ceiling, priced as a research programme.
+ * The thrifting ceiling, priced as a research program.
  *
  * Replaces a free switch. The switch answered "would a higher ceiling help",
  * which is not in doubt; this answers "how much may we spend reaching it". The
@@ -79,7 +79,7 @@ export default function RdValuePanel({ base, unlocked, unlock, onUnlock,
                     gap: 12, marginBottom: 12 }}>
         {[
           { l: 'Capability unlocked', v: `${r.ktUnlocked.toFixed(1)} kt`, s: 'Dy/Tb newly designable-out' },
-          { l: 'Actually designed out', v: `${r.ktAbated.toFixed(1)} kt`, s: 'what the optimiser takes up' },
+          { l: 'Actually designed out', v: `${r.ktAbated.toFixed(1)} kt`, s: 'what the optimizer takes up' },
           { l: 'US bill', v: musd(r.saving), s: 'saving at this ceiling', c: r.saving > 0 ? GOOD : BAD },
           { l: 'R&D bill', v: musd(-r.rdCost), s: `${r.ktUnlocked.toFixed(1)} kt × $${costPerKg}/kg` },
         ].map((k) => (
@@ -95,7 +95,7 @@ export default function RdValuePanel({ base, unlocked, unlock, onUnlock,
       <div style={{ fontSize: 11.5, lineHeight: 1.5, maxWidth: 680, paddingTop: 12,
                     borderTop: '1px solid var(--rule)' }}>
         {r.breakeven == null ? (
-          <span>Move the barrier slider to price a programme.</span>
+          <span>Move the barrier slider to price a program.</span>
         ) : r.breakeven <= 0 ? (
           <>
             <strong>No price makes this pay here.</strong> At this restriction the extra
@@ -114,7 +114,7 @@ export default function RdValuePanel({ base, unlocked, unlock, onUnlock,
             {r.breakeven < 50 && (
               <>That is a low bar to clear, and the reason is worth stating: the tranches
                 a higher ceiling unlocks are the <em>expensive</em> ones — grade downshift
-                and RE-free substitution, not grain-boundary diffusion — so the optimiser
+                and RE-free substitution, not grain-boundary diffusion — so the optimizer
                 only buys them when the premium has already risen to meet their cost, and
                 little surplus is left over.{' '}</>
             )}

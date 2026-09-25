@@ -325,7 +325,7 @@ export function interpScenario(pt: Point): Scenario {
   const brk = FIELD_AXIS.map(([f, ax]) => bracket(AX[ax] ?? [0], (pt[f] as number) ?? 0));
   const n = FIELD_AXIS.length;
   // Blend the two solved ceilings only when the query sits strictly between them.
-  // The approximation: the optimiser's response to a ceiling is piecewise (it
+  // The approximation: the optimizer's response to a ceiling is piecewise (it
   // abates up to the ceiling only where marginal cost undercuts the premium), so
   // a midpoint read is linear where the truth is a staircase. The endpoints, which
   // are what the paper quotes, are exact.

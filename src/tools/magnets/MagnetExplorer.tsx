@@ -122,9 +122,14 @@ const KPIS: { k: string; label: string; sub: string; fmt: (x: number) => string;
   { k: 'recycled_pct', label: 'Recycled supply', sub: '2035', fmt: pct, lowerBetter: false, help: 'Final-year (2035) share of oxide supplied by recycling.' },
 ];
 
-function Slider({ label, value, max, min = 0, onChange, fmt, desc }: {
-  label: string; value: number; max: number; min?: number;
+/** `ticks` replaces the min/mid/max strip with NAMED anchors at real values —
+ *  "China parity", "today's ex-China spread", "2x that". A reader sliding a bare
+ *  0-1 axis is guessing what they are postulating; a labelled anchor tells them,
+ *  and tells them how far from it they have moved. */
+function Slider({ label, value, max, min = 0, onChange, fmt, desc, ticks, step = 0.01 }: {
+  label: string; value: number; max: number; min?: number; step?: number;
   onChange: (v: number) => void; fmt: (v: number) => string; desc?: string;
+  ticks?: { at: number; label: string }[];
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -143,12 +148,32 @@ function Slider({ label, value, max, min = 0, onChange, fmt, desc }: {
         </span>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--accent)' }}>{fmt(value)}</span>
       </div>
-      <input type="range" min={min} max={max} step={0.01} value={value}
+      <input type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         style={{ width: '100%', accentColor: 'var(--accent)' }} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--ink)', opacity: 0.45, marginTop: -1 }}>
-        <span>{fmt(min)}</span><span>{fmt((min + max) / 2)}</span><span>{fmt(max)}</span>
-      </div>
+      {ticks?.length ? (
+        <div style={{ position: 'relative', height: 20, marginTop: -2 }}>
+          {ticks.map((t) => {
+            const pctPos = ((t.at - min) / (max - min)) * 100;
+            return (
+              <span key={t.label} title={`${t.label} — ${fmt(t.at)}`}
+                style={{ position: 'absolute', left: `${Math.max(0, Math.min(100, pctPos))}%`,
+                         transform: pctPos < 12 ? 'none' : pctPos > 88 ? 'translateX(-100%)' : 'translateX(-50%)',
+                         textAlign: 'center', lineHeight: 1.1 }}>
+                <span style={{ display: 'block', width: 1, height: 3, background: 'var(--ink)',
+                               opacity: 0.35, margin: pctPos < 12 ? '0' : pctPos > 88 ? '0 0 0 auto' : '0 auto' }} />
+                <span style={{ font: '400 8.5px var(--font-mono)', opacity: 0.45, whiteSpace: 'nowrap' }}>
+                  {t.label}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--ink)', opacity: 0.45, marginTop: -1 }}>
+          <span>{fmt(min)}</span><span>{fmt((min + max) / 2)}</span><span>{fmt(max)}</span>
+        </div>
+      )}
       {desc && open && (
         <p style={{ fontSize: 11, opacity: 0.6, margin: '6px 0 0', lineHeight: 1.45 }}>{desc}</p>
       )}
@@ -355,7 +380,9 @@ export default function MagnetExplorer() {
   // Price world drives the actor screen only. It is a free control because the
   // screen is arithmetic rather than a solve — see projectFinance.ts. It cannot
   // move the Sankey, and should not: the planner has no prices.
-  const [priceWorld, setPriceWorld] = useState<string>('ex_china');   // sector detail + demand levers
+  // Oxide prices as a multiple of TODAY'S ex-China spread: 1 = the market as it
+  // actually is, which is the right default for a study about hedging that market.
+  const [priceSpread, setPriceSpread] = useState(1);
   // Actor-mode controls. The hurdle rate IS the actor/planner distinction — there
   // is no separate mode switch — so it defaults to the US firm rate and can be
   // dragged down to the planner's, which reproduces planner mode exactly.
@@ -632,44 +659,77 @@ export default function MagnetExplorer() {
   // The ACTOR controls (hurdle rate, US cost, FOAK, provenance premium, the
   // instrument reliefs) live in the capacity panel instead. They are closed-form
   // arithmetic over a solved cell and cannot move a ribbon.
+  // Grouped by the DECISION each pair represents, not by instrument type: a
+  // stockpile size means nothing without its price, and a collection rate means
+  // nothing without what recycling costs. Headings carry the cardinal accent, so
+  // "geopolitical context" and "US policy levers" read as peers.
+  const GROUP = { font: '600 10px var(--font-mono)', letterSpacing: '0.08em',
+                  textTransform: 'uppercase' as const, color: 'var(--cardinal)',
+                  opacity: 0.85, margin: '0 0 6px' };
+  const ROW = { display: 'grid', gap: '2px 20px',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' } as const;
+  const RULE = { borderTop: '1px solid var(--rule)', margin: '10px 0 8px' };
   const plannerControls = (
     <>
-      <div style={{ display: 'grid', gap: '2px 20px',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-          <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
-            desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium (see the cost bar)." />
-
-      </div>
-
-
-          <div style={{ borderTop: '1px solid var(--rule)', margin: '10px 0 8px' }} />
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.6, margin: '0 0 6px' }}>
-            US policy levers <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, opacity: 0.8 }}>— also solved by the planner, so these move the chain above</span>
+      <div style={GROUP}>US demand</div>
+      <div id="demand-builder">
+        <DemandChips scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv}
+          open={demandOpen} setOpen={setDemandOpen} />
+        {demandOpen && (
+          <div style={{ marginTop: 10 }}>
+            <DemandBuilder mode="full" scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
           </div>
-      <div style={{ display: 'grid', gap: '2px 20px',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-          <Slider label="US-made magnets (reshore)" value={make} max={AXES.makeMax} onChange={setMake} fmt={(v) => pct(v * 100)}
-            desc="Component prong, like the IRA EV credit: the share of US magnets that must be manufactured in the US — reshoring the final step. On its own it can still be met with imported (incl. Chinese) alloy or oxide; pair it with non-China sourcing to close that loophole." />
-          <Slider label="Clean heavy sourcing (friendshore)" value={source} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
-            desc="Friendshoring the heavy rare earths, FEOC-traced: the minimum share of US Dy/Tb need met by a chain-of-custody-CLEAN supply that never touched Chinese ore, oxide, or alloy at any stage — pulling ex-China-mined or recycled heavy material to US demand. Unlike a provenance-blind sourcing quota (which ex-China separation of Chinese ore defeats), this can only be met by genuinely China-free material, so it moves the flow-traced exposure. The US pays an ex-China premium for it (shown in the cost bar)." />
-          <Slider label="End-of-life collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
-            desc="Share of end-of-life magnets collected and reprocessed into oxide. Recovered scrap is concentrated Nd/Pr/Dy/Tb with no co-product tax — but recycling plants must be built and paid for." />
-          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
-            desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
-          <Slider label="US price floor on China imports" value={pfloor} max={AXES.pfloorMax} onChange={setPfloor} fmt={(v) => pct(v * 100)}
-            desc="A US guaranteed price floor (DoD / MP-Materials-style) modeled as a tariff that lifts the price of Chinese oxide, alloy & magnet imports toward the ex-China premium — 0% = off, 50% = half, 100% = the full premium. It makes domestic + allied supply cost-competitive WITHOUT a mandate, so the market reshores on price rather than by rule. Its cost is borne by consumers as a higher import price (no factory needed), shown as 'Price floor' in the cost bar. A distinct instrument from friendshoring (a quantity mandate) — try them separately." />
-          <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
-            desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$110/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
-          <Slider label="Stockpile cost" value={stockCost} min={40} max={250} onChange={setStockCost} fmt={(v) => `$${v.toFixed(0)}/kg`}
-            desc={`Acquire + hold cost of stockpiled finished magnets, $/kg. The default (~$${STOCKPILE_COST_DEFAULT}/kg) assumes a buffer skewed to Dy/Tb-rich high-coercivity grades, which are the strategically scarce ones and cost well above an average magnet. Only bites when the stockpile is above zero.`} />
-          {stockpile > 0 && (
-            <p style={{ fontSize: 10.5, opacity: 0.55, margin: '-2px 0 6px', lineHeight: 1.4 }}>
-              Embodies ≈ <b>{Math.round(stockpile * 0.326)} kt Nd/Pr</b> + <b>{(stockpile * 0.034).toFixed(1)} kt Dy/Tb</b> oxide — the heavy slice is the strategically scarce one.
-            </p>
-          )}
+        )}
       </div>
-          <ProjectsAside future={futureSel} onToggle={toggleFuture} onSetGroup={setProjectGroup} />
 
+      <div style={RULE} />
+      <div style={GROUP}>Geopolitical context</div>
+      <div style={ROW}>
+        <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
+          ticks={[{ at: 0, label: 'open' }, { at: 0.6, label: 'reference' }, { at: 1, label: 'full ban' }]}
+          desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium. The 60% reference is a MODELLING CHOICE, not a calibrated value: it is the cell the written results describe. China's 2025 licensing regime on seven medium/heavy REEs is the closest real analogue, and mapping it to a single severity number is a judgement." />
+      </div>
+
+      <div style={RULE} />
+      <div style={GROUP}>US policy levers</div>
+      <div style={ROW}>
+        <Slider label="US-made magnets (reshore)" value={make} max={AXES.makeMax} onChange={setMake} fmt={(v) => pct(v * 100)}
+          ticks={[{ at: 0, label: 'none' }, { at: 0.5, label: 'half' }, { at: AXES.makeMax, label: 'all US-made' }]}
+          desc="Component prong, like the IRA EV credit: the share of US magnets that must be manufactured in the US — reshoring the final step. On its own it can still be met with imported (incl. Chinese) alloy or oxide; pair it with non-China sourcing to close that loophole." />
+        <Slider label="Clean heavy sourcing (friendshore)" value={source} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
+          ticks={[{ at: 0, label: 'none' }, { at: 0.5, label: 'half' }, { at: AXES.sourceMax, label: 'all China-free' }]}
+          desc="Friendshoring the heavy rare earths, FEOC-traced: the minimum share of US Dy/Tb need met by a chain-of-custody-CLEAN supply that never touched Chinese ore, oxide, or alloy at any stage. Unlike a provenance-blind sourcing quota (which ex-China separation of Chinese ore defeats), this can only be met by genuinely China-free material, so it moves the flow-traced exposure. The US pays an ex-China premium for it." />
+        <Slider label="US price floor on China imports" value={pfloor} max={AXES.pfloorMax} onChange={setPfloor} fmt={(v) => pct(v * 100)}
+          ticks={[{ at: 0, label: 'off' }, { at: 0.5, label: 'half premium' }, { at: 1, label: 'full premium' }]}
+          desc="A US guaranteed price floor (DoD / MP-Materials-style), modeled as a tariff lifting the price of Chinese oxide, alloy and magnet imports toward the ex-China premium. It makes domestic and allied supply cost-competitive WITHOUT a mandate, so the market reshores on price rather than by rule; its cost falls on consumers as a higher import price. The SAME instrument also de-risks covered projects in actor mode below, and that relief scales with this setting." />
+      </div>
+
+      <div style={RULE} />
+      <div style={GROUP}>Recycling</div>
+      <div style={ROW}>
+        <Slider label="End-of-life collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
+          ticks={[{ at: 0, label: 'none' }, { at: 0.3, label: 'e-waste-like' }, { at: AXES.recMax, label: 'max solved' }]}
+          desc="Share of end-of-life magnets collected and reprocessed into oxide. Recovered scrap is concentrated Nd/Pr/Dy/Tb with no co-product tax — but recycling plants must be built and paid for." />
+      </div>
+
+      <div style={RULE} />
+      <div style={GROUP}>Strategic stockpile</div>
+      <div style={ROW}>
+        <Slider label="Stockpile size" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
+          ticks={[{ at: 0, label: 'none' }, { at: 5, label: '5 kt' }, { at: STOCKPILE_MAX, label: `${STOCKPILE_MAX} kt` }]}
+          desc="A pre-positioned US inventory of finished magnets, bought on the open market before a shock and drawn down to cover the earliest unmet demand. Cheap insurance against a near-term shock, but finite: it only helps where there is unmet demand to cover." />
+        <Slider label="Stockpile cost" value={stockCost} min={40} max={250} onChange={setStockCost} fmt={(v) => `$${v.toFixed(0)}/kg`}
+          ticks={[{ at: 40, label: 'commodity' }, { at: STOCKPILE_COST_DEFAULT, label: 'default' }, { at: 250, label: 'high-coercivity' }]}
+          desc={`Acquire and hold cost of stockpiled finished magnets. The $${STOCKPILE_COST_DEFAULT}/kg default assumes a buffer skewed to Dy/Tb-rich high-coercivity grades — the strategically scarce ones, which cost well above an average magnet. Only bites when the stockpile is above zero.`} />
+      </div>
+      {stockpile > 0 && (
+        <p style={{ fontSize: 10.5, opacity: 0.55, margin: '2px 0 0', lineHeight: 1.4 }}>
+          Embodies ≈ <b>{Math.round(stockpile * 0.326)} kt Nd/Pr</b> + <b>{(stockpile * 0.034).toFixed(1)} kt Dy/Tb</b> oxide — the heavy slice is the strategically scarce one.
+        </p>
+      )}
+
+      <div style={RULE} />
+      <ProjectsAside future={futureSel} onToggle={toggleFuture} onSetGroup={setProjectGroup} />
     </>
   );
 
@@ -722,24 +782,10 @@ export default function MagnetExplorer() {
                        textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>
             Scenario assumptions
           </h2>
-          <span style={{ fontSize: 11, opacity: 0.5, lineHeight: 1.4 }}>
-            what the US does not control — they define the problem the interventions
-            are trying to solve
-          </span>
         </div>
       )}
       {!isMobile && (
         <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '12px 16px 10px', background: 'var(--paper)', marginBottom: 16 }}>
-          <div id="demand-builder">
-            <DemandChips scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv}
-              open={demandOpen} setOpen={setDemandOpen} />
-            {demandOpen && (
-              <div style={{ marginTop: 10 }}>
-                <DemandBuilder mode="full" scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
-              </div>
-            )}
-          </div>
-          <div style={{ borderTop: '1px solid var(--rule)', margin: '9px 0 8px' }} />
           {plannerControls}
         </section>
       )}
@@ -835,7 +881,7 @@ export default function MagnetExplorer() {
                                               kt: pj.capacityKt, note: pj.note });
                 return acc;
               }, {} as Record<string, { stage: string; name: string; kt: number; note?: string }[]>)}
-            priceWorld={priceWorld} onPriceWorld={setPriceWorld}
+            priceSpread={priceSpread} onPriceSpread={setPriceSpread}
             rate={hurdle} onRate={setHurdle}
             instruments={instruments} onInstruments={setInstruments}
             sc={scR} alliedHHI={alliedHHIMap}

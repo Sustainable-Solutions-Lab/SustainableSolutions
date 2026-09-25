@@ -224,7 +224,21 @@ function stageProduction(flows: Record<string, Flow[]>, stage: Stage, iface: str
   const model = modelProduction(flows, iface, frac);
   const T = sumReg(model);
   let usP: number, rowP: number;
-  if (cls && (stage === 'mining' || stage === 'separation')) {
+  if (!cls && (stage === 'mining' || stage === 'separation')) {
+    // AGGREGATE view of an element-specific stage. The floor must be the SUM of the
+    // class floors, not the raw project nameplate.
+    //
+    // A mine's nameplate is total rare-earth oxide — mostly La/Ce — while the model's
+    // concentrate flow carries only Nd/Pr + Dy/Tb. Flooring a two-element flow with an
+    // all-element nameplate credited ex-China mines with roughly three times the
+    // capacity the class views gave them, which is why the aggregate read 55% China at
+    // mining while light read 56% and heavy 97%: a total below BOTH its parts, which no
+    // weighted average can be. Summing the class floors makes the identity hold by
+    // construction.
+    const lo = rampedCapacityRe(stage, active, 'light', scale);
+    const hi = rampedCapacityRe(stage, active, 'heavy', scale);
+    usP = lo.USA + hi.USA; rowP = lo.RoW + hi.RoW;
+  } else if (cls && (stage === 'mining' || stage === 'separation')) {
     // Element-specific stage in a CLASS view: ex-China heavy/light supply comes ONLY
     // from class-tagged projects. The aggregate model production × frac would mis-
     // attribute (e.g. the US's light Mountain Pass ore would show up as ~2% of HEAVY

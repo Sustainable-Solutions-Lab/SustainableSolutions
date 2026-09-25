@@ -709,9 +709,11 @@ export default function MagnetExplorer() {
         </h1>
         <p style={{ fontSize: 15, lineHeight: 1.55, opacity: 0.8, margin: 0 }}>
           A capacity-expansion model of the NdFeB magnet supply chain
-          (mining → separation → alloy → magnet). Compose demand by sector, then adjust
-          policy, recycling, and geopolitical assumptions to identify choke points and see
-          how cost and US import dependence respond.
+          (mining → separation → alloy → magnet). Set demand and geopolitical scenario to
+          identify the least-cost supply chain of US magnets, then evaluate the extent to
+          which private actors would actually build the needed capacity, the magnitude of
+          residual trade risks, and efficacy of hypothetical technological and policy
+          interventions.
         </p>
       </header>
 

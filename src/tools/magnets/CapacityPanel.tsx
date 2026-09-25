@@ -87,7 +87,7 @@ const LABEL: Record<string, string> = {
 const ICON: Record<string, JSX.Element> = {
   mining: <Pickaxe size={14} strokeWidth={1.5} />,
   separation: <FlaskConical size={14} strokeWidth={1.5} />,
-  alloy: <Flame size={14} strokeWidth={1.5} />,
+  alloy: <Flame size={14} strokeWidth={2.1} />,
   magnet: <Magnet size={14} strokeWidth={1.5} />,
   recycling: <Recycle size={14} strokeWidth={1.5} />,
 };

@@ -84,7 +84,7 @@ const LABEL_CH = 9.6, ICON = 15;
 const STAGE_ICON: Record<string, JSX.Element> = {
   Mining: <Pickaxe size={ICON} strokeWidth={1.5} />,
   Separation: <FlaskConical size={ICON} strokeWidth={1.5} />,
-  Alloying: <Flame size={ICON} strokeWidth={1.5} />,
+  Alloying: <Flame size={ICON} strokeWidth={2.1} />,
   Magnet: <Magnet size={ICON} strokeWidth={1.5} />,
   Demand: <Zap size={ICON} strokeWidth={1.5} />,
 };

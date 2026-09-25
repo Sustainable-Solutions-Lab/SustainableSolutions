@@ -378,9 +378,11 @@ export const STOCKPILE_MAX = (data as any).meta.stockpile_max_kt ?? 80;   // kt 
 // strategic buffer skews to Dy/Tb-rich high-coercivity grades, so ~$110/kg.
 // $M/kt == $/kg.
 const STOCKPILE_COST_PER_KT = (data as any).meta.stockpile_cost_per_kt ?? 110;
+/** $/kg, == $M/kt. Exposed so the UI can sweep what is otherwise a buried assumption. */
+export const STOCKPILE_COST_DEFAULT = STOCKPILE_COST_PER_KT;
 const DISCOUNT = 0.07;   // matches the model's real discount rate
 
-export function applyStockpile(sc: Scenario, stockpileKt: number): Scenario {
+export function applyStockpile(sc: Scenario, stockpileKt: number, costPerKg = STOCKPILE_COST_PER_KT): Scenario {
   if (!stockpileKt || stockpileKt <= 0) return sc;
   const unmet = [...(sc.path.us_mix.unmet ?? [])];
   const n = unmet.length;
@@ -441,7 +443,7 @@ export function applyStockpile(sc: Scenario, stockpileKt: number): Scenario {
     us_cost: {
       ...sc.us_cost,
       shortage: (sc.us_cost.shortage ?? 0) * shortageScale,
-      stockpile: Math.round(stockpileKt * STOCKPILE_COST_PER_KT),
+      stockpile: Math.round(stockpileKt * costPerKg),
     },
     path: { ...sc.path, us_mix: { ...sc.path.us_mix, unmet, stockpile: draw } },
   };

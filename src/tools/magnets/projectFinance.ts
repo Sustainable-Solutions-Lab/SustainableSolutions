@@ -94,15 +94,38 @@ function stageFlows(stage: string, p: Prices, basket: Record<string, number>): [
  *  RC.instrument_relief: reliefs do NOT stack — the largest single one wins —
  *  and a subsidy earns none, which is the asymmetry the whole exercise shows. */
 export function instrumentRelief(stage: string, opts: {
-  offtake?: boolean; floorInterface?: string | null; creditSupport?: number;
+  /** 0-1: how much of the risk premium an offtake removes. 0 = no offtake. */
+  offtake?: number;
+  floorInterface?: string | null;
+  /** 0-1: relief a FULL price floor buys, before scaling by how far the floor is on. */
+  floorRelief?: number;
+  /** 0-1: how far the floor is actually set, from the planner-side tariff slider. */
+  floorLevel?: number;
+  /** 0-1: relief from credit support. */
+  creditSupport?: number;
 } = {}): number {
-  let relief = 0;
-  if (opts.offtake) relief = Math.max(relief, C.hurdle_relief.offtake);
+  let relief = Math.max(0, opts.offtake ?? 0);
   const covers = opts.floorInterface ? (C.floor_covers[opts.floorInterface] ?? []) : [];
-  if (covers.includes(stage)) relief = Math.max(relief, C.hurdle_relief.price_floor);
-  if (opts.creditSupport) relief = Math.max(relief, opts.creditSupport * C.hurdle_relief.loan_guarantee);
+  if (covers.includes(stage)) {
+    // The floor is ONE instrument with two effects: it re-prices imports for the
+    // planner (a grid axis) and de-risks covered projects for the actor. Its relief
+    // therefore scales with how far the planner-side floor is actually set — a
+    // floor that is off cannot be de-risking anything.
+    relief = Math.max(relief, (opts.floorRelief ?? 0) * (opts.floorLevel ?? 0));
+  }
+  if (opts.creditSupport) relief = Math.max(relief, opts.creditSupport);
   return Math.min(1, relief);
 }
+
+/** The asserted defaults. NOT empirical: the ORDERING is defensible (an offtake
+ *  removes more risk than a floor; a guarantee removes all of it; a cost subsidy
+ *  removes none, which is why it is absent), the magnitudes are judgement. They
+ *  are defaults for a slider precisely so a reader can disagree with them. */
+export const RELIEF_DEFAULTS = {
+  offtake: C.hurdle_relief?.offtake ?? 0.70,
+  floor: C.hurdle_relief?.price_floor ?? 0.50,
+  guarantee: C.hurdle_relief?.loan_guarantee ?? 1.00,
+};
 
 export type Verdict = {
   facility: string; stage: string; region: string; newKt: number; utilization: number;
@@ -195,7 +218,8 @@ export function evaluate(b: Buildout, prices: Prices, opts: {
 /** Screen a whole build-out. Relief is resolved PER STAGE, because a price floor
  *  on magnets does nothing for a separation plant — see instrumentRelief. */
 export const screen = (rows: Buildout[], prices: Prices, opts: {
-  offtake?: boolean; floorInterface?: string | null; creditSupport?: number;
+  offtake?: number; floorInterface?: string | null; floorRelief?: number;
+  floorLevel?: number; creditSupport?: number;
   support?: number; rate?: number; costMult?: number; foakMult?: number;
   provenancePremium?: number;
 } = {}): Verdict[] =>

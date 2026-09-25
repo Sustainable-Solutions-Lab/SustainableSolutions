@@ -22,7 +22,7 @@
  * is kt of finished magnet — so each row names its own unit.
  */
 import { Pickaxe, FlaskConical, Flame, Magnet, Recycle } from 'lucide-react';
-import { screen, PRICE_WORLDS, HAS_META, hurdleRate, PLANNER_RATE, priceSensitive,
+import { screen, PRICE_WORLDS, HAS_META, hurdleRate, PLANNER_RATE, priceSensitive, RELIEF_DEFAULTS,
          type Buildout, type Verdict } from './projectFinance';
 import { stageBreakdown, stageBreakdownClass, riskColor, riskChip } from './tri';
 import type { Scenario } from './interp';
@@ -57,12 +57,12 @@ export type Incumbent = { stage: string; name: string; kt: number; note?: string
  *  controls above; putting them here would imply they change a firm's return,
  *  which is exactly the confusion the registry exists to prevent. */
 const INSTRUMENTS = [
-  { key: 'offtake', label: 'Offtake', relief: 0.70,
-    hint: 'Binary switch, fixed quantity: removes 70% of the risk premium — volume risk is its largest single component. Costs nothing unless the buyer walks. Reliefs do NOT stack; the largest single one wins.' },
-  { key: 'floor', label: 'Price floor', relief: 0.50,
-    hint: 'Removes 50% of the risk premium, but ONLY for the stages the floor\u2019s trade interface covers: a floor on magnets does nothing for a separation plant. Reliefs do not stack.' },
-  { key: 'guarantee', label: 'Loan guarantee', relief: 1.00,
-    hint: 'Removes 100% of the risk premium — the project finances at the planner\u2019s rate outright. Reliefs do not stack.' },
+  { key: 'offtake', label: 'Offtake agreement', max: 1,
+    hint: 'A committed buyer removes VOLUME risk — the largest single component of the premium a first US plant pays. Costs the public nothing unless the buyer walks. The default is a judgement, not a measurement; move it if you disagree.' },
+  { key: 'floor', label: 'Price floor', max: 1,
+    hint: 'How much of the risk premium a FULL price floor removes. What actually reaches a project is this times how far the floor is set in the scenario above, and only for the stages the floor\u2019s trade interface covers — a magnet floor does nothing for a separation plant.' },
+  { key: 'guarantee', label: 'Loan guarantee', max: 1,
+    hint: 'Public credit support: at 100% the project finances at the planner\u2019s social rate outright. A cost subsidy is deliberately absent — it shifts the mean return without removing any state of the world, so it earns no relief at all.' },
 ] as const;
 // A cost subsidy is deliberately absent: it earns ZERO relief, because it shifts
 // the mean return without removing any state of the world. That asymmetry is the
@@ -95,15 +95,17 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                                         rate, onRate, instruments, onInstruments,
                                         sc, alliedHHI, reClass, onReClass,
                                         costMult, onCostMult, foakMult, onFoakMult,
-                                        provenancePremium, onProvenancePremium }: {
+                                        provenancePremium, onProvenancePremium, floorLevel }: {
   buildout: Buildout[] | undefined;
   incumbent: Record<string, Incumbent[]>;
   priceWorld: string;
   onPriceWorld: (w: string) => void;
   rate: number;
   onRate: (r: number) => void;
-  instruments: Record<string, boolean>;
-  onInstruments: (i: Record<string, boolean>) => void;
+  instruments: Record<string, number>;
+  onInstruments: (i: Record<string, number>) => void;
+  /** How far the planner-side price floor is set (0-1). Scales the floor's relief. */
+  floorLevel: number;
   sc: Scenario;
   alliedHHI?: Record<string, number>;
   reClass: ReClass;
@@ -121,7 +123,7 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                         padding: '14px 18px', background: 'var(--paper)', marginTop: 22 }}>
         <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em',
                      textTransform: 'uppercase', opacity: 0.6, margin: '0 0 6px' }}>
-          Would it actually be built
+          Would it actually be built?
         </h2>
         <p style={{ fontSize: 11.5, opacity: 0.7, margin: 0, maxWidth: 620, lineHeight: 1.45 }}>
           Waiting on a grid that carries the planner build-out. The model emits it; this
@@ -156,8 +158,8 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
   const verdicts: Verdict[] = screen(us, PRICE_WORLDS[priceWorld] ?? PRICE_WORLDS.neutral, {
     rate,
     offtake: instruments.offtake,
-    floorInterface: instruments.floor ? 'magnet' : null,
-    creditSupport: instruments.guarantee ? 1 : 0,
+    floorInterface: 'magnet', floorRelief: instruments.floor, floorLevel,
+    creditSupport: instruments.guarantee,
     costMult, foakMult, provenancePremium,
   });
   const byStage = (s: string) => verdicts.filter((v) => v.stage === s);
@@ -190,11 +192,14 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                     flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
         <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em',
                      textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>
-          Would it actually be built
+          Would it actually be built?
         </h2>
         <div style={{ display: 'flex', gap: 5 }} title={anyPriceSensitive
-            ? 'Prices are a free control here: the screen is arithmetic, not a solve'
-            : 'No screened project is price-sensitive in this scenario — see the note below'}>
+            ? 'The price path a firm sells into. Oxide prices bifurcated after 2025: ex-China buyers pay far above the Chinese domestic benchmark, and which regime a project faces decides whether US separation clears. A free control because the screen is arithmetic, not a solve — making it a grid axis would have multiplied the grid.'
+            : 'Inert in this scenario: every screened project is a CONVERSION stage, whose output price is defined as its input price plus a fixed spread, so the oxide price cancels exactly. It bites for mining and separation.'}>
+          <span style={{ font: '600 9.5px var(--font-mono)', letterSpacing: '0.05em',
+                         textTransform: 'uppercase', opacity: 0.45, alignSelf: 'center',
+                         marginRight: 2 }}>price regime</span>
           {Object.keys(PRICE_WORLDS).map((w) => (
             <button key={w} onClick={() => onPriceWorld(w)}
               style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5,
@@ -220,7 +225,7 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                     padding: '10px 12px', marginBottom: 14, borderRadius: 8,
                     background: 'var(--paper-2)', border: '1px solid var(--rule)' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
-          <span style={{ whiteSpace: 'nowrap' }}>Hurdle rate</span>
+          <span style={{ whiteSpace: 'nowrap' }} title="The return a private developer demands before committing: its cost of capital including a risk premium. This is the ONLY thing that separates actor mode from planner mode — the planner discounts the same cash flows at the social rate. It is a DISCOUNT RATE; the provenance premium is a PRICE. They act on different sides of the NPV and do not overlap.">Hurdle rate</span>
           <input type="range" min={PLANNER_RATE} max={0.35} step={0.005} value={rate}
             onChange={(e) => onRate(parseFloat(e.target.value))}
             style={{ width: 150, accentColor: 'var(--accent)' }} />
@@ -234,16 +239,16 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
         {/* The calibration the US conclusion turns on. Fixed values invite the
             reader to believe them; these are the numbers we are least sure of. */}
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}
-          title="Scales the US regional cost disadvantage (opex and fixed). 1x is as calibrated: 1.6x China at the magnet stage.">
-          <span style={{ whiteSpace: 'nowrap' }}>US cost</span>
+          title="The STEADY-STATE US cost disadvantage — labour, power, permitting, scale — applied to opex AND capital, for a plant that is not the first of its kind. 1x is as calibrated (1.6x China at the magnet stage). This does NOT include any first-plant penalty; that is the separate FOAK knob, so turning both up is not double-counting.">
+          <span style={{ whiteSpace: 'nowrap' }}>US cost (nth-of-a-kind)</span>
           <input type="range" min={0.5} max={2.5} step={0.05} value={costMult}
             onChange={(e) => onCostMult(parseFloat(e.target.value))}
             style={{ width: 110, accentColor: 'var(--accent)' }} />
           <span style={{ font: '600 11px var(--font-mono)', minWidth: 34 }}>{costMult.toFixed(2)}×</span>
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}
-          title="Scales the first-of-a-kind premium ABOVE one. 0 = a US plant builds like an nth-of-a-kind; 1 = as calibrated (1.3x at the magnet stage); 2 = twice the penalty.">
-          <span style={{ whiteSpace: 'nowrap' }}>FOAK</span>
+          title="The EXTRA capital cost of being first, on top of the steady-state disadvantage: unproven process, no local supply chain, learning still ahead. CAPITAL ONLY — it does not touch opex. 0 = builds like an nth-of-a-kind, 1 = as calibrated (1.3x at the magnet stage), 2 = twice that penalty.">
+          <span style={{ whiteSpace: 'nowrap' }}>FOAK (capital only)</span>
           <input type="range" min={0} max={2.5} step={0.05} value={foakMult}
             onChange={(e) => onFoakMult(parseFloat(e.target.value))}
             style={{ width: 110, accentColor: 'var(--accent)' }} />
@@ -257,26 +262,34 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
             style={{ width: 110, accentColor: 'var(--accent)' }} />
           <span style={{ font: '600 11px var(--font-mono)', minWidth: 46 }}>${provenancePremium.toFixed(0)}/kg</span>
         </label>
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {INSTRUMENTS.map((i) => {
-            const on = !!instruments[i.key];
-            return (
-              <button key={i.key} title={i.hint}
-                onClick={() => onInstruments({ ...instruments, [i.key]: !on })}
-                style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5,
-                         cursor: 'pointer',
-                         border: `1px solid ${on ? 'var(--accent)' : 'var(--rule-strong)'}`,
-                         background: on ? 'var(--accent)' : 'transparent',
-                         color: on ? 'var(--paper)' : 'var(--ink)' }}>
-                {i.label}
-                <span style={{ opacity: on ? 0.75 : 0.45, fontWeight: 400, marginLeft: 4 }}>
-                  &minus;{(i.relief * 100).toFixed(0)}%
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {INSTRUMENTS.map((i) => {
+          const v = instruments[i.key] ?? 0;
+          const eff = i.key === 'floor' ? v * floorLevel : v;
+          return (
+            <label key={i.key} title={i.hint}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
+              <span style={{ whiteSpace: 'nowrap' }}>{i.label}</span>
+              <input type="range" min={0} max={i.max} step={0.05} value={v}
+                onChange={(e) => onInstruments({ ...instruments, [i.key]: parseFloat(e.target.value) })}
+                style={{ width: 96, accentColor: 'var(--accent)' }} />
+              <span style={{ font: '600 11px var(--font-mono)', minWidth: 52 }}>
+                &minus;{(v * 100).toFixed(0)}%
+                {i.key === 'floor' && Math.abs(eff - v) > 1e-9 && (
+                  <span style={{ opacity: 0.55, fontWeight: 400 }}> ({(eff * 100).toFixed(0)})</span>
+                )}
+              </span>
+            </label>
+          );
+        })}
       </div>
+
+      <p style={{ fontSize: 10.5, opacity: 0.5, margin: '-6px 0 10px', lineHeight: 1.45, maxWidth: 780 }}>
+        These four are <b>actor-side only</b>: they re-price a project the planner already
+        chose and cannot move the chain above. <b>US cost</b> is the steady-state penalty on
+        opex and capital; <b>FOAK</b> is the extra capital cost of being first, so the two
+        stack without double-counting. <b>Hurdle rate</b> is a discount rate, <b>provenance
+        premium</b> is a price — opposite sides of the NPV.
+      </p>
 
       {/* Which RE class the bars and the risk column describe. Dy/Tb is the real
           chokepoint; Nd/Pr is far more diversified, so a single "All" reading

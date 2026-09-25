@@ -62,7 +62,7 @@ export default function ProjectsAside({ future, onToggle, onSetGroup }: {
   ];
   return (
     <div>
-      <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>New supplies</div>
+      <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Projects assumed built</div>
       <div style={{ display: 'flex', gap: 5 }}>
         {groups.map(([label, g]) => (
           <GroupButton key={label} label={label} count={g.on} total={g.list.length} allOn={g.allOn}
@@ -81,7 +81,12 @@ export default function ProjectsAside({ future, onToggle, onSetGroup }: {
         </div>
       </details>
       <p style={{ fontSize: 10, opacity: 0.5, margin: '6px 0 0', lineHeight: 1.4 }}>
-        Mature plants are always included; toggling new supply moves the Sankey + trade-risk.
+        An assumption about which projects are <b>destined to get built</b>, whatever the
+        economics say. Operating plants are always in. Anything you add here is treated the
+        same way: its capacity floors the least-cost chain above, and actor mode books it as
+        <b> sunk</b> — already committed, so never put through the build/no-build screen.
+        That is why a project can appear here while the screen below would decline to fund
+        a comparable new one.
       </p>
     </div>
   );

@@ -14,10 +14,11 @@
  */
 import { abatedShare, bindingTranches, premiumAt, MAX_ABATABLE, TRANCHE_LABEL } from './abatement';
 
-export default function AbatementReadout({ china }: { china: number }) {
+export default function AbatementReadout({ china, unlock = 0 }:
+                                         { china: number; unlock?: number }) {
   const premium = premiumAt(china);
-  const share = abatedShare(premium);
-  const binding = bindingTranches(premium);
+  const share = abatedShare(premium, 1, unlock);
+  const binding = bindingTranches(premium, 1, unlock);
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 18px',
                       background: 'var(--paper)', marginTop: 22 }}>

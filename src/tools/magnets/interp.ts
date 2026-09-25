@@ -10,6 +10,9 @@ export type Flow = { from: string; to: string; value: number };
 export type Scenario = {
   make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number;
   pfloor: number;
+  /** Abatement-ceiling case: 0 = today's sectoral availability, 1 = barrier broken.
+   *  Discrete, not interpolated. Absent on grids written before the axis existed. */
+  abunlock?: number;
   kpis: Record<string, number>;
   cost: Record<string, number>;
   us_cost: Record<string, number>;
@@ -78,9 +81,14 @@ export const AXIS_DOMAIN = Object.fromEntries(
   FIELD_AXIS.map(([f, a]) => [f, [...(AX[a] ?? [0])].sort((x, y) => x - y)]),
 ) as Record<AxisField, number[]>;
 
-type Point = { make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number; pfloor?: number };
+type Point = { make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number; pfloor?: number; abunlock?: number };
+// `abunlock` is part of the KEY but deliberately not part of FIELD_AXIS: it is a
+// discrete technology-availability case (today's sectoral ceiling vs the barrier
+// broken), not a continuum, so interpolating halfway between them would describe
+// a world nobody asserted. Every corner of a query is looked up at the SAME
+// ceiling; the toggle switches which set of corners is in play.
 const key = (s: Point) =>
-  `${s.make}|${s.source}|${s.rec}|${s.dytb}|${s.china}|${s.rcost}|${s.dscale}|${s.pfloor ?? 0}`;
+  `${s.make}|${s.source}|${s.rec}|${s.dytb}|${s.china}|${s.rcost}|${s.dscale}|${s.pfloor ?? 0}|${s.abunlock ?? 0}`;
 const LOOKUP = new Map(SC.map((s) => [key(s), s]));
 
 // Price-floor slices ship separately so the default page load is unchanged: the eager
@@ -110,6 +118,47 @@ export function ensurePriceFloorSlices(): Promise<void> {
   }
   return pfLoadPromise;
 }
+// Aspirational abatement-ceiling slices. Same lazy pattern as the price floor, but
+// keyed (abunlock, pfloor) because the ceiling crosses the floor: all three have to
+// be resident before a query at unlock=1 can be answered at any floor level.
+const AB_SLICE_LOADERS: Record<string, () => Promise<any>> = {
+  '1.0|0.0': () => import('./scenarios.ab1.json'),
+  '1.0|0.5': () => import('./scenarios.ab1.pf1.json'),
+  '1.0|1.0': () => import('./scenarios.ab1.pf2.json'),
+};
+const loadedAb = new Set<string>();
+let abLoadPromise: Promise<void> | null = null;
+/** True once every aspirational slice is resident. Until then a query at
+ *  unlock=1 degrades to the baseline ceiling rather than returning nothing. */
+export function abatementCeilingReady(): boolean {
+  return Object.keys(AB_SLICE_LOADERS).every((k) => loadedAb.has(k));
+}
+export function ensureAbatementCeilingSlices(): Promise<void> {
+  if (abatementCeilingReady()) return Promise.resolve();
+  if (!abLoadPromise) {
+    abLoadPromise = Promise.all(
+      Object.entries(AB_SLICE_LOADERS).map(async ([k, load]) => {
+        if (loadedAb.has(k)) return;
+        const mod: any = await load();
+        for (const s of (((mod.default ?? mod).scenarios as Scenario[]) || [])) LOOKUP.set(key(s), s);
+        loadedAb.add(k);
+      }),
+    ).then(() => undefined);
+  }
+  return abLoadPromise;
+}
+/** The ceilings the deployed grid actually carries, as fractions of Dy/Tb that can
+ *  be designed out at any price. Read from meta so the label cannot drift from the
+ *  model; the fallback covers a grid written before the axis existed. */
+export const ABATEMENT_CEILINGS: { baseline: number; aspirational: number } = (() => {
+  const tr = (data as any).meta?.abatement?.tranches as { frac: number }[] | undefined;
+  const baseline = tr ? tr.reduce((a, t) => a + t.frac, 0) : 0.247;
+  return { baseline, aspirational: 0.45 };
+})();
+/** Whether this grid was built with the aspirational slice at all. */
+export const HAS_ABATEMENT_CEILING: boolean =
+  !!(data as any).meta?.abatement_unlock_slices;
+
 const snap = (arr: number[], x: number) =>
   arr.reduce((p, c) => (Math.abs(c - x) < Math.abs(p - x) ? c : p), arr[0]);
 
@@ -270,6 +319,7 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
 
 export function interpScenario(pt: Point): Scenario {
   pt = { ...pt, pfloor: pt.pfloor ?? 0 };   // default the price-floor axis for callers that omit it
+  const ab = pt.abunlock ?? 0;              // discrete: 0 = today's ceiling, 1 = barrier broken
   const brk = FIELD_AXIS.map(([f, ax]) => bracket(AX[ax] ?? [0], (pt[f] as number) ?? 0));
   const n = FIELD_AXIS.length;
   const parts: { s: Scenario; w: number }[] = [];
@@ -283,8 +333,11 @@ export function interpScenario(pt: Point): Scenario {
       w *= hiBit ? t : 1 - t;
     }
     if (w <= 1e-9) continue;
-    const sk = FIELD_AXIS.map(([f, ax]) => snap(AX[ax], coords[f])).join('|');
-    const s = LOOKUP.get(sk);
+    const base = FIELD_AXIS.map(([f, ax]) => snap(AX[ax], coords[f])).join('|');
+    // Try the requested ceiling, then fall back to the baseline one. The fallback
+    // is what makes the toggle safe to flip before its slices have downloaded:
+    // the page keeps answering, at today's ceiling, instead of emptying out.
+    const s = LOOKUP.get(`${base}|${ab}`) ?? (ab ? LOOKUP.get(`${base}|0`) : undefined);
     if (s) parts.push({ s, w });
   }
   const out = parts.length ? combine(parts) : { ...BASE };
@@ -294,6 +347,7 @@ export function interpScenario(pt: Point): Scenario {
   // the restriction severity (sc.china), which were otherwise quantized to the
   // nearest grid coordinate (e.g. a 0.8 slider read as 0.5).
   for (const [f] of FIELD_AXIS) (out as any)[f] = pt[f];
+  (out as any).abunlock = ab;
   return out;
 }
 

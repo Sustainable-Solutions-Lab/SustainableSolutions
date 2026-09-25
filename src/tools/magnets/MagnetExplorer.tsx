@@ -695,12 +695,17 @@ export default function MagnetExplorer() {
       <div style={GROUP}>US demand</div>
       <div id="demand-builder">
         <DemandChips scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv}
-          open={demandOpen} setOpen={setDemandOpen} />
+          open={demandOpen} setOpen={setDemandOpen} custom={dscaleOverride !== null} />
         {demandOpen && (
           <div style={{ marginTop: 10 }}>
             <DemandBuilder mode="full" scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
           </div>
         )}
+        <div style={{ ...ROW, marginTop: 8 }}>
+          <Slider label="Total magnet demand" value={dscale} min={AXES.dscaleMin} max={AXES.dscaleMax}
+            onChange={setDscaleOverride} fmt={(v) => `${v.toFixed(2)}× APS`} ticks={demandTicks}
+            desc="US magnet demand as a multiple of the IEA Announced Pledges (APS) trajectory, 2026–35. The three IEA scenarios are anchors on this axis, not the only options: the grid is solved at 0.6, 1.0 and 1.4× and every level between is interpolated over solved cells. Dragging scales the total; the sector mix (and so the Dy/Tb intensity) stays as set by the chips above, and choosing a chip snaps this back to that scenario's level." />
+        </div>
       </div>
 
       <div style={RULE} />
@@ -798,13 +803,16 @@ export default function MagnetExplorer() {
           thing you were trying to move was off-screen and you were changing a
           slider blind. Sticky keeps the score visible while you work anywhere on
           the page; 3x2 and smaller type is what makes six of them fit in a band
-          shallow enough to give up that much of the viewport. */}
+          shallow enough to give up that much of the viewport.
+          `top` is the site nav's height: the nav is itself sticky (Nav.astro,
+          56px), so a band pinned at 0 slides UNDER it and reads as not sticking.
+          Each chip is boxed so the band reads as six readouts, not a text row. */}
       {!isMobile && (
-        <div style={{ position: 'sticky', top: 0, zIndex: 30, background: 'var(--paper)',
+        <div style={{ position: 'sticky', top: NAV_HEIGHT, zIndex: 30, background: 'var(--paper)',
                       borderBottom: '1px solid var(--rule)', padding: '8px 0 9px',
                       marginBottom: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-                        gridTemplateRows: 'repeat(2, auto)', gap: '7px 12px' }}>
+                        gridTemplateRows: 'repeat(2, auto)', gap: '6px 10px' }}>
             {[
               { l: 'US trade-risk index', v: tri.toFixed(2), c: riskColor(tri), chip: true,
                 s: 'demand-weighted 2026–35' },
@@ -820,7 +828,9 @@ export default function MagnetExplorer() {
                 s: '2026–35 NPV' },
             ].map((k) => (
               <div key={k.l} style={{ display: 'flex', alignItems: 'baseline', gap: 7,
-                                      minWidth: 0 }}>
+                                      minWidth: 0, padding: '5px 9px', borderRadius: 6,
+                                      border: '1px solid var(--rule-strong)',
+                                      background: 'var(--paper-2, var(--paper))' }}>
                 <span style={{ font: '600 9px var(--font-mono)', letterSpacing: '0.05em',
                                textTransform: 'uppercase', opacity: 0.5, flex: '0 0 auto',
                                width: 116, lineHeight: 1.25 }}>{k.l}</span>

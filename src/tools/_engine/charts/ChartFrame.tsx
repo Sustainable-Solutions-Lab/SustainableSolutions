@@ -77,9 +77,13 @@ export default function ChartFrame({
     let max = 0;
     for (const s of data.series) {
       for (const p of s.points) {
-        if (p.value == null) continue;
-        if (p.value < min) min = p.value;
-        if (p.value > max) max = p.value;
+        // Uncertainty bands can reach past the median line in either
+        // direction, so the domain has to see them too.
+        for (const v of [p.value, p.lo, p.hi, p.loOuter, p.hiOuter]) {
+          if (v == null) continue;
+          if (v < min) min = v;
+          if (v > max) max = v;
+        }
       }
     }
     const lo = zeroBased ? Math.min(0, min) : min;
@@ -136,6 +140,28 @@ export default function ChartFrame({
           >
             Year
           </text>
+
+          {/* Where the observed record ends and the projection begins. */}
+          {data.historicalEnd != null && (
+            <g transform={`translate(${xScale(data.historicalEnd)},0)`}>
+              <line
+                y1={0}
+                y2={innerHeight}
+                stroke="var(--ink-3)"
+                strokeDasharray="2 3"
+                strokeWidth={1}
+              />
+              <text
+                x={-4}
+                y={6}
+                textAnchor="start"
+                className="chart-tick"
+                style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+              >
+                Present ({data.historicalEnd})
+              </text>
+            </g>
+          )}
 
           {children({ xScale, yScale, innerWidth, innerHeight })}
 

@@ -1,4 +1,5 @@
-import type { DataBundle, Spec } from '../types';
+import type { DataBundle, DriverName, ScenarioName, Spec } from '../types';
+import { DRIVER_LABELS } from '../types';
 
 // Spec + loaded data layers → normalized chart data. Pure function; no
 // React, no DOM. The chart components take the result and render.
@@ -13,12 +14,20 @@ export type Series = {
   color: string;        // hex color from the dimension palette
   points: Point[];      // chronologically sorted, possibly with null y
   // The dimension the key belongs to. Useful for legends and tooltips.
-  dimension: 'geo' | 'material' | 'group' | 'flow';
+  dimension: 'geo' | 'material' | 'group' | 'flow' | 'driver';
+  /** First projected year, if this series runs past the historical record. */
+  projectedFrom?: number;
 };
 
 export type Point = {
   year: number;
   value: number | null;
+  /** Inner uncertainty band (scenario spread or MC interquartile range). */
+  lo?: number | null;
+  hi?: number | null;
+  /** Outer uncertainty band (full scenario range or MC min-max). */
+  loOuter?: number | null;
+  hiOuter?: number | null;
 };
 
 export type DerivedData = {
@@ -27,6 +36,10 @@ export type DerivedData = {
   units: string;
   /** Total range of years rendered. */
   years: number[];
+  /** Last year of observed data, when the chart also shows projections. */
+  historicalEnd?: number;
+  /** What the shaded band around a projected series means, for the caption. */
+  bandLabel?: string;
 };
 
 // ── Treemap-shaped output ───────────────────────────────────────────────────
@@ -159,6 +172,16 @@ type FlowsWorld = { years: number[]; materials: Record<string, number[]> };
 type FlowsRegions = { years: number[]; regions: Record<string, Record<string, number[]>> };
 type GdpPop = { years: number[]; gdp: Record<string, number[]>; population: Record<string, number[]> };
 
+type DriverTrack = Record<string, number[]>; // scenario → value per projection year
+type DriverBundle = { population: DriverTrack; gdp: DriverTrack; gdpPerCapita: DriverTrack };
+type SspDrivers = {
+  years: number[];
+  scenarios: string[];
+  anchorYear: number;
+  world: DriverBundle;
+  regions: Record<string, DriverBundle>;
+};
+
 type FlowsCountries = {
   years: number[];
   countries: string[];
@@ -197,6 +220,7 @@ function countriesToRegionalShape(
 // ── Derivation ──────────────────────────────────────────────────────────────
 
 export function derive(data: DataBundle, spec: Spec): DerivedData {
+  if (spec.driver) return deriveDrivers(data, spec);
   const meta = data.meta as Meta;
   const flowsWorld = data.flowsWorld as FlowsWorld;
   const flowsRegions = data.flowsRegions as FlowsRegions;
@@ -270,6 +294,144 @@ export function derive(data: DataBundle, spec: Spec): DerivedData {
   }
 
   return { series, units: unitsFor(spec.measure), years };
+}
+
+
+// ── Drivers (population / GDP / GDP per capita, with SSP projections) ───────
+//
+// History comes from the same UN + World Bank layer the measures use; the
+// projection is the SSP trajectory anchored to the 2024 historical value.
+// With scenario 'range' the line is the SSP median and the two bands are the
+// interquartile and full spread across SSP1-5 — the same reading as the
+// paper's Monte Carlo envelope, but driven by the five marker scenarios.
+
+const DRIVER_UNITS: Record<DriverName, string> = {
+  population: 'billion people',
+  gdp: 'trillion 2015 US$',
+  gdp_per_capita: 'thousand 2015 US$ per person',
+};
+
+const DRIVER_SCALE: Record<DriverName, number> = {
+  population: 1e9,
+  gdp: 1e12,
+  gdp_per_capita: 1e3,
+};
+
+const DRIVER_COLOR: Record<DriverName, string> = {
+  population: '#1F618D',
+  gdp: '#0E6655',
+  gdp_per_capita: '#117A65',
+};
+
+const DRIVER_TRACK: Record<DriverName, keyof DriverBundle> = {
+  population: 'population',
+  gdp: 'gdp',
+  gdp_per_capita: 'gdpPerCapita',
+};
+
+function quantile(sorted: number[], q: number): number {
+  if (sorted.length === 0) return NaN;
+  const pos = (sorted.length - 1) * q;
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+
+function historicalDriver(
+  driver: DriverName,
+  geo: string,
+  gdpPop: GdpPop,
+): (number | null)[] {
+  const pop = gdpPop.population[geo];
+  const gdp = gdpPop.gdp[geo];
+  if (driver === 'population') return pop ?? [];
+  if (driver === 'gdp') return gdp ?? [];
+  if (!pop || !gdp) return [];
+  return pop.map((p, i) => (p && gdp[i] != null ? (gdp[i] as number) / p : null));
+}
+
+export function deriveDrivers(data: DataBundle, spec: Spec): DerivedData {
+  const meta = data.meta as Meta;
+  const gdpPop = data.gdpPop as GdpPop;
+  const ssp = data.sspDrivers as SspDrivers | undefined;
+
+  const driver = spec.driver as DriverName;
+  const scenario: ScenarioName = spec.scenario ?? 'range';
+  const scale = DRIVER_SCALE[driver];
+  const [yStart, yEnd] = spec.yearRange;
+
+  const geoLevel = spec.geoLevel ?? 'world';
+  const geoFilter = spec.filters.geo ?? [];
+  const geos = geoLevel === 'world' || geoFilter.length === 0 ? ['World'] : geoFilter;
+
+  const histEnd = ssp?.anchorYear ?? meta.years[meta.years.length - 1];
+  const projYears = (ssp?.years ?? []).filter((y) => y > histEnd && y <= yEnd);
+  const histYears = meta.years.filter((y) => y >= yStart && y <= Math.min(yEnd, histEnd));
+  const years = [...histYears, ...projYears];
+
+  const series: Series[] = [];
+
+  geos.forEach((geo, i) => {
+    const hist = historicalDriver(driver, geo, gdpPop);
+    const points: Point[] = histYears.map((y) => {
+      const v = hist[meta.years.indexOf(y)];
+      return { year: y, value: v == null ? null : v / scale };
+    });
+
+    const track =
+      geo === 'World' ? ssp?.world[DRIVER_TRACK[driver]] : ssp?.regions[geo]?.[DRIVER_TRACK[driver]];
+
+    if (track && projYears.length > 0) {
+      for (const y of projYears) {
+        const idx = (ssp as SspDrivers).years.indexOf(y);
+        const across = (ssp as SspDrivers).scenarios
+          .map((sc) => track[sc]?.[idx])
+          .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+          .sort((a, b) => a - b);
+        // Keep one point per year even where a scenario is missing: the
+        // hover cursor indexes series points by the shared year axis.
+        if (across.length === 0) {
+          points.push({ year: y, value: null });
+          continue;
+        }
+
+        if (scenario === 'range') {
+          points.push({
+            year: y,
+            value: quantile(across, 0.5) / scale,
+            lo: quantile(across, 0.25) / scale,
+            hi: quantile(across, 0.75) / scale,
+            loOuter: across[0] / scale,
+            hiOuter: across[across.length - 1] / scale,
+          });
+        } else {
+          const v = track[scenario]?.[idx];
+          points.push({ year: y, value: v == null || !Number.isFinite(v) ? null : v / scale });
+        }
+      }
+    }
+
+    series.push({
+      key: geo,
+      label: geos.length === 1 ? DRIVER_LABELS[driver] : geo,
+      color: geos.length === 1 ? DRIVER_COLOR[driver] : colorFor('geo', geo, i),
+      dimension: geos.length === 1 ? 'driver' : 'geo',
+      points,
+      projectedFrom: projYears.length > 0 ? projYears[0] : undefined,
+    });
+  });
+
+  return {
+    series,
+    units: DRIVER_UNITS[driver],
+    years,
+    historicalEnd: projYears.length > 0 ? histEnd : undefined,
+    bandLabel:
+      projYears.length > 0 && scenario === 'range'
+        ? 'Median of SSP1–5; bands show the interquartile and full scenario spread'
+        : undefined,
+  };
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { DataBundle, ExplorerConfig, Spec } from '../types';
+import { DRIVER_LABELS } from '../types';
 import { useSpecStoreHook } from '../store/context';
 import { useLazyLayer } from '../data/lazy-context';
 import {
@@ -141,6 +142,27 @@ function ChartHeader({
   meta: Meta;
 }) {
   const measure = config.measures.find((m) => m.name === spec.measure);
+  if (spec.driver) {
+    const geoPart = geographyTitlePart(spec);
+    const scenario = spec.scenario ?? 'range';
+    const projected = spec.yearRange[1] > config.yearRange[1];
+    return (
+      <div className="explorer-chart-header">
+        <h2 className="explorer-chart-title">
+          {DRIVER_LABELS[spec.driver]}
+          {geoPart ? ` in ${geoPart}` : ''}
+        </h2>
+        <p className="explorer-chart-subtitle">
+          {spec.yearRange[0]}–{spec.yearRange[1]}
+          {projected
+            ? ` · observed to ${config.yearRange[1]}, then ${
+                scenario === 'range' ? 'the SSP1–5 range' : scenario
+              }`
+            : ' · observed'}
+        </p>
+      </div>
+    );
+  }
   const title = buildChartTitle(spec, meta);
   let subtitle = '';
   if (spec.chart === 'treemap' || spec.chart === 'choropleth') {
@@ -202,7 +224,12 @@ function ChartFooter({ spec, data }: { spec: Spec; data: DataBundle }) {
     return null;
   const derived = derive(data, spec);
   if (derived.series.length === 0) return null;
-  return <Legend series={derived.series} />;
+  return (
+    <>
+      <Legend series={derived.series} />
+      {derived.bandLabel && <p className="explorer-chart-note">{derived.bandLabel}</p>}
+    </>
+  );
 }
 
 const styles = `
@@ -243,6 +270,13 @@ const styles = `
     min-height: 0;
     display: flex;
     overflow: hidden;
+  }
+  .explorer-chart-note {
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    color: var(--ink-3);
+    margin: 2px 0 0 0;
   }
   .explorer-chart-empty {
     flex: 1;

@@ -73,7 +73,7 @@ const cleanName = (name: string, stage: Stage) => {
     .replace(/[,;]\s*\)/g, ')').replace(/\(\s*[,;]?\s*\)/g, '')   // tidy "(Estonia, )" / empty "()"
     .replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').replace(/\s{2,}/g, ' ').trim();
 };
-const W = 900, H = 556, PADX = 64, PADY = 52, NODE_W = 16;
+const W = 900, PADX = 64, PADY = 52, NODE_W = 16;
 // One Lucide glyph per process stage, set inline to the LEFT of the column
 // label. Inline rather than stacked above because PADY is 52 and a stacked
 // icon pushes the two-line sub-labels into the top of the bars.
@@ -88,11 +88,13 @@ const STAGE_ICON: Record<string, JSX.Element> = {
   Magnet: <Magnet size={ICON} strokeWidth={1.5} />,
   Demand: <Zap size={ICON} strokeWidth={1.5} />,
 };
-// Space under the bars for the end-of-life return loop. Reserved rather than
-// taken out of the plot: H grew by exactly this, so innerH — and therefore every
-// bar and ribbon — is identical to before the loop was drawn to scale.
+// Space under the bars for the end-of-life return loop. The canvas GROWS by this
+// when there are arcs to draw and collapses when there are not, rather than
+// reserving dead space at a zero collection rate — which is the default, so the
+// gap between the diagram and its caption was permanent and unexplained. The bar
+// area (innerH) is fixed either way, so the plot never resizes under the reader.
 const RECYCLE_BAND = 44;
-const innerH = H - 2 * PADY - RECYCLE_BAND;
+const innerH = 408;
 const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
 
 const outSum = (fl: FlowMap, iface: string, r: string) =>
@@ -100,8 +102,8 @@ const outSum = (fl: FlowMap, iface: string, r: string) =>
 const inSum = (fl: FlowMap, iface: string, r: string) =>
   (fl[iface] ?? []).filter((f) => f.to === r).reduce((a, f) => a + f.value, 0);
 
-export default function FlowDiagram({ flows, active, scale = {} }: {
-  flows: FlowsByClass; active: Set<string>; scale?: Record<string, number>;
+export default function FlowDiagram({ flows, active, scale = {}, year }: {
+  flows: FlowsByClass; active: Set<string>; scale?: Record<string, number>; year?: string;
 }) {
   const [cls, setCls] = useState<'total' | 'heavy' | 'light'>('total');
   const fl = flows[cls];
@@ -144,6 +146,9 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
     for (const r of REGIONS) { const h = (vals[r] / total) * innerH; out[r] = { y0: y, y1: y + h }; y += h; }
     return out;
   });
+
+  const recPresent = ((fl as any).recycled ?? []).some((r: any) => r.value > 0.01);
+  const H = 2 * PADY + innerH + (recPresent ? RECYCLE_BAND : 0);
 
   const ribbons: JSX.Element[] = [];
   // The return loop. End-of-life material re-enters at the OXIDE hub, bypassing
@@ -315,19 +320,12 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
         </div>
       )}
       </div>
-      <p style={{ fontSize: 11, opacity: 0.55, marginTop: 8, lineHeight: 1.5 }}>
-        The <b>real-world-projected</b> chain, ~2035. Each bar is a region’s share of that stage
-        (concentrate → oxide → alloy → magnet → demand). The chain is the <b>model’s own cost-optimal
-        flows</b> at your current settings — already routing <b>allies→US</b> under friendshoring and
-        reflecting the China-export + price-floor levers — with the <b>real projects you select below</b>
-        layered on as ex-China capacity that displaces China; total throughput scales with demand.
-        <b>Note the masses differ by stage</b> (hover any bar): the first three
-        columns are <b>rare-earth oxide</b> (the RE content), while magnet + demand are <b>finished-magnet
-        mass</b> (RE + iron + boron), ~3× heavier — the ribbons taper to fit both. Toggle projects
-        (Round Top, Mt Weld, Lynas, …) to add ex-China capacity. The model, left to itself, mines
-        almost all-China (Chinese ore isn’t export-restricted and is cheapest), so <b>ex-China mining
-        appears only as you select real projects</b> — an ex-China mine may still ship its concentrate
-        to Chinese separation, which the diagram shows. Read the palette as a US-security signal:
+      <p style={{ fontSize: 11, opacity: 0.55, marginTop: 4, lineHeight: 1.45, maxWidth: 'none' }}>
+        <b>Least-cost supply chain</b> showing regions’ share by stage under selected
+        assumptions{year ? <>, <b>{year}</b></> : null}. Note that masses differ by stage
+        (hover any bar): first 3 columns are rare-earth oxide (RE content), while magnet
+        and demand are finished-magnet mass (RE + iron + boron; ~3× heavier). Colors
+        indicate US-security:
         <span style={{ color: '#66C2A5', fontWeight: 600 }}> US-made</span> (secure) ·
         <span style={{ color: '#FDAE61', fontWeight: 600 }}> allies</span> (medium) ·
         <span style={{ color: '#D53E4F', fontWeight: 600 }}> China</span> (exposed).

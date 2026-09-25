@@ -114,7 +114,7 @@ const COST_DESC: Record<string, string> = {
 const WORSE = '#D53E4F';
 
 const KPIS: { k: string; label: string; sub: string; fmt: (x: number) => string; lowerBetter: boolean; help: string }[] = [
-  { k: 'us_import_pct', label: 'Share of US magnets imported', sub: '2035', fmt: pct, lowerBetter: true, help: 'Final-year (2035) share of US magnet demand met by imports rather than made in the US.' },
+  { k: 'us_import_pct', label: 'Share of US magnets imported', sub: 'snapshot year', fmt: pct, lowerBetter: true, help: 'Share of US magnet demand met by imports rather than made in the US, in the snapshot year selected above the Sankey. Read off the same project-reconciled flows the diagram draws.' },
   { k: 'npv_musd', label: 'Total system cost', sub: '2026–35 NPV', fmt: musd, lowerBetter: true, help: 'Total 2026–2035 system cost: discounted (NPV) build-out + operating cost, summed across all regions.' },
   { k: 'us_unmet_kt', label: 'US unmet demand', sub: '2026–35 cumulative', fmt: (x) => `${x.toFixed(0)} kt`, lowerBetter: true, help: 'Cumulative 2026–2035 US magnet shortfall (kt of finished magnet) the chain cannot deliver in time — e.g. under a China export ban.' },
   { k: 'primary_dytb_kt', label: 'Primary Dy/Tb mined', sub: '2035 annual', fmt: (x) => `${x.toFixed(1)} kt`, lowerBetter: true, help: 'Final-year (2035) Dy+Tb oxide mined from ore that year (kt) — a few kt; the scarce chokepoint element, not comparable to total magnet tonnage.' },
@@ -394,6 +394,20 @@ export default function MagnetExplorer() {
       light: realWorldFlows(scY, activeProjects, {}, 'light'),
     };
   }, [sc, activeProjects, flowYear]);
+  // Imported share read off the SAME object the Sankey draws, not off the raw grid
+  // KPI. They disagreed — 70% on the diagram against 88% on the chip — because the
+  // Sankey floors each stage with real project capacity and the KPI does not, so a
+  // reader comparing the two was comparing a reconciled number with an
+  // unreconciled one. Deriving it from rwFlows makes the chip and the picture the
+  // same measurement by construction, and follows the Sankey's YEAR selector too.
+  const usImportPct = useMemo(() => {
+    const mag = (rwFlows.total.magnet ?? []).filter((f) => f.to === 'USA');
+    const tot = mag.reduce((a, f) => a + f.value, 0);
+    if (tot <= 1e-9) return sc.kpis.us_import_pct ?? 0;
+    const home = mag.find((f) => f.from === 'USA')?.value ?? 0;
+    return 100 * (1 - home / tot);
+  }, [rwFlows, sc]);
+
   // Reconcile the US-centric views (trade-risk index + pathway) with the selected
   // projects: US-project capacity is a floor on US self-sufficiency; the model fills
   // the residual. So toggling projects moves the TRI and the demand-met chart, the
@@ -465,7 +479,7 @@ export default function MagnetExplorer() {
   };
   const changed = pin ? axisDiff(coords, pin.coords) : [];
   const doPin = () => setPin({
-    coords, tri, cost: usCostReal, imp: sc.kpis.us_import_pct ?? 0,
+    coords, tri, cost: usCostReal, imp: usImportPct,
     touch: chinaTouch, unmet: usUnmet,
   });
   const restorePin = () => {
@@ -608,17 +622,10 @@ export default function MagnetExplorer() {
   // sheet, where a single column already IS the reading order.
   const worldControls = (
     <>
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '18px 0 2px' }}>The world as it is</div>
-          <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
-            Assumptions the US does not control: they define the problem the
-            interventions are trying to solve.
-          </p>
       <div style={{ display: 'grid', gap: '2px 20px',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
           <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
             desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium (see the cost bar)." />
-          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
-            desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
 
       </div>
           {/* The reference scenario: a baseline every later reading is measured
@@ -671,6 +678,8 @@ export default function MagnetExplorer() {
             desc="Friendshoring the heavy rare earths, FEOC-traced: the minimum share of US Dy/Tb need met by a chain-of-custody-CLEAN supply that never touched Chinese ore, oxide, or alloy at any stage — pulling ex-China-mined or recycled heavy material to US demand. Unlike a provenance-blind sourcing quota (which ex-China separation of Chinese ore defeats), this can only be met by genuinely China-free material, so it moves the flow-traced exposure. The US pays an ex-China premium for it (shown in the cost bar)." />
           <Slider label="End-of-life collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
             desc="Share of end-of-life magnets collected and reprocessed into oxide. Recovered scrap is concentrated Nd/Pr/Dy/Tb with no co-product tax — but recycling plants must be built and paid for." />
+          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
+            desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
           <Slider label="US price floor on China imports" value={pfloor} max={AXES.pfloorMax} onChange={setPfloor} fmt={(v) => pct(v * 100)}
             desc="A US guaranteed price floor (DoD / MP-Materials-style) modeled as a tariff that lifts the price of Chinese oxide, alloy & magnet imports toward the ex-China premium — 0% = off, 50% = half, 100% = the full premium. It makes domestic + allied supply cost-competitive WITHOUT a mandate, so the market reshores on price rather than by rule. Its cost is borne by consumers as a higher import price (no factory needed), shown as 'Price floor' in the cost bar. A distinct instrument from friendshoring (a quantity mandate) — try them separately." />
           <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
@@ -721,17 +730,6 @@ export default function MagnetExplorer() {
           is one line of chips. The full builder — which this page used to lead
           with — is one click away for anyone who wants sector detail or the
           demand levers. */}
-      <div id="demand-builder" style={{ marginBottom: 18 }}>
-        <DemandChips scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv}
-          open={demandOpen} setOpen={setDemandOpen} />
-        {demandOpen && (
-          <div style={{ marginTop: 12 }}>
-            <DemandBuilder mode={isMobile ? 'chart' : 'full'} scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
-          </div>
-        )}
-      </div>
-
-      <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 12px' }}>Supply explorer</h2>
 
       {/* MOBILE keeps the slide-up sheet: a phone has no room for inline control
           bands, and one column already is a reading order. */}
@@ -748,9 +746,34 @@ export default function MagnetExplorer() {
         </aside>
       )}
 
-      {/* STEP 1 — the world you are assuming, directly above the chain it produces. */}
+      {/* STEP 1 — everything that feeds the PLANNER's solve, in one box directly
+          above the chain it produces: demand, the geopolitical axis, and the
+          recycling assumptions. Title and rationale sit OUTSIDE the box so the box
+          itself is all controls and no prose. */}
       {!isMobile && (
-        <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '16px 20px 12px', background: 'var(--paper)', marginBottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', margin: '0 0 7px' }}>
+          <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em',
+                       textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>
+            Scenario assumptions
+          </h2>
+          <span style={{ fontSize: 11, opacity: 0.5, lineHeight: 1.4 }}>
+            what the US does not control — they define the problem the interventions
+            are trying to solve
+          </span>
+        </div>
+      )}
+      {!isMobile && (
+        <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '12px 16px 10px', background: 'var(--paper)', marginBottom: 16 }}>
+          <div id="demand-builder">
+            <DemandChips scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv}
+              open={demandOpen} setOpen={setDemandOpen} />
+            {demandOpen && (
+              <div style={{ marginTop: 10 }}>
+                <DemandBuilder mode="full" scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
+              </div>
+            )}
+          </div>
+          <div style={{ borderTop: '1px solid var(--rule)', margin: '9px 0 8px' }} />
           {worldControls}
         </section>
       )}
@@ -775,7 +798,7 @@ export default function MagnetExplorer() {
               ))}
             </div>
           )}
-          <FlowDiagram flows={rwFlows} active={activeProjects} />
+          <FlowDiagram flows={rwFlows} active={activeProjects} year={flowYear} />
 
           {/* The four KPIs that summarise the Sankey sit directly under it: this is
               the picture of what happens with NO US intervention. The time-trend
@@ -794,7 +817,7 @@ export default function MagnetExplorer() {
                 { short: 'light', label: `light ${triLight.toFixed(2)} × ${RE_CLASS_WEIGHT.light}`,
                   value: (RE_CLASS_WEIGHT.light * triLight).toFixed(2) },
               ]}
-              sub={pin ? 'vs reference scenario' : undefined} />
+              sub={pin ? 'vs reference scenario' : 'demand-weighted 2026–35, not a single year'} />
             <ScoreCard2 label="Tightest chokepoint" small chip
               a={{ label: `Dy/Tb · stage TRI ${cpHeavy.tri.toFixed(2)}`,
                    value: cpHeavy.label.split(' ')[0], color: riskColor(cpHeavy.tri) }}
@@ -804,9 +827,9 @@ export default function MagnetExplorer() {
                 emits china_exposed_light_pct; it lands at the next regrid), so this
                 stays a single figure rather than an invented split. */}
             {lightFeoc == null ? (
-              <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip
+              <ScoreCard label="China-exposed demand (flow-traced)" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip
                 {...(pin ? deltaOf(chinaTouch * 100, pin.touch * 100, (v) => `${v.toFixed(1)} pp`, true, 0.05) : {})}
-                sub={pin ? 'vs reference' : feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
+                sub={pin ? 'vs reference' : feocIsHeavy ? `heavy Dy/Tb · ${flowYear}` : `any chain stage · ${flowYear}`} />
             ) : (
               /* Split by class, like the index and the chokepoint. The two move
                  very differently under restriction — heavy decouples, light is
@@ -814,16 +837,16 @@ export default function MagnetExplorer() {
                  blended figure hides exactly that. */
               /* NOT `small`: this sits beside "US demand met", and two results cards
                  at different type sizes read as a hierarchy that isn't there. */
-              <ScoreCard2 label="China-exposed demand" chip
-                a={{ label: `Dy/Tb · flow-traced`, value: pct(chinaTouch * 100),
+              <ScoreCard2 label="China-exposed demand (flow-traced)" chip
+                a={{ label: `Dy/Tb · ${flowYear}`, value: pct(chinaTouch * 100),
                      color: riskColor(chinaTouch) }}
-                b={{ label: `Nd/Pr · flow-traced`, value: pct(lightFeoc),
+                b={{ label: `Nd/Pr · ${flowYear}`, value: pct(lightFeoc),
                      color: riskColor(lightFeoc / 100) }} />
             )}
             <ScoreCard2 label="US demand met"
-              a={{ label: pin ? 'imported 2035 · vs reference' : 'imported · 2035',
-                   value: pct(sc.kpis.us_import_pct), color: 'var(--ink)',
-                   ...(pin ? deltaOf(sc.kpis.us_import_pct ?? 0, pin.imp, (v) => `${v.toFixed(0)} pp`, true, 0.4) : {}) }}
+              a={{ label: pin ? `imported ${flowYear} · vs reference` : `imported · ${flowYear}`,
+                   value: pct(usImportPct), color: 'var(--ink)',
+                   ...(pin ? deltaOf(usImportPct, pin.imp, (v) => `${v.toFixed(0)} pp`, true, 0.4) : {}) }}
               b={{ label: pin ? 'unmet 26–35 · vs reference' : 'unmet · 2026–35 cum.',
                    value: `${usUnmet.toFixed(0)} kt`, color: usUnmet > 0.05 ? WORSE : 'var(--ink)',
                    ...(pin ? deltaOf(usUnmet, pin.unmet, (v) => `${v.toFixed(1)} kt`, true, 0.05) : {}) }} />
@@ -972,7 +995,7 @@ export default function MagnetExplorer() {
             <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 16px', background: 'var(--paper)', borderTop: '1px solid var(--rule-strong)', boxShadow: '0 -4px 16px rgba(0,0,0,0.12)' }}>
               <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>
                 <span style={{ fontSize: 12.5 }}><b style={{ ...riskChip(riskColor(tri)), fontFamily: 'var(--font-mono)' }}>TRI {tri.toFixed(2)}</b> <span style={{ opacity: 0.5 }}>trade-risk</span></span>
-                <span style={{ opacity: 0.6, fontSize: 11 }}>{pct(sc.kpis.us_import_pct)} of US magnets imported</span>
+                <span style={{ opacity: 0.6, fontSize: 11 }}>{pct(usImportPct)} of US magnets imported</span>
               </span>
               <button onClick={() => setSheetOpen(true)}
                 style={{ font: '600 13px var(--font-mono)', color: 'var(--paper)', background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '11px 16px', cursor: 'pointer', whiteSpace: 'nowrap' }}>

@@ -110,13 +110,28 @@ export type Verdict = {
   margin: number; plannerMargin: number; breakeven: number;
   npv: number; overnightCapital: number; leadYears: number;
   funded: boolean; supportNeeded: number;
+  /** Rate the capital was actually charged at, after instrument relief. Equals
+   *  the planner's rate when relief is total, the raw hurdle when there is none. */
+  effRate: number;
+  /** NPV the same project would show at the planner's rate. The difference
+   *  between this and `npv` is the financing wedge, in dollars. */
+  plannerNpv: number;
 };
 
-/** Screen one planner-chosen expansion at a firm's hurdle. */
+/** The IRR a firm in this region demands before it will build. This IS the
+ *  discrete parameter behind "actor mode" — there is no separate switch. The
+ *  planner charges C.discount_rate; the spread between the two is the entire
+ *  planner/actor wedge, and `relief` is how far an instrument closes it. */
+export const hurdleRate = (region: string): number =>
+  C.hurdle_rate[region] ?? C.discount_rate;
+export const PLANNER_RATE: number = C.discount_rate;
+
+/** Screen one planner-chosen expansion at a firm's hurdle.
+ *  `rate` overrides the regional default, so the UI can sweep the IRR threshold. */
 export function evaluate(b: Buildout, prices: Prices, opts: {
-  relief?: number; support?: number; basket?: Record<string, number>;
+  relief?: number; support?: number; basket?: Record<string, number>; rate?: number;
 } = {}): Verdict {
-  const rate = C.hurdle_rate[b.r] ?? C.discount_rate;
+  const rate = opts.rate ?? hurdleRate(b.r);
   const relief = opts.relief ?? 0;
   const eff = C.discount_rate + (1 - relief) * (rate - C.discount_rate);
 
@@ -144,18 +159,34 @@ export function evaluate(b: Buildout, prices: Prices, opts: {
   const lead = C.lead_years?.[b.r]?.[b.s] ?? 0;
   const overnight = baseFixed / crf(C.discount_rate, C.asset_life_years);
   const opMargin = revenue - inputCost - opex + support;
-  let npv = lead === 0 ? -overnight : 0;
-  for (let k = 0; k < lead; k++) npv -= (overnight / lead) / (1 + eff) ** k;
-  for (let k = 1; k <= C.asset_life_years; k++) npv += opMargin / (1 + eff) ** (lead + k);
+  const npvAt = (r: number) => {
+    let v = lead === 0 ? -overnight : 0;
+    for (let k = 0; k < lead; k++) v -= (overnight / lead) / (1 + r) ** k;
+    for (let k = 1; k <= C.asset_life_years; k++) v += opMargin / (1 + r) ** (lead + k);
+    return v;
+  };
+  const npv = npvAt(eff);
 
   return {
     facility: b.f, stage: b.s, region: b.r, newKt: b.kt, utilization: b.u,
     revenue, inputCost, opex, capitalCharge, margin, plannerMargin, breakeven,
     npv, overnightCapital: overnight, leadYears: lead,
     funded: npv > 0, supportNeeded: Math.max(0, -margin),
+    effRate: eff, plannerNpv: npvAt(C.discount_rate),
   };
 }
 
-/** Screen a whole build-out. */
-export const screen = (rows: Buildout[], prices: Prices, opts = {}): Verdict[] =>
-  rows.map((b) => evaluate(b, prices, { ...opts, relief: instrumentRelief(b.s, opts as any) }));
+/** Screen a whole build-out. Relief is resolved PER STAGE, because a price floor
+ *  on magnets does nothing for a separation plant — see instrumentRelief. */
+export const screen = (rows: Buildout[], prices: Prices, opts: {
+  offtake?: boolean; floorInterface?: string | null; creditSupport?: number;
+  support?: number; rate?: number;
+} = {}): Verdict[] =>
+  rows.map((b) => evaluate(b, prices, { ...opts, relief: instrumentRelief(b.s, opts) }));
+
+/** Does this stage's margin depend on the price world at all? Conversion stages
+ *  earn an asserted spread (magnet = alloy + 25), so their revenue and their
+ *  purchased input move together and the oxide price cancels exactly. Saying so
+ *  is better than shipping a price-world control that silently does nothing. */
+export const priceSensitive = (stage: string): boolean =>
+  stage === 'mining' || stage === 'separation' || stage === 'recycling';

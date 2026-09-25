@@ -5,6 +5,7 @@ import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import DemandChips from './DemandChips';
 import AbatementReadout from './AbatementReadout';
 import CapacityPanel from './CapacityPanel';
+import { hurdleRate } from './projectFinance';
 import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
@@ -316,6 +317,12 @@ export default function MagnetExplorer() {
   // screen is arithmetic rather than a solve — see projectFinance.ts. It cannot
   // move the Sankey, and should not: the planner has no prices.
   const [priceWorld, setPriceWorld] = useState<string>('ex_china');   // sector detail + demand levers
+  // Actor-mode controls. The hurdle rate IS the actor/planner distinction — there
+  // is no separate mode switch — so it defaults to the US firm rate and can be
+  // dragged down to the planner's, which reproduces planner mode exactly.
+  const [hurdle, setHurdle] = useState<number>(hurdleRate('USA'));
+  const [instruments, setInstruments] = useState<Record<string, boolean>>(
+    { offtake: false, floor: false, guarantee: false });
   // The two derived axes have no slider here; their chips send you to the control
   // that actually moves them (the sheet on mobile, the builder on desktop).
   const jumpToDemand = useCallback(() => {
@@ -836,7 +843,9 @@ export default function MagnetExplorer() {
             incumbent={PROJECTS.filter((pj) => pj.bloc === 'us' && pj.status === 'operating')
               .reduce((acc, pj) => ({ ...acc, [pj.stage]: (acc[pj.stage] ?? 0) + pj.capacityKt }),
                       {} as Record<string, number>)}
-            priceWorld={priceWorld} onPriceWorld={setPriceWorld} />
+            priceWorld={priceWorld} onPriceWorld={setPriceWorld}
+            rate={hurdle} onRate={setHurdle}
+            instruments={instruments} onInstruments={setInstruments} />
 
           <AbatementReadout china={china} />
 

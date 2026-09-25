@@ -57,10 +57,27 @@ export type Incumbent = { stage: string; name: string; kt: number; note?: string
  *  controls above; putting them here would imply they change a firm's return,
  *  which is exactly the confusion the registry exists to prevent. */
 const INSTRUMENTS = [
-  { key: 'offtake', label: 'Offtake', hint: 'Removes volume risk: the largest single component of the premium. Costs nothing unless the buyer walks.' },
-  { key: 'floor', label: 'Price floor', hint: 'Removes the bad price states, but only for the stages its trade interface covers.' },
-  { key: 'guarantee', label: 'Loan guarantee', hint: 'Finances at the planner rate outright.' },
+  { key: 'offtake', label: 'Offtake', relief: 0.70,
+    hint: 'Binary switch, fixed quantity: removes 70% of the risk premium — volume risk is its largest single component. Costs nothing unless the buyer walks. Reliefs do NOT stack; the largest single one wins.' },
+  { key: 'floor', label: 'Price floor', relief: 0.50,
+    hint: 'Removes 50% of the risk premium, but ONLY for the stages the floor\u2019s trade interface covers: a floor on magnets does nothing for a separation plant. Reliefs do not stack.' },
+  { key: 'guarantee', label: 'Loan guarantee', relief: 1.00,
+    hint: 'Removes 100% of the risk premium — the project finances at the planner\u2019s rate outright. Reliefs do not stack.' },
 ] as const;
+// A cost subsidy is deliberately absent: it earns ZERO relief, because it shifts
+// the mean return without removing any state of the world. That asymmetry is the
+// point of the registry, and a chip reading "0%" would invite clicking it.
+
+/** Shorten a plant name for an inline label; the hover carries the full name,
+ *  the capacity and the project note. "MP Fort Worth (magnets)" is 23 characters
+ *  in a bar that is often 60px wide. */
+const abbrev = (name: string): string => {
+  const short = name
+    .replace(/\s*\([^)]*\)/g, '')                       // drop "(magnets)", "(Indiana)"
+    .replace(/\b(separation|recycling|mining|mine|magnets?|metal\/alloy|alloy)\b/ig, '')
+    .replace(/\s{2,}/g, ' ').trim();
+  return short.length > 15 ? `${short.slice(0, 14)}\u2026` : short;
+};
 
 const STAGES = ['mining', 'separation', 'alloy', 'magnet', 'recycling'] as const;
 const LABEL: Record<string, string> = {
@@ -156,6 +173,16 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
   const maxKt = Math.max(0.001, ...STAGES.map((s) =>
     (incKt(s) + byStage(s).reduce((a, v) => a + v.newKt, 0)) * classFrac(s)));
   const shortfall = verdicts.filter((v) => !v.funded);
+  // Minimal scale ticks. All bars share `maxKt`, so one step serves every row —
+  // the PRODUCT differs by stage but the measure (kt/yr) does not, so a tick at
+  // 20 means 20 kt on any row. Chosen to give 3-6 marks at a round tonnage.
+  const tickStep = (() => {
+    const raw = maxKt / 4;
+    const mag = 10 ** Math.floor(Math.log10(Math.max(raw, 1e-6)));
+    return [1, 2, 5, 10].map((m) => m * mag).find((c) => maxKt / c <= 6) ?? mag * 10;
+  })();
+  const ticks = Array.from({ length: Math.floor(maxKt / tickStep) + 1 }, (_, i) => i * tickStep)
+    .filter((t) => t > 0);
   // Stages the US already operates but which the plan never expands. Worth
   // naming: a reader who sees only a magnet bar assumes the others were screened
   // and failed, when in fact the planner never asked. The distinction is the
@@ -250,6 +277,9 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                          background: on ? 'var(--accent)' : 'transparent',
                          color: on ? 'var(--paper)' : 'var(--ink)' }}>
                 {i.label}
+                <span style={{ opacity: on ? 0.75 : 0.45, fontWeight: 400, marginLeft: 4 }}>
+                  &minus;{(i.relief * 100).toFixed(0)}%
+                </span>
               </button>
             );
           })}
@@ -314,9 +344,8 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                 kt/yr {PRODUCT[s]}
               </span>
               <span style={{ marginLeft: 'auto', font: '400 10.5px var(--font-mono)', opacity: 0.7 }}>
-                {inc > 0 && <>{inc.toFixed(1)} existing</>}
                 {asked > 0 && (
-                  <>{inc > 0 ? ' · ' : ''}
+                  <>
                     <span style={{ color: funded > 0.005 ? GREEN : 'inherit' }}>
                       +{funded.toFixed(1)} built
                     </span>
@@ -331,22 +360,21 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                 risk, so build-out and exposure are read on one line. */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 62px', gap: 10,
                           alignItems: 'center' }}>
+              <div>
               <div style={{ position: 'relative', height: 20, background: 'var(--paper-2)',
                             border: '1px solid var(--rule)', borderRadius: 3, overflow: 'hidden' }}>
                 {/* SOLID base: everything the plan relies on, existing plus new. The
                     new part is split by verdict — green is funded, red is capacity the
                     plan depends on that no firm would put money into. */}
+                {/* Already built: flat grey, no texture. Sunk capital reads as
+                    "not a decision" perfectly well by being uncoloured next to the
+                    green and red of things that ARE decisions. */}
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: pc(inc),
-                              background: 'var(--ink-3)', opacity: 0.30 }} />
+                              background: 'var(--ink-3)', opacity: 0.32 }} />
                 <div style={{ position: 'absolute', left: pc(inc), top: 0, bottom: 0,
                               width: pc(funded), background: GREEN, opacity: 0.75 }} />
                 <div style={{ position: 'absolute', left: pc(inc + funded), top: 0, bottom: 0,
                               width: pc(declined), background: RED, opacity: 0.75 }} />
-                {/* STIPPLE over the already-built portion: present, but sunk, so never
-                    judged by the screen. Laid on top rather than beside, so the bar
-                    still reads as one quantity. */}
-                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: pc(inc),
-                              ...STIPPLE, pointerEvents: 'none' }} />
                 {/* Hairlines naming the real plants inside the existing block. */}
                 {fac.map((f, i) => {
                   const left = fac.slice(0, i).reduce((a, x) => a + x.kt, 0);
@@ -359,12 +387,29 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                       {wide && (
                         <span style={{ font: '500 9px var(--font-mono)', opacity: 0.75,
                                        paddingLeft: 4, whiteSpace: 'nowrap' }}>
-                          {f.name}
+                          {abbrev(f.name)}
                         </span>
                       )}
                     </div>
                   );
                 })}
+              </div>
+              {/* ticks share the bar's grid CHILD, not just its column, so the
+                  risk chip beside them stays level with the bar itself */}
+              <div style={{ position: 'relative', height: 9, marginTop: 1 }}>
+                {ticks.map((t) => (
+                  <span key={t} style={{ position: 'absolute', left: `${(t / maxKt) * 100}%`,
+                                         top: 0, width: 1, height: 3,
+                                         background: 'var(--ink)', opacity: 0.28 }} />
+                ))}
+                {ticks.map((t) => (
+                  <span key={`l${t}`} style={{ position: 'absolute', left: `${(t / maxKt) * 100}%`,
+                                               top: 3, transform: 'translateX(-50%)',
+                                               font: '400 8px var(--font-mono)', opacity: 0.4 }}>
+                    {t % 1 === 0 ? t : t.toFixed(1)}
+                  </span>
+                ))}
+              </div>
               </div>
               {tri == null ? (
                 <span style={{ font: '400 10px var(--font-mono)', opacity: 0.35, textAlign: 'right' }}
@@ -443,8 +488,8 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12,
                     font: '400 10px var(--font-mono)', opacity: 0.65 }}>
-        <span><span style={{ display: 'inline-block', width: 12, height: 8, ...STIPPLE,
-                             background: 'var(--ink-3)', border: '1px solid var(--rule)' }} /> already built (sunk, never screened)</span>
+        <span><span style={{ display: 'inline-block', width: 12, height: 8,
+                             background: 'var(--ink-3)', opacity: 0.32 }} /> already built (sunk, never screened)</span>
         <span><span style={{ display: 'inline-block', width: 12, height: 8,
                              background: GREEN, opacity: 0.75 }} /> new build a firm would fund</span>
         <span><span style={{ display: 'inline-block', width: 12, height: 8,

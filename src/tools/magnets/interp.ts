@@ -10,6 +10,9 @@ export type Flow = { from: string; to: string; value: number };
 export type Scenario = {
   make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number;
   pfloor: number;
+  /** US ad-valorem tariff on allied alloy + magnet imports (a world assumption).
+   *  Absent on grids written before the axis existed, which solved it as 0. */
+  atariff?: number;
   /** Abatement-ceiling case: 0 = today's sectoral availability, 1 = barrier broken.
    *  Discrete, not interpolated. Absent on grids written before the axis existed. */
   abunlock?: number;
@@ -54,13 +57,14 @@ export const YEARS = (data as any).meta.years as number[];
 export const DEMAND_KT_REF = (data as any).meta.demand_kt_ref as number[];
 export const US_DEMAND_SHARE = (data as any).meta.us_demand_share as number;
 
-type AxisField = 'make' | 'source' | 'rec' | 'dytb' | 'china' | 'rcost' | 'dscale' | 'pfloor';
+type AxisField = 'make' | 'source' | 'rec' | 'dytb' | 'china' | 'rcost' | 'dscale' | 'pfloor' | 'atariff';
 const SC = (data as any).scenarios as Scenario[];
 const AX = (data as any).meta.axes as Record<string, number[]>;
 // scenario field -> grid-axis name
 const FIELD_AXIS: [AxisField, string][] = [
   ['make', 'us_make'], ['source', 'non_china_source'], ['rec', 'recycling'], ['dytb', 'dytb'],
   ['china', 'china'], ['rcost', 'us_recyc_cost'], ['dscale', 'demand_scale'], ['pfloor', 'price_floor'],
+  ['atariff', 'allied_tariff'],
 ];
 export const AXES = {
   makeMax: Math.max(...AX.us_make),
@@ -73,7 +77,19 @@ export const AXES = {
   rcostMin: Math.min(...AX.us_recyc_cost),  // baseline US recycling cost factor
   rcostMax: Math.max(...AX.us_recyc_cost),
   pfloorMax: Math.max(...(AX.price_floor ?? [0])),  // US price floor: 0=off … 1=full ex-China premium
+  atariffMax: Math.max(...(AX.allied_tariff ?? [0])),  // US tariff on allied imports; 0 on pre-axis grids
 };
+/** Whether the deployed grid carries the allied-tariff axis at all. */
+export const HAS_ALLIED_TARIFF: boolean = (AX.allied_tariff?.length ?? 0) > 1;
+/** The allied-tariff levels resident in the eager file; higher ones are lazy. */
+const ATARIFF_EAGER: number[] = (data as any).meta.allied_tariff_eager ?? [0];
+/** How the grid applies China's restriction: 'pooled' (every grid before
+ *  2026-09-25: one cap on China's total exports, allocated by the planner) or
+ *  'per_destination' (each buyer capped at its own share). Drives the default
+ *  opening settings, since only the second makes the planner build in the US
+ *  without a mandate. */
+export const RESTRICTION_SCOPE: 'pooled' | 'per_destination' =
+  (data as any).meta.export_restriction_scope ?? 'pooled';
 
 /** Every axis's solved grid points, ascending — the domain the scenario bar draws.
  *  Two of these (dytb, dscale) have no slider: they are computed from the Demand
@@ -82,7 +98,7 @@ export const AXIS_DOMAIN = Object.fromEntries(
   FIELD_AXIS.map(([f, a]) => [f, [...(AX[a] ?? [0])].sort((x, y) => x - y)]),
 ) as Record<AxisField, number[]>;
 
-type Point = { make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number; pfloor?: number; abunlock?: number };
+type Point = { make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number; pfloor?: number; abunlock?: number; atariff?: number };
 // `abunlock` is part of the KEY but not of FIELD_AXIS, because only its two
 // ENDPOINTS are solved (0 = today's sectoral ceiling, 1 = the barrier broken
 // everywhere). It is nonetheless a continuum in the model — aggregate_tranches
@@ -90,8 +106,10 @@ type Point = { make: number; source: number; rec: number; dytb: number; china: n
 // interpolating between the endpoints describes a real intermediate world: R&D
 // that got part of the way. interpScenario blends the two corner sets when the
 // query falls between them; see the note there on where that approximation bites.
+// The allied-tariff axis is keyed like the rest (it IS interpolated), defaulting
+// to 0 so cells from a grid written before it existed still resolve.
 const key = (s: Point) =>
-  `${s.make}|${s.source}|${s.rec}|${s.dytb}|${s.china}|${s.rcost}|${s.dscale}|${s.pfloor ?? 0}|${s.abunlock ?? 0}`;
+  `${s.make}|${s.source}|${s.rec}|${s.dytb}|${s.china}|${s.rcost}|${s.dscale}|${s.pfloor ?? 0}|${s.atariff ?? 0}|${s.abunlock ?? 0}`;
 const LOOKUP = new Map(SC.map((s) => [key(s), s]));
 
 // Price-floor slices ship separately so the default page load is unchanged: the eager
@@ -150,6 +168,42 @@ export function ensureAbatementCeilingSlices(): Promise<void> {
   }
   return abLoadPromise;
 }
+// Allied-tariff HIGH-level companions: one ".at2" sibling per file above (and
+// of the eager file), keyed (abunlock, pfloor). Loaded the first time the
+// tariff slider goes above the eager levels; until then a query up there
+// degrades to the highest eager level rather than emptying out.
+const AT_SLICE_LOADERS: Record<string, () => Promise<any>> = {
+  '0.0|0.0': () => import('./scenarios.at2.json'),
+  '0.0|0.5': () => import('./scenarios.pf1.at2.json'),
+  '0.0|1.0': () => import('./scenarios.pf2.at2.json'),
+  '1.0|0.0': () => import('./scenarios.ab1.at2.json'),
+  '1.0|0.5': () => import('./scenarios.ab1.pf1.at2.json'),
+  '1.0|1.0': () => import('./scenarios.ab1.pf2.at2.json'),
+};
+const loadedAt = new Set<string>();
+let atLoadPromise: Promise<void> | null = null;
+export function alliedTariffReady(): boolean {
+  if (!HAS_ALLIED_TARIFF) return true;
+  return Object.keys(AT_SLICE_LOADERS).every((k) => loadedAt.has(k));
+}
+export function ensureAlliedTariffSlices(): Promise<void> {
+  if (alliedTariffReady()) return Promise.resolve();
+  if (!atLoadPromise) {
+    atLoadPromise = Promise.all(
+      Object.entries(AT_SLICE_LOADERS).map(async ([k, load]) => {
+        if (loadedAt.has(k)) return;
+        try {
+          const mod: any = await load();
+          for (const s of (((mod.default ?? mod).scenarios as Scenario[]) || [])) LOOKUP.set(key(s), s);
+        } catch {
+          // A grid that predates the axis ships no such file; the fallback below covers it.
+        }
+        loadedAt.add(k);
+      }),
+    ).then(() => undefined);
+  }
+  return atLoadPromise;
+}
 /** The ceilings the deployed grid actually carries, as fractions of Dy/Tb that can
  *  be designed out at any price. Read from meta so the label cannot drift from the
  *  model; the fallback covers a grid written before the axis existed. */
@@ -177,7 +231,7 @@ function bracket(arr: number[], x: number): [number, number, number] {
 // Baseline for deltas: no policy, APS reference demand (dytb intensity 1.0, demand
 // scale 1.0) — both exact grid points.
 export const BASE = LOOKUP.get(key({
-  make: 0, source: 0, rec: 0, dytb: 1.0, china: 0, rcost: Math.min(...AX.us_recyc_cost), dscale: 1.0,
+  make: 0, source: 0, rec: 0, dytb: 1.0, china: 0, rcost: Math.min(...AX.us_recyc_cost), dscale: 1.0, atariff: 0,
 }))!;
 
 function combine(parts: { s: Scenario; w: number }[]): Scenario {
@@ -345,11 +399,18 @@ export function interpScenario(pt: Point): Scenario {
     const abBit = blendAb ? (m >> n) & 1 : (ab >= 0.5 ? 1 : 0);
     if (blendAb) w *= abBit ? ab : 1 - ab;
     if (w <= 1e-9) continue;
-    const base = FIELD_AXIS.map(([f, ax]) => snap(AX[ax], coords[f])).join('|');
-    // Try the requested ceiling, then fall back to the baseline one. The fallback
-    // is what makes the control safe to move before its slices have downloaded:
-    // the page keeps answering, at today's ceiling, instead of emptying out.
-    const s = LOOKUP.get(`${base}|${abBit}`) ?? (abBit ? LOOKUP.get(`${base}|0`) : undefined);
+    const baseAt = (at: number) => FIELD_AXIS.map(([f, ax]) =>
+      snap(AX[ax] ?? [0], f === 'atariff' ? at : coords[f])).join('|');
+    // Try the requested cell; then the same cell at the highest EAGER tariff
+    // level (a high-tariff slice not yet downloaded); then the baseline ceiling.
+    // The fallbacks are what make the controls safe to move before their
+    // slices arrive: the page keeps answering instead of emptying out.
+    const atReq = coords.atariff ?? 0;
+    const atFallback = Math.max(...ATARIFF_EAGER.filter((x) => x <= atReq + 1e-9), 0);
+    const tryKeys = [`${baseAt(atReq)}|${abBit}`, `${baseAt(atFallback)}|${abBit}`,
+                     ...(abBit ? [`${baseAt(atReq)}|0`, `${baseAt(atFallback)}|0`] : [])];
+    let s: Scenario | undefined;
+    for (const k of tryKeys) { s = LOOKUP.get(k); if (s) break; }
     if (s) parts.push({ s, w });
   }
   const out = parts.length ? combine(parts) : { ...BASE };

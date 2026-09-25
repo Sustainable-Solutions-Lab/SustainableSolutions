@@ -289,7 +289,15 @@ function ScoreCard2({ label, a, b, small, chip }: {
 }
 
 export default function MagnetExplorer() {
-  const [make, setMake] = useState(0);       // component prong: US-made magnets
+  // OPENS WITH A GAP. With no intervention the planner asks for no US capacity
+  // at any restriction below 85%, so the actor panel opened empty and the
+  // tool's own argument, that what is optimal and what gets funded differ, had
+  // nothing to show. A half US-made mandate at the reference restriction is
+  // the smallest honest change: the planner then asks for one magnet plant (MP
+  // Fort Worth's expansion) which does not clear at the competitive spread, so
+  // the first screen shows the gap and what closes it. The do-nothing deltas
+  // still read against make=0, so nothing is hidden by starting here.
+  const [make, setMake] = useState(0.5);     // component prong: US-made magnets
   const [source, setSource] = useState(0);   // mineral prong: non-China sourcing
   // BASE CASE is a partially restricted world, not an open market. The study
   // exists because buyers are already paying to hedge Chinese supply, and an
@@ -298,9 +306,8 @@ export default function MagnetExplorer() {
   // paper's canonical reference cell (the 83%-heavy-FEOC exposure figure), so the
   // tool opens on the same world the written results describe.
   //
-  // Note what it does NOT fix: with no intervention the planner asks for no US
-  // capacity at ANY restriction below 0.85, so the actor panel opens with nothing
-  // to screen. That is the finding, not a defect, and the panel says so.
+  // On its own it does not make the planner ask for US capacity (nothing below
+  // 0.85 does); the half mandate above is what puts something on the screen.
   const [china, setChina] = useState(0.6);   // China export-restriction severity
   const [rcost, setRcost] = useState(AXES.rcostMin); // US recycling cost factor
   // INTERVENTION COSTS. Collection, stockpiling and thrifting research are not

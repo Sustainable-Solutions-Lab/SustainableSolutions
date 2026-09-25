@@ -313,5 +313,17 @@ export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<
     const demand = scaleTo(demandRaw, sumReg(supply));   // conserve this interface's total
     out[iface] = route(supply, demand, sc.us_supply?.[stage]);
   }
+  // STEP 3: the recycling return loop. It is NOT one of IFACE_STAGE — it runs
+  // backwards, from end-of-life magnets to separation feed — so it has to be
+  // copied across explicitly. Omitting it is what kept the return arc from ever
+  // drawing, at any collection rate: `fl.recycled` was simply undefined.
+  // `flows_re` carries no recycled rows, so per-class views scale the aggregate
+  // by the oxide interface's class share, which is where the loop lands.
+  const recRows = flows.recycled ?? sc.flows.recycled;
+  if (recRows?.length) {
+    const rf = flows.recycled ? 1 : capFracFor('oxide');
+    const rows = recRows.map((f) => ({ ...f, value: f.value * rf })).filter((f) => f.value > 0.02);
+    if (rows.length) out.recycled = rows;
+  }
   return out;
 }

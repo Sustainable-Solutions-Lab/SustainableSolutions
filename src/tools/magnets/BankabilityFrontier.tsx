@@ -23,15 +23,17 @@ const PREM_MAX = 60;    // $/kg of finished magnet
 const COST_MAX = 3.5;   // multiple of the calibrated US disadvantage
 
 export default function BankabilityFrontier({ rows, priceSpread, conversion, rate, instruments,
-                                              costMult, foakMult, provenancePremium }: {
+                                              costMult, foakMult, provenancePremium, floorLevel = 0 }: {
   rows: Buildout[];
   priceSpread: number;
   conversion: number;
   rate: number;
-  instruments: Record<string, boolean>;
+  instruments: Record<string, number>;
   costMult: number;
   foakMult: number;
   provenancePremium: number;
+  /** How far the planner-side price floor is set, so its de-risking matches the bars. */
+  floorLevel?: number;
 }) {
   const prices = priceAtSpread(priceSpread, conversion);
   const asked = rows.reduce((a, b) => a + b.kt, 0) || 1;
@@ -41,8 +43,8 @@ export default function BankabilityFrontier({ rows, priceSpread, conversion, rat
     const v = screen(rows, prices, {
       rate,
       offtake: instruments.offtake,
-      floorInterface: instruments.floor ? 'magnet' : null,
-      creditSupport: instruments.guarantee ? 1 : 0,
+      floorInterface: 'magnet', floorRelief: instruments.floor, floorLevel,
+      creditSupport: instruments.guarantee,
       costMult: cm, foakMult, provenancePremium: prem,
     });
     return v.filter((x) => x.funded).reduce((a, x) => a + x.newKt, 0) / asked;
@@ -91,6 +93,14 @@ export default function BankabilityFrontier({ rows, priceSpread, conversion, rat
           <div style={{ position: 'relative', display: 'grid', gap: 1,
                         gridTemplateColumns: `repeat(${NX}, 1fr)`,
                         gridTemplateRows: `repeat(${NY}, 14px)` }}>
+            {empty && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', textAlign: 'center', padding: 12, zIndex: 1,
+                            fontSize: 11, opacity: 0.6, lineHeight: 1.4 }}>
+                Blank because the plan asks for no new US capacity here, so there is nothing to
+                screen. Add a mandate or raise the restriction and the frontier fills in.
+              </div>
+            )}
             {ys.slice().reverse().map((cm) => xs.map((prem) => {
               const s = empty ? -1 : fundedShare(prem, cm);
               return (
@@ -115,17 +125,8 @@ export default function BankabilityFrontier({ rows, priceSpread, conversion, rat
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8,
-                    font: '400 10px var(--font-mono)', opacity: 0.65 }}>
-        <span><span style={{ display: 'inline-block', width: 10, height: 8,
-                             background: 'var(--brand-green)' }} /> funded</span>
-        <span><span style={{ display: 'inline-block', width: 10, height: 8,
-                             background: '#FDAE61' }} /> partly</span>
-        <span><span style={{ display: 'inline-block', width: 10, height: 8,
-                             background: '#D53E4F' }} /> none</span>
-        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-                             border: '2px solid var(--ink)' }} /> your assumptions</span>
-      </div>
+      {/* Legend is the capacity panel's, shared with the bars above, so the same
+          word never appears twice for one colour. */}
     </div>
   );
 }

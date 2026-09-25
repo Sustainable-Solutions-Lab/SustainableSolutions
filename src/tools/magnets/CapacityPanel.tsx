@@ -517,16 +517,20 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
 
       <BankabilityFrontier rows={us} priceSpread={priceSpread} conversion={conversion} rate={rate}
         instruments={instruments} costMult={costMult} foakMult={foakMult}
-        provenancePremium={provenancePremium} />
+        provenancePremium={provenancePremium} floorLevel={floorLevel} />
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12,
                     font: '400 10px var(--font-mono)', opacity: 0.65 }}>
         <span><span style={{ display: 'inline-block', width: 12, height: 8,
                              background: 'var(--ink-3)', opacity: 0.32 }} /> already built (sunk, never screened)</span>
         <span><span style={{ display: 'inline-block', width: 12, height: 8,
-                             background: GREEN, opacity: 0.75 }} /> new build a firm would fund</span>
+                             background: GREEN, opacity: 0.75 }} /> funded</span>
         <span><span style={{ display: 'inline-block', width: 12, height: 8,
-                             background: RED, opacity: 0.75 }} /> asked for, but declined</span>
+                             background: '#FDAE61', opacity: 0.9 }} /> partly (frontier cells)</span>
+        <span><span style={{ display: 'inline-block', width: 12, height: 8,
+                             background: RED, opacity: 0.75 }} /> not funded</span>
+        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+                             border: '2px solid var(--ink)', verticalAlign: '-1px' }} /> your assumptions on the frontier</span>
         {!HAS_META && <span style={{ opacity: 0.5 }}>· constants inline pending regrid</span>}
       </div>
     </section>

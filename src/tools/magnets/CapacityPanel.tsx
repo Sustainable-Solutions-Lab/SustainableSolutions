@@ -23,7 +23,7 @@
  */
 import { Pickaxe, FlaskConical, Flame, Magnet, Recycle } from 'lucide-react';
 import { screen, HAS_META, hurdleRate, PLANNER_RATE, priceSensitive, RELIEF_DEFAULTS,
-         priceAtSpread, EXCHINA_SPREAD_PER_MAGNET_KG,
+         priceAtSpread, EXCHINA_SPREAD_PER_MAGNET_KG, MAGNET_CONVERSION_DEFAULT,
          type Buildout, type Verdict } from './projectFinance';
 import { stageBreakdown, stageBreakdownClass, riskColor, riskChip } from './tri';
 import type { Scenario } from './interp';
@@ -93,6 +93,7 @@ const ICON: Record<string, JSX.Element> = {
   recycling: <Recycle size={14} strokeWidth={1.5} />,
 };
 export default function CapacityPanel({ buildout, incumbent, priceSpread, onPriceSpread,
+                                        conversion, onConversion,
                                         rate, onRate, instruments, onInstruments,
                                         sc, alliedHHI, reClass, onReClass,
                                         costMult, onCostMult, foakMult, onFoakMult,
@@ -102,6 +103,9 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
   /** Oxide prices as a multiple of today's ex-China spread. 0 = China parity. */
   priceSpread: number;
   onPriceSpread: (v: number) => void;
+  /** Magnet conversion spread, $/kg. The number the bankability result hinges on. */
+  conversion: number;
+  onConversion: (v: number) => void;
   rate: number;
   onRate: (r: number) => void;
   instruments: Record<string, number>;
@@ -157,7 +161,7 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
   };
 
   const us = buildout.filter((b) => b.r === 'USA');
-  const verdicts: Verdict[] = screen(us, priceAtSpread(priceSpread), {
+  const verdicts: Verdict[] = screen(us, priceAtSpread(priceSpread, conversion), {
     rate,
     offtake: instruments.offtake,
     floorInterface: 'magnet', floorRelief: instruments.floor, floorLevel,
@@ -209,6 +213,19 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
             {priceSpread.toFixed(2)}×{' '}
             <span style={{ opacity: 0.55, fontWeight: 400 }}>
               {priceSpread === 0 ? 'China parity' : Math.abs(priceSpread - 1) < 0.03 ? "today's" : ''}
+            </span>
+          </span>
+        </label>
+        <label title="What turning alloy into a finished magnet is worth, over and above the alloy consumed. EVERY region is given the same spread, so China's lower cost makes it more profitable without making a US plant unprofitable — the model has no way for a cheaper Chinese producer to depress the price a US plant receives. That is why the plan looks bankable so widely. US conversion costs $11-12/kg all-in, so US projects stop clearing below about $15/kg."
+          style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
+          <span style={{ whiteSpace: 'nowrap' }}>Conversion spread</span>
+          <input type="range" min={5} max={40} step={1} value={conversion}
+            onChange={(e) => onConversion(parseFloat(e.target.value))}
+            style={{ width: 110, accentColor: 'var(--accent)' }} />
+          <span style={{ font: '600 11px var(--font-mono)', minWidth: 92 }}>
+            ${conversion.toFixed(0)}/kg{' '}
+            <span style={{ opacity: 0.55, fontWeight: 400 }}>
+              {conversion === MAGNET_CONVERSION_DEFAULT ? 'calibrated' : conversion < 15 ? 'thin' : ''}
             </span>
           </span>
         </label>
@@ -494,7 +511,7 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
         )}
       </div>
 
-      <BankabilityFrontier rows={us} priceSpread={priceSpread} rate={rate}
+      <BankabilityFrontier rows={us} priceSpread={priceSpread} conversion={conversion} rate={rate}
         instruments={instruments} costMult={costMult} foakMult={foakMult}
         provenancePremium={provenancePremium} />
 
@@ -506,12 +523,6 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
                              background: GREEN, opacity: 0.75 }} /> new build a firm would fund</span>
         <span><span style={{ display: 'inline-block', width: 12, height: 8,
                              background: RED, opacity: 0.75 }} /> asked for, but declined</span>
-        {!anyPriceSensitive && (
-          <span style={{ opacity: 0.75 }}>
-            · price world is inert here: conversion stages earn an asserted spread, so the
-            oxide price cancels between revenue and feedstock
-          </span>
-        )}
         {!HAS_META && <span style={{ opacity: 0.5 }}>· constants inline pending regrid</span>}
       </div>
     </section>

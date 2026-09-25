@@ -8,15 +8,15 @@
  *
  * One SOLID bar per stage: everything the plan relies on, existing plus new.
  *
- *   STIPPLE over   already built — sunk, so the screen never judges it
+ *   GREY           already built — sunk, so the screen never judges it
  *   GREEN          new build a firm would fund at the stated hurdle
  *   RED            new build the plan depends on that no firm would fund
  *
- * Stipple is laid OVER the bar rather than beside it so the row still reads as
- * one quantity: the plan's requirement, with the part already standing marked
- * out. Hairlines inside the existing block name the real plants, because "MP
+ * The existing block is plain grey rather than textured: sunk capital reads as
+ * "not a decision" simply by being uncoloured beside the green and red of things
+ * that are. Hairlines inside it name the real plants, abbreviated, because "MP
  * Fort Worth is most of US magnet capacity" is the fact a reader needs, and
- * "10 kt exists" is not.
+ * "10 kt exists" is not — the full name, capacity and note are on hover.
  *
  * Bars are NOT commensurate across stages — mining is kt of concentrate, magnet
  * is kt of finished magnet — so each row names its own unit.
@@ -91,14 +91,6 @@ const ICON: Record<string, JSX.Element> = {
   magnet: <Magnet size={14} strokeWidth={1.5} />,
   recycling: <Recycle size={14} strokeWidth={1.5} />,
 };
-// Incumbent texture. Hatching already means unmet demand on the pathway charts,
-// so stipple is reused here — a different chart in a different register, which
-// reads as "marked out" rather than as a second meaning for one texture.
-const STIPPLE = {
-  backgroundImage: 'radial-gradient(var(--ink-3) 0.8px, transparent 1.1px)',
-  backgroundSize: '4px 4px',
-};
-
 export default function CapacityPanel({ buildout, incumbent, priceWorld, onPriceWorld,
                                         rate, onRate, instruments, onInstruments,
                                         sc, alliedHHI, reClass, onReClass,

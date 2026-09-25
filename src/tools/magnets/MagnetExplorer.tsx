@@ -4,7 +4,7 @@ import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WE
 import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import DemandChips from './DemandChips';
 import AbatementReadout from './AbatementReadout';
-import CapacityPanel from './CapacityPanel';
+import CapacityPanel, { type ReClass } from './CapacityPanel';
 import { hurdleRate } from './projectFinance';
 import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
@@ -323,6 +323,9 @@ export default function MagnetExplorer() {
   const [hurdle, setHurdle] = useState<number>(hurdleRate('USA'));
   const [instruments, setInstruments] = useState<Record<string, boolean>>(
     { offtake: false, floor: false, guarantee: false });
+  // Governs BOTH the capacity bars and the per-stage risk chips beside them, since
+  // "which stage is exposed" has a different answer for Dy/Tb than for Nd/Pr.
+  const [reClass, setReClass] = useState<ReClass>('heavy');   // the chokepoint by default
   // The two derived axes have no slider here; their chips send you to the control
   // that actually moves them (the sheet on mobile, the builder on desktop).
   const jumpToDemand = useCallback(() => {
@@ -790,7 +793,20 @@ export default function MagnetExplorer() {
                       {} as Record<string, number>)}
             priceWorld={priceWorld} onPriceWorld={setPriceWorld}
             rate={hurdle} onRate={setHurdle}
-            instruments={instruments} onInstruments={setInstruments} />
+            instruments={instruments} onInstruments={setInstruments}
+            sc={scR} alliedHHI={alliedHHIMap}
+            reClass={reClass} onReClass={setReClass} />
+
+          {/* 4 — what the interventions bought. Sits between the actor verdict and
+              the price tag: the levers are pulled in the sidebar, their effect on
+              build-out is the panel above, and their effect on demand is here. */}
+          <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '30px 0 4px' }}>
+            What interventions buy
+          </h2>
+          <p style={{ fontSize: 11.5, opacity: 0.65, margin: '0 0 12px', maxWidth: 620, lineHeight: 1.45 }}>
+            Cost of the security choices made above, and the cheapest remaining move.
+          </p>
+          <AbatementReadout china={china} />
 
           {/* 4 — combined "Cost and security" section: cost bar (real NPV) + the
               trade-risk index + cost-of-security ROI, in one block; notes behind ⓘ. */}
@@ -851,21 +867,10 @@ export default function MagnetExplorer() {
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
               <TradeRiskPanel sc={scR} levers={securityLevers} alliedHHI={alliedHHIMap} />
             </div>
-          </section>
-
-          <AbatementReadout china={china} />
-
-          {/* ── Part 2: what interventions buy ───────────────────────────────
-              Everything above characterises the world with no US action. These
-              two are the only headline numbers that belong to the intervention
-              question: what it costs, and what to pull next. */}
-          <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '30px 0 4px' }}>
-            What interventions buy
-          </h2>
-          <p style={{ fontSize: 11.5, opacity: 0.65, margin: '0 0 12px', maxWidth: 620, lineHeight: 1.45 }}>
-            Cost of the security choices made above, and the cheapest remaining move.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gridAutoRows: '1fr', gap: 12 }}>
+          {/* The two closing headline numbers, folded into the cost block rather
+              than standing as their own section: what it cost, and what to pull
+              next. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gridAutoRows: '1fr', gap: 12, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
             <ScoreCard label="US cost of supply" value={musd(usCostReal)} valueColor="var(--ink)"
               {...(pin
                 ? deltaOf(usCostReal, pin.cost, (v) => musd(v), true, 50)
@@ -874,7 +879,8 @@ export default function MagnetExplorer() {
               sub={pin ? '2026–35 NPV · vs reference' : '2026–35 NPV · Δ vs do-nothing'} />
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : leversExhausted ? 'all spent' : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : leversExhausted ? 'at the security floor — only demand-side moves left' : 'raise the China restriction'} />
-          </div>
+            </div>
+          </section>
         </main>
       </div>
 

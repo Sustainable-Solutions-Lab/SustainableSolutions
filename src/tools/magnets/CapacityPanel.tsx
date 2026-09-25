@@ -19,6 +19,22 @@
 import { Pickaxe, FlaskConical, Flame, Magnet, Recycle } from 'lucide-react';
 import { screen, PRICE_WORLDS, HAS_META, hurdleRate, PLANNER_RATE, priceSensitive,
          type Buildout, type Verdict } from './projectFinance';
+import { stageBreakdown, stageBreakdownClass, riskColor, riskChip } from './tri';
+import type { Scenario } from './interp';
+
+/** Stage -> the flow interface whose mass it produces. Used to express a stage's
+ *  capacity in units of ONE rare-earth class, by the share of that interface's
+ *  mass the class accounts for — the same fraction the Sankey scales by, so the
+ *  two views cannot disagree. Recycling has no interface of its own. */
+const STAGE_IFACE: Record<string, string> = {
+  mining: 'concentrate', separation: 'oxide', alloy: 'alloy', magnet: 'magnet',
+};
+const CLASSES = [
+  { key: 'all', label: 'All' },
+  { key: 'heavy', label: 'Dy/Tb (heavy)' },
+  { key: 'light', label: 'Nd/Pr (light)' },
+] as const;
+export type ReClass = 'all' | 'heavy' | 'light';
 
 /** The three instruments that reach the project screen. Quantity levers
  *  (domestic content, friendshoring) act on the PLANNER and live in the world
@@ -51,7 +67,8 @@ const STIPPLE = {
 };
 
 export default function CapacityPanel({ buildout, incumbent, priceWorld, onPriceWorld,
-                                        rate, onRate, instruments, onInstruments }: {
+                                        rate, onRate, instruments, onInstruments,
+                                        sc, alliedHHI, reClass, onReClass }: {
   buildout: Buildout[] | undefined;
   incumbent: Record<string, number>;
   priceWorld: string;
@@ -60,6 +77,10 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
   onRate: (r: number) => void;
   instruments: Record<string, boolean>;
   onInstruments: (i: Record<string, boolean>) => void;
+  sc: Scenario;
+  alliedHHI?: Record<string, number>;
+  reClass: ReClass;
+  onReClass: (c: ReClass) => void;
 }) {
   if (!buildout) {
     return (
@@ -77,6 +98,27 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
     );
   }
 
+  // Trade risk per stage, on the SAME row as the capacity it belongs to. Exposure
+  // and build-out are two readings of one decision, and splitting them across two
+  // stage-resolved charts made the reader hold mining's bar in one and mining's
+  // risk in the other. The class toggle governs both, because "which stage is
+  // exposed" has a different answer for Dy/Tb than for Nd/Pr.
+  const triByStage: Record<string, number> = Object.fromEntries(
+    (reClass === 'all' ? stageBreakdown(sc, alliedHHI)
+                       : stageBreakdownClass(sc, reClass, alliedHHI))
+      .map((st) => [st.key, st.tri]));
+  // Share of an interface's mass that is this RE class, so a stage's capacity can
+  // be read in class units. 1 for 'all', and for recycling, which has no interface.
+  const classFrac = (stage: string): number => {
+    if (reClass === 'all') return 1;
+    const iface = STAGE_IFACE[stage];
+    const re = sc.flows_re?.[reClass]?.[iface];
+    if (!iface || !re) return 1;
+    const sum = (rows?: { value: number }[]) => (rows ?? []).reduce((a, f) => a + f.value, 0);
+    const agg = sum(sc.flows?.[iface]);
+    return agg > 1e-9 ? sum(re) / agg : 1;
+  };
+
   const us = buildout.filter((b) => b.r === 'USA');
   const verdicts: Verdict[] = screen(us, PRICE_WORLDS[priceWorld] ?? PRICE_WORLDS.neutral, {
     rate,
@@ -85,8 +127,8 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
     creditSupport: instruments.guarantee ? 1 : 0,
   });
   const byStage = (s: string) => verdicts.filter((v) => v.stage === s);
-  const maxKt = Math.max(1, ...STAGES.map((s) =>
-    (incumbent[s] ?? 0) + byStage(s).reduce((a, v) => a + v.newKt, 0)));
+  const maxKt = Math.max(0.001, ...STAGES.map((s) =>
+    ((incumbent[s] ?? 0) + byStage(s).reduce((a, v) => a + v.newKt, 0)) * classFrac(s)));
   const shortfall = verdicts.filter((v) => !v.funded);
   // Stages the US already operates but which the plan never expands. Worth
   // naming: a reader who sees only a magnet bar assumes the others were screened
@@ -162,13 +204,49 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
         </div>
       </div>
 
+      {/* Which RE class the bars and the risk column describe. Dy/Tb is the real
+          chokepoint; Nd/Pr is far more diversified, so a single "All" reading
+          averages the problem away. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                    marginBottom: 8 }}>
+        <span style={{ fontSize: 11, opacity: 0.6 }}>By RE class:</span>
+        {CLASSES.map((c) => {
+          const on = reClass === c.key;
+          return (
+            <button key={c.key} onClick={() => onReClass(c.key)}
+              style={{ font: '600 10.5px var(--font-mono)', padding: '3px 9px', borderRadius: 6,
+                       cursor: 'pointer',
+                       border: `1px solid ${on ? 'var(--accent)' : 'var(--rule-strong)'}`,
+                       background: on ? 'var(--paper-2)' : 'transparent', color: 'var(--ink)' }}>
+              {c.label}
+            </button>
+          );
+        })}
+        <span style={{ marginLeft: 'auto', font: '600 9.5px var(--font-mono)',
+                       letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.45 }}>
+          trade risk
+        </span>
+      </div>
+      {reClass !== 'all' && (
+        // Worth stating: in class mode the bars are CONTAINED metal, not plant
+        // throughput, and a magnet is only ~2% Dy/Tb by mass. Without this the
+        // tonnages look like a bug rather than a change of unit.
+        <p style={{ fontSize: 10.5, opacity: 0.5, margin: '-2px 0 8px', lineHeight: 1.4 }}>
+          Bars show kt of contained {reClass === 'heavy' ? 'Dy/Tb' : 'Nd/Pr'} passing each
+          stage, not total plant throughput — a finished magnet is about{' '}
+          {reClass === 'heavy' ? '2% Dy/Tb' : '33% Nd/Pr'} by mass.
+        </p>
+      )}
+
       {STAGES.map((s) => {
         const vs = byStage(s);
-        const inc = incumbent[s] ?? 0;
-        const asked = vs.reduce((a, v) => a + v.newKt, 0);
-        const funded = vs.filter((v) => v.funded).reduce((a, v) => a + v.newKt, 0);
+        const cf = classFrac(s);
+        const inc = (incumbent[s] ?? 0) * cf;
+        const asked = vs.reduce((a, v) => a + v.newKt, 0) * cf;
+        const funded = vs.filter((v) => v.funded).reduce((a, v) => a + v.newKt, 0) * cf;
         if (inc <= 0 && asked <= 0) return null;
         const pc = (v: number) => `${(v / maxKt) * 100}%`;
+        const tri = triByStage[s];
         return (
           <div key={s} style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, marginBottom: 3 }}>
@@ -180,17 +258,33 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                 </span>
               )}
             </div>
-            <div style={{ position: 'relative', height: 16, background: 'var(--paper-2)',
-                          border: '1px solid var(--rule)', borderRadius: 3 }}>
-              {/* sunk */}
-              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: pc(inc),
-                            ...STIPPLE, borderRight: inc > 0 ? '1px solid var(--rule-strong)' : 'none' }} />
-              {/* asked for: outline */}
-              <div style={{ position: 'absolute', left: pc(inc), top: 0, bottom: 0, width: pc(asked),
-                            border: '1.5px dashed var(--accent)', borderRadius: 2 }} />
-              {/* funded: fill */}
-              <div style={{ position: 'absolute', left: pc(inc), top: 0, bottom: 0, width: pc(funded),
-                            background: 'var(--accent)', opacity: 0.55, borderRadius: 2 }} />
+            {/* Bar is narrowed to leave the right-hand column for the stage's trade
+                risk, so build-out and exposure are read on one line. */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 62px', gap: 10,
+                          alignItems: 'center' }}>
+              <div style={{ position: 'relative', height: 16, background: 'var(--paper-2)',
+                            border: '1px solid var(--rule)', borderRadius: 3 }}>
+                {/* sunk */}
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: pc(inc),
+                              ...STIPPLE, borderRight: inc > 0 ? '1px solid var(--rule-strong)' : 'none' }} />
+                {/* asked for: outline */}
+                <div style={{ position: 'absolute', left: pc(inc), top: 0, bottom: 0, width: pc(asked),
+                              border: '1.5px dashed var(--accent)', borderRadius: 2 }} />
+                {/* funded: fill */}
+                <div style={{ position: 'absolute', left: pc(inc), top: 0, bottom: 0, width: pc(funded),
+                              background: 'var(--accent)', opacity: 0.55, borderRadius: 2 }} />
+              </div>
+              {tri == null ? (
+                <span style={{ font: '400 10px var(--font-mono)', opacity: 0.35, textAlign: 'right' }}
+                  title="Recycling is a domestic feedstock, not a sourcing stage — the index has no term for it.">
+                  —
+                </span>
+              ) : (
+                <span style={{ textAlign: 'right', font: '600 11px var(--font-mono)' }}
+                  title={`Trade-risk index for ${LABEL[s].toLowerCase()}${reClass === 'all' ? '' : `, ${reClass === 'heavy' ? 'Dy/Tb' : 'Nd/Pr'}`}: ${tri.toFixed(2)} — lower is secure`}>
+                  <span style={riskChip(riskColor(tri))}>{tri.toFixed(2)}</span>
+                </span>
+              )}
             </div>
             {/* Name the projects, not just the tonnage: "Ucore does not clear" is
                 actionable where "separation is short 12 kt" is not. */}

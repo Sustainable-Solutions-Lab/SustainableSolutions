@@ -812,7 +812,7 @@ export default function MagnetExplorer() {
                       borderBottom: '1px solid var(--rule)', padding: '8px 0 9px',
                       marginBottom: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-                        gridTemplateRows: 'repeat(2, auto)', gap: '6px 10px' }}>
+                        gridTemplateRows: 'repeat(2, auto)', gap: '8px 10px' }}>
             {[
               { l: 'US trade-risk index', v: tri.toFixed(2), c: riskColor(tri), chip: true,
                 s: 'demand-weighted 2026–35' },
@@ -827,17 +827,16 @@ export default function MagnetExplorer() {
               { l: 'US cost of supply', v: musd(usCostReal), c: 'var(--ink)',
                 s: '2026–35 NPV' },
             ].map((k) => (
-              <div key={k.l} style={{ display: 'flex', alignItems: 'baseline', gap: 7,
-                                      minWidth: 0, padding: '5px 9px', borderRadius: 6,
-                                      border: '1px solid var(--rule-strong)',
-                                      background: 'var(--paper-2, var(--paper))' }}>
-                <span style={{ font: '600 9px var(--font-mono)', letterSpacing: '0.05em',
-                               textTransform: 'uppercase', opacity: 0.5, flex: '0 0 auto',
-                               width: 116, lineHeight: 1.25 }}>{k.l}</span>
-                <span style={{ font: '600 14px var(--font-mono)',
-                               ...(k.chip ? riskChip(k.c) : { color: k.c }) }}>{k.v}</span>
-                <span style={{ fontSize: 9.5, opacity: 0.45, whiteSpace: 'nowrap',
-                               overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.s}</span>
+              // The old ScoreCard, scaled down: label above, the number as the
+              // one big thing, context beneath. The single-line variant was
+              // shallower but read as a table row, not a readout.
+              <div key={k.l} style={{ ...CARD, borderRadius: 8, padding: '7px 10px 6px', minWidth: 0 }}>
+                <div style={{ ...CARD_LABEL, fontSize: 10, marginBottom: 2 }}>{k.l}</div>
+                <div style={{ ...CARD_VALUE(), font: '600 16px var(--font-mono)' }}>
+                  <span style={k.chip ? { ...riskChip(k.c), display: 'inline-block' } : { color: k.c }}>{k.v}</span>
+                </div>
+                <div style={{ ...CARD_SUB, fontSize: 8.5, paddingTop: 3, whiteSpace: 'nowrap',
+                              overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.s}</div>
               </div>
             ))}
           </div>

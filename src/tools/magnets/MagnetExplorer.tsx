@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, ensurePriceFloorSlices, priceFloorReady, ensureAbatementCeilingSlices,
+import { AXES, BASE, interpScenario, applyStockpile, STOCKPILE_COST_DEFAULT, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, ensurePriceFloorSlices, priceFloorReady, ensureAbatementCeilingSlices,
          abatementCeilingReady, HAS_ABATEMENT_CEILING, ABATEMENT_CEILINGS } from './interp';
 import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
 import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
@@ -7,7 +7,7 @@ import DemandChips from './DemandChips';
 import AbatementReadout from './AbatementReadout';
 import CapacityPanel, { type ReClass } from './CapacityPanel';
 import RdValuePanel from './RdValuePanel';
-import { hurdleRate } from './projectFinance';
+import { hurdleRate, RELIEF_DEFAULTS } from './projectFinance';
 import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
@@ -273,6 +273,7 @@ export default function MagnetExplorer() {
   const [china, setChina] = useState(0.6);   // China export-restriction severity
   const [rcost, setRcost] = useState(AXES.rcostMin); // US recycling cost factor
   const [stockpile, setStockpile] = useState(0);     // strategic stockpile size (kt)
+  const [stockCost, setStockCost] = useState(STOCKPILE_COST_DEFAULT);   // $/kg acquire + hold
   const [pfloor, setPfloor] = useState(0);           // US price floor on China imports (0 / .5 / 1)
   // The floor=0 grid is eager; the half/full slices load on first use of the slider.
   const [pfReady, setPfReady] = useState(priceFloorReady());
@@ -324,7 +325,7 @@ export default function MagnetExplorer() {
 
   const sc = useMemo(() => applyStockpile(interpScenario({
     make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale, pfloor, abunlock,
-  }), stockpile), [make, source, rec, china, rcost, demand, stockpile, pfloor, pfReady, abunlock, ceilingReady]);
+  }), stockpile, stockCost), [make, source, rec, china, rcost, demand, stockpile, stockCost, pfloor, pfReady, abunlock, ceilingReady]);
   // The cost breakdown is US-specific (the cost the US bears to supply itself) —
   // this analysis is about US supply security. Global trade/co-product don't apply.
   const US_COST_KEYS = COST_KEYS.filter(([k]) => k !== 'trade' && k !== 'coproduct');
@@ -359,8 +360,10 @@ export default function MagnetExplorer() {
   // is no separate mode switch — so it defaults to the US firm rate and can be
   // dragged down to the planner's, which reproduces planner mode exactly.
   const [hurdle, setHurdle] = useState<number>(hurdleRate('USA'));
-  const [instruments, setInstruments] = useState<Record<string, boolean>>(
-    { offtake: false, floor: false, guarantee: false });
+  // Seeded from RELIEF_DEFAULTS but OFF, so nothing is applied until asked for.
+  // The defaults become the value a slider snaps to when you turn it on.
+  const [instruments, setInstruments] = useState<Record<string, number>>(
+    { offtake: 0, floor: RELIEF_DEFAULTS.floor, guarantee: 0 });
   // Governs BOTH the capacity bars and the per-stage risk chips beside them, since
   // "which stage is exposed" has a different answer for Dy/Tb than for Nd/Pr.
   const [reClass, setReClass] = useState<ReClass>('heavy');   // the chokepoint by default
@@ -620,7 +623,16 @@ export default function MagnetExplorer() {
   // respond. A sticky sidebar put every knob permanently beside every result,
   // which is the opposite of a sequence. On mobile they stay in the slide-up
   // sheet, where a single column already IS the reading order.
-  const worldControls = (
+  // PLANNER controls: every one of these is a grid axis, so every one re-solves
+  // the least-cost chain and moves the Sankey. That — not who controls them — is
+  // the division that matters to a reader, so they sit together in one box above
+  // the diagram they determine. Whether a lever is a US choice or a fact about
+  // the world is a second-order annotation, carried by the sub-heading.
+  //
+  // The ACTOR controls (hurdle rate, US cost, FOAK, provenance premium, the
+  // instrument reliefs) live in the capacity panel instead. They are closed-form
+  // arithmetic over a solved cell and cannot move a ribbon.
+  const plannerControls = (
     <>
       <div style={{ display: 'grid', gap: '2px 20px',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
@@ -628,48 +640,12 @@ export default function MagnetExplorer() {
             desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium (see the cost bar)." />
 
       </div>
-          {/* The reference scenario: a baseline every later reading is measured
-              against. It lives with the WORLD settings because that is what you
-              hold fixed — you set a world, mark it as the reference, then vary
-              the interventions and see what moved. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '10px 0 4px' }}>
-            <button onClick={pin ? () => setPin(null) : doPin}
-              title={pin ? 'Clear the reference' : 'Mark this world as the reference; every headline then reads as a change against it'}
-              style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.05em', textTransform: 'uppercase',
-                       padding: '5px 10px', borderRadius: 6, cursor: 'pointer',
-                       border: `1px solid ${pin ? 'var(--accent)' : 'var(--rule-strong)'}`,
-                       background: pin ? 'var(--accent)' : 'transparent',
-                       color: pin ? 'var(--paper)' : 'var(--ink)' }}>
-              {pin ? 'Reference set — clear' : 'Set as reference'}
-            </button>
-            {pin && (
-              <span style={{ fontSize: 11, opacity: 0.7, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                {changed.length === 0
-                  ? 'identical to the reference'
-                  : <>changed: {changed.map((k) => (
-                      <b key={k} style={{ fontWeight: 600 }}>
-                        {AXIS_LABEL[k]} {AXIS_FMT[k](pin.coords[k])}&rarr;{AXIS_FMT[k](coords[k])}
-                      </b>
-                    )).reduce((a, b) => <>{a}, {b}</>)}</>}
-                <button onClick={restorePin}
-                  title="Put the six supply sliders back to their pinned values. Dy/Tb intensity and demand scale are derived from the Demand Builder, so they stay put and will still be listed as changed."
-                  style={{ font: '500 10px var(--font-mono)', padding: '2px 7px', borderRadius: 5,
-                           border: '1px solid var(--rule-strong)', background: 'transparent',
-                           color: 'var(--ink)', cursor: 'pointer' }}>restore</button>
-              </span>
-            )}
+
+
+          <div style={{ borderTop: '1px solid var(--rule)', margin: '10px 0 8px' }} />
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.6, margin: '0 0 6px' }}>
+            US policy levers <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, opacity: 0.8 }}>— also solved by the planner, so these move the chain above</span>
           </div>
-
-
-    </>
-  );
-  const interventionControls = (
-    <>
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 2px' }}>What the US can do</div>
-          <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
-            Interventions: things the US can choose. None of them changes the world
-            settings above.
-          </p>
       <div style={{ display: 'grid', gap: '2px 20px',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
           <Slider label="US-made magnets (reshore)" value={make} max={AXES.makeMax} onChange={setMake} fmt={(v) => pct(v * 100)}
@@ -684,6 +660,8 @@ export default function MagnetExplorer() {
             desc="A US guaranteed price floor (DoD / MP-Materials-style) modeled as a tariff that lifts the price of Chinese oxide, alloy & magnet imports toward the ex-China premium — 0% = off, 50% = half, 100% = the full premium. It makes domestic + allied supply cost-competitive WITHOUT a mandate, so the market reshores on price rather than by rule. Its cost is borne by consumers as a higher import price (no factory needed), shown as 'Price floor' in the cost bar. A distinct instrument from friendshoring (a quantity mandate) — try them separately." />
           <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
             desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$110/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
+          <Slider label="Stockpile cost" value={stockCost} min={40} max={250} onChange={setStockCost} fmt={(v) => `$${v.toFixed(0)}/kg`}
+            desc={`Acquire + hold cost of stockpiled finished magnets, $/kg. The default (~$${STOCKPILE_COST_DEFAULT}/kg) assumes a buffer skewed to Dy/Tb-rich high-coercivity grades, which are the strategically scarce ones and cost well above an average magnet. Only bites when the stockpile is above zero.`} />
           {stockpile > 0 && (
             <p style={{ fontSize: 10.5, opacity: 0.55, margin: '-2px 0 6px', lineHeight: 1.4 }}>
               Embodies ≈ <b>{Math.round(stockpile * 0.326)} kt Nd/Pr</b> + <b>{(stockpile * 0.034).toFixed(1)} kt Dy/Tb</b> oxide — the heavy slice is the strategically scarce one.
@@ -692,17 +670,6 @@ export default function MagnetExplorer() {
       </div>
           <ProjectsAside future={futureSel} onToggle={toggleFuture} onSetGroup={setProjectGroup} />
 
-          <button onClick={() => {
-              setMake(0); setSource(0); setRec(0); setChina(0.6); setRcost(AXES.rcostMin); setStockpile(0); setPfloor(0); setFutureSel(new Set(DEFAULT_FUTURE));
-              setResetFlash(true); window.setTimeout(() => setResetFlash(false), 650);
-            }}
-            style={{ marginTop: 14, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em',
-              color: resetFlash ? 'var(--paper)' : 'var(--ink)',
-              background: resetFlash ? 'var(--accent)' : 'transparent',
-              border: `1px solid ${resetFlash ? 'var(--accent)' : 'var(--rule)'}`,
-              borderRadius: 6, cursor: 'pointer', transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease' }}>
-            {resetFlash ? '✓ RESET TO BASELINE' : 'RESET TO BASELINE'}
-          </button>
     </>
   );
 
@@ -741,8 +708,7 @@ export default function MagnetExplorer() {
           </div>
           <div style={{ font: '600 11px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '14px 0 8px', borderBottom: '1px solid var(--rule)', paddingBottom: 6 }}>Demand</div>
           <DemandBuilder mode="controls" scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
-          {worldControls}
-          {interventionControls}
+          {plannerControls}
         </aside>
       )}
 
@@ -774,7 +740,7 @@ export default function MagnetExplorer() {
             )}
           </div>
           <div style={{ borderTop: '1px solid var(--rule)', margin: '9px 0 8px' }} />
-          {worldControls}
+          {plannerControls}
         </section>
       )}
 
@@ -852,19 +818,6 @@ export default function MagnetExplorer() {
                    ...(pin ? deltaOf(usUnmet, pin.unmet, (v) => `${v.toFixed(1)} kt`, true, 0.05) : {}) }} />
           </div>
 
-          {/* STEP 2 — the levers, bundled. Five separately-headed chunks with
-              their own sub-titles read as five topics rather than one choice set.
-              Now one band, sliders in a grid, each explanation behind its own ⓘ.
-              Placed here because this is where the reading order needs them: the
-              chain above is what happens without you, everything below is what
-              changes if you act. */}
-          {!isMobile && (
-            <section style={{ border: '1px solid var(--rule)', borderRadius: 10,
-                              padding: '16px 20px 12px', background: 'var(--paper)', marginTop: 22 }}>
-              {interventionControls}
-            </section>
-          )}
-
           {/* 3 — the ACTOR view. Sits directly under the planner's chain and KPIs
               because the page reads planner -> actor -> interventions: what the
               least-cost plan calls for, then whether anyone would fund it, and
@@ -889,7 +842,8 @@ export default function MagnetExplorer() {
             reClass={reClass} onReClass={setReClass}
             costMult={costMult} onCostMult={setCostMult}
             foakMult={foakMult} onFoakMult={setFoakMult}
-            provenancePremium={provenancePremium} onProvenancePremium={setProvenancePremium} />
+            provenancePremium={provenancePremium} onProvenancePremium={setProvenancePremium}
+            floorLevel={pfloor} />
 
           {/* 4 — what the interventions bought. Sits between the actor verdict and
               the price tag: the levers are pulled in the sidebar, their effect on

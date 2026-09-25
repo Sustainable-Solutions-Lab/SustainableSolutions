@@ -321,7 +321,6 @@ export default function MagnetExplorer() {
                imp: number; touch: number; unmet: number };
   const [pin, setPin] = useState<Pin | null>(null);
   const [infoCost, setInfoCost] = useState(false);   // ⓘ toggle for the cost-bar method note
-  const [rcostOpen, setRcostOpen] = useState(false); // ＋/－ for the recycling-cost stress-test
   const [resetFlash, setResetFlash] = useState(false); // brief confirm-flash on "reset to baseline"
   // Real-world-anchored Sankey: selected projects locked in by region, China residual.
   const rwFlows = useMemo(() => ({
@@ -597,13 +596,8 @@ export default function MagnetExplorer() {
           <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
             desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium (see the cost bar)." />
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, opacity: 0.55, margin: '14px 0 6px' }}>Recycling cost assumption</div>
-          <details onToggle={(e) => setRcostOpen((e.target as HTMLDetailsElement).open)}>
-            <summary style={{ fontSize: 11, opacity: 0.55, cursor: 'pointer', listStyle: 'none', margin: '2px 0 6px' }}>
-              {rcostOpen ? '－' : '＋'} US recycling cost {rcost !== AXES.rcostMin && <span style={{ color: 'var(--accent)' }}>· {rcost.toFixed(1)}× China</span>}
-            </summary>
-            <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
-              desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
-          </details>
+          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
+            desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
 
           {/* The reference scenario: a baseline every later reading is measured
               against. It lives with the WORLD settings because that is what you

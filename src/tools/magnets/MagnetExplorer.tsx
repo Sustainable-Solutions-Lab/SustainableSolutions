@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { AXES, AXIS_DOMAIN, BASE, interpScenario, applyStockpile, STOCKPILE_COST_DEFAULT, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, ensurePriceFloorSlices, priceFloorReady, ensureAbatementCeilingSlices,
+import { AXES, AXIS_DOMAIN, BASE, HAS_ALLIED_TARIFF, RESTRICTION_SCOPE, ensureAlliedTariffSlices, alliedTariffReady, interpScenario, applyStockpile, STOCKPILE_COST_DEFAULT, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, ensurePriceFloorSlices, priceFloorReady, ensureAbatementCeilingSlices,
          abatementCeilingReady, HAS_ABATEMENT_CEILING, ABATEMENT_CEILINGS, type Scenario } from './interp';
 import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
 import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
@@ -95,6 +95,7 @@ const COST_KEYS: [string, string, string][] = [
   ['stockpile', 'Strategic stockpile', '#5E4FA2'],
   ['dytb_premium', 'Heavy-REE price premium', '#762A83'],
   ['price_floor', 'Price floor (tariff on China imports)', '#5E4FA2'],
+  ['allied_tariff', 'Tariff on allied imports', '#9970AB'],
   ['consumer_premium', 'Consumer premium (ally imports)', '#9970AB'],
   ['trade', 'Shipping', '#5E4FA2'],
   ['coproduct', 'Co-product La/Ce', '#FEE08B'],
@@ -111,6 +112,7 @@ const COST_DESC: Record<string, string> = {
   stockpile: 'Cost of the strategic magnet stockpile: size × an all-in acquire + hold rate (~$110/kg, grounded in Benchmark Feb-2026 prices for Dy/Tb-rich grades). A real, paid cost that buys down the unmet-demand penalty by covering the earliest shortfall.',
   dytb_premium: 'Price-taker premium the US pays on the Dy/Tb it imports (as oxide, alloy, or embodied in magnets) as China’s export controls inflate the heavy-REE benchmarks Western buyers are bound to. Scales with the China-restriction slider; the US escapes by separating or recycling Dy/Tb domestically — limited in the near term, since the one active US mine (Mountain Pass) is light-REE and domestic heavy-REE prospects (e.g. Round Top, TX) are pre-commercial.',
   price_floor: 'Cost of the US price-floor policy: the tariff paid on whatever Chinese oxide / alloy / magnet the US still imports after the floor is set (rate scaled by the slider, sized to the ex-China premium). Borne by consumers as a higher import price, not US capital — no factory needed. As the floor rises it pushes China out of US sourcing, so this line often falls toward zero while the avoided-China cost reappears as domestic build + the ally consumer premium.',
+  allied_tariff: 'US tariff paid on alloy and magnets imported from allies at the rate set in the scenario box. A transfer to the Treasury, but a real cost to US buyers, so it belongs in the bill exactly as the price-floor tariff does.',
   consumer_premium: 'The ex-China premium US buyers pay for ALLY-sourced supply rather than cheaper Chinese material — the Nd/Pr-oxide premium on allied light oxide (~$45/kg) plus a manufacturing premium on any finished magnets imported from allies (~$15/kg). Borne as a higher import price, not US capital, so it rises with friendshoring. The heavy Dy/Tb premium is shown separately above.',
   shortage: 'Penalty on US unmet magnet demand: unmet tonnes × a high penalty rate. Not a market cost — it flags US demand the chain can’t deliver in time (e.g. under a ban).',
 };
@@ -297,8 +299,27 @@ export default function MagnetExplorer() {
   // Fort Worth's expansion) which does not clear at the competitive spread, so
   // the first screen shows the gap and what closes it. The do-nothing deltas
   // still read against make=0, so nothing is hidden by starting here.
-  const [make, setMake] = useState(0.5);     // component prong: US-made magnets
-  const [source, setSource] = useState(0);   // mineral prong: non-China sourcing
+  // On a per-destination grid the planner asks for US capacity at the reference
+  // restriction on its own, so no mandate is needed to open on a gap; on the
+  // older pooled grid it never does below 85%, so a half mandate stands in.
+  const [make, setMake] = useState(RESTRICTION_SCOPE === 'per_destination' ? 0 : 0.5);   // component prong: US-made magnets
+  // CLEAN SOURCING is one grid axis with two owners. China's extraterritorial
+  // licensing (the October 2025 rules: any product with >=0.1% Chinese heavy REE
+  // by value) makes allied magnets on Chinese oxide restricted too, which forces
+  // the US onto chain-of-custody-clean supply exactly as a friendshoring mandate
+  // would. So the axis is the MAX of a world assumption (reach) and a US lever
+  // (the mandate), and the ledger credits the mandate only for what it adds.
+  const [sourceMandate, setSource] = useState(0);   // mineral prong: US friendshore mandate
+  const [reach, setReach] = useState(0);            // China's extraterritorial reach
+  const source = Math.max(sourceMandate, reach);
+  // US tariff on allied alloy + magnets, a world assumption already in force
+  // (~15% on Japan/EU/Korea since 2025). Opens at that level where the grid
+  // carries the axis; a pre-axis grid solved it as 0 and the control says so.
+  const [atariff, setAtariff] = useState(HAS_ALLIED_TARIFF ? 0.15 : 0);
+  const [atReady, setAtReady] = useState(alliedTariffReady());
+  useEffect(() => {
+    if (atariff > 0.15 + 1e-9 && !atReady) void ensureAlliedTariffSlices().then(() => setAtReady(true));
+  }, [atariff, atReady]);
   // BASE CASE is a partially restricted world, not an open market. The study
   // exists because buyers are already paying to hedge Chinese supply, and an
   // undisrupted default answers a question nobody is asking: of course the
@@ -409,9 +430,9 @@ export default function MagnetExplorer() {
   // research decision is then made at that collection rate; the stockpile last,
   // against whatever shortfall is left. Every step is a grid read.
   const cellAt = useCallback((o: Record<string, number>) => interpScenario({
-    make, source, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, abunlock: 0, ...o,
+    make, source, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, atariff, abunlock: 0, ...o,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [make, source, china, rcost, demand, dscale, pfloor, pfReady, ceilingReady]);
+  }), [make, source, china, rcost, demand, dscale, pfloor, atariff, atReady, pfReady, ceilingReady]);
   const collection = useMemo(
     () => chooseCollection(AXIS_DOMAIN.rec, (r) => cellAt({ rec: r }), collectCost),
     [cellAt, collectCost]);
@@ -536,7 +557,7 @@ export default function MagnetExplorer() {
   // baseline = do-nothing (no US policy/projects) at the SAME demand scenario + threat, so
   // the delta is the cost of the security choices made (can be negative if reshoring avoids
   // more China premium than it costs to build).
-  const baseNPV = realCost(interpScenario({ make: 0, source: 0, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale, abunlock }));
+  const baseNPV = realCost(interpScenario({ make: 0, source: reach, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale, atariff, abunlock }));
   const npvDelta = usCostReal - baseNPV;
   const tri = integratedRE(scR, alliedHHIMap);   // live readout (light+heavy weighted)
   // China-exposed demand — FAITHFUL flow-traced provenance from the model export
@@ -573,7 +594,7 @@ export default function MagnetExplorer() {
   // a pinned set. Deltas are signed so that NEGATIVE always means "better" for
   // the metrics where lower is better (all of these except none, today).
   const coords: Record<AxisKey, number> = {
-    make, source, rec, china, rcost, pfloor,
+    make, source, rec, china, rcost, pfloor, atariff,
     dytb: demand.dytb_intensity, dscale,
   };
   const changed = pin ? axisDiff(coords, pin.coords) : [];
@@ -585,7 +606,7 @@ export default function MagnetExplorer() {
     if (!pin) return;
     const c = pin.coords;
     setMake(c.make); setSource(c.source);
-    setChina(c.china); setRcost(c.rcost); setPfloor(c.pfloor);
+    setChina(c.china); setRcost(c.rcost); setPfloor(c.pfloor); setAtariff(c.atariff ?? 0);
     setDscaleOverride(c.dscale);
     // dytb is derived from the sector composition; it follows once the demand
     // controls are reset, which the user does in the builder. Flag it rather
@@ -625,7 +646,7 @@ export default function MagnetExplorer() {
     projects?: Set<string>; stockpileKt?: number; roundTop?: boolean; reshore?: string[];
   } = {}) => {
     const abu = o.abunlock ?? abunlock;
-    let scn = interpScenario({ make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, abunlock: abu, ...o });
+    let scn = interpScenario({ make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, atariff, abunlock: abu, ...o });
     if (opt.reshore) scn = reshoreSupply(scn, opt.reshore, 0.9);
     if (opt.roundTop) scn = applyRoundTop(scn, true);
     const kt = opt.stockpileKt ?? chooseStockpile(scn, stockCost, unmetValue, STOCKPILE_MAX).kt;
@@ -636,7 +657,7 @@ export default function MagnetExplorer() {
       + (abu > 0 ? rdChoice.rd.rdCost : 0);
     return { tri: integratedRE(fin, alliedHHIMap), bill, unmet: (scn.path.us_mix.unmet ?? []).reduce((a, u) => a + u, 0) };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [make, source, rec, china, rcost, demand, dscale, pfloor, abunlock, stockCost, unmetValue, collectCost, rdChoice, activeProjects, alliedHHIMap, finishScn, pfReady, ceilingReady]);
+  }, [make, source, rec, china, rcost, demand, dscale, pfloor, atariff, atReady, abunlock, stockCost, unmetValue, collectCost, rdChoice, activeProjects, alliedHHIMap, finishScn, pfReady, ceilingReady]);
 
   const plannerLedger = useMemo<PlannerRow[]>(() => {
     const cur = evalAt({});
@@ -648,10 +669,11 @@ export default function MagnetExplorer() {
     rows.push({ name: 'US-make mandate', deployed: make > 0, level: make > 0 ? pct(make * 100) : undefined,
       bought: make > 0 ? bought(evalAt({ make: 0 })) : undefined,
       next: make < AXES.makeMax ? next(evalAt({ make: AXES.makeMax })) : undefined });
-    rows.push({ name: 'Friendshore sourcing', deployed: source > 0, level: source > 0 ? pct(source * 100) : undefined,
-      bought: source > 0 ? bought(evalAt({ source: 0 })) : undefined,
+    rows.push({ name: 'Friendshore mandate', deployed: sourceMandate > reach,
+      level: sourceMandate > reach ? pct(sourceMandate * 100) : undefined,
+      bought: sourceMandate > reach ? bought(evalAt({ source: reach })) : undefined,
       next: source < AXES.sourceMax ? next(evalAt({ source: AXES.sourceMax })) : undefined,
-      note: 'consumer premium' });
+      note: reach > 0 ? `beyond China's ${pct(reach * 100)} reach · consumer premium` : 'consumer premium' });
     rows.push({ name: 'Price floor on China imports', deployed: pfloor > 0, level: pfloor > 0 ? pct(pfloor * 100) : undefined,
       bought: pfloor > 0 ? bought(evalAt({ pfloor: 0 })) : undefined,
       next: pfloor < AXES.pfloorMax ? next(evalAt({ pfloor: AXES.pfloorMax })) : undefined,
@@ -679,7 +701,7 @@ export default function MagnetExplorer() {
     rows.push({ name: 'Build US alloy', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['alloy'] }), US_ALLOY_RESHORE_COST) });
     rows.push({ name: 'Build US magnet', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['magnet'] }), US_MAGNET_RESHORE_COST) });
     return rows;
-  }, [evalAt, make, source, pfloor, rec, stockpile, abunlock, rdChoice, activeProjects, collectCost, stockCost, rdCostPerKg]);
+  }, [evalAt, make, source, sourceMandate, reach, pfloor, rec, stockpile, abunlock, rdChoice, activeProjects, collectCost, stockCost, rdCostPerKg]);
 
   // ── THE ACTOR LEDGER ────────────────────────────────────────────────────
   // The same screen the capacity panel runs, once at the current instruments
@@ -776,6 +798,14 @@ export default function MagnetExplorer() {
         <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
           ticks={[{ at: 0, label: 'open' }, { at: 0.6, label: 'reference' }, { at: 1, label: 'full ban' }]}
           desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium. The 60% reference is a MODELLING CHOICE, not a calibrated value: it is the cell the written results describe. China's 2025 licensing regime on seven medium/heavy REEs is the closest real analogue, and mapping it to a single severity number is a judgement." />
+        <Slider label="China’s extraterritorial reach" value={reach} max={AXES.sourceMax} onChange={setReach} fmt={(v) => pct(v * 100)}
+          ticks={[{ at: 0, label: 'none' }, { at: 0.5, label: 'Oct-2025 rules' }, { at: AXES.sourceMax, label: 'total' }]}
+          desc="How far China's controls follow its material abroad. The October 2025 rules (suspended for a year after Busan, not withdrawn) require a Chinese licence for ANY product containing 0.1% or more Chinese-origin heavy rare earths by value, so allied magnets made on Chinese oxide become restricted too. Modelled as the share of US Dy/Tb that must come from chain-of-custody-clean supply, the same constraint a US friendshoring mandate imposes; the two take the larger value, and the mandate below is credited only for what it adds beyond this." />
+        <Slider label="US tariff on allied imports" value={atariff} max={Math.max(AXES.atariffMax, 0.3)} step={0.01} onChange={setAtariff} fmt={(v) => pct(v * 100)}
+          ticks={[{ at: 0, label: 'none' }, { at: 0.15, label: '2025 rates' }, { at: 0.3, label: 'Sec. 232' }]}
+          desc={HAS_ALLIED_TARIFF
+            ? "Ad-valorem tariff on alloy and finished magnets from allies (Japan, Europe, Korea, Malaysia), a state of the world rather than a security lever: the 2025 reciprocal rates are about 15% on Japan, the EU and Korea and 19-20% on Malaysia and Vietnam, and a Section 232 action on critical minerals is pending. Oxide is exempt as a critical mineral. At about 19% allied delivered cost meets the US cost factor, so the planner is indifferent between building in Japan and at home. It bites wherever the plan imports allied magnets, above all under clean sourcing, where it shifts supply from Japanese plants to US ones. The tariff paid appears in the US cost of supply."
+            : "This grid was solved before the allied-tariff axis existed, so every cell assumes free allied trade; the control arrives with the next regrid."} />
       </div>
 
       <div style={RULE} />
@@ -784,7 +814,7 @@ export default function MagnetExplorer() {
         <Slider label="US-made magnets (reshore)" value={make} max={AXES.makeMax} onChange={setMake} fmt={(v) => pct(v * 100)}
           ticks={[{ at: 0, label: 'none' }, { at: 0.5, label: 'half' }, { at: AXES.makeMax, label: 'all US-made' }]}
           desc="Component prong, like the IRA EV credit: the share of US magnets that must be manufactured in the US — reshoring the final step. On its own it can still be met with imported (incl. Chinese) alloy or oxide; pair it with non-China sourcing to close that loophole." />
-        <Slider label="Clean heavy sourcing (friendshore)" value={source} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
+        <Slider label="Clean heavy sourcing (friendshore)" value={sourceMandate} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
           ticks={[{ at: 0, label: 'none' }, { at: 0.5, label: 'half' }, { at: AXES.sourceMax, label: 'all China-free' }]}
           desc="Friendshoring the heavy rare earths, FEOC-traced: the minimum share of US Dy/Tb need met by a chain-of-custody-CLEAN supply that never touched Chinese ore, oxide, or alloy at any stage. Unlike a provenance-blind sourcing quota (which ex-China separation of Chinese ore defeats), this can only be met by genuinely China-free material, so it moves the flow-traced exposure. The US pays an ex-China premium for it." />
         <Slider label="US price floor on China imports" value={pfloor} max={AXES.pfloorMax} onChange={setPfloor} fmt={(v) => pct(v * 100)}

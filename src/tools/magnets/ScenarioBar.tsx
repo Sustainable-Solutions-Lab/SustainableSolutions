@@ -14,20 +14,21 @@
  */
 import { AXIS_DOMAIN } from './interp';
 
-export type AxisKey = 'make' | 'source' | 'rec' | 'dytb' | 'china' | 'rcost' | 'dscale' | 'pfloor';
+export type AxisKey = 'make' | 'source' | 'rec' | 'dytb' | 'china' | 'rcost' | 'dscale' | 'pfloor' | 'atariff';
 
 const LABEL: Record<AxisKey, string> = {
   make: 'US-made', source: 'Non-China ore', rec: 'Recycling', dytb: 'Dy/Tb intensity',
   china: 'China restriction', rcost: 'Recycling cost', dscale: 'Demand scale', pfloor: 'Price floor',
+  atariff: 'Allied tariff',
 };
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const FMT: Record<AxisKey, (v: number) => string> = {
-  make: pct, source: pct, rec: pct, china: pct, pfloor: pct,
+  make: pct, source: pct, rec: pct, china: pct, pfloor: pct, atariff: pct,
   dytb: (v) => `${v.toFixed(2)}×`, dscale: (v) => `${v.toFixed(2)}×`, rcost: (v) => `${v.toFixed(1)}×`,
 };
 /** Axes with no control of their own — computed from the Demand Builder. */
 const DERIVED: AxisKey[] = ['dytb', 'dscale'];
-const ORDER: AxisKey[] = ['china', 'make', 'source', 'rec', 'rcost', 'pfloor', 'dytb', 'dscale'];
+const ORDER: AxisKey[] = ['china', 'atariff', 'make', 'source', 'rec', 'rcost', 'pfloor', 'dytb', 'dscale'];
 
 const EPS = 1e-9;
 

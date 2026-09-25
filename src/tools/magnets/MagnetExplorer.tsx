@@ -774,7 +774,25 @@ export default function MagnetExplorer() {
                    ...(pin ? deltaOf(usUnmet, pin.unmet, (v) => `${v.toFixed(1)} kt`, true, 0.05) : {}) }} />
           </div>
 
-          {/* 3 — combined "Cost and security" section: cost bar (real NPV) + the
+          {/* 3 — the ACTOR view. Sits directly under the planner's chain and KPIs
+              because the page reads planner -> actor -> interventions: what the
+              least-cost plan calls for, then whether anyone would fund it, and
+              only then what closing the difference costs. Putting cost and TRI
+              in between made the screen look like a footnote to the price tag
+              rather than the question the price tag is answering.
+
+              `incumbent` is US operating capacity from the project list — already
+              built, and therefore never screened. */}
+          <CapacityPanel
+            buildout={(sc as any).buildout}
+            incumbent={PROJECTS.filter((pj) => pj.bloc === 'us' && pj.status === 'operating')
+              .reduce((acc, pj) => ({ ...acc, [pj.stage]: (acc[pj.stage] ?? 0) + pj.capacityKt }),
+                      {} as Record<string, number>)}
+            priceWorld={priceWorld} onPriceWorld={setPriceWorld}
+            rate={hurdle} onRate={setHurdle}
+            instruments={instruments} onInstruments={setInstruments} />
+
+          {/* 4 — combined "Cost and security" section: cost bar (real NPV) + the
               trade-risk index + cost-of-security ROI, in one block; notes behind ⓘ. */}
           <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 22 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
@@ -834,18 +852,6 @@ export default function MagnetExplorer() {
               <TradeRiskPanel sc={scR} levers={securityLevers} alliedHHI={alliedHHIMap} />
             </div>
           </section>
-
-
-          {/* US incumbent capacity by stage, from the operating project list —
-              what is already built and therefore never screened. */}
-          <CapacityPanel
-            buildout={(sc as any).buildout}
-            incumbent={PROJECTS.filter((pj) => pj.bloc === 'us' && pj.status === 'operating')
-              .reduce((acc, pj) => ({ ...acc, [pj.stage]: (acc[pj.stage] ?? 0) + pj.capacityKt }),
-                      {} as Record<string, number>)}
-            priceWorld={priceWorld} onPriceWorld={setPriceWorld}
-            rate={hurdle} onRate={setHurdle}
-            instruments={instruments} onInstruments={setInstruments} />
 
           <AbatementReadout china={china} />
 

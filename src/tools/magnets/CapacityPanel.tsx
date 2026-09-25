@@ -24,6 +24,7 @@
 import { Pickaxe, FlaskConical, Flame, Magnet, Recycle } from 'lucide-react';
 import { screen, HAS_META, hurdleRate, PLANNER_RATE, priceSensitive, RELIEF_DEFAULTS,
          priceAtSpread, EXCHINA_SPREAD_PER_MAGNET_KG, MAGNET_CONVERSION_DEFAULT,
+         LEGACY_CONVERSION,
          type Buildout, type Verdict } from './projectFinance';
 import { stageBreakdown, stageBreakdownClass, riskColor, riskChip } from './tri';
 import type { Scenario } from './interp';
@@ -216,16 +217,18 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
             </span>
           </span>
         </label>
-        <label title="What turning alloy into a finished magnet is worth, over and above the alloy consumed. EVERY region is given the same spread, so China's lower cost makes it more profitable without making a US plant unprofitable — the model has no way for a cheaper Chinese producer to depress the price a US plant receives. That is why the plan looks bankable so widely. US conversion costs $11-12/kg all-in, so US projects stop clearing below about $15/kg."
+        <label title={`What turning alloy into a finished magnet is worth, over and above the alloy consumed. Every region is paid the same spread, so this is the price a US plant must live on. The default is what the marginal CHINESE producer needs — its cost plus a normal return, $${MAGNET_CONVERSION_DEFAULT.toFixed(2)}/kg from the model's plant data — because in a market China dominates that is where the price settles. US conversion costs $13-16/kg all-in at its hurdle, so at the competitive spread no US plant clears unaided: the provenance premium below, or an offtake, is what has to make up the difference. $${LEGACY_CONVERSION.magnet} is the earlier asserted value, under which the plan looked bankable almost everywhere.`}
           style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
           <span style={{ whiteSpace: 'nowrap' }}>Conversion spread</span>
-          <input type="range" min={5} max={40} step={1} value={conversion}
+          <input type="range" min={2} max={40} step={0.25} value={conversion}
             onChange={(e) => onConversion(parseFloat(e.target.value))}
             style={{ width: 110, accentColor: 'var(--accent)' }} />
-          <span style={{ font: '600 11px var(--font-mono)', minWidth: 92 }}>
-            ${conversion.toFixed(0)}/kg{' '}
+          <span style={{ font: '600 11px var(--font-mono)', minWidth: 118 }}>
+            ${conversion.toFixed(2)}/kg{' '}
             <span style={{ opacity: 0.55, fontWeight: 400 }}>
-              {conversion === MAGNET_CONVERSION_DEFAULT ? 'calibrated' : conversion < 15 ? 'thin' : ''}
+              {Math.abs(conversion - MAGNET_CONVERSION_DEFAULT) < 0.13 ? 'China cost + return'
+                : Math.abs(conversion - LEGACY_CONVERSION.magnet) < 0.13 ? 'former assertion'
+                : conversion < 15 ? 'below US cost' : ''}
             </span>
           </span>
         </label>
@@ -233,7 +236,8 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
       <p style={{ fontSize: 11.5, opacity: 0.7, margin: '0 0 12px', maxWidth: 640, lineHeight: 1.45 }}>
         US capacity the least-cost planner calls for, against what clears a private hurdle
         rate at these prices. An outline with nothing in it is capacity the plan depends on
-        that no firm would fund.
+        that no firm would fund. Prices are set where the marginal Chinese producer needs
+        them, so a US plant clears only if something pays for its provenance.
       </p>
 
       {/* The two knobs that actually move a verdict. The planner charges

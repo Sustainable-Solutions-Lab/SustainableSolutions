@@ -28,9 +28,11 @@ const HORIZON = 10;
  *  (2030 and 2035), not per year, so the trajectory is approximated: held at
  *  the 2030 rate through 2030, then linear to 2035. Until the precompute emits
  *  the per-year series this is the honest shape of what the grid knows. */
-export function collectedKtNPV(sc: Scenario): number {
+export function collectedKtNPV(sc: Scenario, region?: string): number {
   const by = sc.flows_by_year ?? {};
-  const tot = (yr: string) => (by[yr]?.recycled ?? []).reduce((a, f) => a + f.value, 0);
+  const tot = (yr: string) => (by[yr]?.recycled ?? [])
+    .filter((f) => !region || f.from === region)
+    .reduce((a, f) => a + f.value, 0);
   const r30 = tot('2030');
   const r35 = tot('2035');
   if (r30 <= 0 && r35 <= 0) return 0;

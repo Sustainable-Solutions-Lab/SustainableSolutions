@@ -4,11 +4,11 @@ import { AXES, AXIS_DOMAIN, BASE, interpScenario, applyStockpile, STOCKPILE_COST
 import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
 import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import DemandChips from './DemandChips';
-import AbatementReadout from './AbatementReadout';
 import CapacityPanel, { type ReClass } from './CapacityPanel';
-import RdValuePanel from './RdValuePanel';
-import { chooseCollection, chooseStockpile, chooseRd, UNMET_VALUE_ANCHORS, UNMET_VALUE_DEFAULT } from './deploy';
-import { hurdleRate, RELIEF_DEFAULTS, MAGNET_CONVERSION_DEFAULT } from './projectFinance';
+import InterventionLedger from './InterventionLedger';
+import { actorGap, actorRow, type PlannerRow, type ScreenOpts } from './ledger';
+import { chooseCollection, chooseStockpile, chooseRd, collectedKtNPV, UNMET_VALUE_ANCHORS, UNMET_VALUE_DEFAULT } from './deploy';
+import { hurdleRate, RELIEF_DEFAULTS, MAGNET_CONVERSION_DEFAULT, PLANNER_RATE, priceAtSpread, EXCHINA_SPREAD_PER_MAGNET_KG, type Buildout } from './projectFinance';
 import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
@@ -320,6 +320,16 @@ export default function MagnetExplorer() {
   useEffect(() => {
     if (pfloor > 0 && !pfReady) ensurePriceFloorSlices().then(() => setPfReady(true));
   }, [pfloor, pfReady]);
+  // The ledger rates the price floor as a next move even while it is off, so its
+  // slices load in idle time after first paint rather than on first drag.
+  useEffect(() => {
+    if (pfReady) return;
+    const go = () => { void ensurePriceFloorSlices().then(() => setPfReady(true)); };
+    const w = window as any;
+    const id = typeof w.requestIdleCallback === 'function'
+      ? w.requestIdleCallback(go, { timeout: 6000 }) : window.setTimeout(go, 2500);
+    return () => { if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(id); else window.clearTimeout(id); };
+  }, [pfReady]);
   // Abatement ceiling: 0 = today's sectoral availability, 1 = the barrier broken.
   // Whether it is broken is the planner's call, made below against this R&D cost.
   // Its three slices (one per price-floor level) load in idle time after first
@@ -377,9 +387,6 @@ export default function MagnetExplorer() {
   // between them knows what they are postulating.
   const demandTicks = useMemo(() => (['STEPS', 'APS', 'NZE'] as const).map((k) =>
     ({ at: demandSummary(allScenario(k), DEFAULT_LEVERS).demand_scale, label: SCENARIO_LABEL[k] ?? k })), []);
-  // The same scenario with NO demand levers — the reference for "what the levers buy"
-  // (so the value reflects the chosen scenario, e.g. NZE, not an absolute 1.0).
-  const demandNoLever = useMemo(() => demandSummary(scenario, DEFAULT_LEVERS), [scenario]);
 
   // The cost breakdown is US-specific (the cost the US bears to supply itself) —
   // this analysis is about US supply security. Global trade/co-product don't apply.
@@ -463,7 +470,8 @@ export default function MagnetExplorer() {
   type Pin = { coords: Record<AxisKey, number>; tri: number; cost: number;
                imp: number; touch: number; unmet: number };
   const [pin, setPin] = useState<Pin | null>(null);
-  const [infoCost, setInfoCost] = useState(false);   // ⓘ toggle for the cost-bar method note
+  const [infoCost, setInfoCost] = useState(false);
+  const [showCostBar, setShowCostBar] = useState(false);   // ⓘ toggle for the cost-bar method note
   const [resetFlash, setResetFlash] = useState(false); // brief confirm-flash on "reset to baseline"
   // Real-world-anchored Sankey: selected projects locked in by region, China residual.
   const snapshotYears: string[] = Object.keys((sc as any).flows_by_year ?? {}).sort();
@@ -588,68 +596,114 @@ export default function MagnetExplorer() {
     };
   };
 
-  // Security cost-effectiveness: from no-policy at the CURRENT threat, what each
-  // lever buys in integrated trade-risk reduction per real dollar (TRI per $).
-  // Round Top is the exogenous strategic move whose $/TRI reads as the US
-  // government's revealed shadow price of security.
-  const securityLevers = useMemo(() => {
-    const base = { china, rcost, dytb: demand.dytb_intensity, dscale, abunlock };
-    // TRI with the project floors applied (so lever ROI is consistent with the panel).
-    // Use integratedRE — the SAME heavy-weighted metric the panel displays — not the
-    // aggregate integratedTRI; otherwise a lever that only helps the (low-weight, non-
-    // chokepoint) magnet stage, like "Build US magnet", spuriously topped the ranking.
-    const triR = (scn: Parameters<typeof reconcileUsSupply>[0]) =>
-      integratedRE({ ...scn, us_supply: reconcileUsSupply(scn, activeProjects),
-        us_supply_re: reconcileUsSupplyRe(scn, activeProjects) ?? (scn as any).us_supply_re }, alliedHHIMap);
-    const ref = interpScenario({ ...base, make: 0, source: 0, rec: 0 });
-    const refTRI = triR(ref), refCost = realCost(ref);
-    const makeMandate = interpScenario({ ...base, make: AXES.makeMax, source: 0, rec: 0 });
-    const friendshore = interpScenario({ ...base, make: 0, source: AXES.sourceMax, rec: 0 });
-    const recyc = interpScenario({ ...base, make: 0, source: 0, rec: AXES.recMax });
-    const stock = applyStockpile(ref, STOCKPILE_MAX);
-    const row = (name: string, scn: typeof ref, dCost: number, strategic = false, consumer = false) =>
-      ({ name, strategic, consumer, demand: false, dTRI: refTRI - triR(scn), dCost });
-    // Friendshoring consumer-price premium: the ex-China premium × the China-displaced
-    // share of US demand × discounted US magnet demand (2026–35). It moves China-sourced
-    // embodied RE to allies (averaged across stages), which costs consumers more.
-    const reconChina = (s: typeof ref) => {
-      const u = reconcileUsSupply(s, activeProjects);
-      const st = ['mining', 'separation', 'alloy', 'magnet'];
-      return st.reduce((a, k) => a + (u[k]?.china ?? 0), 0) / st.length;
+  // ── THE PLANNER LEDGER ──────────────────────────────────────────────────
+  // Every lever valued from the CURRENT settings: what a deployed lever bought
+  // (this state against the same state with it off) and what an undeployed one
+  // would buy next (its next step against this state). One evaluator, so every
+  // row is the same measurement: the reconciled, heavy-weighted index the panel
+  // shows, and the real US bill including the priced interventions.
+  const finishScn = useCallback((scn: Scenario, projects: Set<string>) => {
+    const heavyMine = PROJECTS.some((p) => projects.has(p.id) && p.bloc === 'us' && p.stage === 'mining' && p.heavy);
+    const rpath = { ...scn.path, us_mix: reconcileUsMix(scn, projects), us_mix_re: reconcileUsMixRe(scn, projects) ?? scn.path.us_mix_re };
+    return {
+      ...scn,
+      us_supply: reconcileUsSupply(scn, projects),
+      us_supply_re: reconcileUsSupplyRe(scn, projects),
+      us_cost: { ...scn.us_cost, consumer_premium: consumerPremium(rpath), us_projects: usProjectsBuildCost(projects) },
+      path: rpath,
+      _di: heavyMine ? { ...scn._di, mining: ROUND_TOP_MINING_DI } : scn._di,
+    } as Scenario;
+  }, []);
+  const evalAt = useCallback((o: Record<string, number>, opt: {
+    projects?: Set<string>; stockpileKt?: number; roundTop?: boolean; reshore?: string[];
+  } = {}) => {
+    const abu = o.abunlock ?? abunlock;
+    let scn = interpScenario({ make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, abunlock: abu, ...o });
+    if (opt.reshore) scn = reshoreSupply(scn, opt.reshore, 0.9);
+    if (opt.roundTop) scn = applyRoundTop(scn, true);
+    const kt = opt.stockpileKt ?? chooseStockpile(scn, stockCost, unmetValue, STOCKPILE_MAX).kt;
+    scn = applyStockpile(scn, kt, stockCost);
+    const fin = finishScn(scn, opt.projects ?? activeProjects);
+    const bill = realCost(fin)
+      + collectCost * collectedKtNPV(scn, 'USA')
+      + (abu > 0 ? rdChoice.rd.rdCost : 0);
+    return { tri: integratedRE(fin, alliedHHIMap), bill, unmet: (scn.path.us_mix.unmet ?? []).reduce((a, u) => a + u, 0) };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [make, source, rec, china, rcost, demand, dscale, pfloor, abunlock, stockCost, unmetValue, collectCost, rdChoice, activeProjects, alliedHHIMap, finishScn, pfReady, ceilingReady]);
+
+  const plannerLedger = useMemo<PlannerRow[]>(() => {
+    const cur = evalAt({});
+    const bought = (off: ReturnType<typeof evalAt>) => ({ dTRI: off.tri - cur.tri, cost: cur.bill - off.bill });
+    const next = (on: ReturnType<typeof evalAt>, extraCost = 0) => ({ dTRI: cur.tri - on.tri, cost: on.bill - cur.bill + extraCost });
+    const stepUp = (dom: number[], v: number) => dom.find((x) => x > v + 1e-9);
+    const rows: PlannerRow[] = [];
+
+    rows.push({ name: 'US-make mandate', deployed: make > 0, level: make > 0 ? pct(make * 100) : undefined,
+      bought: make > 0 ? bought(evalAt({ make: 0 })) : undefined,
+      next: make < AXES.makeMax ? next(evalAt({ make: AXES.makeMax })) : undefined });
+    rows.push({ name: 'Friendshore sourcing', deployed: source > 0, level: source > 0 ? pct(source * 100) : undefined,
+      bought: source > 0 ? bought(evalAt({ source: 0 })) : undefined,
+      next: source < AXES.sourceMax ? next(evalAt({ source: AXES.sourceMax })) : undefined,
+      note: 'consumer premium' });
+    rows.push({ name: 'Price floor on China imports', deployed: pfloor > 0, level: pfloor > 0 ? pct(pfloor * 100) : undefined,
+      bought: pfloor > 0 ? bought(evalAt({ pfloor: 0 })) : undefined,
+      next: pfloor < AXES.pfloorMax ? next(evalAt({ pfloor: AXES.pfloorMax })) : undefined,
+      note: 'tariff, paid by buyers' });
+    const recUp = stepUp(AXIS_DOMAIN.rec, rec);
+    rows.push({ name: 'Recycling collection', deployed: rec > 0, level: rec > 0 ? `${pct(rec * 100)} of retirements` : undefined,
+      bought: rec > 0 ? bought(evalAt({ rec: 0 })) : undefined,
+      next: recUp != null ? next(evalAt({ rec: recUp })) : undefined,
+      note: `at $${collectCost}/kg collected` });
+    rows.push({ name: 'Strategic stockpile', deployed: stockpile > 0, level: stockpile > 0 ? `${stockpile.toFixed(0)} kt` : undefined,
+      bought: stockpile > 0 ? bought(evalAt({}, { stockpileKt: 0 })) : undefined,
+      next: stockpile <= 0 && cur.unmet > 1e-6 ? next(evalAt({}, { stockpileKt: Math.min(cur.unmet, STOCKPILE_MAX) })) : undefined,
+      note: `at $${stockCost}/kg` });
+    if (HAS_ABATEMENT_CEILING) rows.push({ name: 'Thrifting R&D', deployed: abunlock > 0,
+      level: abunlock > 0 ? 'barrier broken' : undefined,
+      bought: abunlock > 0 ? bought(evalAt({ abunlock: 0 })) : undefined,
+      next: abunlock <= 0 && rdChoice.evaluated ? next(evalAt({ abunlock: 1 })) : undefined,
+      note: rdChoice.evaluated ? `at $${rdCostPerKg}/kg unlocked` : 'evaluating' });
+    const rt = activeProjects.has('round_top');
+    rows.push({ name: 'Develop Round Top', deployed: rt,
+      bought: rt ? bought(evalAt({}, { projects: new Set([...activeProjects].filter((id) => id !== 'round_top')) })) : undefined,
+      next: rt ? undefined : next(evalAt({}, { roundTop: true })),
+      note: 'US heavy mine, project cost' });
+    rows.push({ name: 'Build US separation', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['separation'] }), US_SEP_RESHORE_COST) });
+    rows.push({ name: 'Build US alloy', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['alloy'] }), US_ALLOY_RESHORE_COST) });
+    rows.push({ name: 'Build US magnet', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['magnet'] }), US_MAGNET_RESHORE_COST) });
+    return rows;
+  }, [evalAt, make, source, pfloor, rec, stockpile, abunlock, rdChoice, activeProjects, collectCost, stockCost, rdCostPerKg]);
+
+  // ── THE ACTOR LEDGER ────────────────────────────────────────────────────
+  // The same screen the capacity panel runs, once at the current instruments
+  // and once per instrument applied in full, so each row says what it closes
+  // of the gap the panel shows. Costs only where one is defined: a provenance
+  // premium is paid by buyers every year; an offtake or guarantee is a
+  // contingent liability the model does not price.
+  const actorLedger = useMemo(() => {
+    const us: Buildout[] = (((sc as any).buildout ?? []) as Buildout[]).filter((b) => b.r === 'USA');
+    const prices = priceAtSpread(priceSpread, conversion);
+    const base: ScreenOpts = {
+      rate: hurdle, offtake: instruments.offtake, floorInterface: 'magnet',
+      floorRelief: instruments.floor, floorLevel: pfloor, creditSupport: instruments.guarantee,
+      costMult, foakMult, provenancePremium,
     };
-    const fsDChina = Math.max(0, reconChina(ref) - reconChina(friendshore));
-    const fsMix = friendshore.path.us_mix;
-    const fsN = (fsMix.domestic ?? []).length || 1;
-    let fsDemNPV = 0;
-    for (let t = 0; t < fsN; t++)
-      fsDemNPV += ((fsMix.domestic?.[t] || 0) + (fsMix.allied?.[t] || 0) + (fsMix.china?.[t] || 0) + (fsMix.unmet?.[t] || 0)) / (1.05 ** t);
-    const friendshoreCost = ALLIED_MAGNET_PREMIUM * MAGNET_PRICE * fsDemNPV * fsDChina;
-    // Demand-side levers have no modeled supply cost; we show the TRI reduction the
-    // CURRENT demand settings already achieve vs no improvement (the lever back at its
-    // reference 1.0) — the value of what you've chosen, not the distance to an
-    // arbitrary axis max. They map to the two demand axes: Dy/Tb intensity (thrift +
-    // grade-downshift) and total demand (RE-free / efficiency).
-    // "Without lever" = this scenario at its NO-LEVER demand (not absolute 1.0), so the
-    // value holds up under NZE etc. (where the no-lever baseline is already high).
-    const noThrift = interpScenario({ ...base, dytb: demandNoLever.dytb_intensity, make: 0, source: 0, rec: 0 });
-    const noDemandCut = interpScenario({ ...base, dscale: demandNoLever.demand_scale, make: 0, source: 0, rec: 0 });
-    const dRow = (name: string, withoutScn: typeof ref) =>
-      ({ name, strategic: false, demand: true, dTRI: triR(withoutScn) - refTRI, dCost: 0 });
-    return [
-      // policy levers — the model's own cost; reshoring overlays — an exogenous cost
-      row('US-make mandate', makeMandate, realCost(makeMandate) - refCost),
-      row('Friendshore sourcing', friendshore, friendshoreCost, false, true),
-      row('Recycling build-out', recyc, realCost(recyc) - refCost),
-      row('Strategic stockpile', stock, realCost(stock) - refCost),
-      row('Develop Round Top', applyRoundTop(ref, true), ROUND_TOP_COST, true),
-      row('Build US separation', reshoreSupply(ref, ['separation'], 0.9), US_SEP_RESHORE_COST),
-      row('Build US alloy', reshoreSupply(ref, ['alloy'], 0.9), US_ALLOY_RESHORE_COST),
-      row('Build US magnet', reshoreSupply(ref, ['magnet'], 0.9), US_MAGNET_RESHORE_COST),
-      dRow('Dy/Tb thrifting', noThrift),
-      dRow('Lower total demand', noDemandCut),
+    const now = actorGap(us, prices, base);
+    const ktYr = us.reduce((a, b) => a + b.kt * b.u, 0);   // output the premium would be paid on
+    const rows = now.total === 0 ? [] : [
+      actorRow('Offtake agreement', us, prices, now, base, (o) => ({ ...o, offtake: 1 }),
+        instruments.offtake > 0, null, 'removes most revenue risk'),
+      actorRow('Loan guarantee', us, prices, now, base, (o) => ({ ...o, creditSupport: 1 }),
+        instruments.guarantee > 0, null, 'removes the financing wedge'),
+      actorRow('Price floor, as de-risking', us, prices, now, base, (o) => ({ ...o, floorLevel: 1, floorRelief: RELIEF_DEFAULTS.floor }),
+        pfloor > 0, null, 'covered stages only'),
+      actorRow('Provenance premium at today\'s spread', us, prices, now, base, (o) => ({ ...o, provenancePremium: EXCHINA_SPREAD_PER_MAGNET_KG }),
+        provenancePremium > 0, EXCHINA_SPREAD_PER_MAGNET_KG * ktYr, `$${EXCHINA_SPREAD_PER_MAGNET_KG.toFixed(0)}/kg, paid by buyers`),
+      actorRow('Public finance at the planner\'s rate', us, prices, now, base, (o) => ({ ...o, rate: PLANNER_RATE }),
+        hurdle <= PLANNER_RATE + 1e-9, null, `${(PLANNER_RATE * 100).toFixed(0)}% instead of ${(hurdle * 100).toFixed(1)}%`),
     ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [china, rcost, demand, dscale, demandNoLever, alliedHHIMap, activeProjects, abunlock, ceilingReady]);
+    return { now, rows, hurdlePct: hurdle * 100 };
+  }, [sc, priceSpread, conversion, hurdle, instruments, pfloor, costMult, foakMult, provenancePremium]);
 
   // Story scorecard inputs: the single most concerning bottleneck (highest-TRI stage
   // across BOTH RE classes) and the most cost-effective lever (lowest $/0.1-TRI).
@@ -666,40 +720,6 @@ export default function MagnetExplorer() {
   const cpHeavy = worstIn('heavy'), cpLight = worstIn('light');
   const triHeavy = classTRI(scR, 'heavy', alliedHHIMap);
   const triLight = classTRI(scR, 'light', alliedHHIMap);
-  // MARGINAL TRI benefit of each lever FROM THE CURRENT state (vs securityLevers' from-
-  // no-policy benefit). This makes the KPI truly dynamic: a lever that's exhausted —
-  // slider maxed, project built, or already satisfied by ANOTHER lever (e.g. maxing
-  // "US-made magnets" also satisfies "Build US magnet") — drops to ~0 marginal benefit
-  // and the recommendation advances to the next-cheapest move on its own.
-  const marginalDTRI = useMemo(() => {
-    const cp = { china, rcost, dytb: demand.dytb_intensity, dscale };
-    const triR = (scn: Parameters<typeof reconcileUsSupply>[0]) =>
-      integratedTRI({ ...scn, us_supply: reconcileUsSupply(scn, activeProjects) }, alliedHHIMap);
-    const withDi = (s: typeof sc) => (hasUSHeavyMine ? { ...s, _di: { ...s._di, mining: ROUND_TOP_MINING_DI } } : s);
-    const at = (o: Record<string, number>) => withDi(applyStockpile(interpScenario({ ...cp, make, source, rec, pfloor, ...o }), stockpile));
-    const cur = at({});
-    const curTRI = triR(cur);
-    const noBuf = withDi(interpScenario({ ...cp, make, source, rec, pfloor }));
-    return {
-      'US-make mandate': curTRI - triR(at({ make: AXES.makeMax })),
-      'Friendshore sourcing': curTRI - triR(at({ source: AXES.sourceMax })),
-      'Recycling build-out': curTRI - triR(at({ rec: AXES.recMax })),
-      'Strategic stockpile': curTRI - triR(applyStockpile(noBuf, STOCKPILE_MAX)),
-      'Develop Round Top': activeProjects.has('round_top') ? 0 : curTRI - triR(applyRoundTop(cur, true)),
-      'Build US separation': curTRI - triR(reshoreSupply(cur, ['separation'], 0.9)),
-      'Build US alloy': curTRI - triR(reshoreSupply(cur, ['alloy'], 0.9)),
-      'Build US magnet': curTRI - triR(reshoreSupply(cur, ['magnet'], 0.9)),
-    } as Record<string, number>;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [china, rcost, demand, dscale, make, source, rec, pfloor, stockpile, hasUSHeavyMine, activeProjects, alliedHHIMap, abunlock, ceilingReady]);
-  // Rank only levers that still buy meaningful security FROM HERE, by $ per 0.1 marginal TRI.
-  const bestLever = securityLevers
-    .filter((l) => !l.demand && l.dCost > 0 && (marginalDTRI[l.name] ?? 0) > 0.005)
-    .map((l) => ({ ...l, perTRI: l.dCost / (marginalDTRI[l.name] / 0.1) }))
-    .sort((a, b) => a.perTRI - b.perTRI)[0];
-  // When nothing left buys security cost-effectively, that's itself a finding (the US is
-  // at its security floor for this threat — only demand-side or deeper structural moves remain).
-  const leversExhausted = !bestLever && securityLevers.some((l) => !l.demand && l.dCost > 0);
 
   // Controls live INLINE in reading order, not in a left rail: set the world,
   // see what the planner does with it, then set interventions and see how actors
@@ -974,53 +994,7 @@ export default function MagnetExplorer() {
             provenancePremium={provenancePremium} onProvenancePremium={setProvenancePremium}
             floorLevel={pfloor} />
 
-          {/* 4 — what the interventions bought. Sits between the actor verdict and
-              the price tag: the levers are pulled in the sidebar, their effect on
-              build-out is the panel above, and their effect on demand is here. */}
-          <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '30px 0 4px' }}>
-            What interventions buy
-          </h2>
-          <p style={{ fontSize: 11.5, opacity: 0.65, margin: '0 0 14px', maxWidth: 680, lineHeight: 1.45 }}>
-            Two different things, and conflating them is how a tool starts implying that
-            security is free. A lever can improve the <b>plan</b> — less China-exposed
-            demand, lower trade risk — and separately improve whether <b>firms will fund
-            the plan</b>. The first is above the line, the second below it.
-          </p>
-
-          {/* PLANNER side: what the chosen levers did to exposure and risk. Both are
-              read against the do-nothing world at the same demand and threat, so the
-              delta is the security the choices bought. */}
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em',
-                        textTransform: 'uppercase', color: 'var(--cardinal)', opacity: 0.85,
-                        margin: '0 0 7px' }}>
-            Planner — security bought
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-                        gridAutoRows: '1fr', gap: 12, marginBottom: 18 }}>
-            <ScoreCard label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)} chip
-              sub="demand-weighted 2026–35 · lower is secure" />
-            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)}
-              valueColor={riskColor(chinaTouch)} chip
-              sub={`flow-traced · ${flowYear}`} />
-            <ScoreCard label="Unmet demand" value={`${usUnmet.toFixed(1)} kt`}
-              valueColor={usUnmet > 0.05 ? WORSE : 'var(--ink)'}
-              sub="2026–35 cumulative · what no lever covered" />
-          </div>
-
-          {/* ACTOR side: the stage-resolved gap between what the plan calls for and
-              what anyone would fund. The bars and frontier above are the detail; this
-              is the one-line score. */}
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em',
-                        textTransform: 'uppercase', color: 'var(--cardinal)', opacity: 0.85,
-                        margin: '0 0 7px' }}>
-            Actor — gap closed
-          </div>
-          <AbatementReadout china={china} unlock={abunlock} />
-
-          {HAS_ABATEMENT_CEILING && (
-            <RdValuePanel rd={rdChoice.rd} funded={abunlock > 0} evaluated={rdChoice.evaluated}
-              costPerKg={rdCostPerKg} />
-          )}
+          <InterventionLedger planner={plannerLedger} actor={actorLedger} mobile={isMobile} />
 
           {/* 4 — combined "Cost and security" section: cost bar (real NPV) + the
               trade-risk index + cost-of-security ROI, in one block; notes behind ⓘ. */}
@@ -1036,7 +1010,15 @@ export default function MagnetExplorer() {
                 {usUnmet > 0.05 && <span style={{ color: WORSE, fontWeight: 600 }}> · +{usUnmet.toFixed(1)} kt unmet</span>}
               </span>
             </div>
-            {infoCost && (
+            {/* The stacked bar is detail, not headline: the total is in the sticky
+                band and the ledger above says what the money bought. It stays
+                behind a toggle for anyone who wants the composition. */}
+            <button onClick={() => setShowCostBar((o) => !o)}
+              style={{ font: '500 10.5px var(--font-mono)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
+                       border: '1px solid var(--rule)', background: 'transparent', color: 'var(--ink)', opacity: 0.75, marginBottom: 8 }}>
+              {showCostBar ? '− hide breakdown' : '+ breakdown by component'}
+            </button>
+            {showCostBar && infoCost && (
               <p style={{ fontSize: 11.5, opacity: 0.5, margin: '0 0 12px', lineHeight: 1.45 }}>
                 Absolute build + operating cost of US-located capacity by stage, plus the heavy-REE price
                 premium and any stockpile (2026–35 NPV); the bar grows as you force more security and
@@ -1046,6 +1028,7 @@ export default function MagnetExplorer() {
                 surfaces as <span style={{ color: WORSE }}> unmet demand</span>, not a dollar cost.
               </p>
             )}
+            {showCostBar && (<>
             <div style={{ height: 30, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--rule)', background: 'var(--paper-2)' }}>
               <div style={{ display: 'flex', height: '100%', width: `${Math.min(100, (usCostReal / COST_AXIS_MAX) * 100)}%`, transition: 'width 0.15s' }}>
                 {REAL_COST_KEYS.map(([k, lbl, color]) => {
@@ -1077,22 +1060,10 @@ export default function MagnetExplorer() {
                 );
               })}
             </div>
-            {/* trade-risk index + cost-of-security, folded into the same section */}
+            </>)}
+            {/* trade-risk index, folded into the same section */}
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
-              <TradeRiskPanel sc={scR} levers={securityLevers} alliedHHI={alliedHHIMap} />
-            </div>
-          {/* The two closing headline numbers, folded into the cost block rather
-              than standing as their own section: what it cost, and what to pull
-              next. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gridAutoRows: '1fr', gap: 12, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
-            <ScoreCard label="US cost of supply" value={musd(usCostReal)} valueColor="var(--ink)"
-              {...(pin
-                ? deltaOf(usCostReal, pin.cost, (v) => musd(v), true, 50)
-                : { delta: `${npvDelta >= 0 ? '+' : '−'}${musd(Math.abs(npvDelta))}`,
-                    deltaColor: npvDelta > 50 ? WORSE : npvDelta < -50 ? 'var(--brand-green)' : 'var(--ink-3)' })}
-              sub={pin ? '2026–35 NPV · vs reference' : '2026–35 NPV · Δ vs do-nothing'} />
-            <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : leversExhausted ? 'all spent' : 'none yet'} valueColor="var(--ink)" small
-              sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : leversExhausted ? 'at the security floor — only demand-side moves left' : 'raise the China restriction'} />
+              <TradeRiskPanel sc={scR} alliedHHI={alliedHHIMap} />
             </div>
           </section>
         </main>

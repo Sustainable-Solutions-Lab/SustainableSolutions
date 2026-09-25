@@ -1,6 +1,6 @@
 /**
- * Trade-risk block (per-stage + integrated Trade Risk Index, plus the cost-of-
- * security ROI readout). Rendered BARE (no section wrapper) so the explorer can fold
+ * Trade-risk block (integrated Trade Risk Index and its two class parts; the
+ * cost-of-security ledger now lives in InterventionLedger). Rendered BARE (no section wrapper) so the explorer can fold
  * it into the combined "Cost and security of US magnet supply" section. Long method
  * notes sit behind ⓘ toggles to keep it compact. Method after Cheng et al. (2025, Nature
  * Climate Change, https://www.nature.com/articles/s41558-025-02305-1).
@@ -8,8 +8,6 @@
 import { useState } from 'react';
 import type { Scenario } from './interp';
 import { integratedRE, classTRI, riskColor, riskChip } from './tri';
-
-const musd = (x: number) => `$${(x / 1000).toFixed(1)}B`;
 
 function InfoBtn({ on, set }: { on: boolean; set: (f: (o: boolean) => boolean) => void }) {
   return (
@@ -20,39 +18,13 @@ function InfoBtn({ on, set }: { on: boolean; set: (f: (o: boolean) => boolean) =
   );
 }
 
-export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
+export default function TradeRiskPanel({ sc, alliedHHI }: {
   sc: Scenario;
-  levers: { name: string; strategic: boolean; demand?: boolean; consumer?: boolean; dTRI: number; dCost: number }[];
   alliedHHI?: Record<string, number>;
 }) {
   const [infoTRI, setInfoTRI] = useState(false);
-  const [infoCost, setInfoCost] = useState(false);
   const tri = integratedRE(sc, alliedHHI);
   const triH = classTRI(sc, 'heavy', alliedHHI), triL = classTRI(sc, 'light', alliedHHI);
-  const rows = levers
-    .filter((l) => !l.demand)
-    .map((l) => ({ ...l, perTRI: l.dTRI > 0.005 && l.dCost > 0 ? l.dCost / (l.dTRI / 0.1) : null }))
-    .filter((r) => r.perTRI != null && r.perTRI! <= 10000)   // drop deals worse than $10B / 0.1 TRI
-    .sort((a, b) => (a.perTRI! - b.perTRI!));
-  const shadow = rows.find((r) => r.strategic)?.perTRI ?? null;
-  // No-US-cost levers: risk reduction the model doesn't charge US CAPITAL for — demand-side
-  // levers AND policy sourcing shifts (friendshoring moves the import mix China→allies, which
-  // carries no US-located build cost, so the $/TRI ranking above can't price it). Shown with
-  // their TRI reduction valued at the shadow price.
-  const noCostRows = levers.filter((l) => l.dTRI > 0.005 && (l.demand || l.dCost <= 0))
-    .sort((a, b) => b.dTRI - a.dTRI);
-  // FIXED scale: a $5B/0.1-TRI lever fills the bar; colour by absolute $ (green cheap →
-  // red spendy), so bars are comparable across scenarios. Deals worse than $10B are hidden
-  // (so e.g. a very pricey stockpile may not appear).
-  const BAR_FULL = 5000;   // $M per 0.1 TRI that fills the bar
-  const barLen = (per: number) => Math.min(100, (per / BAR_FULL) * 100);
-  const dealColor = (per: number) => {
-    if (per <= 2000) return '#66C2A5';   // < $2B — green, a good deal
-    if (per <= 4000) return '#FEE08B';   // < $4B — yellow
-    if (per <= 7000) return '#FDAE61';   // < $7B — orange
-    return '#D53E4F';                     // ≥ $7B — red, spendy
-  };
-
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
@@ -96,63 +68,6 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
         </span>
       </div>
 
-      <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--rule)' }}>
-        <div style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, marginBottom: 8, display: 'flex', alignItems: 'center' }}>
-          Cost of security — what each lever buys <InfoBtn on={infoCost} set={setInfoCost} />
-        </div>
-        {infoCost && (
-          <p style={{ fontSize: 11, opacity: 0.55, margin: '0 0 10px', lineHeight: 1.45 }}>
-            From no policy at this China-restriction level: real $ per 0.1 of integrated trade-risk
-            reduced, on a <b>fixed scale</b> ($5B/0.1 fills the bar; <b>green</b> cheap · yellow ·
-            orange · <b>red</b> spendy; deals worse than $10B/0.1 are hidden). <b>Developing Round Top</b> (★) is an exogenous strategic move
-            whose $/TRI is a revealed read on the US government’s <i>shadow price of security</i>;
-            bars are scaled to it. Levers that don’t move the index here are omitted.
-          </p>
-        )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-          {rows.length === 0 && (
-            <p style={{ fontSize: 11.5, opacity: 0.5, margin: 0, lineHeight: 1.45 }}>
-              At this threat level no lever yet buys a measurable trade-risk reduction — the US chain
-              already meets demand. Raise the China-restriction slider to see security become worth paying for.
-            </p>
-          )}
-          {rows.map((r) => (
-            <div key={r.name} style={{ display: 'grid', gridTemplateColumns: '128px 1fr 96px', gap: 10, alignItems: 'center', fontSize: 12 }}>
-              <span style={{ fontWeight: 600, opacity: 0.85 }}>
-                {r.name}{r.strategic && <span title="revealed shadow price of security" style={{ color: 'var(--accent)' }}> ★</span>}
-                {r.consumer && <span title="a consumer price premium on pricier allied imports — not US build capital" style={{ display: 'block', fontWeight: 400, fontSize: 9.5, opacity: 0.55, fontFamily: 'var(--font-mono)' }}>consumer premium</span>}
-              </span>
-              <div style={{ height: 16, borderRadius: 4, background: 'var(--paper-2)', border: '1px solid var(--rule)', overflow: 'hidden' }}>
-                {r.perTRI != null && <div style={{ width: `${barLen(r.perTRI)}%`, height: '100%', background: dealColor(r.perTRI), transition: 'width 0.15s' }} />}
-              </div>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textAlign: 'right' }}
-                title={r.perTRI != null ? `−${r.dTRI.toFixed(2)} TRI for +${musd(r.dCost)}` : 'no risk reduction here'}>
-                {r.perTRI != null ? `${musd(r.perTRI)}/0.1` : '—'}
-              </span>
-            </div>
-          ))}
-        </div>
-        {noCostRows.length > 0 && (
-          <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--rule)' }}>
-            <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 7, lineHeight: 1.4 }}>
-              No US-capital levers — risk reduction the model doesn’t charge US build cost for (demand-side
-              levers + allied sourcing shifts like friendshoring){shadow != null ? ', valued at the shadow price (what you’d otherwise pay to buy the same security)' : ''}:
-            </div>
-            {noCostRows.map((r) => (
-              <div key={r.name} style={{ display: 'grid', gridTemplateColumns: '128px 1fr 96px', gap: 10, alignItems: 'center', fontSize: 12, marginBottom: 5 }}>
-                <span style={{ fontWeight: 600, opacity: 0.85 }}>{r.name}</span>
-                <div style={{ height: 16, borderRadius: 4, background: 'var(--paper-2)', border: '1px solid var(--rule)', overflow: 'hidden' }}>
-                  {/* valued at the shadow price → same length + colour as Round Top */}
-                  {shadow != null && <div style={{ width: `${barLen(shadow)}%`, height: '100%', background: dealColor(shadow) }} />}
-                </div>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textAlign: 'right' }} title={`−${r.dTRI.toFixed(2)} integrated TRI`}>
-                  −{r.dTRI.toFixed(2)}{shadow != null ? ` · ${musd(shadow * r.dTRI / 0.1)}` : ''}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

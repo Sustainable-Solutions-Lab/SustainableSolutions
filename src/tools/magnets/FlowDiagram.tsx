@@ -73,7 +73,7 @@ const cleanName = (name: string, stage: Stage) => {
     .replace(/[,;]\s*\)/g, ')').replace(/\(\s*[,;]?\s*\)/g, '')   // tidy "(Estonia, )" / empty "()"
     .replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').replace(/\s{2,}/g, ' ').trim();
 };
-const W = 900, H = 460, PADX = 64, PADY = 52, NODE_W = 16;
+const W = 900, H = 512, PADX = 64, PADY = 52, NODE_W = 16;
 // One Lucide glyph per process stage, set inline to the LEFT of the column
 // label. Inline rather than stacked above because PADY is 52 and a stacked
 // icon pushes the two-line sub-labels into the top of the bars.
@@ -142,6 +142,41 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
   });
 
   const ribbons: JSX.Element[] = [];
+  // The return loop. End-of-life material re-enters at the OXIDE hub, bypassing
+  // mining and separation, so it is drawn as an arc from Demand back to the
+  // Separation column rather than as another left-to-right ribbon. Without it
+  // the diagram shows a chain that only ever runs one way, in the lever our own
+  // results rank first. Only present on the aggregate view: the per-class flow
+  // payload does not carry it.
+  const recycleArcs: JSX.Element[] = [];
+  const recRows: { from: string; to: string; value: number }[] = (fl as any).recycled ?? [];
+  const recTot = recRows.reduce((a, r) => a + r.value, 0);
+  if (recTot > 0.01) {
+    const xEnd = colX[COLS.length - 1] + NODE_W / 2;   // Demand column
+    const xStart = colX[1] + NODE_W / 2;               // Separation column
+    const yBase = PADY + innerH + 18;                  // below the bars
+    let off = 0;
+    for (const r of recRows) {
+      if (r.value <= 0.01) continue;
+      const w = Math.max(1.5, (r.value / recTot) * 9);
+      const dip = yBase + 10 + off;
+      recycleArcs.push(
+        <path key={`rec-${r.from}`}
+          d={`M${xEnd},${PADY + innerH} C${xEnd},${dip} ${xStart},${dip} ${xStart},${PADY + innerH}`}
+          fill="none" stroke={REGION_COLOR[r.from]} strokeWidth={w} strokeOpacity={0.55}
+          strokeLinecap="round" strokeDasharray="6 4">
+          <title>{`${r.from}: ${r.value.toFixed(1)} kt of end-of-life material recovered as oxide, re-entering at separation`}</title>
+        </path>,
+      );
+      off += 7;
+    }
+    recycleArcs.push(
+      <text key="rec-label" x={(xStart + xEnd) / 2} y={yBase + 10 + off + 12} textAnchor="middle"
+        style={{ font: '600 11px var(--font-mono)', fill: 'var(--ink)', opacity: 0.6 }}>
+        {`recycled back to separation · ${recTot.toFixed(1)} kt`}
+      </text>,
+    );
+  }
   COLS.forEach((c, i) => {
     if (!c.iface) return;
     const ifaceFlows = (fl[c.iface] ?? []);
@@ -201,6 +236,7 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
       <div ref={wrapRef} style={{ position: 'relative' }} onMouseLeave={() => setHover(null)}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Supply-chain Sankey">
         {ribbons}
+        {recycleArcs}
         {COLS.map((c, i) => (
           <g key={c.label}>
             {REGIONS.map((r) => {

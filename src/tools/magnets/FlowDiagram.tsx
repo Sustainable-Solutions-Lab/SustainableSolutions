@@ -300,18 +300,18 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
           ...(hover.flip ? { right: (wrapRef.current?.clientWidth ?? 0) - hover.x + 14 } : { left: hover.x + 14 }),
           pointerEvents: 'none', zIndex: 20, maxWidth: 250,
           background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 8,
-          boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.10)', padding: '8px 10px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.10)', padding: '7px 10px',
         }}>
-          <div style={{ font: '600 11.5px var(--font-mono)', marginBottom: hover.rows.length || hover.note ? 5 : 0 }}>
+          <div style={{ font: '600 11.5px var(--font-mono)', lineHeight: 1.28, marginBottom: hover.rows.length || hover.note ? 4 : 0 }}>
             {hover.head} <span style={{ fontWeight: 400, opacity: 0.55 }}>· {hover.sub}</span>
           </div>
           {hover.rows.map((row) => (
-            <div key={row.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11.5, marginBottom: 2 }}>
+            <div key={row.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11.5, lineHeight: 1.28, marginBottom: 0 }}>
               <span>{row.name} <span style={{ opacity: 0.5 }}>· {row.country}</span></span>
               <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, flexShrink: 0 }}>{row.pct}% <span style={{ fontWeight: 400, opacity: 0.6 }}>· {kt(row.mass)} kt</span></span>
             </div>
           ))}
-          {hover.note && <div style={{ fontSize: 11, opacity: 0.6, lineHeight: 1.4 }}>{hover.note}</div>}
+          {hover.note && <div style={{ fontSize: 11, opacity: 0.6, lineHeight: 1.35, marginTop: 4 }}>{hover.note}</div>}
         </div>
       )}
       </div>

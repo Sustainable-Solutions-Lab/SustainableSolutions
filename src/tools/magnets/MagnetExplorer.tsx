@@ -601,6 +601,102 @@ export default function MagnetExplorer() {
   // at its security floor for this threat — only demand-side or deeper structural moves remain).
   const leversExhausted = !bestLever && securityLevers.some((l) => !l.demand && l.dCost > 0);
 
+  // Controls live INLINE in reading order, not in a left rail: set the world,
+  // see what the planner does with it, then set interventions and see how actors
+  // respond. A sticky sidebar put every knob permanently beside every result,
+  // which is the opposite of a sequence. On mobile they stay in the slide-up
+  // sheet, where a single column already IS the reading order.
+  const worldControls = (
+    <>
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '18px 0 2px' }}>The world as it is</div>
+          <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
+            Assumptions the US does not control: they define the problem the
+            interventions are trying to solve.
+          </p>
+      <div style={{ display: 'grid', gap: '2px 20px',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+          <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
+            desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium (see the cost bar)." />
+          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
+            desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
+
+      </div>
+          {/* The reference scenario: a baseline every later reading is measured
+              against. It lives with the WORLD settings because that is what you
+              hold fixed — you set a world, mark it as the reference, then vary
+              the interventions and see what moved. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '10px 0 4px' }}>
+            <button onClick={pin ? () => setPin(null) : doPin}
+              title={pin ? 'Clear the reference' : 'Mark this world as the reference; every headline then reads as a change against it'}
+              style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.05em', textTransform: 'uppercase',
+                       padding: '5px 10px', borderRadius: 6, cursor: 'pointer',
+                       border: `1px solid ${pin ? 'var(--accent)' : 'var(--rule-strong)'}`,
+                       background: pin ? 'var(--accent)' : 'transparent',
+                       color: pin ? 'var(--paper)' : 'var(--ink)' }}>
+              {pin ? 'Reference set — clear' : 'Set as reference'}
+            </button>
+            {pin && (
+              <span style={{ fontSize: 11, opacity: 0.7, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {changed.length === 0
+                  ? 'identical to the reference'
+                  : <>changed: {changed.map((k) => (
+                      <b key={k} style={{ fontWeight: 600 }}>
+                        {AXIS_LABEL[k]} {AXIS_FMT[k](pin.coords[k])}&rarr;{AXIS_FMT[k](coords[k])}
+                      </b>
+                    )).reduce((a, b) => <>{a}, {b}</>)}</>}
+                <button onClick={restorePin}
+                  title="Put the six supply sliders back to their pinned values. Dy/Tb intensity and demand scale are derived from the Demand Builder, so they stay put and will still be listed as changed."
+                  style={{ font: '500 10px var(--font-mono)', padding: '2px 7px', borderRadius: 5,
+                           border: '1px solid var(--rule-strong)', background: 'transparent',
+                           color: 'var(--ink)', cursor: 'pointer' }}>restore</button>
+              </span>
+            )}
+          </div>
+
+
+    </>
+  );
+  const interventionControls = (
+    <>
+          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 2px' }}>What the US can do</div>
+          <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
+            Interventions: things the US can choose. None of them changes the world
+            settings above.
+          </p>
+      <div style={{ display: 'grid', gap: '2px 20px',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+          <Slider label="US-made magnets (reshore)" value={make} max={AXES.makeMax} onChange={setMake} fmt={(v) => pct(v * 100)}
+            desc="Component prong, like the IRA EV credit: the share of US magnets that must be manufactured in the US — reshoring the final step. On its own it can still be met with imported (incl. Chinese) alloy or oxide; pair it with non-China sourcing to close that loophole." />
+          <Slider label="Clean heavy sourcing (friendshore)" value={source} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
+            desc="Friendshoring the heavy rare earths, FEOC-traced: the minimum share of US Dy/Tb need met by a chain-of-custody-CLEAN supply that never touched Chinese ore, oxide, or alloy at any stage — pulling ex-China-mined or recycled heavy material to US demand. Unlike a provenance-blind sourcing quota (which ex-China separation of Chinese ore defeats), this can only be met by genuinely China-free material, so it moves the flow-traced exposure. The US pays an ex-China premium for it (shown in the cost bar)." />
+          <Slider label="End-of-life collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
+            desc="Share of end-of-life magnets collected and reprocessed into oxide. Recovered scrap is concentrated Nd/Pr/Dy/Tb with no co-product tax — but recycling plants must be built and paid for." />
+          <Slider label="US price floor on China imports" value={pfloor} max={AXES.pfloorMax} onChange={setPfloor} fmt={(v) => pct(v * 100)}
+            desc="A US guaranteed price floor (DoD / MP-Materials-style) modeled as a tariff that lifts the price of Chinese oxide, alloy & magnet imports toward the ex-China premium — 0% = off, 50% = half, 100% = the full premium. It makes domestic + allied supply cost-competitive WITHOUT a mandate, so the market reshores on price rather than by rule. Its cost is borne by consumers as a higher import price (no factory needed), shown as 'Price floor' in the cost bar. A distinct instrument from friendshoring (a quantity mandate) — try them separately." />
+          <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
+            desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$110/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
+          {stockpile > 0 && (
+            <p style={{ fontSize: 10.5, opacity: 0.55, margin: '-2px 0 6px', lineHeight: 1.4 }}>
+              Embodies ≈ <b>{Math.round(stockpile * 0.326)} kt Nd/Pr</b> + <b>{(stockpile * 0.034).toFixed(1)} kt Dy/Tb</b> oxide — the heavy slice is the strategically scarce one.
+            </p>
+          )}
+      </div>
+          <ProjectsAside future={futureSel} onToggle={toggleFuture} onSetGroup={setProjectGroup} />
+
+          <button onClick={() => {
+              setMake(0); setSource(0); setRec(0); setChina(0.6); setRcost(AXES.rcostMin); setStockpile(0); setPfloor(0); setFutureSel(new Set(DEFAULT_FUTURE));
+              setResetFlash(true); window.setTimeout(() => setResetFlash(false), 650);
+            }}
+            style={{ marginTop: 14, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em',
+              color: resetFlash ? 'var(--paper)' : 'var(--ink)',
+              background: resetFlash ? 'var(--accent)' : 'transparent',
+              border: `1px solid ${resetFlash ? 'var(--accent)' : 'var(--rule)'}`,
+              borderRadius: 6, cursor: 'pointer', transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease' }}>
+            {resetFlash ? '✓ RESET TO BASELINE' : 'RESET TO BASELINE'}
+          </button>
+    </>
+  );
+
   return (
     <div style={{ position: 'relative', maxWidth: 'var(--content-max)', margin: '0 auto', padding: isMobile ? '20px 16px 92px' : '28px 20px 0', color: 'var(--ink)' }}>
       <BusyOverlay busy={pfloor > 0 && !pfReady} label="Loading price-floor scenarios" />
@@ -635,113 +731,27 @@ export default function MagnetExplorer() {
 
       <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 12px' }}>Supply explorer</h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 320px) 1fr', gap: 28, alignItems: 'start' }}
-        className="magnet-grid">
-        <aside style={isMobile
-          ? { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60, height: '52vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: 'var(--paper)', borderRadius: '16px 16px 0 0', borderTop: '2px solid var(--accent)', padding: '0 18px 24px', transform: sheetOpen ? 'translateY(0)' : 'translateY(110%)', transition: 'transform 0.28s ease', boxShadow: '0 -8px 30px rgba(0,0,0,0.22)' }
-          : { border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', position: 'sticky', top: 72 }}>
-          {isMobile && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1, background: 'var(--paper)', padding: '12px 0 10px', borderBottom: '1px solid var(--rule)' }}>
-              <span style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6 }}>Scenario</span>
-              <button onClick={() => setSheetOpen(false)} style={{ font: '600 12px var(--font-mono)', color: 'var(--accent)', background: 'transparent', border: '1px solid var(--rule-strong)', borderRadius: 6, padding: '6px 14px', cursor: 'pointer' }}>Done</button>
-            </div>
-          )}
-          {/* On mobile the demand controls share the sheet with the supply controls. */}
-          {isMobile && (
-            <>
-              <div style={{ font: '600 11px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '14px 0 8px', borderBottom: '1px solid var(--rule)', paddingBottom: 6 }}>Demand</div>
-              <DemandBuilder mode="controls" scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
-              <div style={{ font: '600 11px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '20px 0 8px', borderBottom: '1px solid var(--rule)', paddingBottom: 6 }}>Supply</div>
-            </>
-          )}
-          <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 16px', display: isMobile ? 'none' : 'block' }}>Scenario</h2>
-
-
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '18px 0 2px' }}>The world as it is</div>
-          <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
-            Assumptions the US does not control: they define the problem the
-            interventions are trying to solve.
-          </p>
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, opacity: 0.55, margin: '0 0 6px' }}>Geopolitics</div>
-          <Slider label="China export restriction" value={china} max={AXES.chinaMax} onChange={setChina} fmt={(v) => pct(v * 100)}
-            desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium (see the cost bar)." />
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, opacity: 0.55, margin: '14px 0 6px' }}>Recycling cost assumption</div>
-          <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
-            desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
-
-          {/* The reference scenario: a baseline every later reading is measured
-              against. It lives with the WORLD settings because that is what you
-              hold fixed — you set a world, mark it as the reference, then vary
-              the interventions and see what moved. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '10px 0 4px' }}>
-            <button onClick={pin ? () => setPin(null) : doPin}
-              title={pin ? 'Clear the reference' : 'Mark this world as the reference; every headline then reads as a change against it'}
-              style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.05em', textTransform: 'uppercase',
-                       padding: '5px 10px', borderRadius: 6, cursor: 'pointer',
-                       border: `1px solid ${pin ? 'var(--accent)' : 'var(--rule-strong)'}`,
-                       background: pin ? 'var(--accent)' : 'transparent',
-                       color: pin ? 'var(--paper)' : 'var(--ink)' }}>
-              {pin ? 'Reference set — clear' : 'Set as reference'}
-            </button>
-            {pin && (
-              <span style={{ fontSize: 11, opacity: 0.7, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                {changed.length === 0
-                  ? 'identical to the reference'
-                  : <>changed: {changed.map((k) => (
-                      <b key={k} style={{ fontWeight: 600 }}>
-                        {AXIS_LABEL[k]} {AXIS_FMT[k](pin.coords[k])}&rarr;{AXIS_FMT[k](coords[k])}
-                      </b>
-                    )).reduce((a, b) => <>{a}, {b}</>)}</>}
-                <button onClick={restorePin}
-                  title="Put the six supply sliders back to their pinned values. Dy/Tb intensity and demand scale are derived from the Demand Builder, so they stay put and will still be listed as changed."
-                  style={{ font: '500 10px var(--font-mono)', padding: '2px 7px', borderRadius: 5,
-                           border: '1px solid var(--rule-strong)', background: 'transparent',
-                           color: 'var(--ink)', cursor: 'pointer' }}>restore</button>
-              </span>
-            )}
+      {/* MOBILE keeps the slide-up sheet: a phone has no room for inline control
+          bands, and one column already is a reading order. */}
+      {isMobile && (
+        <aside style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60, height: '52vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: 'var(--paper)', borderRadius: '16px 16px 0 0', borderTop: '2px solid var(--accent)', padding: '0 18px 24px', transform: sheetOpen ? 'translateY(0)' : 'translateY(110%)', transition: 'transform 0.28s ease', boxShadow: '0 -8px 30px rgba(0,0,0,0.22)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1, background: 'var(--paper)', padding: '12px 0 10px', borderBottom: '1px solid var(--rule)' }}>
+            <span style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6 }}>Scenario</span>
+            <button onClick={() => setSheetOpen(false)} style={{ font: '600 12px var(--font-mono)', color: 'var(--accent)', background: 'transparent', border: '1px solid var(--rule-strong)', borderRadius: 6, padding: '6px 14px', cursor: 'pointer' }}>Done</button>
           </div>
-
-
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 2px' }}>What the US can do</div>
-          <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
-            Interventions: things the US can choose. None of them changes the world
-            settings above.
-          </p>
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, opacity: 0.55, margin: '0 0 6px' }}>Reshore / friendshore</div>
-          <Slider label="US-made magnets (reshore)" value={make} max={AXES.makeMax} onChange={setMake} fmt={(v) => pct(v * 100)}
-            desc="Component prong, like the IRA EV credit: the share of US magnets that must be manufactured in the US — reshoring the final step. On its own it can still be met with imported (incl. Chinese) alloy or oxide; pair it with non-China sourcing to close that loophole." />
-          <Slider label="Clean heavy sourcing (friendshore)" value={source} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
-            desc="Friendshoring the heavy rare earths, FEOC-traced: the minimum share of US Dy/Tb need met by a chain-of-custody-CLEAN supply that never touched Chinese ore, oxide, or alloy at any stage — pulling ex-China-mined or recycled heavy material to US demand. Unlike a provenance-blind sourcing quota (which ex-China separation of Chinese ore defeats), this can only be met by genuinely China-free material, so it moves the flow-traced exposure. The US pays an ex-China premium for it (shown in the cost bar)." />
-
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, opacity: 0.55, margin: '14px 0 6px' }}>Recycling support</div>
-          <Slider label="End-of-life collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
-            desc="Share of end-of-life magnets collected and reprocessed into oxide. Recovered scrap is concentrated Nd/Pr/Dy/Tb with no co-product tax — but recycling plants must be built and paid for." />
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, opacity: 0.55, margin: '14px 0 6px' }}>Trade policy</div>
-          <Slider label="US price floor on China imports" value={pfloor} max={AXES.pfloorMax} onChange={setPfloor} fmt={(v) => pct(v * 100)}
-            desc="A US guaranteed price floor (DoD / MP-Materials-style) modeled as a tariff that lifts the price of Chinese oxide, alloy & magnet imports toward the ex-China premium — 0% = off, 50% = half, 100% = the full premium. It makes domestic + allied supply cost-competitive WITHOUT a mandate, so the market reshores on price rather than by rule. Its cost is borne by consumers as a higher import price (no factory needed), shown as 'Price floor' in the cost bar. A distinct instrument from friendshoring (a quantity mandate) — try them separately." />
-
-          <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, opacity: 0.55, margin: '14px 0 6px' }}>Stockpile</div>
-          <Slider label="Strategic stockpile" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
-            desc="A pre-positioned US inventory of finished magnets (bought on the open market before a shock) drawn down to cover the earliest unmet demand, up to its size. It buys down the shortage at a real acquire + hold cost (~$110/kg) — cheap insurance against a near-term shock, but finite. Only helps where there is unmet demand to cover." />
-          {stockpile > 0 && (
-            <p style={{ fontSize: 10.5, opacity: 0.55, margin: '-2px 0 6px', lineHeight: 1.4 }}>
-              Embodies ≈ <b>{Math.round(stockpile * 0.326)} kt Nd/Pr</b> + <b>{(stockpile * 0.034).toFixed(1)} kt Dy/Tb</b> oxide — the heavy slice is the strategically scarce one.
-            </p>
-          )}
-          <ProjectsAside future={futureSel} onToggle={toggleFuture} onSetGroup={setProjectGroup} />
-
-          <button onClick={() => {
-              setMake(0); setSource(0); setRec(0); setChina(0.6); setRcost(AXES.rcostMin); setStockpile(0); setPfloor(0); setFutureSel(new Set(DEFAULT_FUTURE));
-              setResetFlash(true); window.setTimeout(() => setResetFlash(false), 650);
-            }}
-            style={{ marginTop: 14, width: '100%', padding: '8px 0', font: '600 12px var(--font-mono)', letterSpacing: '0.05em',
-              color: resetFlash ? 'var(--paper)' : 'var(--ink)',
-              background: resetFlash ? 'var(--accent)' : 'transparent',
-              border: `1px solid ${resetFlash ? 'var(--accent)' : 'var(--rule)'}`,
-              borderRadius: 6, cursor: 'pointer', transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease' }}>
-            {resetFlash ? '✓ RESET TO BASELINE' : 'RESET TO BASELINE'}
-          </button>
+          <div style={{ font: '600 11px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '14px 0 8px', borderBottom: '1px solid var(--rule)', paddingBottom: 6 }}>Demand</div>
+          <DemandBuilder mode="controls" scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
+          {worldControls}
+          {interventionControls}
         </aside>
+      )}
+
+      {/* STEP 1 — the world you are assuming, directly above the chain it produces. */}
+      {!isMobile && (
+        <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '16px 20px 12px', background: 'var(--paper)', marginBottom: 18 }}>
+          {worldControls}
+        </section>
+      )}
 
         <main>
 
@@ -816,6 +826,19 @@ export default function MagnetExplorer() {
                    value: `${usUnmet.toFixed(0)} kt`, color: usUnmet > 0.05 ? WORSE : 'var(--ink)',
                    ...(pin ? deltaOf(usUnmet, pin.unmet, (v) => `${v.toFixed(1)} kt`, true, 0.05) : {}) }} />
           </div>
+
+          {/* STEP 2 — the levers, bundled. Five separately-headed chunks with
+              their own sub-titles read as five topics rather than one choice set.
+              Now one band, sliders in a grid, each explanation behind its own ⓘ.
+              Placed here because this is where the reading order needs them: the
+              chain above is what happens without you, everything below is what
+              changes if you act. */}
+          {!isMobile && (
+            <section style={{ border: '1px solid var(--rule)', borderRadius: 10,
+                              padding: '16px 20px 12px', background: 'var(--paper)', marginTop: 22 }}>
+              {interventionControls}
+            </section>
+          )}
 
           {/* 3 — the ACTOR view. Sits directly under the planner's chain and KPIs
               because the page reads planner -> actor -> interventions: what the
@@ -936,7 +959,6 @@ export default function MagnetExplorer() {
             </div>
           </section>
         </main>
-      </div>
 
       {/* Mobile: a live result chip + a button that opens the scenario controls as a
           slide-up sheet (so the controls never overlay the plots). */}

@@ -22,7 +22,7 @@
  * is kt of finished magnet — so each row names its own unit.
  */
 import { Pickaxe, FlaskConical, Flame, Magnet, Recycle } from 'lucide-react';
-import { screen, PRICE_WORLDS, HAS_META, hurdleRate, PLANNER_RATE, priceSensitive, RELIEF_DEFAULTS,
+import { screen, HAS_META, hurdleRate, PLANNER_RATE, priceSensitive, RELIEF_DEFAULTS,
          priceAtSpread, EXCHINA_SPREAD_PER_MAGNET_KG,
          type Buildout, type Verdict } from './projectFinance';
 import { stageBreakdown, stageBreakdownClass, riskColor, riskChip } from './tri';

@@ -304,7 +304,13 @@ export default function MagnetExplorer() {
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [demandOpen, setDemandOpen] = useState(false);   // sector detail + demand levers
+  const [demandOpen, setDemandOpen] = useState(false);
+  // Which year the Sankey shows. The horizon end alone hides the ramp: 2030 is
+  // mid-build, before long-lead US capacity arrives, which is where a reshoring
+  // story either is or is not already underway. Grids written before 2026-09-25
+  // carry no snapshots, so the selector hides itself rather than offering years
+  // it cannot serve.
+  const [flowYear, setFlowYear] = useState<string>('2035');   // sector detail + demand levers
   // The two derived axes have no slider here; their chips send you to the control
   // that actually moves them (the sheet on mobile, the builder on desktop).
   const jumpToDemand = useCallback(() => {
@@ -323,11 +329,18 @@ export default function MagnetExplorer() {
   const [infoCost, setInfoCost] = useState(false);   // ⓘ toggle for the cost-bar method note
   const [resetFlash, setResetFlash] = useState(false); // brief confirm-flash on "reset to baseline"
   // Real-world-anchored Sankey: selected projects locked in by region, China residual.
-  const rwFlows = useMemo(() => ({
-    total: realWorldFlows(sc, activeProjects),
-    heavy: realWorldFlows(sc, activeProjects, {}, 'heavy'),
-    light: realWorldFlows(sc, activeProjects, {}, 'light'),
-  }), [sc, activeProjects]);
+  const snapshotYears: string[] = Object.keys((sc as any).flows_by_year ?? {}).sort();
+  const rwFlows = useMemo(() => {
+    // Swap the flow set for the chosen year on a shallow clone, so realWorldFlows
+    // keeps reading sc.flows and needs no change.
+    const byYear = (sc as any).flows_by_year?.[flowYear];
+    const scY = byYear ? { ...sc, flows: byYear } : sc;
+    return {
+      total: realWorldFlows(scY, activeProjects),
+      heavy: realWorldFlows(scY, activeProjects, {}, 'heavy'),
+      light: realWorldFlows(scY, activeProjects, {}, 'light'),
+    };
+  }, [sc, activeProjects, flowYear]);
   // Reconcile the US-centric views (trade-risk index + pathway) with the selected
   // projects: US-project capacity is a floor on US self-sufficiency; the model fills
   // the residual. So toggling projects moves the TRI and the demand-met chart, the
@@ -677,6 +690,22 @@ export default function MagnetExplorer() {
 
           {/* 1 — the whole chain first, so users learn the stages + connections.
               Flows are real-world-anchored (selected projects locked in, China residual). */}
+          {snapshotYears.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <span style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.06em',
+                             textTransform: 'uppercase', opacity: 0.55 }}>Chain in</span>
+              {snapshotYears.map((y) => (
+                <button key={y} onClick={() => setFlowYear(y)}
+                  title={y === '2030' ? 'Mid-build: long-lead capacity has not arrived yet'
+                                      : 'End of horizon: the full build-out'}
+                  style={{ font: '600 11px var(--font-mono)', padding: '3px 9px', borderRadius: 6,
+                           cursor: 'pointer',
+                           border: `1px solid ${flowYear === y ? 'var(--accent)' : 'var(--rule-strong)'}`,
+                           background: flowYear === y ? 'var(--accent)' : 'transparent',
+                           color: flowYear === y ? 'var(--paper)' : 'var(--ink)' }}>{y}</button>
+              ))}
+            </div>
+          )}
           <FlowDiagram flows={rwFlows} active={activeProjects} />
 
           {/* The four KPIs that summarise the Sankey sit directly under it: this is

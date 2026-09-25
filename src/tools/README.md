@@ -155,6 +155,13 @@ constantly:
 - **Wrap in `ToolShell`** rather than rebuilding the rail-and-drawer
   layout. Use its `busy` prop for anything slow instead of adding a
   spinner — see the shell section above.
+- **Anything over a second gets the lab mark.** `ToolShell`'s `busy` prop,
+  or `BusyOverlay` from `_shell/busy-overlay.jsx` for tools that place it
+  themselves (a bespoke tool outside the shell, or one that needs to tune
+  z-order against its own overlays — the map and the magnet explorer both
+  do this). Never add a second spinner: one animated mark across every
+  tool is the point, and a lazy import or a solve that shows nothing reads
+  as a broken tool rather than a busy one.
 - **Spectral for data**, the lab's signature palette. Cardinal is a
   hairline accent only, never a fill.
 - **Lucide icons**, `currentColor`, 1.5px stroke. No emoji.

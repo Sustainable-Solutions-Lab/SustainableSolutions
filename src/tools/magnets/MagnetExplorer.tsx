@@ -392,6 +392,10 @@ export default function MagnetExplorer() {
   // separation only launders it). Nudge with the heavy per-stage proxy so the card tracks
   // the project toggles. Falls back to the aggregate KPI for older JSON without the split.
   const heavyFeoc = sc.kpis.china_exposed_heavy_pct;
+  // Light's flow-traced twin, emitted from the 2026-09-25 grid on. Until a grid
+  // carries it the card stays single-valued rather than inventing a split from
+  // supply-mix shares, which is a different quantity.
+  const lightFeoc = (sc.kpis as any).china_exposed_light_pct as number | undefined;
   const feocIsHeavy = heavyFeoc != null;
   const feocSupplyBase = (feocIsHeavy ? sc.us_supply_re?.heavy : undefined) ?? sc.us_supply;
   const feocSupplyR = (feocIsHeavy ? scR.us_supply_re?.heavy : undefined) ?? scR.us_supply;
@@ -734,9 +738,21 @@ export default function MagnetExplorer() {
             {/* Light has no flow-traced twin in the deployed grid yet (the model now
                 emits china_exposed_light_pct; it lands at the next regrid), so this
                 stays a single figure rather than an invented split. */}
-            <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip
-              {...(pin ? deltaOf(chinaTouch * 100, pin.touch * 100, (v) => `${v.toFixed(1)} pp`, true, 0.05) : {})}
-              sub={pin ? 'vs reference' : feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
+            {lightFeoc == null ? (
+              <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip
+                {...(pin ? deltaOf(chinaTouch * 100, pin.touch * 100, (v) => `${v.toFixed(1)} pp`, true, 0.05) : {})}
+                sub={pin ? 'vs reference' : feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
+            ) : (
+              /* Split by class, like the index and the chokepoint. The two move
+                 very differently under restriction — heavy decouples, light is
+                 largely laundered through third-country magnets — and a single
+                 blended figure hides exactly that. */
+              <ScoreCard2 label="China-exposed demand" small chip
+                a={{ label: `Dy/Tb · flow-traced`, value: pct(chinaTouch * 100),
+                     color: riskColor(chinaTouch) }}
+                b={{ label: `Nd/Pr · flow-traced`, value: pct(lightFeoc),
+                     color: riskColor(lightFeoc / 100) }} />
+            )}
             <ScoreCard2 label="US demand met"
               a={{ label: pin ? 'imported 2035 · vs reference' : 'imported · 2035',
                    value: pct(sc.kpis.us_import_pct), color: 'var(--ink)',

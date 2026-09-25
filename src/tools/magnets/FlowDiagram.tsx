@@ -8,6 +8,7 @@
  * between stages, so flows are proportional per interface, not conserved end-to-end).
  */
 
+import { Pickaxe, FlaskConical, Flame, Magnet, Zap } from 'lucide-react';
 import { useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { facilityBreakdown, type Stage } from './projects';
 
@@ -73,6 +74,20 @@ const cleanName = (name: string, stage: Stage) => {
     .replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').replace(/\s{2,}/g, ' ').trim();
 };
 const W = 900, H = 460, PADX = 64, PADY = 52, NODE_W = 16;
+// One Lucide glyph per process stage, set inline to the LEFT of the column
+// label. Inline rather than stacked above because PADY is 52 and a stacked
+// icon pushes the two-line sub-labels into the top of the bars.
+// The label font is MONOSPACE, so half its width is exactly
+// length x 9.6 / 2 and the icon can be placed deterministically without
+// measuring text.
+const LABEL_CH = 9.6, ICON = 15;
+const STAGE_ICON: Record<string, JSX.Element> = {
+  Mining: <Pickaxe size={ICON} strokeWidth={1.5} />,
+  Separation: <FlaskConical size={ICON} strokeWidth={1.5} />,
+  Alloying: <Flame size={ICON} strokeWidth={1.5} />,
+  Magnet: <Magnet size={ICON} strokeWidth={1.5} />,
+  Demand: <Zap size={ICON} strokeWidth={1.5} />,
+};
 const innerH = H - 2 * PADY;
 const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
 
@@ -207,6 +222,10 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
                 </text>
               );
             })}
+            <svg x={colX[i] + NODE_W / 2 - (c.label.length * LABEL_CH) / 2 - ICON - 5} y={2}
+              width={ICON} height={ICON} style={{ color: 'var(--ink)', opacity: 0.7, overflow: 'visible' }}>
+              {STAGE_ICON[c.label]}
+            </svg>
             <text x={colX[i] + NODE_W / 2} y={15} textAnchor="middle" style={{ font: '600 16px var(--font-mono)', fill: 'var(--ink)', opacity: 0.85, cursor: 'help' }}>
               {c.label}<title>{c.desc}</title>
             </text>

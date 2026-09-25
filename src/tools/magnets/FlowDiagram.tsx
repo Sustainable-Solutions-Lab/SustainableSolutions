@@ -73,7 +73,7 @@ const cleanName = (name: string, stage: Stage) => {
     .replace(/[,;]\s*\)/g, ')').replace(/\(\s*[,;]?\s*\)/g, '')   // tidy "(Estonia, )" / empty "()"
     .replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').replace(/\s{2,}/g, ' ').trim();
 };
-const W = 900, H = 512, PADX = 64, PADY = 52, NODE_W = 16;
+const W = 900, H = 556, PADX = 64, PADY = 52, NODE_W = 16;
 // One Lucide glyph per process stage, set inline to the LEFT of the column
 // label. Inline rather than stacked above because PADY is 52 and a stacked
 // icon pushes the two-line sub-labels into the top of the bars.
@@ -88,7 +88,11 @@ const STAGE_ICON: Record<string, JSX.Element> = {
   Magnet: <Magnet size={ICON} strokeWidth={1.5} />,
   Demand: <Zap size={ICON} strokeWidth={1.5} />,
 };
-const innerH = H - 2 * PADY;
+// Space under the bars for the end-of-life return loop. Reserved rather than
+// taken out of the plot: H grew by exactly this, so innerH — and therefore every
+// bar and ribbon — is identical to before the loop was drawn to scale.
+const RECYCLE_BAND = 44;
+const innerH = H - 2 * PADY - RECYCLE_BAND;
 const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
 
 const outSum = (fl: FlowMap, iface: string, r: string) =>
@@ -152,28 +156,44 @@ export default function FlowDiagram({ flows, active, scale = {} }: {
   const recRows: { from: string; to: string; value: number }[] = (fl as any).recycled ?? [];
   const recTot = recRows.reduce((a, r) => a + r.value, 0);
   if (recTot > 0.01) {
-    const xEnd = colX[COLS.length - 1] + NODE_W / 2;   // Demand column
-    const xStart = colX[1] + NODE_W / 2;               // Separation column
-    const yBase = PADY + innerH + 18;                  // below the bars
-    let off = 0;
-    for (const r of recRows) {
-      if (r.value <= 0.01) continue;
-      const w = Math.max(1.5, (r.value / recTot) * 9);
-      const dip = yBase + 10 + off;
+    // Scaled off the MAGNET interface, the same scale the last ribbon column
+    // uses, so a 5 kt return loop is exactly as thick as a 5 kt shipment. The old
+    // arcs were scaled to their own maximum, which made a trivial loop look as
+    // substantial as a large one.
+    const magnetTotal = (fl.magnet ?? []).reduce((a, f) => a + f.value, 0);
+    const recScale = magnetTotal > 1e-9 ? innerH / magnetTotal : 0;
+    const iDem = COLS.length - 1, iSep = 1;
+    const yFloor = PADY + innerH;
+    // Ordered so the region dipping deepest is drawn first and the arcs nest
+    // rather than cross.
+    const rows = recRows.filter((r) => r.value > 0.01)
+      .sort((a, b) => REGIONS.indexOf(a.from) - REGIONS.indexOf(b.from));
+    rows.forEach((r, k) => {
+      // Collection happens where the magnets were USED, and the recovered oxide
+      // re-enters separation in that same region — so the loop is anchored to the
+      // region's own bars at both ends, not to a shared point on the floor.
+      const xEnd = colX[iDem] + NODE_W / 2;
+      const xStart = colX[iSep] + NODE_W / 2;
+      const yEnd = segY[iDem][r.from]?.y1 ?? yFloor;
+      const yStart = segY[iSep][r.to]?.y1 ?? yFloor;
+      const w = Math.max(1.2, r.value * recScale);
+      const dip = yFloor + 16 + k * 11 + w / 2;
       recycleArcs.push(
-        <path key={`rec-${r.from}`}
-          d={`M${xEnd},${PADY + innerH} C${xEnd},${dip} ${xStart},${dip} ${xStart},${PADY + innerH}`}
-          fill="none" stroke={REGION_COLOR[r.from]} strokeWidth={w} strokeOpacity={0.55}
-          strokeLinecap="round" strokeDasharray="6 4">
-          <title>{`${r.from}: ${r.value.toFixed(1)} kt of end-of-life material recovered as oxide, re-entering at separation`}</title>
+        <path key={`rec-${r.from}-${r.to}`}
+          d={`M${xEnd},${yEnd} C${xEnd},${dip} ${xStart},${dip} ${xStart},${yStart}`}
+          fill="none" stroke={REGION_COLOR[r.from]} strokeWidth={w} strokeOpacity={0.5}
+          strokeLinecap="round">
+          <title>{`${r.from}: ${r.value.toFixed(1)} kt of end-of-life material collected in ${r.from} and recovered as oxide, re-entering ${r.to} separation`}</title>
         </path>,
       );
-      off += 7;
-    }
+    });
+    const deepest = yFloor + 16 + (rows.length - 1) * 11
+      + Math.max(1.2, (rows[rows.length - 1]?.value ?? 0) * recScale) / 2;
     recycleArcs.push(
-      <text key="rec-label" x={(xStart + xEnd) / 2} y={yBase + 10 + off + 12} textAnchor="middle"
-        style={{ font: '600 11px var(--font-mono)', fill: 'var(--ink)', opacity: 0.6 }}>
-        {`recycled back to separation · ${recTot.toFixed(1)} kt`}
+      <text key="rec-label" x={(colX[iSep] + colX[iDem]) / 2 + NODE_W / 2} y={deepest + 16}
+        textAnchor="middle"
+        style={{ font: '600 10.5px var(--font-mono)', fill: 'var(--ink)', opacity: 0.55 }}>
+        {`end-of-life recycled back into separation · ${recTot.toFixed(1)} kt`}
       </text>,
     );
   }

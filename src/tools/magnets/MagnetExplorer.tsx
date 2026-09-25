@@ -55,7 +55,7 @@ function consumerPremium(path: { us_mix?: Record<string, number[]>; us_mix_re?: 
 }
 import FlowDiagram from './FlowDiagram';
 import DemandBuilder from './DemandBuilder';
-import { allScenario, demandSummary, DEFAULT_LEVERS, type PerSectorScenario, type Levers } from './demand';
+import { allScenario, demandSummary, DEFAULT_LEVERS, SCENARIO_LABEL, type PerSectorScenario, type Levers } from './demand';
 import TradeRiskPanel from './TradeRiskPanel';
 import ProjectsAside from './ProjectsAside';
 import { alliedHHIByStage, activeSet, DEFAULT_FUTURE, FUTURE_PROJECTS, PROJECTS, tier, usProjectsBuildCost, type Tier } from './projects';
@@ -126,6 +126,10 @@ const KPIS: { k: string; label: string; sub: string; fmt: (x: number) => string;
  *  "China parity", "today's ex-China spread", "2x that". A reader sliding a bare
  *  0-1 axis is guessing what they are postulating; a labelled anchor tells them,
  *  and tells them how far from it they have moved. */
+/** Height of the site's sticky nav (components/Nav.astro), which anything
+ *  else sticky must clear or it pins out of sight beneath it. */
+const NAV_HEIGHT = 56;
+
 function Slider({ label, value, max, min = 0, onChange, fmt, desc, ticks, step = 0.01 }: {
   label: string; value: number; max: number; min?: number; step?: number;
   onChange: (v: number) => void; fmt: (v: number) => string; desc?: string;
@@ -341,16 +345,30 @@ export default function MagnetExplorer() {
   // Demand state lives here (lifted from DemandBuilder) so the demand controls can
   // share the mobile bottom sheet with the supply controls while the chart stays on
   // the page. The summary feeds the supply grid's two demand axes.
-  const [scenario, setScenario] = useState<PerSectorScenario>(() => allScenario('STEPS'));
-  const [lv, setLv] = useState<Levers>(DEFAULT_LEVERS);
+  const [scenario, setScenarioRaw] = useState<PerSectorScenario>(() => allScenario('STEPS'));
+  const [lv, setLvRaw] = useState<Levers>(DEFAULT_LEVERS);
   const demand = useMemo(() => demandSummary(scenario, lv), [scenario, lv]);
+  // Total demand is ALSO a continuous slider. The three IEA scenarios sit inside
+  // the grid's solved demand_scale axis (0.6-1.4x APS), so any level between or
+  // beyond them is an interpolation over solved cells, not a new solve. The
+  // sector composition (and with it the Dy/Tb intensity) still comes from the
+  // chips/builder; the slider scales the total. A hand-set scale is an override
+  // that any composition change clears, so the two cannot silently disagree.
+  const [dscaleOverride, setDscaleOverride] = useState<number | null>(null);
+  const dscale = dscaleOverride ?? demand.demand_scale;
+  const setScenario = useCallback((s: PerSectorScenario) => { setScenarioRaw(s); setDscaleOverride(null); }, []);
+  const setLv = useCallback((l: Levers) => { setLvRaw(l); setDscaleOverride(null); }, []);
+  // Slider anchors: where each IEA scenario lands on the axis, so a reader dragging
+  // between them knows what they are postulating.
+  const demandTicks = useMemo(() => (['STEPS', 'APS', 'NZE'] as const).map((k) =>
+    ({ at: demandSummary(allScenario(k), DEFAULT_LEVERS).demand_scale, label: SCENARIO_LABEL[k] ?? k })), []);
   // The same scenario with NO demand levers — the reference for "what the levers buy"
   // (so the value reflects the chosen scenario, e.g. NZE, not an absolute 1.0).
   const demandNoLever = useMemo(() => demandSummary(scenario, DEFAULT_LEVERS), [scenario]);
 
   const sc = useMemo(() => applyStockpile(interpScenario({
-    make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale, pfloor, abunlock,
-  }), stockpile, stockCost), [make, source, rec, china, rcost, demand, stockpile, stockCost, pfloor, pfReady, abunlock, ceilingReady]);
+    make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, abunlock,
+  }), stockpile, stockCost), [make, source, rec, china, rcost, demand, dscale, stockpile, stockCost, pfloor, pfReady, abunlock, ceilingReady]);
   // The cost breakdown is US-specific (the cost the US bears to supply itself) —
   // this analysis is about US supply security. Global trade/co-product don't apply.
   const US_COST_KEYS = COST_KEYS.filter(([k]) => k !== 'trade' && k !== 'coproduct');
@@ -363,10 +381,10 @@ export default function MagnetExplorer() {
   const rdPair = useMemo(() => {
     const at = (u: number) => interpScenario({
       make, source, rec, china, rcost,
-      dytb: demand.dytb_intensity, dscale: demand.demand_scale, pfloor, abunlock: u,
+      dytb: demand.dytb_intensity, dscale, pfloor, abunlock: u,
     });
     return { base: at(0), unlocked: at(1) };
-  }, [make, source, rec, china, rcost, demand, pfloor, pfReady, ceilingReady]);
+  }, [make, source, rec, china, rcost, demand, dscale, pfloor, pfReady, ceilingReady]);
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -468,7 +486,7 @@ export default function MagnetExplorer() {
   // baseline = do-nothing (no US policy/projects) at the SAME demand scenario + threat, so
   // the delta is the cost of the security choices made (can be negative if reshoring avoids
   // more China premium than it costs to build).
-  const baseNPV = realCost(interpScenario({ make: 0, source: 0, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale, abunlock }));
+  const baseNPV = realCost(interpScenario({ make: 0, source: 0, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale, abunlock }));
   const npvDelta = usCostReal - baseNPV;
   const tri = integratedRE(scR, alliedHHIMap);   // live readout (light+heavy weighted)
   // China-exposed demand — FAITHFUL flow-traced provenance from the model export
@@ -506,7 +524,7 @@ export default function MagnetExplorer() {
   // the metrics where lower is better (all of these except none, today).
   const coords: Record<AxisKey, number> = {
     make, source, rec, china, rcost, pfloor,
-    dytb: demand.dytb_intensity, dscale: demand.demand_scale,
+    dytb: demand.dytb_intensity, dscale,
   };
   const changed = pin ? axisDiff(coords, pin.coords) : [];
   const doPin = () => setPin({
@@ -518,8 +536,10 @@ export default function MagnetExplorer() {
     const c = pin.coords;
     setMake(c.make); setSource(c.source); setRec(c.rec);
     setChina(c.china); setRcost(c.rcost); setPfloor(c.pfloor);
-    // dytb/dscale are derived; they follow once the demand controls are reset,
-    // which the user does in the builder. Flag it rather than silently diverge.
+    setDscaleOverride(c.dscale);
+    // dytb is derived from the sector composition; it follows once the demand
+    // controls are reset, which the user does in the builder. Flag it rather
+    // than silently diverge.
   };
 
   /** Signed delta string + colour, given "is lower better". */
@@ -538,7 +558,7 @@ export default function MagnetExplorer() {
   // Round Top is the exogenous strategic move whose $/TRI reads as the US
   // government's revealed shadow price of security.
   const securityLevers = useMemo(() => {
-    const base = { china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale, abunlock };
+    const base = { china, rcost, dytb: demand.dytb_intensity, dscale, abunlock };
     // TRI with the project floors applied (so lever ROI is consistent with the panel).
     // Use integratedRE — the SAME heavy-weighted metric the panel displays — not the
     // aggregate integratedTRI; otherwise a lever that only helps the (low-weight, non-
@@ -594,7 +614,7 @@ export default function MagnetExplorer() {
       dRow('Lower total demand', noDemandCut),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [china, rcost, demand, demandNoLever, alliedHHIMap, activeProjects, abunlock, ceilingReady]);
+  }, [china, rcost, demand, dscale, demandNoLever, alliedHHIMap, activeProjects, abunlock, ceilingReady]);
 
   // Story scorecard inputs: the single most concerning bottleneck (highest-TRI stage
   // across BOTH RE classes) and the most cost-effective lever (lowest $/0.1-TRI).
@@ -617,7 +637,7 @@ export default function MagnetExplorer() {
   // "US-made magnets" also satisfies "Build US magnet") — drops to ~0 marginal benefit
   // and the recommendation advances to the next-cheapest move on its own.
   const marginalDTRI = useMemo(() => {
-    const cp = { china, rcost, dytb: demand.dytb_intensity, dscale: demand.demand_scale };
+    const cp = { china, rcost, dytb: demand.dytb_intensity, dscale };
     const triR = (scn: Parameters<typeof reconcileUsSupply>[0]) =>
       integratedTRI({ ...scn, us_supply: reconcileUsSupply(scn, activeProjects) }, alliedHHIMap);
     const withDi = (s: typeof sc) => (hasUSHeavyMine ? { ...s, _di: { ...s._di, mining: ROUND_TOP_MINING_DI } } : s);
@@ -636,7 +656,7 @@ export default function MagnetExplorer() {
       'Build US magnet': curTRI - triR(reshoreSupply(cur, ['magnet'], 0.9)),
     } as Record<string, number>;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [china, rcost, demand, make, source, rec, pfloor, stockpile, hasUSHeavyMine, activeProjects, alliedHHIMap, abunlock, ceilingReady]);
+  }, [china, rcost, demand, dscale, make, source, rec, pfloor, stockpile, hasUSHeavyMine, activeProjects, alliedHHIMap, abunlock, ceilingReady]);
   // Rank only levers that still buy meaningful security FROM HERE, by $ per 0.1 marginal TRI.
   const bestLever = securityLevers
     .filter((l) => !l.demand && l.dCost > 0 && (marginalDTRI[l.name] ?? 0) > 0.005)

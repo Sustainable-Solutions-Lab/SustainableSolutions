@@ -32,12 +32,14 @@ function activeChip(scenario: PerSectorScenario, lv: Levers): string | null {
   return vals.every((v) => v === vals[0]) ? vals[0] : null;
 }
 
-export default function DemandChips({ scenario, setScenario, lv, setLv, open, setOpen }: {
+export default function DemandChips({ scenario, setScenario, lv, setLv, open, setOpen, custom = false }: {
   scenario: PerSectorScenario; setScenario: (s: PerSectorScenario) => void;
   lv: Levers; setLv: (l: Levers) => void;
   open: boolean; setOpen: (o: boolean) => void;
+  /** The total-demand slider has been dragged off the chip's own level. */
+  custom?: boolean;
 }) {
-  const active = activeChip(scenario, lv);
+  const active = custom ? null : activeChip(scenario, lv);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'nowrap', overflowX: 'auto' }}>
       {ORDER.map((sc) => {
@@ -59,7 +61,7 @@ export default function DemandChips({ scenario, setScenario, lv, setLv, open, se
         );
       })}
       {active === null && (
-        <span title="Per-sector scenarios or demand levers have been hand-tuned below."
+        <span title="The demand level or per-sector scenarios have been hand-set; pick a chip to return to an IEA scenario."
           style={{ font: '600 11px var(--font-mono)', padding: '4px 10px', borderRadius: 6,
                    border: '1px solid var(--accent)', background: 'var(--accent)', color: 'var(--paper)' }}>
           Custom

@@ -668,7 +668,7 @@ export default function MagnetExplorer() {
                   textTransform: 'uppercase' as const, color: 'var(--cardinal)',
                   opacity: 0.85, margin: '0 0 6px' };
   const ROW = { display: 'grid', gap: '2px 20px',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' } as const;
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)' } as const;
   const RULE = { borderTop: '1px solid var(--rule)', margin: '10px 0 8px' };
   const plannerControls = (
     <>
@@ -773,6 +773,47 @@ export default function MagnetExplorer() {
         </aside>
       )}
 
+      {/* THE SIX HEADLINE NUMBERS, pinned. They were under the Sankey, which meant
+          that by the time you had scrolled to the actor bars or the cost block the
+          thing you were trying to move was off-screen and you were changing a
+          slider blind. Sticky keeps the score visible while you work anywhere on
+          the page; 3x2 and smaller type is what makes six of them fit in a band
+          shallow enough to give up that much of the viewport. */}
+      {!isMobile && (
+        <div style={{ position: 'sticky', top: 0, zIndex: 30, background: 'var(--paper)',
+                      borderBottom: '1px solid var(--rule)', padding: '8px 0 9px',
+                      marginBottom: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+                        gridTemplateRows: 'repeat(2, auto)', gap: '7px 12px' }}>
+            {[
+              { l: 'US trade-risk index', v: tri.toFixed(2), c: riskColor(tri), chip: true,
+                s: 'demand-weighted 2026–35' },
+              { l: 'Tightest chokepoint', v: cpHeavy.label.split(' ')[0], c: riskColor(cpHeavy.tri),
+                chip: true, s: `Dy/Tb · stage TRI ${cpHeavy.tri.toFixed(2)}` },
+              { l: 'China-exposed demand', v: pct(chinaTouch * 100), c: riskColor(chinaTouch),
+                chip: true, s: `flow-traced · ${flowYear}` },
+              { l: 'US magnets imported', v: pct(usImportPct), c: 'var(--ink)',
+                s: `${flowYear} · same flows as the Sankey` },
+              { l: 'Unmet demand', v: `${usUnmet.toFixed(1)} kt`,
+                c: usUnmet > 0.05 ? WORSE : 'var(--ink)', s: '2026–35 cumulative' },
+              { l: 'US cost of supply', v: musd(usCostReal), c: 'var(--ink)',
+                s: '2026–35 NPV' },
+            ].map((k) => (
+              <div key={k.l} style={{ display: 'flex', alignItems: 'baseline', gap: 7,
+                                      minWidth: 0 }}>
+                <span style={{ font: '600 9px var(--font-mono)', letterSpacing: '0.05em',
+                               textTransform: 'uppercase', opacity: 0.5, flex: '0 0 auto',
+                               width: 116, lineHeight: 1.25 }}>{k.l}</span>
+                <span style={{ font: '600 14px var(--font-mono)',
+                               ...(k.chip ? riskChip(k.c) : { color: k.c }) }}>{k.v}</span>
+                <span style={{ fontSize: 9.5, opacity: 0.45, whiteSpace: 'nowrap',
+                               overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.s}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* STEP 1 — everything that feeds the PLANNER's solve, in one box directly
           above the chain it produces: demand, the geopolitical axis, and the
           recycling assumptions. Title and rationale sit OUTSIDE the box so the box
@@ -813,57 +854,6 @@ export default function MagnetExplorer() {
           )}
           <FlowDiagram flows={rwFlows} active={activeProjects} year={flowYear} />
 
-          {/* The four KPIs that summarise the Sankey sit directly under it: this is
-              the picture of what happens with NO US intervention. The time-trend
-              (PathwayCharts), the light/heavy dumbbells and the cost breakdown all
-              moved out of the default view; cost belongs with the interventions in
-              part 2, and the other two are detail rather than headline. */}
-          {/* 2x2 on desktop: four cards in one row are too narrow to read, and these
-              four are the summary of the Sankey directly above them. */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-                        gridAutoRows: '1fr', gap: 12, marginTop: 16 }}>
-            <ScoreCardTotal label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)}
-              {...(pin ? deltaOf(tri, pin.tri, (v) => v.toFixed(2), true, 0.004) : {})}
-              parts={[
-                { short: 'heavy', label: `heavy ${triHeavy.toFixed(2)} × ${RE_CLASS_WEIGHT.heavy}`,
-                  value: (RE_CLASS_WEIGHT.heavy * triHeavy).toFixed(2) },
-                { short: 'light', label: `light ${triLight.toFixed(2)} × ${RE_CLASS_WEIGHT.light}`,
-                  value: (RE_CLASS_WEIGHT.light * triLight).toFixed(2) },
-              ]}
-              sub={pin ? 'vs reference scenario' : 'demand-weighted 2026–35, not a single year'} />
-            <ScoreCard2 label="Tightest chokepoint" small chip
-              a={{ label: `Dy/Tb · stage TRI ${cpHeavy.tri.toFixed(2)}`,
-                   value: cpHeavy.label.split(' ')[0], color: riskColor(cpHeavy.tri) }}
-              b={{ label: `Nd/Pr · stage TRI ${cpLight.tri.toFixed(2)}`,
-                   value: cpLight.label.split(' ')[0], color: riskColor(cpLight.tri) }} />
-            {/* Light has no flow-traced twin in the deployed grid yet (the model now
-                emits china_exposed_light_pct; it lands at the next regrid), so this
-                stays a single figure rather than an invented split. */}
-            {lightFeoc == null ? (
-              <ScoreCard label="China-exposed demand (flow-traced)" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip
-                {...(pin ? deltaOf(chinaTouch * 100, pin.touch * 100, (v) => `${v.toFixed(1)} pp`, true, 0.05) : {})}
-                sub={pin ? 'vs reference' : feocIsHeavy ? `heavy Dy/Tb · ${flowYear}` : `any chain stage · ${flowYear}`} />
-            ) : (
-              /* Split by class, like the index and the chokepoint. The two move
-                 very differently under restriction — heavy decouples, light is
-                 largely laundered through third-country magnets — and a single
-                 blended figure hides exactly that. */
-              /* NOT `small`: this sits beside "US demand met", and two results cards
-                 at different type sizes read as a hierarchy that isn't there. */
-              <ScoreCard2 label="China-exposed demand (flow-traced)" chip
-                a={{ label: `Dy/Tb · ${flowYear}`, value: pct(chinaTouch * 100),
-                     color: riskColor(chinaTouch) }}
-                b={{ label: `Nd/Pr · ${flowYear}`, value: pct(lightFeoc),
-                     color: riskColor(lightFeoc / 100) }} />
-            )}
-            <ScoreCard2 label="US demand met"
-              a={{ label: pin ? `imported ${flowYear} · vs reference` : `imported · ${flowYear}`,
-                   value: pct(usImportPct), color: 'var(--ink)',
-                   ...(pin ? deltaOf(usImportPct, pin.imp, (v) => `${v.toFixed(0)} pp`, true, 0.4) : {}) }}
-              b={{ label: pin ? 'unmet 26–35 · vs reference' : 'unmet · 2026–35 cum.',
-                   value: `${usUnmet.toFixed(0)} kt`, color: usUnmet > 0.05 ? WORSE : 'var(--ink)',
-                   ...(pin ? deltaOf(usUnmet, pin.unmet, (v) => `${v.toFixed(1)} kt`, true, 0.05) : {}) }} />
-          </div>
 
           {/* 3 — the ACTOR view. Sits directly under the planner's chain and KPIs
               because the page reads planner -> actor -> interventions: what the

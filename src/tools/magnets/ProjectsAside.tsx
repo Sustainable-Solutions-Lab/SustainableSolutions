@@ -34,7 +34,7 @@ function GroupButton({ label, count, total, allOn, onClick }: {
   const some = count > 0 && !allOn;
   return (
     <button onClick={onClick} title={`${count} of ${total} on — click to ${allOn ? 'exclude' : 'include'} all`}
-      style={{ flex: 1, font: '600 11px var(--font-mono)', padding: '7px 4px', borderRadius: 6, cursor: 'pointer', lineHeight: 1.25,
+      style={{ width: '100%', font: '600 11px var(--font-mono)', padding: '7px 4px', borderRadius: 6, cursor: 'pointer', lineHeight: 1.25,
         border: `1px solid ${allOn || some ? 'var(--accent)' : 'var(--rule-strong)'}`,
         background: allOn ? 'var(--accent)' : 'transparent', color: allOn ? 'var(--paper)' : 'var(--ink)' }}>
       {label}
@@ -60,30 +60,32 @@ export default function ProjectsAside({ future, onToggle, onSetGroup }: {
   return (
     <div>
       <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Projects assumed built</div>
-      {/* Buttons and their lists share ONE grid, so each tier's projects open in a
-          column directly under the button that toggles them. Stacked vertically
-          they ran the page several screens longer on a single click, and the
-          association between a list and its group button was left to memory. */}
-      <div style={{ display: 'grid', gap: '5px 16px',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-                    alignItems: 'start' }}>
+      {/* Each tier's list renders INSIDE its own button's column, so a list is
+          visually owned by the control that toggles it and the row cannot reflow.
+          The toggle sits above the grid so it stays put when the lists open —
+          otherwise it slides down the page and you have to scroll back to close. */}
+      <button onClick={() => setCustOpen((o) => !o)}
+        style={{ font: '500 10.5px var(--font-mono)', padding: '4px 8px', borderRadius: 6,
+                 cursor: 'pointer', border: '1px solid var(--rule)', background: 'transparent',
+                 color: 'var(--ink)', opacity: 0.75, marginBottom: 6 }}>
+        {custOpen ? '− customize' : '+ customize'}
+      </button>
+      <div style={{ display: 'grid', gap: '0 16px',
+                    gridTemplateColumns: 'repeat(3, 1fr)', alignItems: 'start' }}>
         {groups.map(([label, g]) => (
-          <GroupButton key={label} label={label} count={g.on} total={g.list.length} allOn={g.allOn}
-            onClick={() => onSetGroup(g.t, !g.allOn)} />
-        ))}
-        {custOpen && groups.map(([label, g]) => (
-          <div key={`${label}-list`}>
-            {g.list.map((p) => (
-              <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />
-            ))}
+          <div key={label}>
+            <GroupButton label={label} count={g.on} total={g.list.length} allOn={g.allOn}
+              onClick={() => onSetGroup(g.t, !g.allOn)} />
+            {custOpen && (
+              <div style={{ marginTop: 4 }}>
+                {g.list.map((p) => (
+                  <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
-      <button onClick={() => setCustOpen((o) => !o)}
-        style={{ font: '500 11px var(--font-mono)', opacity: 0.6, cursor: 'pointer',
-                 background: 'transparent', border: 'none', padding: '6px 0 0' }}>
-        {custOpen ? '－ hide individual projects' : '＋ choose individual projects'}
-      </button>
       <p style={{ fontSize: 10, opacity: 0.5, margin: '8px 0 0', lineHeight: 1.45, maxWidth: 'none' }}>
         An assumption about which projects are <b>destined to get built</b>, whatever the
         economics say. Operating plants are always in. Anything you add here is treated the

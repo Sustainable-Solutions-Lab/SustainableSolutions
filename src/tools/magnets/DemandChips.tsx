@@ -39,10 +39,7 @@ export default function DemandChips({ scenario, setScenario, lv, setLv, open, se
 }) {
   const active = activeChip(scenario, lv);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-      <span style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.55 }}>
-        Demand
-      </span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'nowrap', overflowX: 'auto' }}>
       {ORDER.map((sc) => {
         const on = active === sc;
         const sum_ = demandSummary(allScenario(sc), DEFAULT_LEVERS);
@@ -50,7 +47,7 @@ export default function DemandChips({ scenario, setScenario, lv, setLv, open, se
         return (
           <button key={sc} title={BLURB[sc]}
             onClick={() => { setScenario(allScenario(sc)); setLv(DEFAULT_LEVERS); }}
-            style={{ font: '600 11px var(--font-mono)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
+            style={{ font: '600 11px var(--font-mono)', padding: '4px 9px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap',
                      border: `1px solid ${on ? 'var(--accent)' : 'var(--rule-strong)'}`,
                      background: on ? 'var(--accent)' : 'transparent',
                      color: on ? 'var(--paper)' : 'var(--ink)' }}>
@@ -69,10 +66,10 @@ export default function DemandChips({ scenario, setScenario, lv, setLv, open, se
         </span>
       )}
       <button onClick={() => setOpen(!open)}
-        title={open ? 'Hide the per-sector detail' : 'Show how the scenario breaks down by end-use sector'}
-        style={{ font: '500 10.5px var(--font-mono)', padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+        title={open ? 'Hide the per-sector detail' : 'Set the scenario sector by sector, and see the demand trajectory'}
+        style={{ font: '500 10.5px var(--font-mono)', padding: '4px 8px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', marginLeft: 'auto',
                  border: '1px solid var(--rule)', background: 'transparent', color: 'var(--ink)', opacity: 0.75 }}>
-        {open ? '− sectoral detail' : '+ see sectoral detail'}
+        {open ? '− customize' : '+ customize'}
       </button>
     </div>
   );

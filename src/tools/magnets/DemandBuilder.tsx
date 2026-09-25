@@ -202,41 +202,32 @@ export default function DemandBuilder({ scenario, setScenario, lv, setLv, mode =
 
   const controls = (
     <>
-      <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 8px' }}>Demand scenario</div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {SCENARIO_NAMES.map((sc) => {
-          const active = SECTOR_KEYS.every((k) => scenario[k] === sc);
-          return (
-            <button key={sc} onClick={() => setScenario(allScenario(sc))} title={SCENARIO_TIP[sc]}
-              style={{ flex: 1, font: '600 11px var(--font-mono)', padding: '7px 4px', borderRadius: 6, cursor: 'pointer', lineHeight: 1.2,
-                border: `1px solid ${active ? 'var(--accent)' : 'var(--rule-strong)'}`, background: active ? 'var(--accent)' : 'transparent', color: active ? 'var(--paper)' : 'var(--ink)' }}>
-              {SCENARIO_LABEL[sc] ?? sc}
-            </button>
-          );
-        })}
+      {/* The three IEA scenarios are NOT repeated here: the chips that opened this
+          panel are still visible directly above, so a second identical row was
+          asking the same question twice. What "customize" is for is the per-sector
+          mix, so that opens straight away rather than behind another expander. */}
+      <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 8px' }}>
+        Scenario by sector
+        {SECTOR_KEYS.every((k) => scenario[k] === scenario[SECTOR_KEYS[0]])
+          ? '' : <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, opacity: 0.8 }}> · custom mix set</span>}
       </div>
-      <details style={{ marginTop: 8 }} onToggle={(e) => setCustOpen((e.target as HTMLDetailsElement).open)}>
-        <summary style={{ fontSize: 11, opacity: 0.6, cursor: 'pointer', listStyle: 'none' }}>
-          {custOpen ? '－' : '＋'} Customize by sector{SECTOR_KEYS.every((k) => scenario[k] === scenario[SECTOR_KEYS[0]]) ? '' : ' · custom mix set'}
-        </summary>
-        <div style={{ marginTop: 8 }}>
-          {LIST_ORDER.map((k) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                <span style={{ width: 9, height: 9, borderRadius: 2, background: SECTOR_COLOR[k], display: 'inline-block' }} />
-                {SECTOR_LABEL[k] ?? k}
-              </span>
-              <select value={scenario[k]} onChange={(e) => setScenario({ ...scenario, [k]: e.target.value })}
-                title={SCENARIO_TIP[scenario[k]]}
-                style={{ font: '500 11px var(--font-mono)', padding: '2px 4px', borderRadius: 5, border: '1px solid var(--rule)', background: 'var(--paper)', color: 'var(--ink)', cursor: 'pointer' }}>
-                {SCENARIO_NAMES.map((sc) => <option key={sc} value={sc}>{SCENARIO_LABEL[sc] ?? sc}</option>)}
-              </select>
-            </div>
-          ))}
-        </div>
-      </details>
+      <div style={{ display: 'grid', gap: '5px 18px',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))' }}>
+        {LIST_ORDER.map((k) => (
+          <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+              <span style={{ width: 9, height: 9, borderRadius: 2, background: SECTOR_COLOR[k], display: 'inline-block' }} />
+              {SECTOR_LABEL[k] ?? k}
+            </span>
+            <select value={scenario[k]} onChange={(e) => setScenario({ ...scenario, [k]: e.target.value })}
+              title={SCENARIO_TIP[scenario[k]]}
+              style={{ font: '500 11px var(--font-mono)', padding: '2px 4px', borderRadius: 5, border: '1px solid var(--rule)', background: 'var(--paper)', color: 'var(--ink)', cursor: 'pointer' }}>
+              {SCENARIO_NAMES.map((sc) => <option key={sc} value={sc}>{SCENARIO_LABEL[sc] ?? sc}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
 
-      <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '16px 0 4px' }}>Demand levers</div>
       {/* The four demand-side thrifting levers used to live here. They are gone
           because thrifting is no longer a demand ASSUMPTION: the model prices it as
           a supply, drawn on where its marginal abatement cost undercuts the premium,

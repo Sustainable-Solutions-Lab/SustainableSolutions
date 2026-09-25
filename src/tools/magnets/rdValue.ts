@@ -3,7 +3,7 @@
  *
  * The ceiling shipped first as a free switch: flip it and the bill falls, with
  * nothing charged for the engineering that made it possible. That reads as a
- * policy win rather than a research programme, and it is the wrong shape for the
+ * policy win rather than a research program, and it is the wrong shape for the
  * question AMMTO actually asks — not "would a higher ceiling help" (obviously)
  * but "how much may we spend reaching it before it stops being worth it".
  *
@@ -13,9 +13,9 @@
  *
  * THE UNIT. Cost is quoted per kg of Dy/Tb that the research makes designable-out
  * (`$/kg unlocked`), not per kg actually abated. Those differ: the ceiling is a
- * possibility, and the optimiser only draws on it where marginal abatement cost
+ * possibility, and the optimizer only draws on it where marginal abatement cost
  * undercuts the premium it would otherwise pay. Quoting per-abated would flatter
- * the programme in exactly the scenarios where the premium is low and little of
+ * the program in exactly the scenarios where the premium is low and little of
  * the new headroom gets used. Because a $/kg is a $M/kt (see the repo's unit
  * convention), the bill is a plain multiplication.
  *
@@ -42,7 +42,7 @@ export type RdCase = {
   ceilingTo: number;
   /** Dy/Tb the ceiling newly makes available to design out, kt. */
   ktUnlocked: number;
-  /** Dy/Tb the optimiser actually designs out because of it, kt. */
+  /** Dy/Tb the optimizer actually designs out because of it, kt. */
   ktAbated: number;
   /** Fall in the US supply bill, $M. Positive = cheaper. This is the one the
    *  breakeven is struck against, because it is the bill the US actually pays. */
@@ -50,7 +50,7 @@ export type RdCase = {
   /** Fall in the GLOBAL least-cost objective, $M. Much larger than the US saving,
    *  because most of the benefit of designing Dy/Tb out accrues outside the US.
    *  Reported so the gap between the two is visible rather than a surprise: a
-   *  programme can be excellent for the world and marginal for the US budget. */
+   *  program can be excellent for the world and marginal for the US budget. */
   systemSaving: number;
   /** R&D bill at the assumed cost, $M. */
   rdCost: number;
@@ -60,7 +60,7 @@ export type RdCase = {
    *  research unlocks nothing, where no price makes it pay. */
   breakeven: number | null;
   /** Did the shortfall move? Recorded because it usually does not, and that is
-   *  the most important thing to say about a thrifting programme under a ban. */
+   *  the most important thing to say about a thrifting program under a ban. */
   unmetFrom: number;
   unmetTo: number;
 };
@@ -69,7 +69,7 @@ export type RdCase = {
  * Value one R&D case, given the same scenario solved at both ceilings.
  *
  * `costPerKg` is the assumption under test: dollars of research per kg of Dy/Tb
- * of newly-designable-out capability. `unlock` scales a partial programme
+ * of newly-designable-out capability. `unlock` scales a partial program
  * linearly — both the capability bought and the bill.
  */
 export function valueRd(base: Scenario, unlocked: Scenario, opts: {
@@ -79,7 +79,7 @@ export function valueRd(base: Scenario, unlocked: Scenario, opts: {
   ceilingTo: number;
   realCost: CostFn;
   /** Total embodied Dy/Tb the ceiling applies to, kt. Falls back to inferring it
-   *  from the abated tonnage and the ceiling, which is exact when the optimiser
+   *  from the abated tonnage and the ceiling, which is exact when the optimizer
    *  sits at the ceiling and an underestimate when it does not. */
   embodiedKt?: number;
 }): RdCase {

@@ -6,7 +6,7 @@
  * US conclusion actually turns on and show the line they cross.
  *
  *   x  provenance premium — what a buyer pays extra for non-China supply. The
- *      hedging demand that motivates the whole programme, and the one thing the
+ *      hedging demand that motivates the whole program, and the one thing the
  *      model charges the US as a cost while never crediting it as revenue.
  *   y  US cost disadvantage — the regional cost factor and FOAK premium
  *      together, as a multiple of the calibrated value.
@@ -16,16 +16,16 @@
  * no grid is loaded. That is worth saying explicitly, because the instinct is
  * that a two-dimensional sweep must be expensive — for the PLANNER it would be.
  */
-import { screen, PRICE_WORLDS, type Buildout } from './projectFinance';
+import { screen, priceAtSpread, type Buildout } from './projectFinance';
 
 const NX = 13, NY = 11;
 const PREM_MAX = 60;    // $/kg of finished magnet
 const COST_MAX = 3.5;   // multiple of the calibrated US disadvantage
 
-export default function BankabilityFrontier({ rows, priceWorld, rate, instruments,
+export default function BankabilityFrontier({ rows, priceSpread, rate, instruments,
                                               costMult, foakMult, provenancePremium }: {
   rows: Buildout[];
-  priceWorld: string;
+  priceSpread: number;
   rate: number;
   instruments: Record<string, boolean>;
   costMult: number;
@@ -33,7 +33,7 @@ export default function BankabilityFrontier({ rows, priceWorld, rate, instrument
   provenancePremium: number;
 }) {
   if (!rows.length) return null;
-  const prices = PRICE_WORLDS[priceWorld] ?? PRICE_WORLDS.neutral;
+  const prices = priceAtSpread(priceSpread);
   const asked = rows.reduce((a, b) => a + b.kt, 0) || 1;
 
   /** Share of requested capacity that clears, at one (premium, cost) pair. */

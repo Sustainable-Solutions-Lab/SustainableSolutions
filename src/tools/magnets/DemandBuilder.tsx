@@ -237,33 +237,12 @@ export default function DemandBuilder({ scenario, setScenario, lv, setLv, mode =
       </details>
 
       <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '16px 0 4px' }}>Demand levers</div>
-      <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
-        The bar under each lever shades how optimistic the reduction is:
-        <span style={{ color: '#66C2A5', fontWeight: 600 }}> plausible</span> ·
-        <span style={{ color: '#D4A017', fontWeight: 600 }}> a stretch</span> ·
-        <span style={{ color: '#F46D43', fontWeight: 600 }}> aggressive</span>.
-      </p>
-      <p style={{ fontSize: 11, opacity: 0.6, margin: '2px 0 6px', lineHeight: 1.45 }}>
-        The first two levers cut <b>Dy/Tb intensity only</b> (watch the Dy/Tb view) — they leave total
-        magnet mass and Nd/Pr unchanged. Total demand moves with <b>RE-free adoption</b> and <b>offshore-PMSG</b>.
-      </p>
-      <Lever label="Dy/Tb thrifting (material)" value={lv.thrift} min={0} max={0.6} plausible={LEV_PLAUSIBLE.thrift} stretch={LEV_STRETCH.thrift} onChange={(v) => setLv({ ...lv, thrift: v })} fmt={(v) => `−${pct(v)}`}
-        desc="The % reduction in Dy/Tb (heavy rare earth) used per kg of magnet at a GIVEN coercivity grade — via grain-boundary diffusion, finer grains, or Ce/La substitution. Applied across all sectors. 0% = today's loadings. Realism: GBD alone cuts heavy-REE ~20–50% for a grade, so ≲30% is plausible, ~45% a stretch." />
-      <Lever label="Hot-motor grade downshift" value={lv.ev_downshift} min={0} max={1} plausible={LEV_PLAUSIBLE.ev_downshift} stretch={LEV_STRETCH.ev_downshift} onChange={(v) => setLv({ ...lv, ev_downshift: v })} fmt={pct}
-        desc="Better motor cooling / magnetic-circuit design lets hot-motor magnets (EVs, robotics, e-bikes) meet the same duty at a LOWER coercivity grade — which carries less Dy/Tb. Shifts those sectors' grade mix down a rung. 0% = today's grade mix. Realism: a partial downshift (~30%) is plausible with thermal design; downshifting most of the fleet is aggressive." />
-      <Lever label="RE-free motor adoption" value={lv.re_free} min={0} max={0.5} plausible={LEV_PLAUSIBLE.re_free} stretch={LEV_STRETCH.re_free} onChange={(v) => setLv({ ...lv, re_free: v })} fmt={pct}
-        desc="Share of motor demand (EVs, robotics, e-bikes) that switches to rare-earth-FREE designs (externally-excited or induction motors), removing their magnet demand entirely. 0% = all motors use permanent magnets today. Realism: RE-free motors are heavier/less efficient, so ~15% by 2035 is plausible (some OEMs are moving), >30% is aggressive." />
-      <Lever label="Offshore PMSG share reduction" value={OFFSHORE_PMSG_DEFAULT - lv.offshore_pmsg} min={0} max={OFFSHORE_PMSG_DEFAULT} plausible={LEV_PLAUSIBLE.offshore} stretch={LEV_STRETCH.offshore} onChange={(v) => setLv({ ...lv, offshore_pmsg: OFFSHORE_PMSG_DEFAULT - v })} fmt={(v) => `−${pct(v)}`}
-        desc={`Offshore wind is ~${pct(OFFSHORE_PMSG_DEFAULT)} NdFeB direct-drive PMSG by default. Drag right to reduce that share (a shift toward other generator types), which cuts offshore-wind magnet demand. 0 = today's ~${pct(OFFSHORE_PMSG_DEFAULT)}. Realism: PMSG is favored offshore for low O&M, so a ~20% shift to geared/alternatives is plausible, ~40% a stretch.`} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-        <span style={{ fontSize: 11, opacity: 0.55 }}>Set all:</span>
-        {([['None', DEFAULT_LEVERS], ['Plausible limit', presetLevers(LEV_PLAUSIBLE)], ['Stretch', presetLevers(LEV_STRETCH)]] as [string, Levers][]).map(([lbl, target]) => (
-          <button key={lbl} onClick={() => setLv(target)} title={`Set every demand lever to its ${lbl.toLowerCase()} value`}
-            style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5, cursor: 'pointer', border: '1px solid var(--rule)', background: 'transparent', color: 'var(--ink)' }}>
-            {lbl}
-          </button>
-        ))}
-      </div>
+      {/* The four demand-side thrifting levers used to live here. They are gone
+          because thrifting is no longer a demand ASSUMPTION: the model prices it as
+          a supply, drawn on where its marginal abatement cost undercuts the premium,
+          with the R&D to raise its ceiling costed in actor mode. Leaving hand-set
+          levers here would let a reader assert a thrifting level the optimizer has
+          already decided against, and the two would silently disagree. */}
     </>
   );
 
@@ -321,7 +300,6 @@ export default function DemandBuilder({ scenario, setScenario, lv, setLv, mode =
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--rule)', fontSize: 12 }}>
-        <span style={{ opacity: 0.6 }}>Feeding the supply explorer →</span>
         <span>US magnet demand <b style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{summary.demand_scale.toFixed(2)}×</b> pledges-case</span>
         <span>Dy/Tb intensity <b style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{summary.dytb_intensity.toFixed(2)}×</b> pledges-case</span>
       </div>

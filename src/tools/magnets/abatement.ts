@@ -5,7 +5,7 @@
  * that costs less than $p, so the share of Dy/Tb designed out is a step
  * function of the price the model already charges. This is not a separate
  * elasticity assumption bolted on: it is the marginal-abatement-cost curve the
- * optimiser already trades against, read right-to-left.
+ * optimizer already trades against, read right-to-left.
  *
  * Mirrors `config/demand_abatement.py`. The tranches SHOULD come from grid meta
  * (`meta.abatement`), which the model now emits — the inline fallback below

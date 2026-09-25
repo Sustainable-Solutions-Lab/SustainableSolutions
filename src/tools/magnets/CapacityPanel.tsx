@@ -23,6 +23,7 @@
  */
 import { Pickaxe, FlaskConical, Flame, Magnet, Recycle } from 'lucide-react';
 import { screen, PRICE_WORLDS, HAS_META, hurdleRate, PLANNER_RATE, priceSensitive, RELIEF_DEFAULTS,
+         priceAtSpread, EXCHINA_SPREAD_PER_MAGNET_KG,
          type Buildout, type Verdict } from './projectFinance';
 import { stageBreakdown, stageBreakdownClass, riskColor, riskChip } from './tri';
 import type { Scenario } from './interp';
@@ -91,15 +92,16 @@ const ICON: Record<string, JSX.Element> = {
   magnet: <Magnet size={14} strokeWidth={1.5} />,
   recycling: <Recycle size={14} strokeWidth={1.5} />,
 };
-export default function CapacityPanel({ buildout, incumbent, priceWorld, onPriceWorld,
+export default function CapacityPanel({ buildout, incumbent, priceSpread, onPriceSpread,
                                         rate, onRate, instruments, onInstruments,
                                         sc, alliedHHI, reClass, onReClass,
                                         costMult, onCostMult, foakMult, onFoakMult,
                                         provenancePremium, onProvenancePremium, floorLevel }: {
   buildout: Buildout[] | undefined;
   incumbent: Record<string, Incumbent[]>;
-  priceWorld: string;
-  onPriceWorld: (w: string) => void;
+  /** Oxide prices as a multiple of today's ex-China spread. 0 = China parity. */
+  priceSpread: number;
+  onPriceSpread: (v: number) => void;
   rate: number;
   onRate: (r: number) => void;
   instruments: Record<string, number>;
@@ -155,7 +157,7 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
   };
 
   const us = buildout.filter((b) => b.r === 'USA');
-  const verdicts: Verdict[] = screen(us, PRICE_WORLDS[priceWorld] ?? PRICE_WORLDS.neutral, {
+  const verdicts: Verdict[] = screen(us, priceAtSpread(priceSpread), {
     rate,
     offtake: instruments.offtake,
     floorInterface: 'magnet', floorRelief: instruments.floor, floorLevel,
@@ -194,23 +196,22 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                      textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>
           Would it actually be built?
         </h2>
-        <div style={{ display: 'flex', gap: 5 }} title={anyPriceSensitive
-            ? 'The price path a firm sells into. Oxide prices bifurcated after 2025: ex-China buyers pay far above the Chinese domestic benchmark, and which regime a project faces decides whether US separation clears. A free control because the screen is arithmetic, not a solve — making it a grid axis would have multiplied the grid.'
-            : 'Inert in this scenario: every screened project is a CONVERSION stage, whose output price is defined as its input price plus a fixed spread, so the oxide price cancels exactly. It bites for mining and separation.'}>
-          <span style={{ font: '600 9.5px var(--font-mono)', letterSpacing: '0.05em',
-                         textTransform: 'uppercase', opacity: 0.45, alignSelf: 'center',
-                         marginRight: 2 }}>price regime</span>
-          {Object.keys(PRICE_WORLDS).map((w) => (
-            <button key={w} onClick={() => onPriceWorld(w)}
-              style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5,
-                       cursor: 'pointer', opacity: anyPriceSensitive ? 1 : 0.4,
-                       border: `1px solid ${priceWorld === w ? 'var(--accent)' : 'var(--rule-strong)'}`,
-                       background: priceWorld === w ? 'var(--accent)' : 'transparent',
-                       color: priceWorld === w ? 'var(--paper)' : 'var(--ink)' }}>
-              {w.replace('_', ' ')}
-            </button>
-          ))}
-        </div>
+        <label title={anyPriceSensitive
+            ? "How far oxide prices are bifurcated between China and everyone else. 0 means parity with the Chinese domestic benchmark; 1 is where the ex-China market actually sits after 2025; above 1 assumes the gap widens further. It decides whether US separation clears, so it is a control rather than a fixed assumption."
+            : "Inert in this scenario: every screened project is a CONVERSION stage, whose output price is defined as its input price plus a fixed spread, so the oxide price cancels exactly. It bites for mining and separation."}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5,
+                   opacity: anyPriceSensitive ? 1 : 0.45 }}>
+          <span style={{ whiteSpace: 'nowrap' }}>Ex-China oxide spread</span>
+          <input type="range" min={0} max={2} step={0.05} value={priceSpread}
+            onChange={(e) => onPriceSpread(parseFloat(e.target.value))}
+            style={{ width: 120, accentColor: 'var(--accent)' }} />
+          <span style={{ font: '600 11px var(--font-mono)', minWidth: 96 }}>
+            {priceSpread.toFixed(2)}×{' '}
+            <span style={{ opacity: 0.55, fontWeight: 400 }}>
+              {priceSpread === 0 ? 'China parity' : Math.abs(priceSpread - 1) < 0.03 ? "today's" : ''}
+            </span>
+          </span>
+        </label>
       </div>
       <p style={{ fontSize: 11.5, opacity: 0.7, margin: '0 0 12px', maxWidth: 640, lineHeight: 1.45 }}>
         US capacity the least-cost planner calls for, against what clears a private hurdle
@@ -257,10 +258,16 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}
           title="What a buyer pays extra, per kg of finished magnet, for supply that never touched China. The model charges the ex-China premium to the US as a COST but never credits it as revenue to an ex-China producer; this is that missing side. No defensible default, so it starts at zero.">
           <span style={{ whiteSpace: 'nowrap' }}>Provenance premium</span>
-          <input type="range" min={0} max={60} step={1} value={provenancePremium}
+          <input type="range" min={0} max={2 * EXCHINA_SPREAD_PER_MAGNET_KG} step={1} value={provenancePremium}
             onChange={(e) => onProvenancePremium(parseFloat(e.target.value))}
             style={{ width: 110, accentColor: 'var(--accent)' }} />
-          <span style={{ font: '600 11px var(--font-mono)', minWidth: 46 }}>${provenancePremium.toFixed(0)}/kg</span>
+          <span style={{ font: '600 11px var(--font-mono)', minWidth: 104 }}>
+            ${provenancePremium.toFixed(0)}/kg{' '}
+            <span style={{ opacity: 0.55, fontWeight: 400 }}>
+              {Math.abs(provenancePremium - EXCHINA_SPREAD_PER_MAGNET_KG) < 3
+                ? '= oxide spread' : `${(provenancePremium / EXCHINA_SPREAD_PER_MAGNET_KG).toFixed(2)}× spread`}
+            </span>
+          </span>
         </label>
         {INSTRUMENTS.map((i) => {
           const v = instruments[i.key] ?? 0;
@@ -487,7 +494,7 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
         )}
       </div>
 
-      <BankabilityFrontier rows={us} priceWorld={priceWorld} rate={rate}
+      <BankabilityFrontier rows={us} priceSpread={priceSpread} rate={rate}
         instruments={instruments} costMult={costMult} foakMult={foakMult}
         provenancePremium={provenancePremium} />
 

@@ -62,11 +62,39 @@ export function pricesFromOxide(ndpr: number, dytb: number,
   return { ...C.prices, oxide_NdPr: ndpr, oxide_DyTb: dytb, alloy, magnet: alloy + magnetConv };
 }
 
+const OXIDE_CHINA = { ndpr: 113, dytb: 285 };      // Chinese domestic benchmark
+const OXIDE_EXCHINA = { ndpr: 184, dytb: 1625 };   // ex-China, post-2025 bifurcation
+
 export const PRICE_WORLDS: Record<string, Prices> = {
-  ex_china: pricesFromOxide(184, 1625),
-  china_benchmark: pricesFromOxide(113, 285),
+  ex_china: pricesFromOxide(OXIDE_EXCHINA.ndpr, OXIDE_EXCHINA.dytb),
+  china_benchmark: pricesFromOxide(OXIDE_CHINA.ndpr, OXIDE_CHINA.dytb),
   neutral: { ...C.prices },
 };
+
+/**
+ * Oxide prices at an arbitrary multiple of TODAY'S ex-China spread.
+ *
+ * Three named regimes were a worse control than one continuous axis: the real
+ * question is not "China or ex-China" but "how far does the bifurcation go", and
+ * a reader needs to be able to push it past what we observe as well as back to
+ * parity. `spread` = 0 is the Chinese benchmark, 1 is today's ex-China level,
+ * 2 is twice today's gap.
+ */
+export const priceAtSpread = (spread: number): Prices => pricesFromOxide(
+  OXIDE_CHINA.ndpr + spread * (OXIDE_EXCHINA.ndpr - OXIDE_CHINA.ndpr),
+  OXIDE_CHINA.dytb + spread * (OXIDE_EXCHINA.dytb - OXIDE_CHINA.dytb),
+);
+
+/** What today's ex-China spread is worth per kg of FINISHED MAGNET — the oxide
+ *  price gap carried through the bill of materials. This is the concrete number
+ *  the provenance-premium slider is anchored to, so a reader setting that slider
+ *  knows what one observed spread actually looks like. */
+export const EXCHINA_SPREAD_PER_MAGNET_KG: number = (() => {
+  const [nm, dm] = C.grade_ladder[C.grade];
+  const at = (o: { ndpr: number; dytb: number }) =>
+    C.oxide_factor * (nm * o.ndpr + dm * o.dytb);
+  return at(OXIDE_EXCHINA) - at(OXIDE_CHINA);
+})();
 
 const crf = (r: number, n: number) => (r <= 0 ? 1 / n : (r * (1 + r) ** n) / ((1 + r) ** n - 1));
 
@@ -164,7 +192,7 @@ export function evaluate(b: Buildout, prices: Prices, opts: {
    *  ex-China premium as a COST on imported Dy/Tb but never credits it as
    *  REVENUE to an ex-China producer, so a US plant carries the premium's
    *  burden and none of its benefit — which is precisely backwards for the
-   *  hedging demand that motivates the programme. Defaults to 0, because we
+   *  hedging demand that motivates the program. Defaults to 0, because we
    *  have no defensible number for it; it is here to be swept. */
   provenancePremium?: number;
 } = {}): Verdict {

@@ -785,7 +785,9 @@ export default function MagnetExplorer() {
                  very differently under restriction — heavy decouples, light is
                  largely laundered through third-country magnets — and a single
                  blended figure hides exactly that. */
-              <ScoreCard2 label="China-exposed demand" small chip
+              /* NOT `small`: this sits beside "US demand met", and two results cards
+                 at different type sizes read as a hierarchy that isn't there. */
+              <ScoreCard2 label="China-exposed demand" chip
                 a={{ label: `Dy/Tb · flow-traced`, value: pct(chinaTouch * 100),
                      color: riskColor(chinaTouch) }}
                 b={{ label: `Nd/Pr · flow-traced`, value: pct(lightFeoc),
@@ -812,8 +814,11 @@ export default function MagnetExplorer() {
           <CapacityPanel
             buildout={(sc as any).buildout}
             incumbent={PROJECTS.filter((pj) => pj.bloc === 'us' && pj.status === 'operating')
-              .reduce((acc, pj) => ({ ...acc, [pj.stage]: (acc[pj.stage] ?? 0) + pj.capacityKt }),
-                      {} as Record<string, number>)}
+              .reduce((acc, pj) => {
+                (acc[pj.stage] ??= []).push({ stage: pj.stage, name: pj.name,
+                                              kt: pj.capacityKt, note: pj.note });
+                return acc;
+              }, {} as Record<string, { stage: string; name: string; kt: number; note?: string }[]>)}
             priceWorld={priceWorld} onPriceWorld={setPriceWorld}
             rate={hurdle} onRate={setHurdle}
             instruments={instruments} onInstruments={setInstruments}

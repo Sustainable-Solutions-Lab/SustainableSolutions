@@ -6,15 +6,20 @@
  * unachievable case has no flow solution at all — any Sankey drawn for it would
  * be a plausible-looking fabrication. Stage-resolved capacity needs neither.
  *
- *   STIPPLED   incumbent — already built, sunk, never judged
- *   OUTLINE    NEW capacity the planner asked for
- *   FILL       the portion of that new build which clears a firm's hurdle
+ * One SOLID bar per stage: everything the plan relies on, existing plus new.
  *
- * Incumbent is shown even though the screen never evaluates it: a bar of new
- * build alone would not sum to the Sankey's stage totals and someone would
- * rightly ask why. Stipple carries the distinction the screen actually makes —
- * sunk capital faces no investment decision, so it is present but not assessed.
- * A plain fill would imply we had assessed plants we have not.
+ *   STIPPLE over   already built — sunk, so the screen never judges it
+ *   GREEN          new build a firm would fund at the stated hurdle
+ *   RED            new build the plan depends on that no firm would fund
+ *
+ * Stipple is laid OVER the bar rather than beside it so the row still reads as
+ * one quantity: the plan's requirement, with the part already standing marked
+ * out. Hairlines inside the existing block name the real plants, because "MP
+ * Fort Worth is most of US magnet capacity" is the fact a reader needs, and
+ * "10 kt exists" is not.
+ *
+ * Bars are NOT commensurate across stages — mining is kt of concentrate, magnet
+ * is kt of finished magnet — so each row names its own unit.
  */
 import { Pickaxe, FlaskConical, Flame, Magnet, Recycle } from 'lucide-react';
 import { screen, PRICE_WORLDS, HAS_META, hurdleRate, PLANNER_RATE, priceSensitive,
@@ -35,6 +40,16 @@ const CLASSES = [
   { key: 'light', label: 'Nd/Pr (light)' },
 ] as const;
 export type ReClass = 'all' | 'heavy' | 'light';
+/** What each stage's kt actually measures. Named per row because the bars are
+ *  NOT commensurate across stages — 42 kt of concentrate is not 42 kt of magnet. */
+const PRODUCT: Record<string, string> = {
+  mining: 'concentrate', separation: 'oxide', alloy: 'alloy',
+  magnet: 'finished magnets', recycling: 'recovered oxide',
+};
+const GREEN = 'var(--brand-green)';
+const RED = '#D53E4F';
+/** One operating plant, for the hairlines inside the existing block. */
+export type Incumbent = { stage: string; name: string; kt: number; note?: string };
 
 /** The three instruments that reach the project screen. Quantity levers
  *  (domestic content, friendshoring) act on the PLANNER and live in the world
@@ -70,7 +85,7 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                                         rate, onRate, instruments, onInstruments,
                                         sc, alliedHHI, reClass, onReClass }: {
   buildout: Buildout[] | undefined;
-  incumbent: Record<string, number>;
+  incumbent: Record<string, Incumbent[]>;
   priceWorld: string;
   onPriceWorld: (w: string) => void;
   rate: number;
@@ -127,15 +142,16 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
     creditSupport: instruments.guarantee ? 1 : 0,
   });
   const byStage = (s: string) => verdicts.filter((v) => v.stage === s);
+  const incKt = (s: string) => (incumbent[s] ?? []).reduce((a, f) => a + f.kt, 0);
   const maxKt = Math.max(0.001, ...STAGES.map((s) =>
-    ((incumbent[s] ?? 0) + byStage(s).reduce((a, v) => a + v.newKt, 0)) * classFrac(s)));
+    (incKt(s) + byStage(s).reduce((a, v) => a + v.newKt, 0)) * classFrac(s)));
   const shortfall = verdicts.filter((v) => !v.funded);
   // Stages the US already operates but which the plan never expands. Worth
   // naming: a reader who sees only a magnet bar assumes the others were screened
   // and failed, when in fact the planner never asked. The distinction is the
   // whole point — a gap in the PLAN is a different problem from a gap in the
   // FINANCING, and only the second is what an offtake or a guarantee can fix.
-  const unasked = STAGES.filter((s) => (incumbent[s] ?? 0) > 0 && byStage(s).length === 0);
+  const unasked = STAGES.filter((s) => incKt(s) > 0 && byStage(s).length === 0);
   const anyPriceSensitive = verdicts.some((v) => priceSensitive(v.stage));
 
   return (
@@ -241,38 +257,78 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
       {STAGES.map((s) => {
         const vs = byStage(s);
         const cf = classFrac(s);
-        const inc = (incumbent[s] ?? 0) * cf;
+        const fac = (incumbent[s] ?? []).map((f) => ({ ...f, kt: f.kt * cf }))
+          .filter((f) => f.kt > 0).sort((a, b) => b.kt - a.kt);
+        const inc = fac.reduce((a, f) => a + f.kt, 0);
         const asked = vs.reduce((a, v) => a + v.newKt, 0) * cf;
         const funded = vs.filter((v) => v.funded).reduce((a, v) => a + v.newKt, 0) * cf;
+        const declined = asked - funded;
         if (inc <= 0 && asked <= 0) return null;
         const pc = (v: number) => `${(v / maxKt) * 100}%`;
         const tri = triByStage[s];
         return (
-          <div key={s} style={{ marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, marginBottom: 3 }}>
-              <span style={{ opacity: 0.7, display: 'flex' }}>{ICON[s]}</span>
+          <div key={s} style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11.5, marginBottom: 3 }}>
+              <span style={{ opacity: 0.7, display: 'flex', alignSelf: 'center' }}>{ICON[s]}</span>
               <span>{LABEL[s]}</span>
-              {asked > 0 && (
-                <span style={{ font: '400 10.5px var(--font-mono)', opacity: 0.6 }}>
-                  {funded.toFixed(1)} of {asked.toFixed(1)} kt new funded
-                </span>
-              )}
+              {/* Bars at different stages measure DIFFERENT products, so the unit has
+                  to be named per row. Without it the 42 kt mining bar reads as though
+                  it were commensurate with the 22 kt magnet bar. */}
+              <span style={{ font: '400 10px var(--font-mono)', opacity: 0.45 }}>
+                kt/yr {PRODUCT[s]}
+              </span>
+              <span style={{ marginLeft: 'auto', font: '400 10.5px var(--font-mono)', opacity: 0.7 }}>
+                {inc > 0 && <>{inc.toFixed(1)} existing</>}
+                {asked > 0 && (
+                  <>{inc > 0 ? ' · ' : ''}
+                    <span style={{ color: funded > 0.005 ? GREEN : 'inherit' }}>
+                      +{funded.toFixed(1)} built
+                    </span>
+                    {declined > 0.005 && (
+                      <span style={{ color: RED }}> · {declined.toFixed(1)} declined</span>
+                    )}
+                  </>
+                )}
+              </span>
             </div>
             {/* Bar is narrowed to leave the right-hand column for the stage's trade
                 risk, so build-out and exposure are read on one line. */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 62px', gap: 10,
                           alignItems: 'center' }}>
-              <div style={{ position: 'relative', height: 16, background: 'var(--paper-2)',
-                            border: '1px solid var(--rule)', borderRadius: 3 }}>
-                {/* sunk */}
+              <div style={{ position: 'relative', height: 20, background: 'var(--paper-2)',
+                            border: '1px solid var(--rule)', borderRadius: 3, overflow: 'hidden' }}>
+                {/* SOLID base: everything the plan relies on, existing plus new. The
+                    new part is split by verdict — green is funded, red is capacity the
+                    plan depends on that no firm would put money into. */}
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: pc(inc),
-                              ...STIPPLE, borderRight: inc > 0 ? '1px solid var(--rule-strong)' : 'none' }} />
-                {/* asked for: outline */}
-                <div style={{ position: 'absolute', left: pc(inc), top: 0, bottom: 0, width: pc(asked),
-                              border: '1.5px dashed var(--accent)', borderRadius: 2 }} />
-                {/* funded: fill */}
-                <div style={{ position: 'absolute', left: pc(inc), top: 0, bottom: 0, width: pc(funded),
-                              background: 'var(--accent)', opacity: 0.55, borderRadius: 2 }} />
+                              background: 'var(--ink-3)', opacity: 0.30 }} />
+                <div style={{ position: 'absolute', left: pc(inc), top: 0, bottom: 0,
+                              width: pc(funded), background: GREEN, opacity: 0.75 }} />
+                <div style={{ position: 'absolute', left: pc(inc + funded), top: 0, bottom: 0,
+                              width: pc(declined), background: RED, opacity: 0.75 }} />
+                {/* STIPPLE over the already-built portion: present, but sunk, so never
+                    judged by the screen. Laid on top rather than beside, so the bar
+                    still reads as one quantity. */}
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: pc(inc),
+                              ...STIPPLE, pointerEvents: 'none' }} />
+                {/* Hairlines naming the real plants inside the existing block. */}
+                {fac.map((f, i) => {
+                  const left = fac.slice(0, i).reduce((a, x) => a + x.kt, 0);
+                  const wide = (f.kt / maxKt) > 0.13;
+                  return (
+                    <div key={f.name} title={`${f.name} — ${f.kt.toFixed(1)} kt/yr${f.note ? `\n\n${f.note}` : ''}`}
+                      style={{ position: 'absolute', left: pc(left), top: 0, bottom: 0, width: pc(f.kt),
+                               borderLeft: i > 0 ? '1px solid var(--paper)' : 'none',
+                               display: 'flex', alignItems: 'center', overflow: 'hidden', cursor: 'help' }}>
+                      {wide && (
+                        <span style={{ font: '500 9px var(--font-mono)', opacity: 0.75,
+                                       paddingLeft: 4, whiteSpace: 'nowrap' }}>
+                          {f.name}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
               {tri == null ? (
                 <span style={{ font: '400 10px var(--font-mono)', opacity: 0.35, textAlign: 'right' }}
@@ -316,7 +372,14 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
           still has to be told "so is there a gap or not". */}
       <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--rule)',
                     fontSize: 11.5, lineHeight: 1.5, maxWidth: 660 }}>
-        {shortfall.length === 0 ? (
+        {verdicts.length === 0 ? (
+          <span>
+            <strong>The plan asks for no new US capacity here.</strong> Least cost is met by
+            imports, recycling and designing Dy/Tb out, so there is nothing for a firm to
+            decline — the bars above are existing plant only. Raise the China restriction,
+            or require domestic content, to give the planner a reason to build.
+          </span>
+        ) : shortfall.length === 0 ? (
           <span>
             <strong>No financing gap here.</strong> Every expansion the planner asks for clears
             a {(rate * 100).toFixed(1)}% hurdle unaided
@@ -341,11 +404,11 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12,
                     font: '400 10px var(--font-mono)', opacity: 0.65 }}>
         <span><span style={{ display: 'inline-block', width: 12, height: 8, ...STIPPLE,
-                             border: '1px solid var(--rule)' }} /> already built (sunk)</span>
+                             background: 'var(--ink-3)', border: '1px solid var(--rule)' }} /> already built (sunk, never screened)</span>
         <span><span style={{ display: 'inline-block', width: 12, height: 8,
-                             border: '1.5px dashed var(--accent)' }} /> planner asks for</span>
+                             background: GREEN, opacity: 0.75 }} /> new build a firm would fund</span>
         <span><span style={{ display: 'inline-block', width: 12, height: 8,
-                             background: 'var(--accent)', opacity: 0.55 }} /> a firm would fund</span>
+                             background: RED, opacity: 0.75 }} /> asked for, but declined</span>
         {!anyPriceSensitive && (
           <span style={{ opacity: 0.75 }}>
             · price world is inert here: conversion stages earn an asserted spread, so the

@@ -46,7 +46,8 @@ export default function DemandChips({ scenario, setScenario, lv, setLv, open, se
       </span>
       {ORDER.map((sc) => {
         const on = active === sc;
-        const mult = demandSummary(allScenario(sc), DEFAULT_LEVERS).demand_scale;
+        const sum_ = demandSummary(allScenario(sc), DEFAULT_LEVERS);
+        const mult = sum_.demand_scale;
         return (
           <button key={sc} title={BLURB[sc]}
             onClick={() => { setScenario(allScenario(sc)); setLv(DEFAULT_LEVERS); }}
@@ -55,7 +56,9 @@ export default function DemandChips({ scenario, setScenario, lv, setLv, open, se
                      background: on ? 'var(--accent)' : 'transparent',
                      color: on ? 'var(--paper)' : 'var(--ink)' }}>
             {SCENARIO_LABEL[sc] ?? sc}
-            <span style={{ opacity: on ? 0.75 : 0.5, marginLeft: 6, fontWeight: 400 }}>{mult.toFixed(2)}×</span>
+            <span style={{ opacity: on ? 0.75 : 0.5, marginLeft: 6, fontWeight: 400 }}>
+              {mult.toFixed(2)}× vol · {sum_.dytb_intensity.toFixed(2)}× Dy/Tb
+            </span>
           </button>
         );
       })}
@@ -66,6 +69,9 @@ export default function DemandChips({ scenario, setScenario, lv, setLv, open, se
           Custom
         </span>
       )}
+      <span style={{ fontSize: 10, opacity: 0.5, marginLeft: 2 }}>
+        (the two demand axes the supply grid is solved over)
+      </span>
       <button onClick={() => setOpen(!open)}
         title={open ? 'Hide the sector detail and demand levers' : 'Tune demand by sector, grade mix and the four demand levers'}
         style={{ font: '500 10.5px var(--font-mono)', padding: '4px 8px', borderRadius: 6, cursor: 'pointer',

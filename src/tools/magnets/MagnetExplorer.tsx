@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, ensurePriceFloorSlices, priceFloorReady } from './interp';
 import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
-import ScenarioBar, { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
+import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import DemandChips from './DemandChips';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
@@ -644,10 +644,6 @@ export default function MagnetExplorer() {
         </aside>
 
         <main>
-          {/* 0 — where you are in the 8-axis grid. Two of these axes have no slider
-              (they come from the Demand Builder), so without this the coordinates
-              are unreadable — see ScenarioBar's header note. */}
-          <ScenarioBar values={coords} onJumpToDemand={jumpToDemand} />
 
           {/* Pin one scenario, then read every headline against it. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '-4px 0 16px' }}>
@@ -687,7 +683,10 @@ export default function MagnetExplorer() {
               (PathwayCharts), the light/heavy dumbbells and the cost breakdown all
               moved out of the default view; cost belongs with the interventions in
               part 2, and the other two are detail rather than headline. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gridAutoRows: '1fr', gap: 12, marginTop: 16 }}>
+          {/* 2x2 on desktop: four cards in one row are too narrow to read, and these
+              four are the summary of the Sankey directly above them. */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                        gridAutoRows: '1fr', gap: 12, marginTop: 16 }}>
             <ScoreCardTotal label="US trade-risk index" value={tri.toFixed(2)} valueColor={riskColor(tri)}
               {...(pin ? deltaOf(tri, pin.tri, (v) => v.toFixed(2), true, 0.004) : {})}
               parts={[

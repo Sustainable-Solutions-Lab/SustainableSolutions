@@ -17,7 +17,18 @@
  * A plain fill would imply we had assessed plants we have not.
  */
 import { Pickaxe, FlaskConical, Flame, Magnet, Recycle } from 'lucide-react';
-import { screen, PRICE_WORLDS, HAS_META, type Buildout, type Verdict } from './projectFinance';
+import { screen, PRICE_WORLDS, HAS_META, hurdleRate, PLANNER_RATE, priceSensitive,
+         type Buildout, type Verdict } from './projectFinance';
+
+/** The three instruments that reach the project screen. Quantity levers
+ *  (domestic content, friendshoring) act on the PLANNER and live in the world
+ *  controls above; putting them here would imply they change a firm's return,
+ *  which is exactly the confusion the registry exists to prevent. */
+const INSTRUMENTS = [
+  { key: 'offtake', label: 'Offtake', hint: 'Removes volume risk: the largest single component of the premium. Costs nothing unless the buyer walks.' },
+  { key: 'floor', label: 'Price floor', hint: 'Removes the bad price states, but only for the stages its trade interface covers.' },
+  { key: 'guarantee', label: 'Loan guarantee', hint: 'Finances at the planner rate outright.' },
+] as const;
 
 const STAGES = ['mining', 'separation', 'alloy', 'magnet', 'recycling'] as const;
 const LABEL: Record<string, string> = {
@@ -39,11 +50,16 @@ const STIPPLE = {
   backgroundSize: '4px 4px',
 };
 
-export default function CapacityPanel({ buildout, incumbent, priceWorld, onPriceWorld }: {
+export default function CapacityPanel({ buildout, incumbent, priceWorld, onPriceWorld,
+                                        rate, onRate, instruments, onInstruments }: {
   buildout: Buildout[] | undefined;
   incumbent: Record<string, number>;
   priceWorld: string;
   onPriceWorld: (w: string) => void;
+  rate: number;
+  onRate: (r: number) => void;
+  instruments: Record<string, boolean>;
+  onInstruments: (i: Record<string, boolean>) => void;
 }) {
   if (!buildout) {
     return (
@@ -62,10 +78,23 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
   }
 
   const us = buildout.filter((b) => b.r === 'USA');
-  const verdicts: Verdict[] = screen(us, PRICE_WORLDS[priceWorld] ?? PRICE_WORLDS.neutral);
+  const verdicts: Verdict[] = screen(us, PRICE_WORLDS[priceWorld] ?? PRICE_WORLDS.neutral, {
+    rate,
+    offtake: instruments.offtake,
+    floorInterface: instruments.floor ? 'magnet' : null,
+    creditSupport: instruments.guarantee ? 1 : 0,
+  });
   const byStage = (s: string) => verdicts.filter((v) => v.stage === s);
   const maxKt = Math.max(1, ...STAGES.map((s) =>
     (incumbent[s] ?? 0) + byStage(s).reduce((a, v) => a + v.newKt, 0)));
+  const shortfall = verdicts.filter((v) => !v.funded);
+  // Stages the US already operates but which the plan never expands. Worth
+  // naming: a reader who sees only a magnet bar assumes the others were screened
+  // and failed, when in fact the planner never asked. The distinction is the
+  // whole point — a gap in the PLAN is a different problem from a gap in the
+  // FINANCING, and only the second is what an offtake or a guarantee can fix.
+  const unasked = STAGES.filter((s) => (incumbent[s] ?? 0) > 0 && byStage(s).length === 0);
+  const anyPriceSensitive = verdicts.some((v) => priceSensitive(v.stage));
 
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20,
@@ -76,12 +105,13 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                      textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>
           Would it actually be built
         </h2>
-        <div style={{ display: 'flex', gap: 5 }}>
+        <div style={{ display: 'flex', gap: 5 }} title={anyPriceSensitive
+            ? 'Prices are a free control here: the screen is arithmetic, not a solve'
+            : 'No screened project is price-sensitive in this scenario — see the note below'}>
           {Object.keys(PRICE_WORLDS).map((w) => (
             <button key={w} onClick={() => onPriceWorld(w)}
-              title="Prices are a free control here: the screen is arithmetic, not a solve"
               style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5,
-                       cursor: 'pointer',
+                       cursor: 'pointer', opacity: anyPriceSensitive ? 1 : 0.4,
                        border: `1px solid ${priceWorld === w ? 'var(--accent)' : 'var(--rule-strong)'}`,
                        background: priceWorld === w ? 'var(--accent)' : 'transparent',
                        color: priceWorld === w ? 'var(--paper)' : 'var(--ink)' }}>
@@ -90,11 +120,47 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
           ))}
         </div>
       </div>
-      <p style={{ fontSize: 11.5, opacity: 0.7, margin: '0 0 14px', maxWidth: 640, lineHeight: 1.45 }}>
+      <p style={{ fontSize: 11.5, opacity: 0.7, margin: '0 0 12px', maxWidth: 640, lineHeight: 1.45 }}>
         US capacity the least-cost planner calls for, against what clears a private hurdle
         rate at these prices. An outline with nothing in it is capacity the plan depends on
         that no firm would fund.
       </p>
+
+      {/* The two knobs that actually move a verdict. The planner charges
+          {PLANNER_RATE}; everything between that and the hurdle is the wedge an
+          instrument is trying to close, which is why they sit side by side. */}
+      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center',
+                    padding: '10px 12px', marginBottom: 14, borderRadius: 8,
+                    background: 'var(--paper-2)', border: '1px solid var(--rule)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
+          <span style={{ whiteSpace: 'nowrap' }}>Hurdle rate</span>
+          <input type="range" min={PLANNER_RATE} max={0.35} step={0.005} value={rate}
+            onChange={(e) => onRate(parseFloat(e.target.value))}
+            style={{ width: 150, accentColor: 'var(--accent)' }} />
+          <span style={{ font: '600 11px var(--font-mono)', minWidth: 38 }}>
+            {(rate * 100).toFixed(1)}%
+          </span>
+        </label>
+        <span style={{ fontSize: 10.5, opacity: 0.55 }}>
+          planner {(PLANNER_RATE * 100).toFixed(0)}% · US default {(hurdleRate('USA') * 100).toFixed(0)}%
+        </span>
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {INSTRUMENTS.map((i) => {
+            const on = !!instruments[i.key];
+            return (
+              <button key={i.key} title={i.hint}
+                onClick={() => onInstruments({ ...instruments, [i.key]: !on })}
+                style={{ font: '600 10px var(--font-mono)', padding: '3px 8px', borderRadius: 5,
+                         cursor: 'pointer',
+                         border: `1px solid ${on ? 'var(--accent)' : 'var(--rule-strong)'}`,
+                         background: on ? 'var(--accent)' : 'transparent',
+                         color: on ? 'var(--paper)' : 'var(--ink)' }}>
+                {i.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {STAGES.map((s) => {
         const vs = byStage(s);
@@ -132,10 +198,18 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 3,
                             font: '400 9.5px var(--font-mono)', opacity: 0.65 }}>
                 {vs.map((v) => (
-                  <span key={v.facility} title={`NPV ${v.npv.toFixed(0)} $M · ${v.leadYears} yr build · breakeven ${v.breakeven.toFixed(1)} $/kg`}>
+                  <span key={v.facility} title={
+                    `NPV ${v.npv.toFixed(0)} $M at ${(v.effRate * 100).toFixed(1)}% · ` +
+                    `${v.plannerNpv.toFixed(0)} $M at the planner's ${(PLANNER_RATE * 100).toFixed(0)}% ` +
+                    `(financing wedge ${(v.plannerNpv - v.npv).toFixed(0)} $M) · ` +
+                    `${v.leadYears} yr build · breakeven ${v.breakeven.toFixed(1)} $/kg` +
+                    (v.funded ? '' : ` · needs ${v.supportNeeded.toFixed(0)} $M/yr to clear`)}>
                     <span style={{ color: v.funded ? 'var(--accent)' : 'var(--ink-3)' }}>
                       {v.funded ? '●' : '○'}
                     </span>{' '}{v.facility}
+                    {!v.funded && (
+                      <span style={{ opacity: 0.8 }}> · needs {v.supportNeeded.toFixed(0)} $M/yr</span>
+                    )}
                   </span>
                 ))}
               </div>
@@ -143,6 +217,32 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
           </div>
         );
       })}
+
+      {/* The verdict in one line, because the bars answer "how much" and a reader
+          still has to be told "so is there a gap or not". */}
+      <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--rule)',
+                    fontSize: 11.5, lineHeight: 1.5, maxWidth: 660 }}>
+        {shortfall.length === 0 ? (
+          <span>
+            <strong>No financing gap here.</strong> Every expansion the planner asks for clears
+            a {(rate * 100).toFixed(1)}% hurdle unaided
+            {unasked.length > 0 && (
+              <> — but the plan only ever asks for {STAGES.filter((s) => byStage(s).length > 0)
+                .map((s) => LABEL[s].toLowerCase()).join(' and ')} capacity.
+                It requests no new {unasked.map((s) => LABEL[s].toLowerCase()).join(', ')} at all,
+                so the exposure at those stages is a gap in the <em>plan</em>, not one an offtake
+                or a guarantee could close.</>
+            )}
+          </span>
+        ) : (
+          <span>
+            <strong>{shortfall.length} of {verdicts.length} expansions do not clear</strong> at
+            a {(rate * 100).toFixed(1)}% hurdle: {shortfall.map((v) => v.facility).join(', ')}.
+            Closing that needs {shortfall.reduce((a, v) => a + v.supportNeeded, 0).toFixed(0)} $M/yr
+            of support, or an instrument that removes enough risk to lower the rate itself.
+          </span>
+        )}
+      </div>
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12,
                     font: '400 10px var(--font-mono)', opacity: 0.65 }}>
@@ -152,6 +252,12 @@ export default function CapacityPanel({ buildout, incumbent, priceWorld, onPrice
                              border: '1.5px dashed var(--accent)' }} /> planner asks for</span>
         <span><span style={{ display: 'inline-block', width: 12, height: 8,
                              background: 'var(--accent)', opacity: 0.55 }} /> a firm would fund</span>
+        {!anyPriceSensitive && (
+          <span style={{ opacity: 0.75 }}>
+            · price world is inert here: conversion stages earn an asserted spread, so the
+            oxide price cancels between revenue and feedstock
+          </span>
+        )}
         {!HAS_META && <span style={{ opacity: 0.5 }}>· constants inline pending regrid</span>}
       </div>
     </section>

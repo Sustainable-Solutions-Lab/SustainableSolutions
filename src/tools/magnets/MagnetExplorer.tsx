@@ -3,6 +3,7 @@ import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSuppl
 import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
 import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import DemandChips from './DemandChips';
+import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
 // sheet rather than a sticky sidebar that would overlay the plots.
@@ -531,7 +532,8 @@ export default function MagnetExplorer() {
   const leversExhausted = !bestLever && securityLevers.some((l) => !l.demand && l.dCost > 0);
 
   return (
-    <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto', padding: isMobile ? '20px 16px 92px' : '28px 20px 0', color: 'var(--ink)' }}>
+    <div style={{ position: 'relative', maxWidth: 'var(--content-max)', margin: '0 auto', padding: isMobile ? '20px 16px 92px' : '28px 20px 0', color: 'var(--ink)' }}>
+      <BusyOverlay busy={pfloor > 0 && !pfReady} label="Loading price-floor scenarios" />
       <header style={{ marginBottom: 24 }}>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.08em', color: 'var(--accent)', marginBottom: 8 }}>
           INTERACTIVE MODEL · WORK IN PROGRESS

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { AXES, BASE, interpScenario, applyStockpile, STOCKPILE_COST_DEFAULT, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, ensurePriceFloorSlices, priceFloorReady, ensureAbatementCeilingSlices,
-         abatementCeilingReady, HAS_ABATEMENT_CEILING, ABATEMENT_CEILINGS } from './interp';
+import { AXES, AXIS_DOMAIN, BASE, interpScenario, applyStockpile, STOCKPILE_COST_DEFAULT, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, ensurePriceFloorSlices, priceFloorReady, ensureAbatementCeilingSlices,
+         abatementCeilingReady, HAS_ABATEMENT_CEILING, ABATEMENT_CEILINGS, type Scenario } from './interp';
 import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
 import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import DemandChips from './DemandChips';
 import AbatementReadout from './AbatementReadout';
 import CapacityPanel, { type ReClass } from './CapacityPanel';
 import RdValuePanel from './RdValuePanel';
+import { chooseCollection, chooseStockpile, chooseRd, UNMET_VALUE_ANCHORS, UNMET_VALUE_DEFAULT } from './deploy';
 import { hurdleRate, RELIEF_DEFAULTS, MAGNET_CONVERSION_DEFAULT } from './projectFinance';
 import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
@@ -70,6 +71,8 @@ import { realWorldFlows, reconcileUsSupply, reconcileUsMix, reconcileUsMixRe, re
 
 const pct = (x: number) => `${x.toFixed(0)}%`;
 const musd = (x: number) => `$${(x / 1000).toFixed(1)}B`;
+/** Same, but a bill under a billion reads in $M rather than as $0.0B. */
+const musdS = (x: number) => Math.abs(x) >= 1000 ? musd(x) : `$${x.toFixed(0)}M`;
 // Fixed x-axis for the absolute cost bar so it visibly grows/shrinks with sliders
 // (real US cost-of-security spans ~$2.5B baseline to ~$10B under heavy reshoring).
 const COST_AXIS_MAX = 12000;  // $M
@@ -288,7 +291,6 @@ function ScoreCard2({ label, a, b, small, chip }: {
 export default function MagnetExplorer() {
   const [make, setMake] = useState(0);       // component prong: US-made magnets
   const [source, setSource] = useState(0);   // mineral prong: non-China sourcing
-  const [rec, setRec] = useState(0);         // recycling collection rate
   // BASE CASE is a partially restricted world, not an open market. The study
   // exists because buyers are already paying to hedge Chinese supply, and an
   // undisrupted default answers a question nobody is asking: of course the
@@ -301,8 +303,17 @@ export default function MagnetExplorer() {
   // to screen. That is the finding, not a defect, and the panel says so.
   const [china, setChina] = useState(0.6);   // China export-restriction severity
   const [rcost, setRcost] = useState(AXES.rcostMin); // US recycling cost factor
-  const [stockpile, setStockpile] = useState(0);     // strategic stockpile size (kt)
+  // INTERVENTION COSTS. Collection, stockpiling and thrifting research are not
+  // set by the reader; the reader states what each costs and the planner deploys
+  // each to the degree it pays (deploy.ts). The deployed rate, size and unlock
+  // are derived below, not state.
+  const [collectCost, setCollectCost] = useState(25);                   // $/kg of magnet collected
   const [stockCost, setStockCost] = useState(STOCKPILE_COST_DEFAULT);   // $/kg acquire + hold
+  // Value of a kg of unmet magnet demand, held as log10 so the slider spans the
+  // three orders of magnitude between the revealed 2025 premium and a
+  // value-of-lost-load figure without the low end collapsing into one pixel.
+  const [unmetValueLog, setUnmetValueLog] = useState(Math.log10(UNMET_VALUE_DEFAULT));
+  const unmetValue = 10 ** unmetValueLog;
   const [pfloor, setPfloor] = useState(0);           // US price floor on China imports (0 / .5 / 1)
   // The floor=0 grid is eager; the half/full slices load on first use of the slider.
   const [pfReady, setPfReady] = useState(priceFloorReady());
@@ -310,11 +321,11 @@ export default function MagnetExplorer() {
     if (pfloor > 0 && !pfReady) ensurePriceFloorSlices().then(() => setPfReady(true));
   }, [pfloor, pfReady]);
   // Abatement ceiling: 0 = today's sectoral availability, 1 = the barrier broken.
-  // Its three slices (one per price-floor level) load on first use, exactly like the
-  // floor slices; until then interpScenario answers at the baseline ceiling.
-  // Continuous now: the barrier is removed by degrees, and the research that
-  // removes it is priced. Both endpoints are solved; between them we blend.
-  const [abunlock, setAbunlock] = useState(0);
+  // Whether it is broken is the planner's call, made below against this R&D cost.
+  // Its three slices (one per price-floor level) load in idle time after first
+  // paint, because the decision needs both ceilings; until they arrive the
+  // research counts as not yet evaluated, and interpScenario answers at the
+  // baseline ceiling.
   const [rdCostPerKg, setRdCostPerKg] = useState(50);   // $ per kg of capability unlocked
   // The actor-side calibration. Exposed rather than fixed because these are the
   // numbers the US conclusion turns on and the ones we are least sure of.
@@ -322,10 +333,14 @@ export default function MagnetExplorer() {
   const [foakMult, setFoakMult] = useState(1);            // x the FOAK premium above one
   const [provenancePremium, setProvenancePremium] = useState(0);   // $/kg for non-China supply
   const [ceilingReady, setCeilingReady] = useState(abatementCeilingReady());
-  const loadCeiling = () => ensureAbatementCeilingSlices().then(() => setCeilingReady(true));
   useEffect(() => {
-    if (abunlock > 0 && !ceilingReady) void loadCeiling();
-  }, [abunlock, ceilingReady]);
+    if (ceilingReady || !HAS_ABATEMENT_CEILING) return;
+    const go = () => { void ensureAbatementCeilingSlices().then(() => setCeilingReady(true)); };
+    const w = window as any;
+    const id = typeof w.requestIdleCallback === 'function'
+      ? w.requestIdleCallback(go, { timeout: 4000 }) : window.setTimeout(go, 1500);
+    return () => { if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(id); else window.clearTimeout(id); };
+  }, [ceilingReady]);
   // Real-world projects overlay (default = operating only; construction + planned off). The
   // active allied set drives the country-level allied HHI in the trade-risk index.
   // Only the uncertain future supply is toggled; operating plants are always in.
@@ -366,25 +381,45 @@ export default function MagnetExplorer() {
   // (so the value reflects the chosen scenario, e.g. NZE, not an absolute 1.0).
   const demandNoLever = useMemo(() => demandSummary(scenario, DEFAULT_LEVERS), [scenario]);
 
-  const sc = useMemo(() => applyStockpile(interpScenario({
-    make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, abunlock,
-  }), stockpile, stockCost), [make, source, rec, china, rcost, demand, dscale, stockpile, stockCost, pfloor, pfReady, abunlock, ceilingReady]);
   // The cost breakdown is US-specific (the cost the US bears to supply itself) —
   // this analysis is about US supply security. Global trade/co-product don't apply.
   const US_COST_KEYS = COST_KEYS.filter(([k]) => k !== 'trade' && k !== 'coproduct');
   // The bar shows REAL economic cost: the unmet-demand penalty is excluded (it's a
   // solver flag at $10k/kg, not money) and surfaced physically as unmet demand (kt).
   const REAL_COST_KEYS = US_COST_KEYS.filter(([k]) => k !== 'shortage');
-  const realCost = (s: typeof sc) => REAL_COST_KEYS.reduce((a, [k]) => a + Math.max(0, s.us_cost[k] ?? 0), 0);
-  // The SAME world at both ceilings, so the R&D panel can difference them. Both
-  // are grid reads, not solves, so this costs nothing beyond a lookup.
-  const rdPair = useMemo(() => {
-    const at = (u: number) => interpScenario({
-      make, source, rec, china, rcost,
-      dytb: demand.dytb_intensity, dscale, pfloor, abunlock: u,
-    });
-    return { base: at(0), unlocked: at(1) };
-  }, [make, source, rec, china, rcost, demand, dscale, pfloor, pfReady, ceilingReady]);
+  const realCost = (s: Scenario) => REAL_COST_KEYS.reduce((a, [k]) => a + Math.max(0, s.us_cost[k] ?? 0), 0);
+
+  // ── THE PLANNER'S DEPLOYMENTS ────────────────────────────────────────────
+  // Three decisions, in the order they depend on each other. Collection is a
+  // world parameter, chosen on the world objective at the baseline ceiling; the
+  // research decision is then made at that collection rate; the stockpile last,
+  // against whatever shortfall is left. Every step is a grid read.
+  const cellAt = useCallback((o: Record<string, number>) => interpScenario({
+    make, source, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, abunlock: 0, ...o,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [make, source, china, rcost, demand, dscale, pfloor, pfReady, ceilingReady]);
+  const collection = useMemo(
+    () => chooseCollection(AXIS_DOMAIN.rec, (r) => cellAt({ rec: r }), collectCost),
+    [cellAt, collectCost]);
+  const rec = collection.rate;
+  // The SAME world at both ceilings, so the research can be valued by
+  // differencing them. Both are grid reads, not solves.
+  const rdPair = useMemo(
+    () => ({ base: cellAt({ rec }), unlocked: cellAt({ rec, abunlock: 1 }) }),
+    [cellAt, rec]);
+  const rdChoice = useMemo(() => chooseRd(rdPair.base, rdPair.unlocked, {
+    costPerKg: rdCostPerKg, ceilingFrom: ABATEMENT_CEILINGS.baseline,
+    ceilingTo: ABATEMENT_CEILINGS.aspirational, realCost,
+    evaluated: ceilingReady && HAS_ABATEMENT_CEILING,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [rdPair, rdCostPerKg, ceilingReady]);
+  const abunlock = rdChoice.unlock;
+  const scBase = abunlock ? rdPair.unlocked : rdPair.base;
+  const stockChoice = useMemo(
+    () => chooseStockpile(scBase, stockCost, unmetValue, STOCKPILE_MAX),
+    [scBase, stockCost, unmetValue]);
+  const stockpile = stockChoice.kt;
+  const sc = useMemo(() => applyStockpile(scBase, stockpile, stockCost), [scBase, stockpile, stockCost]);
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -534,7 +569,7 @@ export default function MagnetExplorer() {
   const restorePin = () => {
     if (!pin) return;
     const c = pin.coords;
-    setMake(c.make); setSource(c.source); setRec(c.rec);
+    setMake(c.make); setSource(c.source);
     setChina(c.china); setRcost(c.rcost); setPfloor(c.pfloor);
     setDscaleOverride(c.dscale);
     // dytb is derived from the sector composition; it follows once the demand
@@ -731,25 +766,52 @@ export default function MagnetExplorer() {
       </div>
 
       <div style={RULE} />
-      <div style={GROUP}>Recycling</div>
+      <div style={GROUP}>Intervention costs</div>
+      <p style={{ fontSize: 10.5, opacity: 0.6, margin: '-2px 0 8px', lineHeight: 1.4 }}>
+        Not set, but priced: state what each costs and the planner deploys it to the
+        degree it pays. What it chose is reported beneath.
+      </p>
       <div style={ROW}>
-        <Slider label="End-of-life collection rate" value={rec} max={AXES.recMax} onChange={setRec} fmt={(v) => pct(v * 100)}
-          ticks={[{ at: 0, label: 'none' }, { at: 0.3, label: 'e-waste-like' }, { at: AXES.recMax, label: 'max solved' }]}
-          desc="Share of end-of-life magnets collected and reprocessed into oxide. Recovered scrap is concentrated Nd/Pr/Dy/Tb with no co-product tax — but recycling plants must be built and paid for." />
-      </div>
-
-      <div style={RULE} />
-      <div style={GROUP}>Strategic stockpile</div>
-      <div style={ROW}>
-        <Slider label="Stockpile size" value={stockpile} max={STOCKPILE_MAX} onChange={setStockpile} fmt={(v) => `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} kt`}
-          ticks={[{ at: 0, label: 'none' }, { at: 5, label: '5 kt' }, { at: STOCKPILE_MAX, label: `${STOCKPILE_MAX} kt` }]}
-          desc="A pre-positioned US inventory of finished magnets, bought on the open market before a shock and drawn down to cover the earliest unmet demand. Cheap insurance against a near-term shock, but finite: it only helps where there is unmet demand to cover." />
+        <Slider label="End-of-life collection cost" value={collectCost} max={100} onChange={setCollectCost} fmt={(v) => `$${v.toFixed(0)}/kg`}
+          ticks={[{ at: 0, label: 'free' }, { at: 25, label: 'default' }, { at: 100, label: 'dear' }]}
+          desc="What it costs to get a kilogram of end-of-life magnet to a recycler: take-back, dismantling, sorting, logistics. The model already pays to build and run the recyclers; this is the part it never priced. The planner picks the collection rate (none, 20, 40 or 60% of retirements, the solved points) that minimizes world cost plus this bill, so cheap collection means more recycling and dear collection means none." />
         <Slider label="Stockpile cost" value={stockCost} min={40} max={250} onChange={setStockCost} fmt={(v) => `$${v.toFixed(0)}/kg`}
           ticks={[{ at: 40, label: 'commodity' }, { at: STOCKPILE_COST_DEFAULT, label: 'default' }, { at: 250, label: 'high-coercivity' }]}
-          desc={`Acquire and hold cost of stockpiled finished magnets. The $${STOCKPILE_COST_DEFAULT}/kg default assumes a buffer skewed to Dy/Tb-rich high-coercivity grades — the strategically scarce ones, which cost well above an average magnet. Only bites when the stockpile is above zero.`} />
+          desc={`Acquire and hold cost of stockpiled finished magnets. The $${STOCKPILE_COST_DEFAULT}/kg default assumes a buffer skewed to Dy/Tb-rich high-coercivity grades, the strategically scarce ones. The planner holds enough to cover the shortfall when this is below the value of unmet demand, and nothing otherwise.`} />
+        <Slider label="Value of unmet demand" value={unmetValueLog} min={Math.log10(30)} max={Math.log10(50000)} step={0.01} onChange={setUnmetValueLog}
+          fmt={(v) => { const x = 10 ** v; return x >= 1000 ? `$${(x / 1000).toFixed(x >= 10000 ? 0 : 1)}k/kg` : `$${x.toFixed(0)}/kg`; }}
+          ticks={[{ at: Math.log10(UNMET_VALUE_ANCHORS.revealed2025), label: '2025 premium' }, { at: Math.log10(UNMET_VALUE_ANCHORS.adaptation), label: 'adapt' }, { at: Math.log10(UNMET_VALUE_ANCHORS.lostLoad), label: 'lost load' }]}
+          desc="What a kilogram of magnet demand that goes unmet costs the US, per kg of finished magnet. Three anchors, three orders of magnitude apart, and the gap between them is the point. FLOOR, revealed by the 2025 export controls: buyers paid an ex-China premium worth about $55/kg of magnet rather than go without, so the marginal ton was still obtainable at that. CEILING, a short unforeseen stoppage: the vehicle output riding on each kg of magnet, or an electricity value-of-lost-load ratio of 150-1,000x price, lands at $10,000-100,000/kg. The grid's unmet demand is neither: a foreseen, multi-year gap, which nobody pays that for; they redesign the magnet out at a few hundred $/kg. That is the default. Log scale." />
+        <Slider label="Thrifting R&D cost" value={rdCostPerKg} max={400} step={5} onChange={setRdCostPerKg} fmt={(v) => `$${v.toFixed(0)}/kg`}
+          ticks={[{ at: 0, label: 'free' }, { at: 50, label: 'default' }, { at: 400, label: 'dear' }]}
+          desc="What the research costs per kg of Dy/Tb it makes designable-out: the engineering that lets a sector take a weaker magnet, so the thrifting ceiling rises from today's sectoral availability to the best any sector demonstrates. The planner funds it when the saving on the US supply bill exceeds the bill; the detail is in the research panel below." />
+      </div>
+      <div style={{ display: 'grid', gap: '4px 20px', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                    font: '500 10.5px var(--font-mono)', lineHeight: 1.4, marginTop: 2 }}>
+        {[
+          { l: 'Collection', on: rec > 0,
+            v: rec > 0 ? `${pct(rec * 100)} of retirements` : 'none',
+            s: rec > 0 ? `${collection.collectedKt.toFixed(0)} kt collected · bill ${musdS(collection.bill)} · saves ${musdS(collection.systemSaving)} world`
+                       : 'collection dearer than the primary it displaces' },
+          { l: 'Stockpile', on: stockpile > 0,
+            v: stockpile > 0 ? `${stockpile.toFixed(stockpile % 1 === 0 ? 0 : 1)} kt` : 'none',
+            s: stockpile > 0 ? `covers the ${stockChoice.unmetKt.toFixed(1)} kt shortfall · ${musdS(stockChoice.bill)}`
+               : stockChoice.unmetKt > 1e-6 ? `$${stockCost}/kg to hold exceeds what unmet demand costs`
+               : 'no unmet demand to cover' },
+          { l: 'Thrifting R&D', on: abunlock > 0,
+            v: !rdChoice.evaluated ? 'evaluating…' : abunlock > 0 ? 'funded' : 'not funded',
+            s: !rdChoice.evaluated ? 'loading the higher-ceiling grid'
+               : `net ${musdS(rdChoice.rd.net)} on the US bill${rdChoice.rd.breakeven != null && rdChoice.rd.breakeven > 0 ? ` · breakeven $${rdChoice.rd.breakeven.toFixed(0)}/kg` : ''}` },
+        ].map((k) => (
+          <div key={k.l} style={{ minWidth: 0 }}>
+            <span style={{ opacity: 0.55 }}>{k.l}: </span>
+            <b style={{ color: k.on ? 'var(--accent)' : 'var(--ink)' }}>{k.v}</b>
+            <div style={{ opacity: 0.55, fontWeight: 400, fontSize: 10 }}>{k.s}</div>
+          </div>
+        ))}
       </div>
       {stockpile > 0 && (
-        <p style={{ fontSize: 10.5, opacity: 0.55, margin: '2px 0 0', lineHeight: 1.4 }}>
+        <p style={{ fontSize: 10.5, opacity: 0.55, margin: '4px 0 0', lineHeight: 1.4 }}>
           Embodies ≈ <b>{Math.round(stockpile * 0.326)} kt Nd/Pr</b> + <b>{(stockpile * 0.034).toFixed(1)} kt Dy/Tb</b> oxide — the heavy slice is the strategically scarce one.
         </p>
       )}
@@ -956,11 +1018,8 @@ export default function MagnetExplorer() {
           <AbatementReadout china={china} unlock={abunlock} />
 
           {HAS_ABATEMENT_CEILING && (
-            <RdValuePanel base={rdPair.base} unlocked={rdPair.unlocked}
-              unlock={abunlock}
-              onUnlock={(u) => { setAbunlock(u); if (u > 0) void loadCeiling(); }}
-              costPerKg={rdCostPerKg} onCostPerKg={setRdCostPerKg}
-              realCost={realCost} loading={abunlock > 0 && !ceilingReady} />
+            <RdValuePanel rd={rdChoice.rd} funded={abunlock > 0} evaluated={rdChoice.evaluated}
+              costPerKg={rdCostPerKg} />
           )}
 
           {/* 4 — combined "Cost and security" section: cost bar (real NPV) + the

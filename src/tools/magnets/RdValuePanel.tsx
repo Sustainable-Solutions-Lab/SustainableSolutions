@@ -6,30 +6,22 @@
  * uncertain parameter is therefore the R&D cost, and the model supplies the
  * value — see rdValue.ts for what is and is not counted.
  */
-import { valueRd, type RdCase, type CostFn } from './rdValue';
-import { ABATEMENT_CEILINGS, type Scenario } from './interp';
+import type { RdCase } from './rdValue';
 
 const musd = (v: number) => `${v >= 0 ? '' : '−'}$${(Math.abs(v) / 1000).toFixed(2)}B`;
 const GOOD = 'var(--brand-green)';
 const BAD = '#D53E4F';
 
-export default function RdValuePanel({ base, unlocked, unlock, onUnlock,
-                                       costPerKg, onCostPerKg, realCost, loading }: {
-  base: Scenario;
-  unlocked: Scenario;
-  unlock: number;
-  onUnlock: (u: number) => void;
+export default function RdValuePanel({ rd, funded, evaluated, costPerKg }: {
+  /** The valuation the planner's decision rests on (deploy.chooseRd). */
+  rd: RdCase;
+  /** Whether the planner funds the program at the stated cost. */
+  funded: boolean;
+  /** False until the higher-ceiling cells are resident. */
+  evaluated: boolean;
   costPerKg: number;
-  onCostPerKg: (c: number) => void;
-  realCost: CostFn;
-  loading?: boolean;
 }) {
-  const r: RdCase = valueRd(base, unlocked, {
-    costPerKg, unlock,
-    ceilingFrom: ABATEMENT_CEILINGS.baseline,
-    ceilingTo: ABATEMENT_CEILINGS.aspirational,
-    realCost,
-  });
+  const r = rd;
   const pays = r.net > 0;
 
   return (
@@ -47,32 +39,26 @@ export default function RdValuePanel({ base, unlocked, unlock, onUnlock,
       </div>
       <p style={{ fontSize: 11.5, opacity: 0.7, margin: '0 0 14px', maxWidth: 660, lineHeight: 1.45 }}>
         Thrifting harder is not free: someone has to fund the engineering that lets a
-        sector take a weaker magnet. Set what that research costs per kg of Dy/Tb it
-        makes designable-out, and the model returns whether it pays for itself.
+        sector take a weaker magnet. The cost of that research per kg of Dy/Tb it
+        makes designable-out is set with the other intervention costs; this is the
+        valuation behind the planner's decision to fund it or not.
       </p>
 
       <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center',
                     padding: '10px 12px', marginBottom: 14, borderRadius: 8,
-                    background: 'var(--paper-2)', border: '1px solid var(--rule)' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
-          <span style={{ whiteSpace: 'nowrap' }}>Barrier removed</span>
-          <input type="range" min={0} max={1} step={0.05} value={unlock}
-            onChange={(e) => onUnlock(parseFloat(e.target.value))}
-            style={{ width: 130, accentColor: 'var(--accent)' }} />
-          <span style={{ font: '600 11px var(--font-mono)', minWidth: 70 }}>
-            {(r.ceilingFrom * 100).toFixed(0)}→{(r.ceilingTo * 100).toFixed(0)}%
-          </span>
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
-          <span style={{ whiteSpace: 'nowrap' }}>R&amp;D cost</span>
-          <input type="range" min={0} max={400} step={5} value={costPerKg}
-            onChange={(e) => onCostPerKg(parseFloat(e.target.value))}
-            style={{ width: 130, accentColor: 'var(--accent)' }} />
-          <span style={{ font: '600 11px var(--font-mono)', minWidth: 62 }}>
-            ${costPerKg.toFixed(0)}/kg
-          </span>
-        </label>
-        {loading && <span style={{ fontSize: 10.5, opacity: 0.55 }}>loading grid…</span>}
+                    background: 'var(--paper-2)', border: '1px solid var(--rule)', fontSize: 11.5 }}>
+        <span>
+          <span style={{ opacity: 0.6 }}>Planner's decision at ${costPerKg}/kg: </span>
+          <b style={{ color: !evaluated ? 'var(--ink-3)' : funded ? GOOD : BAD }}>
+            {!evaluated ? 'evaluating' : funded ? 'fund it' : 'do not fund'}
+          </b>
+        </span>
+        <span style={{ font: '600 11px var(--font-mono)', opacity: 0.8 }}>
+          ceiling {(r.ceilingFrom * 100).toFixed(0)}→{(r.ceilingTo * 100).toFixed(0)}%
+        </span>
+        <span style={{ fontSize: 10.5, opacity: 0.55 }}>
+          {evaluated ? 'set the R&D cost in the intervention costs above' : 'loading the higher-ceiling grid…'}
+        </span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
@@ -95,7 +81,7 @@ export default function RdValuePanel({ base, unlocked, unlock, onUnlock,
       <div style={{ fontSize: 11.5, lineHeight: 1.5, maxWidth: 680, paddingTop: 12,
                     borderTop: '1px solid var(--rule)' }}>
         {r.breakeven == null ? (
-          <span>Move the barrier slider to price a program.</span>
+          <span>The research unlocks no capability in this scenario, so no price makes it pay.</span>
         ) : r.breakeven <= 0 ? (
           <>
             <strong>No price makes this pay here.</strong> At this restriction the extra

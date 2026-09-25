@@ -130,6 +130,20 @@ export const PLANNER_RATE: number = C.discount_rate;
  *  `rate` overrides the regional default, so the UI can sweep the IRR threshold. */
 export function evaluate(b: Buildout, prices: Prices, opts: {
   relief?: number; support?: number; basket?: Record<string, number>; rate?: number;
+  /** Scales the regional cost disadvantage (opex AND fixed). 1 = as calibrated.
+   *  Swept because it is a judgement call that the US conclusion turns on. */
+  costMult?: number;
+  /** Scales the FOAK PREMIUM ABOVE ONE, not the multiplier itself: at 0 a
+   *  first-of-a-kind plant costs the same as an nth-of-a-kind, at 2 it is twice
+   *  as penalised. Scaling the multiplier directly would make 0 mean "free". */
+  foakMult?: number;
+  /** $/kg a non-China producer can charge for provenance. The model charges the
+   *  ex-China premium as a COST on imported Dy/Tb but never credits it as
+   *  REVENUE to an ex-China producer, so a US plant carries the premium's
+   *  burden and none of its benefit — which is precisely backwards for the
+   *  hedging demand that motivates the programme. Defaults to 0, because we
+   *  have no defensible number for it; it is here to be swept. */
+  provenancePremium?: number;
 } = {}): Verdict {
   const rate = opts.rate ?? hurdleRate(b.r);
   const relief = opts.relief ?? 0;
@@ -138,10 +152,12 @@ export function evaluate(b: Buildout, prices: Prices, opts: {
   const outKt = b.kt * b.u;
   const basket = opts.basket ?? b.basket ?? C.basket;
   const [revPerKg, inPerKg] = stageFlows(b.s, prices, basket);
-  const cf = C.regional_cost_factor?.[b.r]?.[b.s] ?? 1;
-  const foak = C.foak_premium?.[b.r]?.[b.s] ?? 1;
+  const cf = (C.regional_cost_factor?.[b.r]?.[b.s] ?? 1) * (opts.costMult ?? 1);
+  const foakBase = C.foak_premium?.[b.r]?.[b.s] ?? 1;
+  const foak = 1 + (foakBase - 1) * (opts.foakMult ?? 1);
+  const provenance = b.r === 'China' ? 0 : (opts.provenancePremium ?? 0);
 
-  const revenue = outKt * revPerKg;
+  const revenue = outKt * (revPerKg + provenance);
   const inputCost = outKt * inPerKg;
   const opex = outKt * b.v * cf;
   const baseFixed = b.fx * cf * foak;
@@ -151,7 +167,7 @@ export function evaluate(b: Buildout, prices: Prices, opts: {
 
   const margin = revenue - inputCost - opex - capitalCharge + support;
   const plannerMargin = revenue - inputCost - opex - baseFixed + support;
-  const breakeven = outKt ? (inputCost + opex + capitalCharge - support) / outKt : Infinity;
+  const breakeven = outKt ? (inputCost + opex + capitalCharge - support) / outKt - provenance : Infinity;
 
   // Capital at the START of each construction year, operating margin at the END
   // of each operating year. That convention is what makes npv reconcile with the
@@ -180,7 +196,8 @@ export function evaluate(b: Buildout, prices: Prices, opts: {
  *  on magnets does nothing for a separation plant — see instrumentRelief. */
 export const screen = (rows: Buildout[], prices: Prices, opts: {
   offtake?: boolean; floorInterface?: string | null; creditSupport?: number;
-  support?: number; rate?: number;
+  support?: number; rate?: number; costMult?: number; foakMult?: number;
+  provenancePremium?: number;
 } = {}): Verdict[] =>
   rows.map((b) => evaluate(b, prices, { ...opts, relief: instrumentRelief(b.s, opts) }));
 

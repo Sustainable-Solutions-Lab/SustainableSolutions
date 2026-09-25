@@ -7,7 +7,7 @@
  */
 import { useState } from 'react';
 import type { Scenario } from './interp';
-import { integratedRE, classTRI, stageBreakdownClass, riskColor, riskChip } from './tri';
+import { integratedRE, classTRI, riskColor, riskChip } from './tri';
 
 const musd = (x: number) => `$${(x / 1000).toFixed(1)}B`;
 
@@ -27,8 +27,6 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
 }) {
   const [infoTRI, setInfoTRI] = useState(false);
   const [infoCost, setInfoCost] = useState(false);
-  const [reClass, setReClass] = useState<'heavy' | 'light'>('heavy');   // Dy/Tb chokepoint by default
-  const stages = stageBreakdownClass(sc, reClass, alliedHHI);
   const tri = integratedRE(sc, alliedHHI);
   const triH = classTRI(sc, 'heavy', alliedHHI), triL = classTRI(sc, 'light', alliedHHI);
   const rows = levers
@@ -78,37 +76,24 @@ export default function TradeRiskPanel({ sc, levers, alliedHHI }: {
         </p>
       )}
 
-      {/* Dy/Tb (heavy) is the real chokepoint; Nd/Pr (light) is far more diversified
-          (US/ally reserves). Toggle which class the per-stage bars show. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, opacity: 0.6 }}>By RE class:</span>
+      {/* The per-stage bars used to live here. They now sit in the capacity panel,
+          one risk chip per stage row, so exposure is read against the build-out it
+          belongs to instead of in a second stage-resolved chart. What stays is the
+          pair of class indices, as a READOUT rather than a toggle — the toggle
+          moved with the bars. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
         {(['heavy', 'light'] as const).map((cls) => {
           const v = cls === 'heavy' ? triH : triL;
-          const on = reClass === cls;
           return (
-            <button key={cls} onClick={() => setReClass(cls)}
-              style={{ font: '600 11px var(--font-mono)', padding: '4px 9px', borderRadius: 6, cursor: 'pointer',
-                border: `1px solid ${on ? 'var(--accent)' : 'var(--rule-strong)'}`, background: on ? 'var(--paper-2)' : 'transparent', color: 'var(--ink)' }}>
-              {cls === 'heavy' ? 'Dy/Tb (heavy)' : 'Nd/Pr (light)'} <b style={riskChip(riskColor(v))}>{v.toFixed(2)}</b>
-            </button>
+            <span key={cls} style={{ font: '400 11px var(--font-mono)', opacity: 0.75 }}>
+              {cls === 'heavy' ? 'Dy/Tb (heavy)' : 'Nd/Pr (light)'}{' '}
+              <b style={riskChip(riskColor(v))}>{v.toFixed(2)}</b>
+            </span>
           );
         })}
-      </div>
-      <div style={{ fontSize: 10.5, opacity: 0.5, margin: '0 0 6px' }}>
-        Per stage — {reClass === 'heavy' ? 'Dy/Tb (heavy)' : 'Nd/Pr (light)'}:
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-        {stages.map((st) => (
-          <div key={st.key} style={{ display: 'grid', gridTemplateColumns: '128px 1fr 38px', gap: 10, alignItems: 'center' }}>
-            <span style={{ fontSize: 12, fontWeight: 600, textAlign: 'right', opacity: 0.85 }}>{st.label}</span>
-            <div title={`import reliance ${(st.reliance * 100).toFixed(0)}% · unmet ${(st.unmet * 100).toFixed(0)}%`}
-              style={{ height: 16, borderRadius: 4, background: 'var(--paper-2)', border: '1px solid var(--rule)', overflow: 'hidden' }}>
-              <div style={{ width: `${st.tri * 100}%`, height: '100%', background: riskColor(st.tri), transition: 'width 0.15s' }} />
-            </div>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, textAlign: 'right' }}>{st.tri.toFixed(2)}</span>
-          </div>
-        ))}
+        <span style={{ fontSize: 10.5, opacity: 0.45 }}>
+          per-stage risk is on the build-out bars above
+        </span>
       </div>
 
       <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--rule)' }}>

@@ -3,6 +3,7 @@ import { AXES, BASE, interpScenario, applyStockpile, applyRoundTop, reshoreSuppl
 import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
 import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import DemandChips from './DemandChips';
+import AbatementReadout from './AbatementReadout';
 import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
@@ -783,6 +784,8 @@ export default function MagnetExplorer() {
             </div>
           </section>
 
+
+          <AbatementReadout china={china} />
 
           {/* ── Part 2: what interventions buy ───────────────────────────────
               Everything above characterises the world with no US action. These

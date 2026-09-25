@@ -55,14 +55,47 @@ export type Buildout = {
  *  the basket it consumes. Asserting them independently is how the WP3 figures
  *  ended up with a magnet cheaper than the oxide inside it. */
 export function pricesFromOxide(ndpr: number, dytb: number,
-                                alloyConv = 15, magnetConv = 25): Prices {
+                                alloyConv = ALLOY_CONVERSION_DEFAULT,
+                                magnetConv = MAGNET_CONVERSION_DEFAULT): Prices {
   const [nm, dm] = C.grade_ladder[C.grade];
   const oxideInMagnet = C.oxide_factor * (nm * ndpr + dm * dytb);
   const alloy = oxideInMagnet + alloyConv;
   return { ...C.prices, oxide_NdPr: ndpr, oxide_DyTb: dytb, alloy, magnet: alloy + magnetConv };
 }
 
-export const MAGNET_CONVERSION_DEFAULT = 25;
+/**
+ * COMPETITIVE conversion spreads, anchored on the marginal producer.
+ *
+ * The spread was an asserted $25/kg for magnets and $15 for alloy, given to
+ * every region alike. That tests ABSOLUTE viability: a US plant sells at the
+ * same world price as a Chinese one, so China's lower cost makes it more
+ * profitable without making the US plant unprofitable, and the plan looked
+ * bankable almost everywhere. But in a market where China makes ~90% of the
+ * product, the price of conversion settles near what the marginal CHINESE
+ * producer needs — its cost plus a normal return on capital. That is what a
+ * US plant competes against, and at that spread no US plant clears unaided.
+ *
+ * So the default is China's all-in conversion cost from the model's own
+ * facility data (steer_magnet_cem/data/raw/{magnet,alloy}_plants.csv:
+ * variable $/kg plus the annualised fixed charge of one module at full output,
+ * which already embeds the return on capital at the planner's rate). The old
+ * $25 is kept as a named anchor on the slider so the two readings can be
+ * compared. The only routes to a HIGHER realised price for a US plant are the
+ * provenance premium and the restriction it hedges, which is the argument of
+ * the whole tool.
+ */
+const CHINA_PLANT = {                 // var $/kg, fixed $M/yr per module, module kt
+  magnet: { v: 4.0, fx: 12.0, kt: 40 },
+  alloy:  { v: 2.0, fx: 10.0, kt: 40 },
+};
+export const CHINA_CONVERSION = {
+  magnet: CHINA_PLANT.magnet.v + CHINA_PLANT.magnet.fx / CHINA_PLANT.magnet.kt,   // $4.30/kg
+  alloy:  CHINA_PLANT.alloy.v + CHINA_PLANT.alloy.fx / CHINA_PLANT.alloy.kt,      // $2.25/kg
+};
+/** The asserted spreads the screen used before re-anchoring, kept as anchors. */
+export const LEGACY_CONVERSION = { magnet: 25, alloy: 15 };
+export const MAGNET_CONVERSION_DEFAULT = CHINA_CONVERSION.magnet;
+export const ALLOY_CONVERSION_DEFAULT = CHINA_CONVERSION.alloy;
 const OXIDE_CHINA = { ndpr: 113, dytb: 285 };      // Chinese domestic benchmark
 const OXIDE_EXCHINA = { ndpr: 184, dytb: 1625 };   // ex-China, post-2025 bifurcation
 
@@ -85,14 +118,13 @@ export const priceAtSpread = (spread: number, magnetConv = MAGNET_CONVERSION_DEF
   pricesFromOxide(
     OXIDE_CHINA.ndpr + spread * (OXIDE_EXCHINA.ndpr - OXIDE_CHINA.ndpr),
     OXIDE_CHINA.dytb + spread * (OXIDE_EXCHINA.dytb - OXIDE_CHINA.dytb),
-    15, magnetConv,
+    ALLOY_CONVERSION_DEFAULT, magnetConv,
   );
 
 /**
- * The magnet CONVERSION SPREAD, $/kg: what turning alloy into a finished magnet
- * is worth, over and above the alloy consumed.
+ * History of the magnet CONVERSION SPREAD, kept because it explains the anchor.
  *
- * This single number is why the least-cost plan looks bankable almost everywhere,
+ * At an asserted $25/kg this single number was why the least-cost plan looked bankable almost everywhere,
  * and it deserves to be a control rather than a constant. The model gives EVERY
  * region the same spread — a US plant sells at the same world magnet price as a
  * Chinese one and buys alloy at the same world price — so China's lower cost
@@ -277,7 +309,7 @@ export const screen = (rows: Buildout[], prices: Prices, opts: {
   rows.map((b) => evaluate(b, prices, { ...opts, relief: instrumentRelief(b.s, opts) }));
 
 /** Does this stage's margin depend on the price world at all? Conversion stages
- *  earn an asserted spread (magnet = alloy + 25), so their revenue and their
+ *  earn a fixed spread over their input (magnet = alloy + spread), so their revenue and their
  *  purchased input move together and the oxide price cancels exactly. Saying so
  *  is better than shipping a price-world control that silently does nothing. */
 export const priceSensitive = (stage: string): boolean =>

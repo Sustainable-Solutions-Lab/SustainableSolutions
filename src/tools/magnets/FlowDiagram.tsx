@@ -320,7 +320,7 @@ export default function FlowDiagram({ flows, active, scale = {}, year }: {
         </div>
       )}
       </div>
-      <p style={{ fontSize: 11, opacity: 0.55, marginTop: 4, lineHeight: 1.45, maxWidth: 'none' }}>
+      <p style={{ fontSize: 11, opacity: 0.55, margin: '1px 0 0', lineHeight: 1.35, maxWidth: 'none' }}>
         <b>Least-cost supply chain</b> showing regions’ share by stage under selected
         assumptions{year ? <>, <b>{year}</b></> : null}. Note that masses differ by stage
         (hover any bar): first 3 columns are rare-earth oxide (RE content), while magnet

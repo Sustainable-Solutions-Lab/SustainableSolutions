@@ -714,10 +714,10 @@ export default function MagnetExplorer() {
               {...(pin ? deltaOf(chinaTouch * 100, pin.touch * 100, (v) => `${v.toFixed(1)} pp`, true, 0.05) : {})}
               sub={pin ? 'vs reference' : feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
             <ScoreCard2 label="US demand met"
-              a={{ label: pin ? 'imported 2035 · vs pin' : 'imported · 2035',
+              a={{ label: pin ? 'imported 2035 · vs reference' : 'imported · 2035',
                    value: pct(sc.kpis.us_import_pct), color: 'var(--ink)',
                    ...(pin ? deltaOf(sc.kpis.us_import_pct ?? 0, pin.imp, (v) => `${v.toFixed(0)} pp`, true, 0.4) : {}) }}
-              b={{ label: pin ? 'unmet 26–35 · vs pin' : 'unmet · 2026–35 cum.',
+              b={{ label: pin ? 'unmet 26–35 · vs reference' : 'unmet · 2026–35 cum.',
                    value: `${usUnmet.toFixed(0)} kt`, color: usUnmet > 0.05 ? WORSE : 'var(--ink)',
                    ...(pin ? deltaOf(usUnmet, pin.unmet, (v) => `${v.toFixed(1)} kt`, true, 0.05) : {}) }} />
           </div>

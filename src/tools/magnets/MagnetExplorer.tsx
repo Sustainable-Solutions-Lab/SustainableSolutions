@@ -6,6 +6,7 @@ import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import DemandChips from './DemandChips';
 import AbatementReadout from './AbatementReadout';
 import CapacityPanel, { type ReClass } from './CapacityPanel';
+import RdValuePanel from './RdValuePanel';
 import { hurdleRate } from './projectFinance';
 import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
@@ -271,7 +272,10 @@ export default function MagnetExplorer() {
   // Abatement ceiling: 0 = today's sectoral availability, 1 = the barrier broken.
   // Its three slices (one per price-floor level) load on first use, exactly like the
   // floor slices; until then interpScenario answers at the baseline ceiling.
+  // Continuous now: the barrier is removed by degrees, and the research that
+  // removes it is priced. Both endpoints are solved; between them we blend.
   const [abunlock, setAbunlock] = useState(0);
+  const [rdCostPerKg, setRdCostPerKg] = useState(50);   // $ per kg of capability unlocked
   const [ceilingReady, setCeilingReady] = useState(abatementCeilingReady());
   const loadCeiling = () => ensureAbatementCeilingSlices().then(() => setCeilingReady(true));
   useEffect(() => {
@@ -313,6 +317,15 @@ export default function MagnetExplorer() {
   // solver flag at $10k/kg, not money) and surfaced physically as unmet demand (kt).
   const REAL_COST_KEYS = US_COST_KEYS.filter(([k]) => k !== 'shortage');
   const realCost = (s: typeof sc) => REAL_COST_KEYS.reduce((a, [k]) => a + Math.max(0, s.us_cost[k] ?? 0), 0);
+  // The SAME world at both ceilings, so the R&D panel can difference them. Both
+  // are grid reads, not solves, so this costs nothing beyond a lookup.
+  const rdPair = useMemo(() => {
+    const at = (u: number) => interpScenario({
+      make, source, rec, china, rcost,
+      dytb: demand.dytb_intensity, dscale: demand.demand_scale, pfloor, abunlock: u,
+    });
+    return { base: at(0), unlocked: at(1) };
+  }, [make, source, rec, china, rcost, demand, pfloor, pfReady, ceilingReady]);
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -641,43 +654,6 @@ export default function MagnetExplorer() {
           <Slider label="US recycling cost" value={rcost} min={AXES.rcostMin} max={AXES.rcostMax} onChange={setRcost} fmt={(v) => `${v.toFixed(1)}× China`}
             desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
 
-          {/* Thrifting ceiling. Deliberately a WORLD setting, not an intervention:
-              the model charges nothing for breaking the engineering barrier, so
-              listing it beside the funded levers would read as a free policy win.
-              It is a technology-availability case — "suppose this turns out to be
-              possible" — and the honest place for that is with the assumptions. */}
-          {HAS_ABATEMENT_CEILING && (
-            <>
-              <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.55, margin: '14px 0 6px' }}>Thrifting ceiling</div>
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 4 }}>
-                {([['literature', 0], ['aspirational', 1]] as const).map(([lbl, v]) => {
-                  const on = abunlock === v;
-                  return (
-                    <button key={lbl} onClick={() => { setAbunlock(v); if (v) void loadCeiling(); }}
-                      title={v === 0
-                        ? `Today's sector x mechanism availability: ${(ABATEMENT_CEILINGS.baseline * 100).toFixed(1)}% of embodied Dy/Tb can be designed out at any price. Offshore direct-drive and defence can take neither grade downshift nor RE-free substitution.`
-                        : `Every sector reaches the best availability any sector demonstrates: ${(ABATEMENT_CEILINGS.aspirational * 100).toFixed(0)}%. Assumes the engineering barrier is solved, and charges nothing for solving it.`}
-                      style={{ font: '600 10.5px var(--font-mono)', padding: '4px 9px', borderRadius: 6, cursor: 'pointer',
-                               border: `1px solid ${on ? 'var(--accent)' : 'var(--rule-strong)'}`,
-                               background: on ? 'var(--accent)' : 'transparent',
-                               color: on ? 'var(--paper)' : 'var(--ink)' }}>
-                      {lbl}{' '}
-                      <span style={{ opacity: on ? 0.75 : 0.5, fontWeight: 400 }}>
-                        {((v ? ABATEMENT_CEILINGS.aspirational : ABATEMENT_CEILINGS.baseline) * 100).toFixed(0)}%
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
-                Share of embodied Dy/Tb that can be designed out at any price.
-                {abunlock === 1 && !ceilingReady && ' Loading the aspirational grid…'}
-                {abunlock === 1 && ceilingReady &&
-                  ' Assumes the sectoral barrier is broken everywhere, at no cost.'}
-              </p>
-            </>
-          )}
-
           {/* The reference scenario: a baseline every later reading is measured
               against. It lives with the WORLD settings because that is what you
               hold fixed — you set a world, mark it as the reference, then vary
@@ -854,6 +830,14 @@ export default function MagnetExplorer() {
             Cost of the security choices made above, and the cheapest remaining move.
           </p>
           <AbatementReadout china={china} unlock={abunlock} />
+
+          {HAS_ABATEMENT_CEILING && (
+            <RdValuePanel base={rdPair.base} unlocked={rdPair.unlocked}
+              unlock={abunlock}
+              onUnlock={(u) => { setAbunlock(u); if (u > 0) void loadCeiling(); }}
+              costPerKg={rdCostPerKg} onCostPerKg={setRdCostPerKg}
+              realCost={realCost} loading={abunlock > 0 && !ceilingReady} />
+          )}
 
           {/* 4 — combined "Cost and security" section: cost bar (real NPV) + the
               trade-risk index + cost-of-security ROI, in one block; notes behind ⓘ. */}

@@ -82,11 +82,13 @@ export const AXIS_DOMAIN = Object.fromEntries(
 ) as Record<AxisField, number[]>;
 
 type Point = { make: number; source: number; rec: number; dytb: number; china: number; rcost: number; dscale: number; pfloor?: number; abunlock?: number };
-// `abunlock` is part of the KEY but deliberately not part of FIELD_AXIS: it is a
-// discrete technology-availability case (today's sectoral ceiling vs the barrier
-// broken), not a continuum, so interpolating halfway between them would describe
-// a world nobody asserted. Every corner of a query is looked up at the SAME
-// ceiling; the toggle switches which set of corners is in play.
+// `abunlock` is part of the KEY but not of FIELD_AXIS, because only its two
+// ENDPOINTS are solved (0 = today's sectoral ceiling, 1 = the barrier broken
+// everywhere). It is nonetheless a continuum in the model — aggregate_tranches
+// lifts each sector's availability by `a + u*(best - a)`, linear in u — so
+// interpolating between the endpoints describes a real intermediate world: R&D
+// that got part of the way. interpScenario blends the two corner sets when the
+// query falls between them; see the note there on where that approximation bites.
 const key = (s: Point) =>
   `${s.make}|${s.source}|${s.rec}|${s.dytb}|${s.china}|${s.rcost}|${s.dscale}|${s.pfloor ?? 0}|${s.abunlock ?? 0}`;
 const LOOKUP = new Map(SC.map((s) => [key(s), s]));
@@ -319,11 +321,18 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
 
 export function interpScenario(pt: Point): Scenario {
   pt = { ...pt, pfloor: pt.pfloor ?? 0 };   // default the price-floor axis for callers that omit it
-  const ab = pt.abunlock ?? 0;              // discrete: 0 = today's ceiling, 1 = barrier broken
+  const ab = Math.max(0, Math.min(1, pt.abunlock ?? 0));
   const brk = FIELD_AXIS.map(([f, ax]) => bracket(AX[ax] ?? [0], (pt[f] as number) ?? 0));
   const n = FIELD_AXIS.length;
+  // Blend the two solved ceilings only when the query sits strictly between them.
+  // The approximation: the optimiser's response to a ceiling is piecewise (it
+  // abates up to the ceiling only where marginal cost undercuts the premium), so
+  // a midpoint read is linear where the truth is a staircase. The endpoints, which
+  // are what the paper quotes, are exact.
+  const blendAb = ab > 1e-9 && ab < 1 - 1e-9;
+  const nBits = n + (blendAb ? 1 : 0);
   const parts: { s: Scenario; w: number }[] = [];
-  for (let m = 0; m < (1 << n); m++) {
+  for (let m = 0; m < (1 << nBits); m++) {
     let w = 1;
     const coords: any = {};
     for (let a = 0; a < n; a++) {
@@ -332,12 +341,14 @@ export function interpScenario(pt: Point): Scenario {
       coords[FIELD_AXIS[a][0]] = hiBit ? hi : lo;
       w *= hiBit ? t : 1 - t;
     }
+    const abBit = blendAb ? (m >> n) & 1 : (ab >= 0.5 ? 1 : 0);
+    if (blendAb) w *= abBit ? ab : 1 - ab;
     if (w <= 1e-9) continue;
     const base = FIELD_AXIS.map(([f, ax]) => snap(AX[ax], coords[f])).join('|');
     // Try the requested ceiling, then fall back to the baseline one. The fallback
-    // is what makes the toggle safe to flip before its slices have downloaded:
+    // is what makes the control safe to move before its slices have downloaded:
     // the page keeps answering, at today's ceiling, instead of emptying out.
-    const s = LOOKUP.get(`${base}|${ab}`) ?? (ab ? LOOKUP.get(`${base}|0`) : undefined);
+    const s = LOOKUP.get(`${base}|${abBit}`) ?? (abBit ? LOOKUP.get(`${base}|0`) : undefined);
     if (s) parts.push({ s, w });
   }
   const out = parts.length ? combine(parts) : { ...BASE };

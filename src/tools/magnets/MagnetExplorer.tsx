@@ -604,6 +604,39 @@ export default function MagnetExplorer() {
               desc={`Cost to build US recycling capacity, relative to China. ${AXES.rcostMin.toFixed(1)}× is the baseline US premium; drag higher for a pessimistic cold start. Recycling is a built, paid-for capacity stage — this stress-tests how much its economics rest on that uncertain US cost. (Only bites when collection rate > 0.)`} />
           </details>
 
+          {/* The reference scenario: a baseline every later reading is measured
+              against. It lives with the WORLD settings because that is what you
+              hold fixed — you set a world, mark it as the reference, then vary
+              the interventions and see what moved. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '10px 0 4px' }}>
+            <button onClick={pin ? () => setPin(null) : doPin}
+              title={pin ? 'Clear the reference' : 'Mark this world as the reference; every headline then reads as a change against it'}
+              style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.05em', textTransform: 'uppercase',
+                       padding: '5px 10px', borderRadius: 6, cursor: 'pointer',
+                       border: `1px solid ${pin ? 'var(--accent)' : 'var(--rule-strong)'}`,
+                       background: pin ? 'var(--accent)' : 'transparent',
+                       color: pin ? 'var(--paper)' : 'var(--ink)' }}>
+              {pin ? 'Reference set — clear' : 'Set as reference'}
+            </button>
+            {pin && (
+              <span style={{ fontSize: 11, opacity: 0.7, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {changed.length === 0
+                  ? 'identical to the reference'
+                  : <>changed: {changed.map((k) => (
+                      <b key={k} style={{ fontWeight: 600 }}>
+                        {AXIS_LABEL[k]} {AXIS_FMT[k](pin.coords[k])}&rarr;{AXIS_FMT[k](coords[k])}
+                      </b>
+                    )).reduce((a, b) => <>{a}, {b}</>)}</>}
+                <button onClick={restorePin}
+                  title="Put the six supply sliders back to their pinned values. Dy/Tb intensity and demand scale are derived from the Demand Builder, so they stay put and will still be listed as changed."
+                  style={{ font: '500 10px var(--font-mono)', padding: '2px 7px', borderRadius: 5,
+                           border: '1px solid var(--rule-strong)', background: 'transparent',
+                           color: 'var(--ink)', cursor: 'pointer' }}>restore</button>
+              </span>
+            )}
+          </div>
+
+
           <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '0 0 2px' }}>What the US can do</div>
           <p style={{ fontSize: 10, opacity: 0.5, margin: '0 0 8px', lineHeight: 1.4 }}>
             Interventions: things the US can choose. None of them changes the world
@@ -647,35 +680,6 @@ export default function MagnetExplorer() {
 
         <main>
 
-          {/* Pin one scenario, then read every headline against it. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '-4px 0 16px' }}>
-            <button onClick={pin ? () => setPin(null) : doPin}
-              title={pin ? 'Stop comparing' : 'Snapshot this scenario and show every headline as a change against it'}
-              style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.05em', textTransform: 'uppercase',
-                       padding: '5px 10px', borderRadius: 6, cursor: 'pointer',
-                       border: `1px solid ${pin ? 'var(--accent)' : 'var(--rule-strong)'}`,
-                       background: pin ? 'var(--accent)' : 'transparent',
-                       color: pin ? 'var(--paper)' : 'var(--ink)' }}>
-              {pin ? 'Comparing — clear' : 'Pin scenario'}
-            </button>
-            {pin && (
-              <span style={{ fontSize: 11, opacity: 0.7, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                {changed.length === 0
-                  ? 'identical to the pinned scenario'
-                  : <>changed: {changed.map((k) => (
-                      <b key={k} style={{ fontWeight: 600 }}>
-                        {AXIS_LABEL[k]} {AXIS_FMT[k](pin.coords[k])}&rarr;{AXIS_FMT[k](coords[k])}
-                      </b>
-                    )).reduce((a, b) => <>{a}, {b}</>)}</>}
-                <button onClick={restorePin}
-                  title="Put the six supply sliders back to their pinned values. Dy/Tb intensity and demand scale are derived from the Demand Builder, so they stay put and will still be listed as changed."
-                  style={{ font: '500 10px var(--font-mono)', padding: '2px 7px', borderRadius: 5,
-                           border: '1px solid var(--rule-strong)', background: 'transparent',
-                           color: 'var(--ink)', cursor: 'pointer' }}>restore supply axes</button>
-              </span>
-            )}
-          </div>
-
           {/* 1 — the whole chain first, so users learn the stages + connections.
               Flows are real-world-anchored (selected projects locked in, China residual). */}
           <FlowDiagram flows={rwFlows} active={activeProjects} />
@@ -697,7 +701,7 @@ export default function MagnetExplorer() {
                 { short: 'light', label: `light ${triLight.toFixed(2)} × ${RE_CLASS_WEIGHT.light}`,
                   value: (RE_CLASS_WEIGHT.light * triLight).toFixed(2) },
               ]}
-              sub={pin ? 'vs pinned scenario' : undefined} />
+              sub={pin ? 'vs reference scenario' : undefined} />
             <ScoreCard2 label="Tightest chokepoint" small chip
               a={{ label: `Dy/Tb · stage TRI ${cpHeavy.tri.toFixed(2)}`,
                    value: cpHeavy.label.split(' ')[0], color: riskColor(cpHeavy.tri) }}
@@ -708,7 +712,7 @@ export default function MagnetExplorer() {
                 stays a single figure rather than an invented split. */}
             <ScoreCard label="China-exposed demand" value={pct(chinaTouch * 100)} valueColor={riskColor(chinaTouch)} chip
               {...(pin ? deltaOf(chinaTouch * 100, pin.touch * 100, (v) => `${v.toFixed(1)} pp`, true, 0.05) : {})}
-              sub={pin ? 'vs pinned' : feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
+              sub={pin ? 'vs reference' : feocIsHeavy ? 'flow-traced · heavy Dy/Tb' : 'flow-traced · any chain stage'} />
             <ScoreCard2 label="US demand met"
               a={{ label: pin ? 'imported 2035 · vs pin' : 'imported · 2035',
                    value: pct(sc.kpis.us_import_pct), color: 'var(--ink)',
@@ -796,7 +800,7 @@ export default function MagnetExplorer() {
                 ? deltaOf(usCostReal, pin.cost, (v) => musd(v), true, 50)
                 : { delta: `${npvDelta >= 0 ? '+' : '−'}${musd(Math.abs(npvDelta))}`,
                     deltaColor: npvDelta > 50 ? WORSE : npvDelta < -50 ? 'var(--brand-green)' : 'var(--ink-3)' })}
-              sub={pin ? '2026–35 NPV · vs pinned' : '2026–35 NPV · Δ vs do-nothing'} />
+              sub={pin ? '2026–35 NPV · vs reference' : '2026–35 NPV · Δ vs do-nothing'} />
             <ScoreCard label="Most cost-effective lever" value={bestLever ? bestLever.name : leversExhausted ? 'all spent' : 'none yet'} valueColor="var(--ink)" small
               sub={bestLever ? `${musd(bestLever.perTRI)} / 0.1 TRI` : leversExhausted ? 'at the security floor — only demand-side moves left' : 'raise the China restriction'} />
           </div>

@@ -4,6 +4,7 @@ import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WE
 import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import DemandChips from './DemandChips';
 import AbatementReadout from './AbatementReadout';
+import CapacityPanel from './CapacityPanel';
 import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
@@ -310,7 +311,11 @@ export default function MagnetExplorer() {
   // story either is or is not already underway. Grids written before 2026-09-25
   // carry no snapshots, so the selector hides itself rather than offering years
   // it cannot serve.
-  const [flowYear, setFlowYear] = useState<string>('2035');   // sector detail + demand levers
+  const [flowYear, setFlowYear] = useState<string>('2035');
+  // Price world drives the actor screen only. It is a free control because the
+  // screen is arithmetic rather than a solve — see projectFinance.ts. It cannot
+  // move the Sankey, and should not: the planner has no prices.
+  const [priceWorld, setPriceWorld] = useState<string>('ex_china');   // sector detail + demand levers
   // The two derived axes have no slider here; their chips send you to the control
   // that actually moves them (the sheet on mobile, the builder on desktop).
   const jumpToDemand = useCallback(() => {
@@ -823,6 +828,15 @@ export default function MagnetExplorer() {
             </div>
           </section>
 
+
+          {/* US incumbent capacity by stage, from the operating project list —
+              what is already built and therefore never screened. */}
+          <CapacityPanel
+            buildout={(sc as any).buildout}
+            incumbent={PROJECTS.filter((pj) => pj.bloc === 'us' && pj.status === 'operating')
+              .reduce((acc, pj) => ({ ...acc, [pj.stage]: (acc[pj.stage] ?? 0) + pj.capacityKt }),
+                      {} as Record<string, number>)}
+            priceWorld={priceWorld} onPriceWorld={setPriceWorld} />
 
           <AbatementReadout china={china} />
 

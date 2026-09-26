@@ -299,10 +299,9 @@ export default function MagnetExplorer() {
   // Fort Worth's expansion) which does not clear at the competitive spread, so
   // the first screen shows the gap and what closes it. The do-nothing deltas
   // still read against make=0, so nothing is hidden by starting here.
-  // On a per-destination grid the planner asks for US capacity at the reference
-  // restriction on its own, so no mandate is needed to open on a gap; on the
-  // older pooled grid it never does below 85%, so a half mandate stands in.
-  const [make, setMake] = useState(RESTRICTION_SCOPE === 'per_destination' ? 0 : 0.5);   // component prong: US-made magnets
+  // No mandate by default: the base case's extraterritorial reach (below) is
+  // what puts US capacity in the plan, on either grid vintage.
+  const [make, setMake] = useState(0);   // component prong: US-made magnets
   // CLEAN SOURCING is one grid axis with two owners. China's extraterritorial
   // licensing (the October 2025 rules: any product with >=0.1% Chinese heavy REE
   // by value) makes allied magnets on Chinese oxide restricted too, which forces
@@ -310,7 +309,13 @@ export default function MagnetExplorer() {
   // would. So the axis is the MAX of a world assumption (reach) and a US lever
   // (the mandate), and the ledger credits the mandate only for what it adds.
   const [sourceMandate, setSource] = useState(0);   // mineral prong: US friendshore mandate
-  const [reach, setReach] = useState(0);            // China's extraterritorial reach
+  // BASE CASE: the October 2025 rules in force. Their 0.1% threshold licenses
+  // essentially every product carrying Chinese heavy REE, i.e. total reach; they
+  // are suspended for a year after Busan, not withdrawn. With the 60% direct
+  // restriction alone the plan adds one 10 kt expansion; with the reach it asks
+  // for a 34 kt new plant that does not clear at the competitive spread, which
+  // is the planner/actor question the tool exists to show.
+  const [reach, setReach] = useState(AXES.sourceMax);   // China's extraterritorial reach
   const source = Math.max(sourceMandate, reach);
   // US tariff on allied alloy + magnets, a world assumption already in force
   // (~15% on Japan/EU/Korea since 2025). Opens at that level where the grid
@@ -800,8 +805,8 @@ export default function MagnetExplorer() {
           ticks={[{ at: 0, label: 'open' }, { at: 0.6, label: 'reference' }, { at: 1, label: 'full ban' }]}
           desc="Severity of Chinese export controls on oxide, alloy & magnets: 0% = open market, 100% = full ban. In between, China may still export to a shrinking share of the rest of the world's demand — allies absorb a partial cut, a full ban forces shortage or reshoring. Tightening also inflates the heavy-REE (Dy/Tb) benchmarks the US is a price-taker to, so the Dy/Tb it imports carries a rising price premium. The 60% reference is a MODELLING CHOICE, not a calibrated value: it is the cell the written results describe. China's 2025 licensing regime on seven medium/heavy REEs is the closest real analogue, and mapping it to a single severity number is a judgement." />
         <Slider label="China’s extraterritorial reach" value={reach} max={AXES.sourceMax} onChange={setReach} fmt={(v) => pct(v * 100)}
-          ticks={[{ at: 0, label: 'none' }, { at: 0.5, label: 'Oct-2025 rules' }, { at: AXES.sourceMax, label: 'total' }]}
-          desc="How far China's controls follow its material abroad. The October 2025 rules (suspended for a year after Busan, not withdrawn) require a Chinese licence for ANY product containing 0.1% or more Chinese-origin heavy rare earths by value, so allied magnets made on Chinese oxide become restricted too. Modelled as the share of US Dy/Tb that must come from chain-of-custody-clean supply, the same constraint a US friendshoring mandate imposes; the two take the larger value, and the mandate below is credited only for what it adds beyond this." />
+          ticks={[{ at: 0, label: 'none' }, { at: 0.5, label: 'partial enforcement' }, { at: AXES.sourceMax, label: 'Oct-2025 rules' }]}
+          desc="How far China's controls follow its material abroad, distinct from the direct export restriction above. The October 2025 rules (suspended for a year after Busan, not withdrawn) require a Chinese licence for ANY product containing 0.1% or more Chinese-origin heavy rare earths by value, so allied magnets made on Chinese oxide become restricted too; that threshold is effectively total reach, and it is the base case. Half stands for partial enforcement or licences granted to some buyers. Modelled as the share of US Dy/Tb that must come from chain-of-custody-clean supply, the same constraint a US friendshoring mandate imposes; the two take the larger value, and the mandate below is credited only for what it adds beyond this." />
         <Slider label="US tariff on allied imports" value={atariff} max={Math.max(AXES.atariffMax, 0.3)} step={0.01} onChange={setAtariff} fmt={(v) => pct(v * 100)}
           ticks={[{ at: 0, label: 'none' }, { at: 0.15, label: '2025 rates' }, { at: 0.3, label: 'Sec. 232' }]}
           desc={HAS_ALLIED_TARIFF

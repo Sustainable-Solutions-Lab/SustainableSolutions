@@ -45,8 +45,11 @@ export type Scenario = {
   // client-side project screen needs (capacity, utilisation, unit opex, fixed
   // cost). Optional: only present once the grid is regenerated with the buildout
   // emit; CapacityPanel shows a "needs a newer grid" note otherwise.
+  // Schema 2 (2026-09-26): one row per expansion COHORT, see projectFinance.Buildout.
   buildout?: { f: string; s: string; r: string; kt: number; u: number; v: number;
-               fx: number; n: number; basket?: Record<string, number> }[];
+               fx: number; n: number; basket?: Record<string, number>;
+               up?: number[]; lead?: number; y0?: number; nb?: number; c?: number;
+               own?: string[]; cc?: [string, number, number][] }[];
   // Interface flows at each snapshot year, so the Sankey can be stepped through
   // time rather than only showing the final year. Optional, as above.
   flows_by_year?: Record<string, Record<string, Flow[]>>;
@@ -324,24 +327,44 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
       }
     return out;
   };
-  // The planner's US expansions, blended per facility. EXTENSIVE fields (kt, fx,
-  // n) weighted-sum, so a facility that only builds in some corners of the
-  // bracket interpolates down to a partial build. INTENSIVE fields (u, v) are
-  // averaged over the weight where the facility actually appears — weighted-
-  // summing a $/kg would hand the screen a unit cost scaled by the blend weight.
+  // The planner's expansions, blended per COHORT (facility and commissioning
+  // year). EXTENSIVE fields (kt, fx, n, and the capital in cc) weighted-sum, so a
+  // cohort that only appears in some corners of the bracket interpolates down to
+  // a partial build. INTENSIVE fields (u, v, the yearly profile, the lead time,
+  // the unit costs in cc) are averaged over the weight where the cohort actually
+  // appears — weighted-summing a $/kg would hand the screen a unit cost scaled
+  // by the blend weight.
   const wBuildout = (): Scenario['buildout'] => {
     if (!ps.some((p) => (p.s as any).buildout?.length)) return undefined;
     const acc = new Map<string, { b: any; w: number }>();
     for (const { s, w } of ps) for (const b of (s as any).buildout ?? []) {
-      const k = `${b.f}|${b.s}|${b.r}`;
-      const e = acc.get(k) ?? { b: { ...b, kt: 0, fx: 0, n: 0, u: 0, v: 0 }, w: 0 };
+      const k = `${b.f}|${b.s}|${b.r}|${b.y0 ?? ''}|${b.c ?? 0}`;
+      const e = acc.get(k) ?? {
+        b: { ...b, kt: 0, fx: 0, n: 0, u: 0, v: 0,
+             ...(b.up ? { up: b.up.map(() => 0) } : {}),
+             ...(b.lead !== undefined ? { lead: 0 } : {}),
+             ...(b.cc ? { cc: b.cc.map(([stg]: [string]) => [stg, 0, 0]) } : {}) },
+        w: 0,
+      };
       for (const f of ['kt', 'fx', 'n'] as const) e.b[f] += (b[f] ?? 0) * w;
       for (const f of ['u', 'v'] as const) e.b[f] += (b[f] ?? 0) * w;   // normalised below
+      if (b.up && e.b.up) b.up.forEach((u: number, i: number) => { e.b.up[i] += u * w; });
+      if (b.lead !== undefined) e.b.lead += b.lead * w;
+      if (b.cc && e.b.cc) b.cc.forEach(([, v, f]: [string, number, number], i: number) => {
+        e.b.cc[i][1] += v * w;       // $/kg, normalised below
+        e.b.cc[i][2] += f * w;       // $M/yr, extensive
+      });
       e.w += w;
       acc.set(k, e);
     }
     return [...acc.values()]
-      .map(({ b, w }) => ({ ...b, u: w > 0 ? b.u / w : 0, v: w > 0 ? b.v / w : 0 }))
+      .map(({ b, w }) => ({
+        ...b,
+        u: w > 0 ? b.u / w : 0, v: w > 0 ? b.v / w : 0,
+        ...(b.up ? { up: b.up.map((u: number) => (w > 0 ? u / w : 0)) } : {}),
+        ...(b.lead !== undefined ? { lead: w > 0 ? Math.round(b.lead / w) : 0 } : {}),
+        ...(b.cc ? { cc: b.cc.map(([stg, v, f]: [string, number, number]) => [stg, w > 0 ? v / w : 0, f]) } : {}),
+      }))
       .filter((b) => b.kt > 0.005);
   };
   // Snapshot-year flows: the same weighted merge as `flows`, one year at a time.

@@ -482,7 +482,8 @@ export default function MagnetExplorer() {
     { offtake: 0, floor: RELIEF_DEFAULTS.floor, guarantee: 0 });
   // Governs BOTH the capacity bars and the per-stage risk chips beside them, since
   // "which stage is exposed" has a different answer for Dy/Tb than for Nd/Pr.
-  const [reClass, setReClass] = useState<ReClass>('heavy');   // the chokepoint by default
+  // Opens on ALL classes: the whole chain first, the Dy/Tb chokepoint one click away.
+  const [reClass, setReClass] = useState<ReClass>('all');
   // The two derived axes have no slider here; their chips send you to the control
   // that actually moves them (the sheet on mobile, the builder on desktop).
   const jumpToDemand = useCallback(() => {

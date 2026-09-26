@@ -1,8 +1,8 @@
 /**
  * The project screen, client-side. Would a FIRM build what the planner chose?
  *
- * A faithful TS port of `core/project_investment.evaluate`, the same way
- * `demand.ts` ports `magnet_bom`. It can live in the browser because the screen
+ * A faithful TS port of `core/project_investment.evaluate` and
+ * `project_from_row`, the same way `demand.ts` ports `magnet_bom`. It can live in the browser because the screen
  * is closed-form arithmetic — revenue, purchased input, opex, a capital charge
  * at the firm's rate, an NPV over a build schedule. No solver. Only the
  * EQUILIBRIUM (iterating planner and screen to a fixed point) needs one, and
@@ -46,10 +46,40 @@ const C = { ...FB, ...(META ?? {}) };
 export const HAS_META = !!META;
 
 export type Prices = Record<string, number>;
+/**
+ * One expansion COHORT the planner chose: the modules a facility adds in one
+ * year. Mirrors `project_investment.build_row`.
+ *
+ * SCHEMA 2 rows (`lead` and `up` present) carry the planner's own EFFECTIVE
+ * costs — regional factor, FOAK, subsidy, learning, build speed and scale
+ * economies already applied — its lead time, and the facility's utilisation in
+ * each year the cohort operates. `kt` and `v` are in the product unit of the
+ * stage (tonnes of alloy, of finished magnet, of TREO fed, of scrap processed),
+ * not the contained oxide the planner counts. Schema 1 rows carried CSV-basis
+ * costs and one average utilisation; `evaluate` still reads them, so a grid and
+ * a build of the site can never be out of step in a way that breaks the page.
+ */
 export type Buildout = {
   f: string; s: string; r: string; kt: number; u: number; v: number; fx: number; n: number;
   basket?: Record<string, number>;
+  /** utilisation in each operating year, first first; the last is held. */
+  up?: number[];
+  /** the planner's lead time, years. */
+  lead?: number;
+  /** calendar year the cohort first produces. */
+  y0?: number;
+  /** modules the facility had online before this cohort. */
+  nb?: number;
+  /** 1 = committed construction: built whatever the screen says. */
+  c?: number;
+  /** stages owned, in chain order, and [stage, $/kg, $M/yr] for each. */
+  own?: string[];
+  cc?: [string, number, number][];
 };
+
+/** True when the row carries the planner's effective costs and cohort timing. */
+export const isResolved = (b: Buildout): boolean =>
+  b.lead !== undefined && Array.isArray(b.up) && b.up.length > 0;
 
 /** Price ladder DERIVED from oxide, so each stage's output is worth more than
  *  the basket it consumes. Asserting them independently is how the WP3 figures
@@ -88,12 +118,15 @@ const CHINA_PLANT = {                 // var $/kg, fixed $M/yr per module, modul
   magnet: { v: 4.0, fx: 12.0, kt: 40 },
   alloy:  { v: 2.0, fx: 10.0, kt: 40 },
 };
-export const CHINA_CONVERSION = {
+// The model's own figures when the grid carries them (meta.project_finance),
+// so the spread cannot drift from the facility tables it is read from.
+export const CHINA_CONVERSION: { magnet: number; alloy: number } = META?.competitive_conversion ?? {
   magnet: CHINA_PLANT.magnet.v + CHINA_PLANT.magnet.fx / CHINA_PLANT.magnet.kt,   // $4.30/kg
   alloy:  CHINA_PLANT.alloy.v + CHINA_PLANT.alloy.fx / CHINA_PLANT.alloy.kt,      // $2.25/kg
 };
 /** The asserted spreads the screen used before re-anchoring, kept as anchors. */
-export const LEGACY_CONVERSION = { magnet: 25, alloy: 15 };
+export const LEGACY_CONVERSION: { magnet: number; alloy: number } =
+  META?.legacy_conversion ?? { magnet: 25, alloy: 15 };
 export const MAGNET_CONVERSION_DEFAULT = CHINA_CONVERSION.magnet;
 export const ALLOY_CONVERSION_DEFAULT = CHINA_CONVERSION.alloy;
 const OXIDE_CHINA = { ndpr: 113, dytb: 285 };      // Chinese domestic benchmark
@@ -255,46 +288,85 @@ export function evaluate(b: Buildout, prices: Prices, opts: {
   const relief = opts.relief ?? 0;
   const eff = C.discount_rate + (1 - relief) * (rate - C.discount_rate);
 
-  const outKt = b.kt * b.u;
   const basket = opts.basket ?? b.basket ?? C.basket;
-  const [revPerKg, inPerKg] = stageFlows(b.s, prices, basket);
-  const cf = (C.regional_cost_factor?.[b.r]?.[b.s] ?? 1) * (opts.costMult ?? 1);
+  // An owned chain buys its first stage's input and sells its last stage's
+  // output; the intermediates are internal transfers.
+  const chain = b.own?.length ? b.own : [b.s];
+  const [revMarket] = stageFlows(chain[chain.length - 1], prices, basket);
+  const [, inPerKg] = stageFlows(chain[0], prices, basket);
+  const provenance = b.r === 'China' ? 0 : (opts.provenancePremium ?? 0);
+  const revPerKg = revMarket + provenance;
+
+  // Costs. A resolved row already holds what the planner charged, so the cost
+  // and FOAK sliders scale it RELATIVE to the calibrated values; a schema-1 row
+  // holds CSV-basis costs and takes the regional layer here.
+  const costMult = opts.costMult ?? 1;
   const foakBase = C.foak_premium?.[b.r]?.[b.s] ?? 1;
   const foak = 1 + (foakBase - 1) * (opts.foakMult ?? 1);
-  const provenance = b.r === 'China' ? 0 : (opts.provenancePremium ?? 0);
+  const stages: [string, number, number][] = b.cc?.length ? b.cc : [[b.s, b.v, b.fx]];
+  let varPerKg = 0;
+  let baseFixed = 0;
+  for (const [stg, v, fx] of stages) {
+    if (isResolved(b)) {
+      const base = C.foak_premium?.[b.r]?.[stg] ?? 1;
+      const scaled = 1 + (base - 1) * (opts.foakMult ?? 1);
+      varPerKg += v * costMult;
+      baseFixed += fx * costMult * (scaled / base);
+    } else {
+      const cf = (C.regional_cost_factor?.[b.r]?.[stg] ?? 1) * costMult;
+      varPerKg += v * cf;
+      baseFixed += fx * cf * (stg === b.s ? foak : 1 + ((C.foak_premium?.[b.r]?.[stg] ?? 1) - 1) * (opts.foakMult ?? 1));
+    }
+  }
 
-  const revenue = outKt * (revPerKg + provenance);
+  const outKt = b.kt * b.u;
+  const revenue = outKt * revPerKg;
   const inputCost = outKt * inPerKg;
-  const opex = outKt * b.v * cf;
-  const baseFixed = b.fx * cf * foak;
+  const opex = outKt * varPerKg;
   const ratio = crf(eff, C.asset_life_years) / crf(C.discount_rate, C.asset_life_years);
   const capitalCharge = baseFixed * ratio;
   const support = opts.support ?? 0;
 
+  // LEVELIZED: a diagnostic of the operating year. It ignores the construction
+  // years, so it is not the test and nothing below is derived from it.
   const margin = revenue - inputCost - opex - capitalCharge + support;
   const plannerMargin = revenue - inputCost - opex - baseFixed + support;
-  const breakeven = outKt ? (inputCost + opex + capitalCharge - support) / outKt - provenance : Infinity;
 
   // Capital at the START of each construction year, operating margin at the END
   // of each operating year. That convention is what makes npv reconcile with the
   // levelized margin at zero lead; getting it wrong inflates every NPV by (1+r).
-  const lead = C.lead_years?.[b.r]?.[b.s] ?? 0;
-  const overnight = baseFixed / crf(C.discount_rate, C.asset_life_years);
-  const opMargin = revenue - inputCost - opex + support;
-  const npvAt = (r: number) => {
-    let v = lead === 0 ? -overnight : 0;
-    for (let k = 0; k < lead; k++) v -= (overnight / lead) / (1 + r) ** k;
-    for (let k = 1; k <= C.asset_life_years; k++) v += opMargin / (1 + r) ** (lead + k);
-    return v;
+  const lead = b.lead ?? C.lead_years?.[b.r]?.[b.s] ?? 0;
+  const life = C.asset_life_years;
+  const overnight = baseFixed / crf(C.discount_rate, life);
+  const profile = isResolved(b) ? b.up! : [b.u];
+  const tonnage = (k: number) => b.kt * profile[Math.min(k, profile.length) - 1];
+  const unitMargin = revPerKg - inPerKg - varPerKg;
+  const discounted = (r: number) => {
+    let capex = lead === 0 ? overnight : 0;
+    for (let k = 0; k < lead; k++) capex += (overnight / lead) / (1 + r) ** k;
+    let value = 0, annuity = 0, pvTonnage = 0;
+    for (let k = 1; k <= life; k++) {
+      const d = (1 + r) ** -(lead + k);
+      value += d * (tonnage(k) * unitMargin + support);
+      annuity += d;
+      pvTonnage += d * tonnage(k);
+    }
+    return { npv: value - capex, annuity, pvTonnage };
   };
-  const npv = npvAt(eff);
+  const at = discounted(eff);
+  const funded = at.npv >= -1e-6;
 
   return {
     facility: b.f, stage: b.s, region: b.r, newKt: b.kt, utilization: b.u,
-    revenue, inputCost, opex, capitalCharge, margin, plannerMargin, breakeven,
-    npv, overnightCapital: overnight, leadYears: lead,
-    funded: npv > 0, supportNeeded: Math.max(0, -margin),
-    effRate: eff, plannerNpv: npvAt(C.discount_rate),
+    revenue, inputCost, opex, capitalCharge, margin, plannerMargin,
+    // ONE CRITERION. The verdict, the support and the breakeven are all read
+    // from the same NPV, so a project paid its `supportNeeded` is exactly
+    // funded. Support used to come from the levelized margin, which understated
+    // it whenever there was a construction period.
+    breakeven: at.pvTonnage > 0 ? revPerKg - at.npv / at.pvTonnage - provenance : Infinity,
+    npv: at.npv, overnightCapital: overnight, leadYears: lead,
+    funded, supportNeeded: funded || at.annuity <= 0 ? 0 : -at.npv / at.annuity,
+    effRate: eff, plannerNpv: discounted(C.discount_rate).npv,
   };
 }
 

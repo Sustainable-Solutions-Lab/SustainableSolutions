@@ -879,6 +879,39 @@ export default function MagnetExplorer() {
     </>
   );
 
+  /** The six headline readouts, as a grid with `cols` columns. Shared by the
+   *  desktop band and the mobile tail so the two never drift. */
+  const kpiCards = (cols: number) => (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '8px 10px' }}>
+      {[
+              { l: 'US trade-risk index', v: tri.toFixed(2), c: riskColor(tri), chip: true,
+                s: 'demand-weighted 2026–35' },
+              { l: 'Tightest chokepoint', v: cpHeavy.label.split(' ')[0], c: riskColor(cpHeavy.tri),
+                chip: true, s: `Dy/Tb · stage TRI ${cpHeavy.tri.toFixed(2)}` },
+              { l: 'China-exposed demand', v: pct(chinaTouch * 100), c: riskColor(chinaTouch),
+                chip: true, s: `flow-traced · ${flowYear}` },
+              { l: 'US magnets imported', v: pct(usImportPct), c: 'var(--ink)',
+                s: `${flowYear} · same flows as the Sankey` },
+              { l: 'Unmet demand', v: `${usUnmet.toFixed(1)} kt`,
+                c: usUnmet > 0.05 ? WORSE : 'var(--ink)', s: '2026–35 cumulative' },
+              { l: 'US cost of supply', v: musd(usCostReal), c: 'var(--ink)',
+                s: '2026–35 NPV' },
+            ].map((k) => (
+              // The old ScoreCard, scaled down: label above, the number as the
+              // one big thing, context beneath. The single-line variant was
+              // shallower but read as a table row, not a readout.
+              <div key={k.l} style={{ ...CARD, borderRadius: 8, padding: '7px 10px 6px', minWidth: 0 }}>
+                <div style={{ ...CARD_LABEL, fontSize: 10, marginBottom: 2 }}>{k.l}</div>
+                <div style={{ ...CARD_VALUE(), font: '600 16px var(--font-mono)' }}>
+                  <span style={k.chip ? { ...riskChip(k.c), display: 'inline-block' } : { color: k.c }}>{k.v}</span>
+                </div>
+                <div style={{ ...CARD_SUB, fontSize: 8.5, paddingTop: 3, whiteSpace: 'nowrap',
+                              overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.s}</div>
+              </div>
+            ))}
+    </div>
+  );
+
   return (
     <div style={{ position: 'relative', maxWidth: 'var(--content-max)', margin: '0 auto', padding: isMobile ? '20px 16px 92px' : '28px 20px 0', color: 'var(--ink)' }}>
       <BusyOverlay busy={pfloor > 0 && !pfReady} label="Loading price-floor scenarios" />
@@ -918,48 +951,22 @@ export default function MagnetExplorer() {
         </aside>
       )}
 
-      {/* THE SIX HEADLINE NUMBERS, pinned. They were under the Sankey, which meant
-          that by the time you had scrolled to the actor bars or the cost block the
-          thing you were trying to move was off-screen and you were changing a
-          slider blind. Sticky keeps the score visible while you work anywhere on
-          the page; 3x2 and smaller type is what makes six of them fit in a band
-          shallow enough to give up that much of the viewport.
+      {/* THE SIX HEADLINE NUMBERS, pinned on desktop. They were under the Sankey,
+          which meant that by the time you had scrolled to the actor bars or the
+          cost block the thing you were trying to move was off-screen and you were
+          changing a slider blind. Sticky keeps the score visible while you work
+          anywhere on the page; 3x2 and smaller type is what makes six of them fit
+          in a band shallow enough to give up that much of the viewport.
           `top` is the site nav's height: the nav is itself sticky (Nav.astro,
           56px), so a band pinned at 0 slides UNDER it and reads as not sticking.
-          Each chip is boxed so the band reads as six readouts, not a text row. */}
+          On mobile the same six cards sit at the END of the scroll, in flow, 2x3:
+          a pinned band would eat a third of a phone screen, and the live chip in
+          the bottom bar already carries the headline number while you drag. */}
       {!isMobile && (
         <div style={{ position: 'sticky', top: NAV_HEIGHT, zIndex: 30, background: 'var(--paper)',
                       borderBottom: '1px solid var(--rule)', padding: '8px 0 9px',
                       marginBottom: 14 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-                        gridTemplateRows: 'repeat(2, auto)', gap: '8px 10px' }}>
-            {[
-              { l: 'US trade-risk index', v: tri.toFixed(2), c: riskColor(tri), chip: true,
-                s: 'demand-weighted 2026–35' },
-              { l: 'Tightest chokepoint', v: cpHeavy.label.split(' ')[0], c: riskColor(cpHeavy.tri),
-                chip: true, s: `Dy/Tb · stage TRI ${cpHeavy.tri.toFixed(2)}` },
-              { l: 'China-exposed demand', v: pct(chinaTouch * 100), c: riskColor(chinaTouch),
-                chip: true, s: `flow-traced · ${flowYear}` },
-              { l: 'US magnets imported', v: pct(usImportPct), c: 'var(--ink)',
-                s: `${flowYear} · same flows as the Sankey` },
-              { l: 'Unmet demand', v: `${usUnmet.toFixed(1)} kt`,
-                c: usUnmet > 0.05 ? WORSE : 'var(--ink)', s: '2026–35 cumulative' },
-              { l: 'US cost of supply', v: musd(usCostReal), c: 'var(--ink)',
-                s: '2026–35 NPV' },
-            ].map((k) => (
-              // The old ScoreCard, scaled down: label above, the number as the
-              // one big thing, context beneath. The single-line variant was
-              // shallower but read as a table row, not a readout.
-              <div key={k.l} style={{ ...CARD, borderRadius: 8, padding: '7px 10px 6px', minWidth: 0 }}>
-                <div style={{ ...CARD_LABEL, fontSize: 10, marginBottom: 2 }}>{k.l}</div>
-                <div style={{ ...CARD_VALUE(), font: '600 16px var(--font-mono)' }}>
-                  <span style={k.chip ? { ...riskChip(k.c), display: 'inline-block' } : { color: k.c }}>{k.v}</span>
-                </div>
-                <div style={{ ...CARD_SUB, fontSize: 8.5, paddingTop: 3, whiteSpace: 'nowrap',
-                              overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.s}</div>
-              </div>
-            ))}
-          </div>
+          {kpiCards(3)}
         </div>
       )}
 
@@ -1104,6 +1111,15 @@ export default function MagnetExplorer() {
               <TradeRiskPanel sc={scR} alliedHHI={alliedHHIMap} />
             </div>
           </section>
+
+          {isMobile && (
+            <div style={{ marginTop: 22, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
+              <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 8px' }}>
+                Where this scenario lands
+              </h2>
+              {kpiCards(2)}
+            </div>
+          )}
         </main>
 
       {/* Mobile: a live result chip + a button that opens the scenario controls as a

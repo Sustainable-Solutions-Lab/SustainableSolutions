@@ -57,7 +57,7 @@ function consumerPremium(path: { us_mix?: Record<string, number[]>; us_mix_re?: 
 import FlowDiagram from './FlowDiagram';
 import DemandBuilder from './DemandBuilder';
 import { allScenario, demandSummary, DEFAULT_LEVERS, SCENARIO_LABEL, type PerSectorScenario, type Levers } from './demand';
-import TradeRiskPanel from './TradeRiskPanel';
+import InfoPopover from './InfoPopover';
 import ProjectsAside from './ProjectsAside';
 import { alliedHHIByStage, activeSet, DEFAULT_FUTURE, FUTURE_PROJECTS, PROJECTS, tier, usProjectsBuildCost, type Tier } from './projects';
 import { realWorldFlows, reconcileUsSupply, reconcileUsMix, reconcileUsMixRe, reconcileUsSupplyRe } from './realworld';
@@ -705,9 +705,12 @@ export default function MagnetExplorer() {
       bought: rt ? bought(evalAt({}, { projects: new Set([...activeProjects].filter((id) => id !== 'round_top')) })) : undefined,
       next: rt ? undefined : next(evalAt({}, { roundTop: true })),
       note: 'US heavy mine, project cost' });
-    rows.push({ name: 'Build US separation', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['separation'] }), US_SEP_RESHORE_COST) });
-    rows.push({ name: 'Build US alloy', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['alloy'] }), US_ALLOY_RESHORE_COST) });
-    rows.push({ name: 'Build US magnet', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['magnet'] }), US_MAGNET_RESHORE_COST) });
+    rows.push({ name: 'Build US separation', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['separation'] }), US_SEP_RESHORE_COST),
+      note: `90% US-made, at an assumed ${musd(US_SEP_RESHORE_COST)}` });
+    rows.push({ name: 'Build US alloy', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['alloy'] }), US_ALLOY_RESHORE_COST),
+      note: `90% US-made, at an assumed ${musd(US_ALLOY_RESHORE_COST)}` });
+    rows.push({ name: 'Build US magnet', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['magnet'] }), US_MAGNET_RESHORE_COST),
+      note: `90% US-made, at an assumed ${musd(US_MAGNET_RESHORE_COST)}` });
     return rows;
   }, [evalAt, make, source, sourceMandate, reach, pfloor, rec, stockpile, abunlock, rdChoice, activeProjects, collectCost, stockCost, rdCostPerKg]);
 
@@ -887,37 +890,138 @@ export default function MagnetExplorer() {
   );
 
   /** The six headline readouts, as a grid with `cols` columns. Shared by the
-   *  desktop band and the mobile tail so the two never drift. */
-  const kpiCards = (cols: number) => (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '8px 10px' }}>
-      {[
-              { l: 'US trade-risk index', v: tri.toFixed(2), c: riskColor(tri), chip: true,
-                s: 'demand-weighted 2026–35' },
-              { l: 'Tightest chokepoint', v: cpHeavy.label.split(' ')[0], c: riskColor(cpHeavy.tri),
-                chip: true, s: `Dy/Tb · stage TRI ${cpHeavy.tri.toFixed(2)}` },
-              { l: 'China-exposed demand', v: pct(chinaTouch * 100), c: riskColor(chinaTouch),
-                chip: true, s: `flow-traced · ${flowYear}` },
-              { l: 'US magnets imported', v: pct(usImportPct), c: 'var(--ink)',
-                s: `${flowYear} · same flows as the Sankey` },
-              { l: 'Unmet demand', v: `${usUnmet.toFixed(1)} kt`,
-                c: usUnmet > 0.05 ? WORSE : 'var(--ink)', s: '2026–35 cumulative' },
-              { l: 'US cost of supply', v: musd(usCostReal), c: 'var(--ink)',
-                s: '2026–35 NPV' },
-            ].map((k) => (
-              // The old ScoreCard, scaled down: label above, the number as the
-              // one big thing, context beneath. The single-line variant was
-              // shallower but read as a table row, not a readout.
-              <div key={k.l} style={{ ...CARD, borderRadius: 8, padding: '7px 10px 6px', minWidth: 0 }}>
-                <div style={{ ...CARD_LABEL, fontSize: 10, marginBottom: 2 }}>{k.l}</div>
-                <div style={{ ...CARD_VALUE(), font: '600 16px var(--font-mono)' }}>
-                  <span style={k.chip ? { ...riskChip(k.c), display: 'inline-block' } : { color: k.c }}>{k.v}</span>
-                </div>
-                <div style={{ ...CARD_SUB, fontSize: 8.5, paddingTop: 3, whiteSpace: 'nowrap',
-                              overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.s}</div>
+   *  desktop band and the mobile tail so the two never drift.
+   *
+   *  The three security readouts are split by rare-earth class. Heavy and light
+   *  move very differently under a restriction (heavy decouples, light is largely
+   *  laundered through third-country magnets), and a single blended figure hides
+   *  exactly that. The index keeps its total, because the total is what every
+   *  lever is rated against, with the two class indices beside it. */
+  type Half = { v: string; c: string; s: string; cls: string; extra?: string };
+  type Kpi = { l: string; v?: string; c?: string; chip?: boolean; s?: string;
+               halves?: [Half, Half]; parts?: { t: string; v: string; c: string }[];
+               info?: JSX.Element };
+  const kpiCards = (cols: number) => {
+    const stacked = cols < 3;   // a phone's cards are too narrow for two halves abreast
+    const cards: Kpi[] = [
+      { l: 'US trade-risk index', v: tri.toFixed(2), c: riskColor(tri), chip: true,
+        parts: [{ t: 'Dy/Tb', v: triHeavy.toFixed(2), c: riskColor(triHeavy) },
+                { t: 'Nd/Pr', v: triLight.toFixed(2), c: riskColor(triLight) }],
+        s: `weighted ${RE_CLASS_WEIGHT.heavy} / ${RE_CLASS_WEIGHT.light} · 2026–35`,
+        info: (
+          <>
+            <p style={{ margin: '0 0 6px', fontWeight: 600 }}>Trade risk index, 0 to 1. Lower is more secure.</p>
+            <p style={{ margin: '0 0 6px' }}>
+              Per stage: import-source concentration (HHI) × import reliance, plus a
+              domestic-reserve risk for the US-made share and a full weight on any unmet
+              demand, after <a href="https://www.nature.com/articles/s41558-025-02305-1"
+              target="_blank" rel="noopener"
+              style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Cheng et al.
+              (2025, <i>Nature Climate Change</i>)</a>, demand-weighted across 2026–2035
+              (period self-sufficiency, so a stockpile or the recycling ramp registers).
+            </p>
+            <p style={{ margin: '0 0 6px' }}>
+              The headline is {RE_CLASS_WEIGHT.heavy} × the Dy/Tb index plus {RE_CLASS_WEIGHT.light} ×
+              the Nd/Pr index: heavy rare earths weigh more because they are the binding
+              constraint, though a small share of the mass. Risk by stage is under each
+              column of the capacity chart.
+            </p>
+            <p style={{ margin: 0 }}>
+              A content mandate cuts magnet-stage risk but pushes it upstream to oxide and
+              ore, where the US has little heavy rare-earth production. Recycling’s benefit
+              depends on the threat: negligible at low restriction, a primary domestic
+              feedstock under a severe one.
+            </p>
+          </>
+        ) },
+      { l: 'Tightest chokepoint',
+        halves: [
+          { v: cpHeavy.label.split(' ')[0], c: riskColor(cpHeavy.tri), s: `Dy/Tb · stage index ${cpHeavy.tri.toFixed(2)}`,
+            cls: 'Dy/Tb', extra: cpHeavy.tri.toFixed(2) },
+          { v: cpLight.label.split(' ')[0], c: riskColor(cpLight.tri), s: `Nd/Pr · stage index ${cpLight.tri.toFixed(2)}`,
+            cls: 'Nd/Pr', extra: cpLight.tri.toFixed(2) },
+        ] },
+      // Light has a flow-traced twin only in grids from 2026-09-25 on; without
+      // one the card stays a single figure rather than inventing a split.
+      lightFeoc == null
+        ? { l: 'China-exposed demand', v: pct(chinaTouch * 100), c: riskColor(chinaTouch),
+            chip: true, s: `${feocIsHeavy ? 'Dy/Tb · ' : ''}flow-traced · ${flowYear}` }
+        : { l: `China-exposed demand · ${flowYear}`,
+            halves: [
+              { v: pct(chinaTouch * 100), c: riskColor(chinaTouch), s: 'Dy/Tb · flow-traced', cls: 'Dy/Tb' },
+              { v: pct(lightFeoc), c: riskColor(lightFeoc / 100), s: 'Nd/Pr · flow-traced', cls: 'Nd/Pr' },
+            ] },
+      { l: 'US magnets imported', v: pct(usImportPct), c: 'var(--ink)',
+        s: `${flowYear} · same flows as the Sankey` },
+      { l: 'Unmet demand', v: `${usUnmet.toFixed(1)} kt`,
+        c: usUnmet > 0.05 ? WORSE : 'var(--ink)', s: '2026–35 cumulative' },
+      { l: 'US cost of supply', v: musd(usCostReal), c: 'var(--ink)', s: '2026–35 NPV' },
+    ];
+    const sub: CSSProperties = { ...CARD_SUB, fontSize: 8.5, paddingTop: 3, whiteSpace: 'nowrap',
+                                 overflow: 'hidden', textOverflow: 'ellipsis' };
+    // One box for every risk-coloured value, pill or not, so that a figure that
+    // needs the pill and one beside it that does not sit on the same line.
+    const chipOf = (c: string) => ({ padding: '1px 7px', borderRadius: 6, ...riskChip(c), display: 'inline-block' });
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '8px 10px' }}>
+        {cards.map((k) => (
+          // The old ScoreCard, scaled down: label above, the number as the
+          // one big thing, context beneath. The single-line variant was
+          // shallower but read as a table row, not a readout.
+          <div key={k.l} data-popover-anchor style={{ ...CARD, borderRadius: 8, padding: '7px 10px 6px', minWidth: 0 }}>
+            <div style={{ ...CARD_LABEL, fontSize: 10, marginBottom: 2, display: 'flex', alignItems: 'center' }}>
+              {k.l}
+              {k.info && <InfoPopover label={`About the ${k.l.toLowerCase()}`}>{k.info}</InfoPopover>}
+            </div>
+            {k.halves ? (
+              <div style={{ display: 'flex', flexDirection: stacked ? 'column' : 'row',
+                            gap: stacked ? 3 : 10, alignItems: stacked ? 'stretch' : 'flex-start' }}>
+                {k.halves.map((h, i) => (
+                  <Fragment key={h.s}>
+                    {i > 0 && !stacked && (
+                      <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--rule)' }} />
+                    )}
+                    {stacked ? (
+                      // class, value, and the stage index if there is one, on a line
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, minWidth: 0 }}>
+                        <span style={{ ...sub, marginTop: 0, paddingTop: 0, flex: '0 0 30px' }}>{h.cls}</span>
+                        <span style={{ ...chipOf(h.c), font: '600 12.5px var(--font-mono)',
+                                       padding: '1px 6px', lineHeight: 1.2 }}>{h.v}</span>
+                        {h.extra && <span style={{ ...sub, marginTop: 0, paddingTop: 0 }}>{h.extra}</span>}
+                      </div>
+                    ) : (
+                      <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                        <div style={{ font: '600 16px var(--font-mono)', lineHeight: 1.15 }}>
+                          <span style={chipOf(h.c)}>{h.v}</span>
+                        </div>
+                        <div style={sub}>{h.s}</div>
+                      </div>
+                    )}
+                  </Fragment>
+                ))}
               </div>
-            ))}
-    </div>
-  );
+            ) : (<>
+              <div style={{ ...CARD_VALUE(), font: '600 16px var(--font-mono)', gap: '2px 8px' }}>
+                <span style={k.chip ? chipOf(k.c!) : { color: k.c }}>{k.v}</span>
+                {k.parts && (
+                  <span style={{ font: '400 10px var(--font-mono)', whiteSpace: 'nowrap' }}>
+                    {k.parts.map((x, i) => (
+                      <span key={x.t}>
+                        {i > 0 && <span style={{ opacity: 0.4 }}> · </span>}
+                        <span style={{ opacity: 0.6 }}>{x.t} </span>
+                        <b style={{ ...chipOf(x.c), fontWeight: 600, padding: '0 5px' }}>{x.v}</b>
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </div>
+              <div style={sub}>{k.s}</div>
+            </>)}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div style={{ position: 'relative', maxWidth: 'var(--content-max)', margin: '0 auto', padding: isMobile ? '20px 16px 92px' : '28px 20px 0', color: 'var(--ink)' }}>
@@ -1048,13 +1152,9 @@ export default function MagnetExplorer() {
 
           <InterventionLedger planner={plannerLedger} actor={actorLedger} mobile={isMobile} />
 
-          {/* 4 — the trade-risk index. The cost block that used to share this
-              section is gone: the total is in the pinned band (and in the bottom
-              bar on a phone), and the ledger above says what the money bought. */}
-          <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 22 }}>
-            <TradeRiskPanel sc={scR} alliedHHI={alliedHHIMap} />
-          </section>
-
+          {/* The trade-risk index has no section of its own any more. Its total and
+              the two class indices are on the headline card, with the method
+              behind the card's ⓘ; risk by stage is under the capacity columns. */}
           {isMobile && (
             <div style={{ marginTop: 22, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
               <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '0 0 8px' }}>

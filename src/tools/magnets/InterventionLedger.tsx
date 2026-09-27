@@ -7,7 +7,7 @@
  * from here), cheapest first. The thrifting research, the stockpile and
  * collection are line items here like everything else, not sections.
  *
- * ACTOR: the gap between what the plan calls for and what firms fund, and what
+ * ACTOR: the build gap between what the plan calls for and what firms fund, and what
  * each instrument closes of it. When there is no gap, it says so in one line
  * and stops, because an empty chart reads as a broken tool.
  */
@@ -117,8 +117,16 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {next.map((r, i) => <Row key={r.name} r={r} effect={r.next} tag={r.overlay ? 'if built regardless' : 'next step'} best={i === 0} mobile={mobile} />)}
+            {next.map((r, i) => <Row key={r.name} r={r} effect={r.next} tag={r.overlay ? 'assumed build' : 'next step'} best={i === 0} mobile={mobile} />)}
           </div>
+        )}
+        {next.some((r) => r.overlay) && (
+          <p style={{ ...MUTED, margin: '10px 0 0' }}>
+            An <b>assumed build</b> is not something the least-cost plan chooses. The row
+            assumes the United States makes 90% of what it needs at that stage and charges
+            a round figure for building it, to show what that security would cost if it
+            were bought whatever the cost. The figure is ours, not the model&rsquo;s.
+          </p>
         )}
         {inert.length > 0 && (
           <p style={{ ...MUTED, margin: '10px 0 0' }}>
@@ -130,7 +138,7 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
       {/* ── ACTOR ── */}
       <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 18px 16px', background: 'var(--paper)', marginTop: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
-          <span style={H2}>Actor: the gap, and what closes it</span>
+          <span style={H2}>Actor: the build gap, and what closes it</span>
           <span style={{ fontSize: 10.5, opacity: 0.5 }}>at a {actor.hurdlePct.toFixed(1)}% hurdle · from the capacity panel above</span>
         </div>
 

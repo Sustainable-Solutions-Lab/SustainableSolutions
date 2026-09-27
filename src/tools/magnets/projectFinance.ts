@@ -405,12 +405,15 @@ export const screen = (rows: Buildout[], prices: Prices, opts: {
     relief: instrumentRelief(b.s, opts),
   }));
 
-/** Does this stage's margin depend on the price world at all? Conversion stages
- *  earn a fixed spread over their input (magnet = alloy + spread), so their revenue and their
- *  purchased input move together and the oxide price cancels exactly. Saying so
- *  is better than shipping a price-world control that silently does nothing. */
+/** Does this stage's margin depend on the oxide premium at all? Conversion stages
+ *  are paid a fixed margin over their input (magnet = alloy + margin), so their
+ *  revenue and their purchased input move together and the oxide price cancels
+ *  exactly. A MINE sells concentrate, whose price the premium does not move
+ *  (`pricesFromOxide` leaves `concentrate` at its constant), so the premium is
+ *  kept by whoever turns concentrate or scrap into oxide: separation and
+ *  recycling. Mining was listed here until 2026-09-27, which was wrong. */
 export const priceSensitive = (stage: string): boolean =>
-  stage === 'mining' || stage === 'separation' || stage === 'recycling';
+  stage === 'separation' || stage === 'recycling';
 
 /** Tonnage to DRAW and to count for a build-out row. The model states separation
  *  in TREO fed; the plants a reader knows are rated in the Nd/Pr and Dy/Tb oxide

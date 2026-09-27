@@ -58,6 +58,7 @@ import FlowDiagram from './FlowDiagram';
 import DemandBuilder from './DemandBuilder';
 import { allScenario, demandSummary, DEFAULT_LEVERS, SCENARIO_LABEL, type PerSectorScenario, type Levers } from './demand';
 import InfoPopover from './InfoPopover';
+import Slider, { followTouches } from './Slider';
 import ProjectsAside from './ProjectsAside';
 import { alliedHHIByStage, activeSet, DEFAULT_FUTURE, FUTURE_PROJECTS, PROJECTS, tier, usProjectsBuildCost, type Tier } from './projects';
 import { realWorldFlows, reconcileUsSupply, reconcileUsMix, reconcileUsMixRe, reconcileUsSupplyRe } from './realworld';
@@ -71,6 +72,9 @@ import { realWorldFlows, reconcileUsSupply, reconcileUsMix, reconcileUsMixRe, re
 
 const pct = (x: number) => `${x.toFixed(0)}%`;
 const musd = (x: number) => `$${(x / 1000).toFixed(1)}B`;
+/** To the nearest $10M, for the headline bill: at one decimal a lever that adds
+ *  $80M left the figure where it was, which read as the lever doing nothing. */
+const musd2 = (x: number) => `$${(x / 1000).toFixed(2)}B`;
 /** Same, but a bill under a billion reads in $M rather than as $0.0B. */
 const musdS = (x: number) => Math.abs(x) >= 1000 ? musd(x) : `$${x.toFixed(0)}M`;
 // Fixed x-axis for the absolute cost bar so it visibly grows/shrinks with sliders
@@ -119,6 +123,10 @@ const COST_DESC: Record<string, string> = {
   shortage: 'Penalty on US unmet magnet demand: unmet tonnes × a high penalty rate. Not a market cost — it flags US demand the chain can’t deliver in time (e.g. under a ban).',
 };
 const WORSE = '#D53E4F';
+/** Default cost of the thrifting research, $ per kg of Dy/Tb made designable-out. */
+const RD_COST_DEFAULT = 65;
+/** How near an IEA scenario the demand slider must be let go to snap to it, x APS. */
+const DEMAND_SNAP = 0.04;
 
 const KPIS: { k: string; label: string; sub: string; fmt: (x: number) => string; lowerBetter: boolean; help: string }[] = [
   { k: 'us_import_pct', label: 'Share of US magnets imported', sub: 'snapshot year', fmt: pct, lowerBetter: true, help: 'Share of US magnet demand met by imports rather than made in the US, in the snapshot year selected above the Sankey. Read off the same project-reconciled flows the diagram draws.' },
@@ -129,68 +137,9 @@ const KPIS: { k: string; label: string; sub: string; fmt: (x: number) => string;
   { k: 'recycled_pct', label: 'Recycled supply', sub: '2035', fmt: pct, lowerBetter: false, help: 'Final-year (2035) share of oxide supplied by recycling.' },
 ];
 
-/** `ticks` replaces the min/mid/max strip with NAMED anchors at real values —
- *  "China parity", "today's ex-China spread", "2x that". A reader sliding a bare
- *  0-1 axis is guessing what they are postulating; a labelled anchor tells them,
- *  and tells them how far from it they have moved. */
 /** Height of the site's sticky nav (components/Nav.astro), which anything
  *  else sticky must clear or it pins out of sight beneath it. */
 const NAV_HEIGHT = 56;
-
-function Slider({ label, value, max, min = 0, onChange, fmt, desc, ticks, step = 0.01 }: {
-  label: string; value: number; max: number; min?: number; step?: number;
-  onChange: (v: number) => void; fmt: (v: number) => string; desc?: string;
-  ticks?: { at: number; label: string }[];
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ marginBottom: 4 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 1 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-          {label}
-          {desc && (
-            <button onClick={() => setOpen((o) => !o)} aria-label="What is this?" title="What is this?"
-              style={{ width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--rule-strong)',
-                background: open ? 'var(--accent)' : 'transparent', color: open ? 'var(--paper)' : 'var(--ink-3)',
-                font: '600 9px var(--font-mono)', lineHeight: 1, cursor: 'pointer', padding: 0, opacity: 0.85 }}>
-              i
-            </button>
-          )}
-        </span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--accent)' }}>{fmt(value)}</span>
-      </div>
-      <input type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{ width: '100%', accentColor: 'var(--accent)' }} />
-      {ticks?.length ? (
-        <div style={{ position: 'relative', height: 20, marginTop: -2 }}>
-          {ticks.map((t) => {
-            const pctPos = ((t.at - min) / (max - min)) * 100;
-            return (
-              <span key={t.label} title={`${t.label} — ${fmt(t.at)}`}
-                style={{ position: 'absolute', left: `${Math.max(0, Math.min(100, pctPos))}%`,
-                         transform: pctPos < 12 ? 'none' : pctPos > 88 ? 'translateX(-100%)' : 'translateX(-50%)',
-                         textAlign: 'center', lineHeight: 1.1 }}>
-                <span style={{ display: 'block', width: 1, height: 3, background: 'var(--ink)',
-                               opacity: 0.35, margin: pctPos < 12 ? '0' : pctPos > 88 ? '0 0 0 auto' : '0 auto' }} />
-                <span style={{ font: '400 8.5px var(--font-mono)', opacity: 0.45, whiteSpace: 'nowrap' }}>
-                  {t.label}
-                </span>
-              </span>
-            );
-          })}
-        </div>
-      ) : (
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--ink)', opacity: 0.45, marginTop: -1 }}>
-          <span>{fmt(min)}</span><span>{fmt((min + max) / 2)}</span><span>{fmt(max)}</span>
-        </div>
-      )}
-      {desc && open && (
-        <p style={{ fontSize: 11, opacity: 0.6, margin: '6px 0 0', lineHeight: 1.45 }}>{desc}</p>
-      )}
-    </div>
-  );
-}
 
 // Every scorecard is a full-height flex column so the grid's equal rows are
 // filled rather than just matched: caption at the top, footnote pinned to the
@@ -293,6 +242,9 @@ function ScoreCard2({ label, a, b, small, chip }: {
 }
 
 export default function MagnetExplorer() {
+  // Every slider on the page, wherever it is rendered, answers to a finger
+  // anywhere along it (Slider.tsx).
+  useEffect(() => followTouches(document.querySelector<HTMLElement>('.magnet-tool') ?? document.body), []);
   // OPENS WITH A GAP. With no intervention the planner asks for no US capacity
   // at any restriction below 85%, so the actor panel opened empty and the
   // tool's own argument, that what is optimal and what gets funded differ, had
@@ -371,7 +323,9 @@ export default function MagnetExplorer() {
   // paint, because the decision needs both ceilings; until they arrive the
   // research counts as not yet evaluated, and interpScenario answers at the
   // baseline ceiling.
-  const [rdCostPerKg, setRdCostPerKg] = useState(50);   // $ per kg of capability unlocked
+  // No source prices this. The $50 it replaces was a round placeholder, and
+  // $65 is a choice too: see RD_COST_DEFAULT.
+  const [rdCostPerKg, setRdCostPerKg] = useState(RD_COST_DEFAULT);   // $ per kg of capability unlocked
   // The actor-side calibration. Exposed rather than fixed because these are the
   // numbers the US conclusion turns on and the ones we are least sure of.
   // Per STAGE: the reader drags one marker for each stage the plan asks the US to
@@ -380,9 +334,15 @@ export default function MagnetExplorer() {
   const [foakMult, setFoakMult] = useState(1);            // x the FOAK premium above one
   const [provenancePremium, setProvenancePremium] = useState<Record<string, number>>({});   // $/kg of the stage's product
   const [ceilingReady, setCeilingReady] = useState(abatementCeilingReady());
+  // The slices could not be fetched. The research then stays unevaluated and the
+  // page shows the baseline ceiling, which is a settled state, not a pending one.
+  const [ceilingFailed, setCeilingFailed] = useState(false);
   useEffect(() => {
     if (ceilingReady || !HAS_ABATEMENT_CEILING) return;
-    const go = () => { void ensureAbatementCeilingSlices().then(() => setCeilingReady(true)); };
+    const go = () => {
+      void ensureAbatementCeilingSlices().then(() => setCeilingReady(true))
+        .catch(() => setCeilingFailed(true));
+    };
     const w = window as any;
     const id = typeof w.requestIdleCallback === 'function'
       ? w.requestIdleCallback(go, { timeout: 4000 }) : window.setTimeout(go, 1500);
@@ -423,7 +383,25 @@ export default function MagnetExplorer() {
   // Slider anchors: where each IEA scenario lands on the axis, so a reader dragging
   // between them knows what they are postulating.
   const demandTicks = useMemo(() => (['STEPS', 'APS', 'NZE'] as const).map((k) =>
-    ({ at: demandSummary(allScenario(k), DEFAULT_LEVERS).demand_scale, label: SCENARIO_LABEL[k] ?? k })), []);
+    ({ key: k, at: demandSummary(allScenario(k), DEFAULT_LEVERS).demand_scale, label: SCENARIO_LABEL[k] ?? k })), []);
+  // THE SLIDER SNAPS to an IEA scenario when it is let go near one, and then
+  // takes everything the scenario's chip sets: every sector on that scenario, no
+  // levers, and with them the scenario's Dy/Tb intensity. Let go anywhere else it
+  // scales the total and leaves the sector mix alone, as it always did. Snapping
+  // on release rather than while dragging means a drag THROUGH a scenario on the
+  // way elsewhere does not wipe a sector mix set by hand.
+  const snapDemand = useCallback((v: number) => {
+    const hit = demandTicks.find((t) => Math.abs(t.at - v) <= DEMAND_SNAP);
+    if (hit) { setScenario(allScenario(hit.key)); setLv(DEFAULT_LEVERS); }
+  }, [demandTicks, setScenario, setLv]);
+  /** The IEA scenario in force, when every sector is on one and the total has
+   *  not been dragged off it. */
+  const demandPreset = useMemo(() => {
+    if (dscaleOverride !== null) return null;
+    if (JSON.stringify(lv) !== JSON.stringify(DEFAULT_LEVERS)) return null;
+    const vals = Object.values(scenario);
+    return vals.every((x) => x === vals[0]) ? vals[0] : null;
+  }, [scenario, lv, dscaleOverride]);
 
   // The cost breakdown is US-specific (the cost the US bears to supply itself) —
   // this analysis is about US supply security. Global trade/co-product don't apply.
@@ -465,9 +443,16 @@ export default function MagnetExplorer() {
   const stockpile = stockChoice.kt;
   const sc = useMemo(() => applyStockpile(scBase, stockpile, stockCost), [scBase, stockpile, stockCost]);
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
+  // THE HEADLINE NUMBERS WAIT for the research decision. Whether the thrifting
+  // research is funded changes the scenario every figure is read from, and it
+  // cannot be decided until the higher-ceiling slices have arrived, a second or
+  // more after first paint. Before this the page opened at $10.5B and dropped
+  // to $10.2B by itself. A figure that is about to change is not shown.
+  const settled = !HAS_ABATEMENT_CEILING || ceilingReady || ceilingFailed;
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [demandOpen, setDemandOpen] = useState(false);
+  const [sectorsOpen, setSectorsOpen] = useState(false);   // phone: demand by sector
   // Which year the Sankey shows. The horizon end alone hides the ramp: 2030 is
   // mid-build, before long-lead US capacity arrives, which is where a reshoring
   // story either is or is not already underway. Grids written before 2026-09-25
@@ -737,13 +722,51 @@ export default function MagnetExplorer() {
         instruments.guarantee > 0, null, 'removes the financing wedge'),
       actorRow('Price floor, as de-risking', us, prices, now, base, (o) => ({ ...o, floorLevel: 1, floorRelief: RELIEF_DEFAULTS.floor }),
         pfloor > 0, null, 'covered stages only'),
-      actorRow('Provenance premium at today\'s spread', us, prices, now, base, (o) => ({ ...o, provenancePremium: EXCHINA_SPREAD_PER_MAGNET_KG }),
-        Object.values(provenancePremium).some((v) => v > 0), EXCHINA_SPREAD_PER_MAGNET_KG * ktYr, `$${EXCHINA_SPREAD_PER_MAGNET_KG.toFixed(0)}/kg, paid by buyers`),
+      // $55/kg is today's ex-China oxide premium as it sits in a kilogram of
+      // magnet. Applied here as extra revenue on every stage's own product, with
+      // nothing added to what the plant pays for its inputs: the plant is assumed
+      // to keep all of it. An assumption about who captures the premium, not an
+      // observed price.
+      actorRow(`Provenance premium of $${EXCHINA_SPREAD_PER_MAGNET_KG.toFixed(0)}/kg`, us, prices, now, base, (o) => ({ ...o, provenancePremium: EXCHINA_SPREAD_PER_MAGNET_KG }),
+        Object.values(provenancePremium).some((v) => v > 0), EXCHINA_SPREAD_PER_MAGNET_KG * ktYr, 'today’s oxide premium in a kg of magnet, if each plant kept all of it; paid by buyers'),
       actorRow('Public finance at the planner\'s rate', us, prices, now, base, (o) => ({ ...o, rate: PLANNER_RATE }),
         hurdle <= PLANNER_RATE + 1e-9, null, `${(PLANNER_RATE * 100).toFixed(0)}% instead of ${(hurdle * 100).toFixed(1)}%`),
     ];
     return { now, rows, hurdlePct: hurdle * 100 };
   }, [sc, priceSpread, conversion, hurdle, instruments, pfloor, costMult, foakMult, provenancePremium]);
+
+  // ── LEVERS THAT CANNOT ACT HERE ─────────────────────────────────────────
+  // A lever that changes nothing is told apart from a broken one by saying why.
+  // The reasons are read from the state, not assumed.
+  //
+  // US-made magnets: compared at its two ends, everything else held. If the
+  // index, the bill and the unmet tonnage are the same at none and at all, the
+  // mandate does not bind, and the share of its magnets the US already makes
+  // (from the solved flows, before project overlays) is the reason.
+  const leverNotes = useMemo(() => {
+    const same = (a: ReturnType<typeof evalAt>, b: ReturnType<typeof evalAt>) =>
+      Math.abs(a.tri - b.tri) < 0.005 && Math.abs(a.bill - b.bill) < 25 && Math.abs(a.unmet - b.unmet) < 0.1;
+    const usMade = (yr: string) => {
+      const to = ((sc as any).flows_by_year?.[yr]?.magnet ?? sc.flows?.magnet ?? [])
+        .filter((f: { to: string }) => f.to === 'USA');
+      const tot = to.reduce((a: number, f: { value: number }) => a + f.value, 0);
+      const home = to.filter((f: { from: string }) => f.from === 'USA')
+        .reduce((a: number, f: { value: number }) => a + f.value, 0);
+      return tot > 1e-9 ? home / tot : 0;
+    };
+    const makeInert = AXES.makeMax > 0 && same(evalAt({ make: 0 }), evalAt({ make: AXES.makeMax }));
+    return {
+      make: makeInert
+        ? `No effect in this scenario: the plan already makes ${pct(usMade('2030') * 100)} of the magnets the US uses in 2030 and ${pct(usMade('2035') * 100)} in 2035 here, so a requirement to make them here changes nothing. It governs where magnets are made, not where their alloy comes from.`
+        : null,
+      source: reach >= AXES.sourceMax - 1e-9
+        ? `No effect in this scenario: China’s extraterritorial reach, set at ${pct(reach * 100)} above, already forces all of the US Dy/Tb onto clean supply. The two take the larger value, so lower the reach to see this act.`
+        : sourceMandate <= reach + 1e-9
+          ? `No effect until it passes ${pct(reach * 100)}: China’s reach already forces that much clean sourcing, and the two take the larger value.`
+          : null,
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evalAt, sc, reach, sourceMandate]);
 
   // Story scorecard inputs: the single most concerning bottleneck (highest-TRI stage
   // across BOTH RE classes) and the most cost-effective lever (lowest $/0.1-TRI).
@@ -789,18 +812,40 @@ export default function MagnetExplorer() {
     <>
       <div style={GROUP}>US demand</div>
       <div id="demand-builder">
-        <DemandChips scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv}
-          open={demandOpen} setOpen={setDemandOpen} custom={dscaleOverride !== null} />
-        {demandOpen && (
+        {/* A phone gets the slider alone. The scenario chips ran off the right of
+            the sheet, and the slider snaps to the same three scenarios. */}
+        {!isMobile && (
+          <DemandChips scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv}
+            open={demandOpen} setOpen={setDemandOpen} custom={dscaleOverride !== null} />
+        )}
+        {!isMobile && demandOpen && (
           <div style={{ marginTop: 10 }}>
             <DemandBuilder mode="full" scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
           </div>
         )}
-        <div style={{ ...ROW, marginTop: 8 }}>
+        <div style={{ ...ROW, marginTop: isMobile ? 0 : 8 }}>
           <Slider label="Total magnet demand" value={dscale} min={AXES.dscaleMin} max={AXES.dscaleMax}
-            onChange={setDscaleOverride} fmt={(v) => `${v.toFixed(2)}× APS`} ticks={demandTicks}
-            desc="US magnet demand as a multiple of the IEA Announced Pledges (APS) trajectory, 2026–35. The three IEA scenarios are anchors on this axis, not the only options: the grid is solved at 0.6, 1.0 and 1.4× and every level between is interpolated over solved cells. Dragging scales the total; the sector mix (and so the Dy/Tb intensity) stays as set by the chips above, and choosing a chip snaps this back to that scenario's level." />
+            onChange={setDscaleOverride} onCommit={snapDemand}
+            fmt={(v) => (demandPreset ? `${SCENARIO_LABEL[demandPreset] ?? demandPreset} · ${v.toFixed(2)}×`
+                                      : `${v.toFixed(2)}× pledges`)}
+            ticks={demandTicks}
+            desc="US magnet demand, 2026–35, as a multiple of the IEA Announced Pledges trajectory. Let go near one of the three IEA scenarios and the slider snaps to it, taking that scenario’s sector mix and its Dy/Tb intensity with it. Let go anywhere else and it scales the total and leaves the sector mix as it was. The grid is solved at 0.6, 1.0 and 1.4× and every level between is interpolated over solved cells." />
         </div>
+        {isMobile && (
+          <div style={{ marginTop: 6 }}>
+            <button type="button" onClick={() => setSectorsOpen((o) => !o)} aria-expanded={sectorsOpen}
+              style={{ font: '500 11px var(--font-mono)', padding: '5px 10px', borderRadius: 6,
+                       cursor: 'pointer', border: '1px solid var(--rule)', background: 'transparent',
+                       color: 'var(--ink)' }}>
+              <span aria-hidden="true">{sectorsOpen ? '▾' : '▸'}</span> Demand by sector
+            </button>
+            {sectorsOpen && (
+              <div style={{ marginTop: 10 }}>
+                <DemandBuilder mode="controls" scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div style={RULE} />
@@ -824,10 +869,12 @@ export default function MagnetExplorer() {
       <div style={ROW}>
         <Slider label="US-made magnets (reshore)" value={make} max={AXES.makeMax} onChange={setMake} fmt={(v) => pct(v * 100)}
           ticks={[{ at: 0, label: 'none' }, { at: 0.5, label: 'half' }, { at: AXES.makeMax, label: 'all US-made' }]}
-          desc="Component prong, like the IRA EV credit: the share of US magnets that must be manufactured in the US — reshoring the final step. On its own it can still be met with imported (incl. Chinese) alloy or oxide; pair it with non-China sourcing to close that loophole." />
+          note={leverNotes.make}
+          desc="The share of the magnets the US uses that must be made in the US: the last step of the chain only, like the component rule of the IRA vehicle credit. It says nothing about what they are made from, so a US magnet plant may still run on imported alloy, Chinese alloy included, as far as the export restriction allows." />
         <Slider label="Clean heavy sourcing (friendshore)" value={sourceMandate} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
           ticks={[{ at: 0, label: 'none' }, { at: 0.5, label: 'half' }, { at: AXES.sourceMax, label: 'all China-free' }]}
-          desc="Friendshoring the heavy rare earths, FEOC-traced: the minimum share of US Dy/Tb need met by a chain-of-custody-CLEAN supply that never touched Chinese ore, oxide, or alloy at any stage. Unlike a provenance-blind sourcing quota (which ex-China separation of Chinese ore defeats), this can only be met by genuinely China-free material, so it moves the flow-traced exposure. The US pays an ex-China premium for it." />
+          note={leverNotes.source}
+          desc="The share of the dysprosium and terbium the US uses that must come from a supply that never touched China at any stage: ore, oxide or alloy. It covers the heavy rare earths only. The neodymium and praseodymium that make up most of a magnet’s rare-earth content are not covered, so Chinese alloy can still reach US magnet plants, as far as the export restriction allows, carrying clean Dy/Tb or none. The US pays a premium for the clean supply." />
         <Slider label="US price floor on China imports" value={pfloor} max={AXES.pfloorMax} onChange={setPfloor} fmt={(v) => pct(v * 100)}
           ticks={[{ at: 0, label: 'off' }, { at: 0.5, label: 'half premium' }, { at: 1, label: 'full premium' }]}
           desc="A US guaranteed price floor (DoD / MP-Materials-style), modeled as a tariff lifting the price of Chinese oxide, alloy and magnet imports toward the ex-China premium. It makes domestic and allied supply cost-competitive WITHOUT a mandate, so the market reshores on price rather than by rule; its cost falls on consumers as a higher import price. The SAME instrument also de-risks covered projects in actor mode below, and that relief scales with this setting." />
@@ -848,35 +895,51 @@ export default function MagnetExplorer() {
           desc={`Acquire and hold cost of stockpiled finished magnets. The $${STOCKPILE_COST_DEFAULT}/kg default assumes a buffer skewed to Dy/Tb-rich high-coercivity grades, the strategically scarce ones. The planner holds enough to cover the shortfall when this is below the value of unmet demand, and nothing otherwise.`} />
         <Slider label="Value of unmet demand" value={unmetValueLog} min={Math.log10(30)} max={Math.log10(50000)} step={0.01} onChange={setUnmetValueLog}
           fmt={(v) => { const x = 10 ** v; return x >= 1000 ? `$${(x / 1000).toFixed(x >= 10000 ? 0 : 1)}k/kg` : `$${x.toFixed(0)}/kg`; }}
-          ticks={[{ at: Math.log10(UNMET_VALUE_ANCHORS.revealed2025), label: '2025 premium' }, { at: Math.log10(UNMET_VALUE_ANCHORS.adaptation), label: 'adapt' }, { at: Math.log10(UNMET_VALUE_ANCHORS.lostLoad), label: 'lost load' }]}
+          ticks={[{ at: Math.log10(UNMET_VALUE_ANCHORS.revealed2025), label: '2025 floor' }, { at: Math.log10(UNMET_VALUE_ANCHORS.adaptation), label: 'redesign', low: true }, { at: Math.log10(UNMET_VALUE_ANCHORS.lostLoad), label: 'stoppage' }]}
           desc="What a kilogram of magnet demand that goes unmet costs the US, per kg of finished magnet. Three anchors, three orders of magnitude apart, and the gap between them is the point. FLOOR, revealed by the 2025 export controls: buyers paid an ex-China premium worth about $55/kg of magnet rather than go without, so the marginal ton was still obtainable at that. CEILING, a short unforeseen stoppage: the vehicle output riding on each kg of magnet, or an electricity value-of-lost-load ratio of 150-1,000x price, lands at $10,000-100,000/kg. The grid's unmet demand is neither: a foreseen, multi-year gap, which nobody pays that for; they redesign the magnet out at a few hundred $/kg. That is the default. Log scale." />
         <Slider label="Thrifting R&D cost" value={rdCostPerKg} max={400} step={5} onChange={setRdCostPerKg} fmt={(v) => `$${v.toFixed(0)}/kg`}
-          ticks={[{ at: 0, label: 'free' }, { at: 50, label: 'default' }, { at: 400, label: 'dear' }]}
+          ticks={[{ at: 0, label: 'free' }, { at: RD_COST_DEFAULT, label: 'default', low: true }, { at: 400, label: 'dear' }]}
           desc="What the research costs per kg of Dy/Tb it makes designable-out: the engineering that lets a sector take a weaker magnet, so the thrifting ceiling rises from today's sectoral availability to the best any sector demonstrates. The planner funds it when the saving on the US supply bill exceeds the bill; the detail is in the research panel below." />
       </div>
-      <div style={{ display: 'grid', gap: '4px 20px', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-                    font: '500 10.5px var(--font-mono)', lineHeight: 1.4, marginTop: 2 }}>
-        {[
+      {/* WHAT THE SETTINGS DEPLOY, set off from the sliders that decide it by a
+          hairline. Deployed reads green and not deployed red, on a tint behind
+          the word and a mark beside it, so the verdict is never colour alone
+          and the text stays the ink colour in both themes. */}
+      <div style={{ display: 'grid', gap: '6px 20px', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                    font: '500 10.5px var(--font-mono)', lineHeight: 1.4,
+                    marginTop: 8, paddingTop: 9, borderTop: '1px solid var(--rule)' }}>
+        {([
           { l: 'Collection', on: rec > 0,
             v: rec > 0 ? `${pct(rec * 100)} of retirements` : 'none',
-            s: rec > 0 ? `${collection.collectedKt.toFixed(0)} kt collected · bill ${musdS(collection.bill)} · saves ${musdS(collection.systemSaving)} world`
-                       : 'collection dearer than the primary it displaces' },
+            s: (rec > 0 ? `${collection.collectedKt.toFixed(0)} kt collected · bill ${musdS(collection.bill)} · saves ${musdS(collection.systemSaving)} world`
+                        : 'collection dearer than the primary it displaces')
+               + (collection.breakeven != null && collection.breakeven > 0
+                  ? ` · breakeven $${collection.breakeven.toFixed(collection.breakeven < 20 ? 1 : 0)}/kg` : ' · no price makes it pay here') },
           { l: 'Stockpile', on: stockpile > 0,
             v: stockpile > 0 ? `${stockpile.toFixed(stockpile % 1 === 0 ? 0 : 1)} kt` : 'none',
             s: stockpile > 0 ? `covers the ${stockChoice.unmetKt.toFixed(1)} kt shortfall · ${musdS(stockChoice.bill)}`
                : stockChoice.unmetKt > 1e-6 ? `$${stockCost}/kg to hold exceeds what unmet demand costs`
                : 'no unmet demand to cover' },
-          { l: 'Thrifting R&D', on: abunlock > 0,
-            v: !rdChoice.evaluated ? 'evaluating…' : abunlock > 0 ? 'funded' : 'not funded',
+          { l: 'Thrifting R&D', on: !rdChoice.evaluated ? null : abunlock > 0,
+            v: !rdChoice.evaluated ? 'evaluating' : abunlock > 0 ? 'funded' : 'not funded',
             s: !rdChoice.evaluated ? 'loading the higher-ceiling grid'
                : `net ${musdS(rdChoice.rd.net)} on the US bill${rdChoice.rd.breakeven != null && rdChoice.rd.breakeven > 0 ? ` · breakeven $${rdChoice.rd.breakeven.toFixed(0)}/kg` : ''}` },
-        ].map((k) => (
-          <div key={k.l} style={{ minWidth: 0 }}>
-            <span style={{ opacity: 0.55 }}>{k.l}: </span>
-            <b style={{ color: k.on ? 'var(--accent)' : 'var(--ink)' }}>{k.v}</b>
-            <div style={{ opacity: 0.55, fontWeight: 400, fontSize: 10 }}>{k.s}</div>
-          </div>
-        ))}
+        ] as { l: string; on: boolean | null; v: string; s: string }[]).map((k) => {
+          const tone = k.on == null ? 'var(--ink-3)' : k.on ? 'var(--brand-green)' : WORSE;
+          return (
+            <div key={k.l} style={{ minWidth: 0 }}>
+              <span style={{ opacity: 0.55 }}>{k.l}: </span>
+              <b style={{ display: 'inline-block', color: 'var(--ink)', padding: '0 6px', borderRadius: 5,
+                          background: `color-mix(in srgb, ${tone} 22%, transparent)`,
+                          border: `1px solid color-mix(in srgb, ${tone} 55%, transparent)` }}>
+                <span aria-hidden="true" style={{ color: tone }}>
+                  {k.on == null ? '…' : k.on ? '✓' : '✕'}
+                </span>{' '}{k.v}
+              </b>
+              <div style={{ opacity: 0.55, fontWeight: 400, fontSize: 10 }}>{k.s}</div>
+            </div>
+          );
+        })}
       </div>
       {stockpile > 0 && (
         <p style={{ fontSize: 10.5, opacity: 0.55, margin: '4px 0 0', lineHeight: 1.4 }}>
@@ -900,7 +963,9 @@ export default function MagnetExplorer() {
   type Half = { v: string; c: string; s: string; cls: string; extra?: string };
   type Kpi = { l: string; v?: string; c?: string; chip?: boolean; s?: string;
                halves?: [Half, Half]; parts?: { t: string; v: string; c: string }[];
-               info?: JSX.Element };
+               info?: JSX.Element;
+               /** Hover text for the figure: the unrounded value and what it is made of. */
+               tip?: string };
   const kpiCards = (cols: number) => {
     const stacked = cols < 3;   // a phone's cards are too narrow for two halves abreast
     const cards: Kpi[] = [
@@ -953,17 +1018,30 @@ export default function MagnetExplorer() {
             ] },
       { l: 'US magnets imported', v: pct(usImportPct), c: 'var(--ink)',
         s: `${flowYear} · same flows as the Sankey` },
-      { l: 'Unmet demand', v: `${usUnmet.toFixed(1)} kt`,
-        c: usUnmet > 0.05 ? WORSE : 'var(--ink)', s: '2026–35 cumulative' },
-      { l: 'US cost of supply', v: musd(usCostReal), c: 'var(--ink)', s: '2026–35 NPV' },
+      { l: 'Unmet US demand', v: `${usUnmet.toFixed(1)} kt`,
+        c: usUnmet > 0.05 ? WORSE : 'var(--ink)',
+        // A shortfall a stockpile covers is still a shortfall the chain left.
+        s: stockpile > 0.05 ? `${stockChoice.unmetKt.toFixed(1)} kt short, met from the stockpile`
+                            : '2026–35 cumulative' },
+      { l: 'US cost of supply', v: musd2(usCostReal), c: 'var(--ink)', s: '2026–35 NPV',
+        tip: `$${Math.round(usCostReal).toLocaleString('en-US')}M: ` + REAL_COST_KEYS
+          .filter(([k]) => (scR.us_cost[k] ?? 0) > 0.5)
+          .map(([k, lbl]) => `${lbl} ${Math.round(scR.us_cost[k])}`).join(' · ') },
     ];
     const sub: CSSProperties = { ...CARD_SUB, fontSize: 8.5, paddingTop: 3, whiteSpace: 'nowrap',
                                  overflow: 'hidden', textOverflow: 'ellipsis' };
     // One box for every risk-coloured value, pill or not, so that a figure that
     // needs the pill and one beside it that does not sit on the same line.
-    const chipOf = (c: string) => ({ padding: '1px 7px', borderRadius: 6, ...riskChip(c), display: 'inline-block' });
+    const chipOf = (c: string) => (settled
+      ? { padding: '1px 7px', borderRadius: 6, ...riskChip(c), display: 'inline-block' }
+      : { padding: '1px 7px', borderRadius: 6, color: 'var(--ink-3)', display: 'inline-block' });
+    // Not settled: every figure is a placeholder, in the same box, so nothing
+    // moves when the numbers arrive.
+    const shown = (v: string | undefined) => (settled ? v : '…');
+    const subOf = (t: string | undefined) => (settled ? t : 'loading scenarios');
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '8px 10px' }}>
+      <div aria-busy={!settled}
+        style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '8px 10px' }}>
         {cards.map((k) => (
           // The old ScoreCard, scaled down: label above, the number as the
           // one big thing, context beneath. The single-line variant was
@@ -986,15 +1064,15 @@ export default function MagnetExplorer() {
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, minWidth: 0 }}>
                         <span style={{ ...sub, marginTop: 0, paddingTop: 0, flex: '0 0 30px' }}>{h.cls}</span>
                         <span style={{ ...chipOf(h.c), font: '600 12.5px var(--font-mono)',
-                                       padding: '1px 6px', lineHeight: 1.2 }}>{h.v}</span>
-                        {h.extra && <span style={{ ...sub, marginTop: 0, paddingTop: 0 }}>{h.extra}</span>}
+                                       padding: '1px 6px', lineHeight: 1.2 }}>{shown(h.v)}</span>
+                        {h.extra && settled && <span style={{ ...sub, marginTop: 0, paddingTop: 0 }}>{h.extra}</span>}
                       </div>
                     ) : (
                       <div style={{ flex: '1 1 0', minWidth: 0 }}>
                         <div style={{ font: '600 16px var(--font-mono)', lineHeight: 1.15 }}>
-                          <span style={chipOf(h.c)}>{h.v}</span>
+                          <span style={chipOf(h.c)}>{shown(h.v)}</span>
                         </div>
-                        <div style={sub}>{h.s}</div>
+                        <div style={sub}>{subOf(h.s)}</div>
                       </div>
                     )}
                   </Fragment>
@@ -1002,8 +1080,9 @@ export default function MagnetExplorer() {
               </div>
             ) : (<>
               <div style={{ ...CARD_VALUE(), font: '600 16px var(--font-mono)', gap: '2px 8px' }}>
-                <span style={k.chip ? chipOf(k.c!) : { color: k.c }}>{k.v}</span>
-                {k.parts && (
+                <span title={settled ? k.tip : undefined}
+                  style={k.chip ? chipOf(k.c!) : { color: settled ? k.c : 'var(--ink-3)' }}>{shown(k.v)}</span>
+                {k.parts && settled && (
                   <span style={{ font: '400 10px var(--font-mono)', whiteSpace: 'nowrap' }}>
                     {k.parts.map((x, i) => (
                       <span key={x.t}>
@@ -1015,7 +1094,7 @@ export default function MagnetExplorer() {
                   </span>
                 )}
               </div>
-              <div style={sub}>{k.s}</div>
+              <div style={sub}>{subOf(k.s)}</div>
             </>)}
           </div>
         ))}
@@ -1024,7 +1103,7 @@ export default function MagnetExplorer() {
   };
 
   return (
-    <div style={{ position: 'relative', maxWidth: 'var(--content-max)', margin: '0 auto', padding: isMobile ? '20px 16px 92px' : '28px 20px 0', color: 'var(--ink)' }}>
+    <div style={{ position: 'relative', maxWidth: 'var(--content-max)', margin: '0 auto', padding: isMobile ? '20px 16px 112px' : '28px 20px 0', color: 'var(--ink)' }}>
       <BusyOverlay busy={pfloor > 0 && !pfReady} label="Loading price-floor scenarios" />
       <header style={{ marginBottom: 24 }}>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.08em', color: 'var(--accent)', marginBottom: 8 }}>
@@ -1051,14 +1130,12 @@ export default function MagnetExplorer() {
       {/* MOBILE keeps the slide-up sheet: a phone has no room for inline control
           bands, and one column already is a reading order. */}
       {isMobile && (
-        <aside style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60, height: '52vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: 'var(--paper)', borderRadius: '16px 16px 0 0', borderTop: '2px solid var(--accent)', padding: '0 18px 24px', transform: sheetOpen ? 'translateY(0)' : 'translateY(110%)', transition: 'transform 0.28s ease', boxShadow: '0 -8px 30px rgba(0,0,0,0.22)' }}>
+        <aside style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60, height: '52vh', overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', background: 'var(--paper)', borderRadius: '16px 16px 0 0', borderTop: '2px solid var(--accent)', padding: '0 18px 24px', transform: sheetOpen ? 'translateY(0)' : 'translateY(110%)', transition: 'transform 0.28s ease', boxShadow: '0 -8px 30px rgba(0,0,0,0.22)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1, background: 'var(--paper)', padding: '12px 0 10px', borderBottom: '1px solid var(--rule)' }}>
             <span style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6 }}>Scenario</span>
             <button onClick={() => setSheetOpen(false)} style={{ font: '600 12px var(--font-mono)', color: 'var(--accent)', background: 'transparent', border: '1px solid var(--rule-strong)', borderRadius: 6, padding: '6px 14px', cursor: 'pointer' }}>Done</button>
           </div>
-          <div style={{ font: '600 11px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: '14px 0 8px', borderBottom: '1px solid var(--rule)', paddingBottom: 6 }}>Demand</div>
-          <DemandBuilder mode="controls" scenario={scenario} setScenario={setScenario} lv={lv} setLv={setLv} />
-          {plannerControls}
+          <div style={{ paddingTop: 14 }}>{plannerControls}</div>
         </aside>
       )}
 
@@ -1176,16 +1253,21 @@ export default function MagnetExplorer() {
               {/* Label, then the number as a chip, the same way on both rows, so
                   the two figures line up and read as a pair. */}
               <span style={{ display: 'grid', gridTemplateColumns: 'auto auto', alignItems: 'center',
-                             gap: '4px 8px', fontSize: 11.5, lineHeight: 1.2, minWidth: 0 }}>
+                             gap: '3px 8px', fontSize: 11, lineHeight: 1.2, minWidth: 0 }}>
                 {([
                   ['Trade Risk Index:', tri.toFixed(2), riskColor(tri), 'var(--risk-chip-bg)'],
-                  ['US cost, 2026–2035:', musd(usCostReal), 'var(--ink)', 'var(--paper-2)'],
+                  ['US cost, 2026–2035:', musd2(usCostReal), 'var(--ink)', 'var(--paper-2)'],
+                  // Unmet demand is the first thing a restriction costs, and a bill that
+                  // does not move when a lever is pulled often means demand went unserved.
+                  ['Unmet US demand:', `${usUnmet.toFixed(1)} kt`, usUnmet > 0.05 ? WORSE : 'var(--ink)', 'var(--paper-2)'],
                 ] as const).map(([label, value, color, background]) => (
                   <Fragment key={label}>
                     <span style={{ opacity: 0.6, whiteSpace: 'nowrap' }}>{label}</span>
-                    <b style={{ justifySelf: 'start', font: '600 11.5px var(--font-mono)', color, background,
+                    <b style={{ justifySelf: 'start', font: '600 11px var(--font-mono)',
+                                color: settled ? color : 'var(--ink-3)',
+                                background: settled ? background : 'var(--paper-2)',
                                 padding: '1px 7px', borderRadius: 6, border: '1px solid var(--rule)',
-                                whiteSpace: 'nowrap' }}>{value}</b>
+                                whiteSpace: 'nowrap' }}>{settled ? value : '…'}</b>
                   </Fragment>
                 ))}
               </span>

@@ -189,13 +189,23 @@ export function regionalCapacity(stage: Stage, active: Set<string>, scale: Recor
 // Crediting a project's FULL nameplate as heavy-REE capacity overstated ex-China heavy supply
 // ~15x and made China's heavy share collapse to 0 when projects were toggled on, contradicting
 // the faithful flow-traced model (heavy ore stays ~95%+ China — the chokepoint is heavy MINING,
-// not separation). Scale heavy-class capacity by this yield. Light class is unchanged (a
-// light-flagged project's output is ~all light).
-const HEAVY_YIELD = 0.06;
+// not separation). Scale heavy-class capacity by this yield.
+export const HEAVY_YIELD = 0.06;
+// The same correction for LIGHT mines, which was missing. A mine's capacity is
+// stated in total rare-earth oxide, most of it lanthanum and cerium; the model's
+// flows carry only the magnet elements. Nd/Pr is 16-22% of the oxide in a light
+// deposit (the model's rho_NdPr: Mountain Pass 0.165, Mt Weld 0.22), so counting
+// the whole nameplate credited ex-China mines with about five times the Nd/Pr
+// they produce: the Sankey showed the US mining half the world's magnet rare
+// earths. Separation plants are listed in the Nd/Pr and Dy/Tb oxide they make,
+// so they take no such factor.
+export const LIGHT_MINE_YIELD = 0.19;
+/** Dy/Tb in the oxide of a LIGHT deposit: Mountain Pass 0.05%, Mt Weld 0.2%. */
+export const LIGHT_MINE_HEAVY_TRACE = 0.001;
 
 export function regionalCapacityRe(stage: Stage, active: Set<string>, cls: 'light' | 'heavy', scale: Record<string, number> = {}): Record<'USA' | 'China' | 'RoW', number> {
   const out: Record<'USA' | 'China' | 'RoW', number> = { USA: 0, China: 0, RoW: 0 };
-  const yld = cls === 'heavy' ? HEAVY_YIELD : 1;
+  const yld = cls === 'heavy' ? HEAVY_YIELD : stage === 'mining' ? LIGHT_MINE_YIELD : 1;
   for (const p of PROJECTS) {
     if (p.stage !== stage || !active.has(p.id)) continue;
     if ((cls === 'heavy') !== !!p.heavy) continue;   // heavy class ⟷ heavy-flagged projects

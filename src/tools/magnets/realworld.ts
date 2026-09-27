@@ -87,7 +87,13 @@ export function reconcileUsSupply(sc: Scenario, active: Set<string>, scale: Reco
   for (const stage of ['mining', 'separation', 'alloy', 'magnet']) {
     const m: any = sc.us_supply?.[stage] ?? { domestic: 0, allied: 0, china: 0 };
     const req = usMag * (STAGE_REQ_FACTOR[stage] ?? 1);
-    const usCap = rampedCapacity(stage as Stage, active, scale).USA;
+    // A mine's nameplate is total rare-earth oxide; the requirement is in the
+    // magnet elements only, so mining is floored by the sum of its class
+    // capacities, which are already in contained Nd/Pr and Dy/Tb.
+    const usCap = stage === 'mining'
+      ? rampedCapacityRe('mining', active, 'light', scale).USA
+        + rampedCapacityRe('mining', active, 'heavy', scale).USA
+      : rampedCapacity(stage as Stage, active, scale).USA;
     const floor = req > 1e-9 ? Math.min(1, usCap / req) : 0;
     const recyc = m.recycled ?? 0;                 // recycled (secondary) supply passes through
     const dom = Math.max(m.domestic ?? 0, floor);  // a US project floors PRIMARY domestic

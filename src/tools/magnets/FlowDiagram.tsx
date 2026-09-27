@@ -88,12 +88,16 @@ const STAGE_ICON: Record<string, JSX.Element> = {
   Magnet: <Magnet size={ICON} strokeWidth={1.5} />,
   Demand: <Zap size={ICON} strokeWidth={1.5} />,
 };
-// Space under the bars for the end-of-life return loop. The canvas GROWS by this
-// when there are arcs to draw and collapses when there are not, rather than
-// reserving dead space at a zero collection rate — which is the default, so the
-// gap between the diagram and its caption was permanent and unexplained. The bar
-// area (innerH) is fixed either way, so the plot never resizes under the reader.
-const RECYCLE_BAND = 44;
+// The end-of-life return loop leaves the RIGHT side of the demand column, runs
+// under the chain and re-enters the separation column from the left, so it reads
+// as one more ribbon of the diagram rather than a line hung beneath it. The
+// canvas GROWS, below and to the right, by what the loops need and collapses
+// when there are none, rather than reserving dead space at a zero collection
+// rate. The bar area (innerH) is fixed either way.
+const LOOP_GAP = 3;        // between nested loops
+const LOOP_CLEAR = 18;     // between the bars and the nearest loop
+const LOOP_BEND = 8;       // inside radius of the tightest loop
+const LOOP_LABEL = 22;     // room for the caption under the lowest loop
 const innerH = 408;
 const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
 
@@ -147,58 +151,64 @@ export default function FlowDiagram({ flows, active, scale = {}, year }: {
     return out;
   });
 
-  const recPresent = ((fl as any).recycled ?? []).some((r: any) => r.value > 0.01);
-  const H = 2 * PADY + innerH + (recPresent ? RECYCLE_BAND : 0);
-
   const ribbons: JSX.Element[] = [];
-  // The return loop. End-of-life material re-enters at the OXIDE hub, bypassing
-  // mining and separation, so it is drawn as an arc from Demand back to the
-  // Separation column rather than as another left-to-right ribbon. Without it
-  // the diagram shows a chain that only ever runs one way, in the lever our own
-  // results rank first. Only present on the aggregate view: the per-class flow
-  // payload does not carry it.
+  // THE RETURN LOOP. End-of-life magnets are collected where they were used and
+  // come back as oxide, bypassing mining and separation, so the ribbon leaves
+  // the demand bar of the region that used them and lands in that region's
+  // share of the oxide column. Its width is on the OXIDE scale, the scale of the
+  // column it enters, so a kiloton of recycled oxide is as thick as a kiloton
+  // of separated oxide beside it; the concentrate ribbons give up exactly that
+  // much of the bar (see `entering` below).
   const recycleArcs: JSX.Element[] = [];
-  const recRows: { from: string; to: string; value: number }[] = (fl as any).recycled ?? [];
-  const recTot = recRows.reduce((a, r) => a + r.value, 0);
-  if (recTot > 0.01) {
-    // Scaled off the MAGNET interface, the same scale the last ribbon column
-    // uses, so a 5 kt return loop is exactly as thick as a 5 kt shipment. The old
-    // arcs were scaled to their own maximum, which made a trivial loop look as
-    // substantial as a large one.
-    const magnetTotal = (fl.magnet ?? []).reduce((a, f) => a + f.value, 0);
-    const recScale = magnetTotal > 1e-9 ? innerH / magnetTotal : 0;
-    const iDem = COLS.length - 1, iSep = 1;
+  const iDem = COLS.length - 1, iSep = 1;
+  const oxideTotal = (fl.oxide ?? []).reduce((a, f) => a + f.value, 0);
+  const recScale = oxideTotal > 1e-9 ? innerH / oxideTotal : 0;
+  // Innermost first: the lowest bar (the US) turns tightest, so the loops nest.
+  const loops = (((fl as any).recycled ?? []) as Flow[])
+    .filter((r) => r.value > 0.01 && segY[iDem][r.from] && segY[iSep][r.to])
+    .sort((a, b) => REGIONS.indexOf(b.from) - REGIONS.indexOf(a.from))
+    .map((r) => {
+      const room = (segY[iSep][r.to].y1 - segY[iSep][r.to].y0) * 0.9;
+      const leave = (segY[iDem][r.from].y1 - segY[iDem][r.from].y0) * 0.9;
+      return { ...r, w: Math.max(1.5, Math.min(r.value * recScale, room, leave)) };
+    });
+  const recTot = loops.reduce((a, r) => a + r.value, 0);
+  /** Height of a separation bar taken by recycled oxide, by region. */
+  const entering: Record<string, number> = {};
+  loops.forEach((r) => { entering[r.to] = (entering[r.to] ?? 0) + r.w; });
+  const loopSpan = loops.reduce((a, r) => a + r.w + LOOP_GAP, 0);
+  const padRight = Math.max(PADX, loops.length ? LOOP_CLEAR + loopSpan + 6 : 0);
+  const CW = W - PADX + padRight;
+  const H = Math.max(2 * PADY + innerH,
+    PADY + innerH + (loops.length ? LOOP_CLEAR + loopSpan + LOOP_LABEL + 8 : 0));
+  if (loops.length) {
     const yFloor = PADY + innerH;
-    // Ordered so the region dipping deepest is drawn first and the arcs nest
-    // rather than cross.
-    const rows = recRows.filter((r) => r.value > 0.01)
-      .sort((a, b) => REGIONS.indexOf(a.from) - REGIONS.indexOf(b.from));
-    rows.forEach((r, k) => {
-      // Collection happens where the magnets were USED, and the recovered oxide
-      // re-enters separation in that same region — so the loop is anchored to the
-      // region's own bars at both ends, not to a shared point on the floor.
-      const xEnd = colX[iDem] + NODE_W / 2;
-      const xStart = colX[iSep] + NODE_W / 2;
-      const yEnd = segY[iDem][r.from]?.y1 ?? yFloor;
-      const yStart = segY[iSep][r.to]?.y1 ?? yFloor;
-      const w = Math.max(1.2, r.value * recScale);
-      const dip = yFloor + 16 + k * 11 + w / 2;
+    const xOut = colX[iDem] + NODE_W, xIn = colX[iSep];
+    let off = LOOP_CLEAR;
+    loops.forEach((r) => {
+      const c = off + r.w / 2;          // centreline distance from the bars
+      off += r.w + LOOP_GAP;
+      const y0 = segY[iDem][r.from].y1 - r.w / 2;
+      const y1 = segY[iSep][r.to].y1 - r.w / 2;
+      const xr = xOut + c, xl = xIn - c, yb = yFloor + c;
+      // Concentric corners: each loop bends around the one inside it.
+      const k = Math.max(2, Math.min(c - LOOP_CLEAR + LOOP_BEND, (yb - y0) / 2, (yb - y1) / 2));
+      const d = `M${xOut},${y0} L${xr - k},${y0} Q${xr},${y0} ${xr},${y0 + k}`
+        + ` L${xr},${yb - k} Q${xr},${yb} ${xr - k},${yb}`
+        + ` L${xl + k},${yb} Q${xl},${yb} ${xl},${yb - k}`
+        + ` L${xl},${y1 + k} Q${xl},${y1} ${xl + k},${y1} L${xIn},${y1}`;
       recycleArcs.push(
-        <path key={`rec-${r.from}-${r.to}`}
-          d={`M${xEnd},${yEnd} C${xEnd},${dip} ${xStart},${dip} ${xStart},${yStart}`}
-          fill="none" stroke={REGION_COLOR[r.from]} strokeWidth={w} strokeOpacity={0.5}
-          strokeLinecap="round">
-          <title>{`${r.from}: ${r.value.toFixed(1)} kt of end-of-life material collected in ${r.from} and recovered as oxide, re-entering ${r.to} separation`}</title>
+        <path key={`rec-${r.from}-${r.to}`} d={d}
+          fill="none" stroke={REGION_COLOR[r.from]} strokeWidth={r.w} strokeOpacity={0.5}>
+          <title>{`${r.from}: ${r.value.toFixed(1)} kt of oxide recovered from end-of-life magnets collected in ${r.from}, re-entering the chain as ${r.to} oxide`}</title>
         </path>,
       );
     });
-    const deepest = yFloor + 16 + (rows.length - 1) * 11
-      + Math.max(1.2, (rows[rows.length - 1]?.value ?? 0) * recScale) / 2;
     recycleArcs.push(
-      <text key="rec-label" x={(colX[iSep] + colX[iDem]) / 2 + NODE_W / 2} y={deepest + 16}
+      <text key="rec-label" x={(xIn + xOut) / 2} y={yFloor + LOOP_CLEAR + loopSpan + 14}
         textAnchor="middle"
         style={{ font: '600 10.5px var(--font-mono)', fill: 'var(--ink)', opacity: 0.55 }}>
-        {`end-of-life recycled back into separation · ${recTot.toFixed(1)} kt`}
+        {`end-of-life magnets recycled back to oxide · ${recTot.toFixed(1)} kt`}
       </text>,
     );
   }
@@ -210,7 +220,10 @@ export default function FlowDiagram({ flows, active, scale = {}, year }: {
     const srcScale = innerH / total;
     // taper: target side fills each target bar exactly (handles recovery/recycling)
     const tgtScale = (r: string) => {
-      const inv = inSum(fl, c.iface!, r), barH = segY[i + 1][r].y1 - segY[i + 1][r].y0;
+      const inv = inSum(fl, c.iface!, r);
+      // The foot of a separation bar belongs to the recycled oxide entering it.
+      const barH = segY[i + 1][r].y1 - segY[i + 1][r].y0
+        - (i + 1 === iSep ? (entering[r] ?? 0) : 0);
       return inv > 1e-9 ? barH / inv : 0;
     };
     const srcCum = Object.fromEntries(REGIONS.map((r) => [r, segY[i][r].y0]));
@@ -259,7 +272,7 @@ export default function FlowDiagram({ flows, active, scale = {}, year }: {
         </div>
       </div>
       <div ref={wrapRef} style={{ position: 'relative' }} onMouseLeave={() => setHover(null)}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Supply-chain Sankey">
+      <svg viewBox={`0 0 ${CW} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Supply-chain Sankey">
         {ribbons}
         {recycleArcs}
         {COLS.map((c, i) => (

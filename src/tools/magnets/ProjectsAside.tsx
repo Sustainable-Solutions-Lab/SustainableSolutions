@@ -28,13 +28,14 @@ function Row({ p, on, onToggle }: { p: Project; on: boolean; onToggle: () => voi
   );
 }
 
-function GroupButton({ label, count, total, allOn, onClick }: {
+function GroupButton({ label, count, total, allOn, onClick, small }: {
   label: string; count: number; total: number; allOn: boolean; onClick: () => void;
+  small?: boolean;
 }) {
   const some = count > 0 && !allOn;
   return (
     <button onClick={onClick} title={`${count} of ${total} on — click to ${allOn ? 'exclude' : 'include'} all`}
-      style={{ width: '100%', font: '600 11px var(--font-mono)', padding: '7px 4px', borderRadius: 6, cursor: 'pointer', lineHeight: 1.25,
+      style={{ width: '100%', font: `600 ${small ? 10 : 11}px var(--font-mono)`, padding: small ? '4px 2px' : '7px 4px', borderRadius: 6, cursor: 'pointer', lineHeight: 1.25,
         border: `1px solid ${allOn || some ? 'var(--accent)' : 'var(--rule-strong)'}`,
         background: allOn ? 'var(--accent)' : 'transparent', color: allOn ? 'var(--paper)' : 'var(--ink)' }}>
       {label}
@@ -43,10 +44,13 @@ function GroupButton({ label, count, total, allOn, onClick }: {
   );
 }
 
-export default function ProjectsAside({ future, onToggle, onSetGroup }: {
+export default function ProjectsAside({ future, onToggle, onSetGroup, rail = false }: {
   future: Set<string>;
   onToggle: (id: string) => void;
   onSetGroup: (t: Tier, on: boolean) => void;
+  /** In the desktop's controls rail, which is too narrow for a list inside each
+   *  button's column: the lists run the rail's width, under the buttons. */
+  rail?: boolean;
 }) {
   const [custOpen, setCustOpen] = useState(false);
   const ramping = FUTURE_PROJECTS.filter((p) => tier(p) === 'ramping');
@@ -59,7 +63,9 @@ export default function ProjectsAside({ future, onToggle, onSetGroup }: {
   ];
   return (
     <div>
-      <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', opacity: 0.7, margin: '12px 0 6px' }}>Projects assumed built</div>
+      <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase',
+                    color: rail ? 'var(--cardinal)' : 'var(--accent)', opacity: rail ? 0.85 : 0.7,
+                    margin: rail ? '0 0 6px' : '12px 0 6px' }}>Projects assumed built</div>
       {/* Each tier's list renders INSIDE its own button's column, so a list is
           visually owned by the control that toggles it and the row cannot reflow.
           The toggle sits above the grid so it stays put when the lists open —
@@ -70,13 +76,13 @@ export default function ProjectsAside({ future, onToggle, onSetGroup }: {
                  color: 'var(--ink)', opacity: 0.75, marginBottom: 6 }}>
         {custOpen ? '− customize' : '+ customize'}
       </button>
-      <div style={{ display: 'grid', gap: '0 16px',
-                    gridTemplateColumns: 'repeat(3, 1fr)', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gap: rail ? '0 6px' : '0 16px',
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', alignItems: 'start' }}>
         {groups.map(([label, g]) => (
           <div key={label}>
-            <GroupButton label={label} count={g.on} total={g.list.length} allOn={g.allOn}
+            <GroupButton label={label} count={g.on} total={g.list.length} allOn={g.allOn} small={rail}
               onClick={() => onSetGroup(g.t, !g.allOn)} />
-            {custOpen && (
+            {custOpen && !rail && (
               <div style={{ marginTop: 4 }}>
                 {g.list.map((p) => (
                   <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />
@@ -86,12 +92,21 @@ export default function ProjectsAside({ future, onToggle, onSetGroup }: {
           </div>
         ))}
       </div>
+      {custOpen && rail && groups.map(([label, g]) => (
+        <div key={label} style={{ marginTop: 8 }}>
+          <div style={{ font: '600 9.5px var(--font-mono)', letterSpacing: '0.06em',
+                        textTransform: 'uppercase', opacity: 0.55, marginBottom: 3 }}>{label}</div>
+          {g.list.map((p) => (
+            <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />
+          ))}
+        </div>
+      ))}
       <p style={{ fontSize: 10, opacity: 0.5, margin: '8px 0 0', lineHeight: 1.45, maxWidth: 'none' }}>
         An assumption about which projects are <b>destined to get built</b>, whatever the
         economics say. Operating plants are always in. Anything you add here is treated the
-        same way: its capacity floors the least-cost chain above, and actor mode books it as
+        same way: its capacity floors the least-cost chain, and actor mode books it as
         <b> sunk</b> — already committed, so never put through the build/no-build screen.
-        That is why a project can appear here while the screen below would decline to fund
+        That is why a project can appear here while the screen would decline to fund
         a comparable new one.
       </p>
     </div>

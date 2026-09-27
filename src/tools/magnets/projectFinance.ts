@@ -8,9 +8,12 @@
  * EQUILIBRIUM (iterating planner and screen to a fixed point) needs one, and
  * that stays server-side.
  *
- * The consequence worth knowing: because this runs here, the PRICE WORLD is a
- * free control rather than a grid axis. That matters — US separation's viability
- * flips on it, and precomputing it would have multiplied the grid.
+ * PRICES ARE FIXED AND THERE IS ONE PRICE LEVER. The market the screen prices
+ * against is China's: oxide at China's benchmark, and conversion paid what the
+ * marginal Chinese producer needs. The one thing a reader sets is the PREMIUM:
+ * what a buyer pays extra per kilogram of a plant's product because it never
+ * touched China, net of any premium the plant itself pays for its inputs, that
+ * is, the premium the plant KEEPS. See `screen` and `pricesForPremium`.
  *
  * Constants come from grid meta (`meta.project_finance`) so they cannot drift
  * from the model. The inline fallback covers grids written before that block was
@@ -108,11 +111,10 @@ export function pricesFromOxide(ndpr: number, dytb: number,
  * So the default is China's all-in conversion cost from the model's own
  * facility data (steer_magnet_cem/data/raw/{magnet,alloy}_plants.csv:
  * variable $/kg plus the annualised fixed charge of one module at full output,
- * which already embeds the return on capital at the planner's rate). The old
- * $25 is kept as a named anchor on the slider so the two readings can be
- * compared. The only routes to a HIGHER realised price for a US plant are the
- * provenance premium and the restriction it hedges, which is the argument of
- * the whole tool.
+ * which already embeds the return on capital at the planner's rate). It is a
+ * constant, not a control: every stage of the chain has such a margin, and the
+ * reader is not asked to set any of them. The only route to a HIGHER realised
+ * price for a US plant is the premium, which is the argument of the whole tool.
  */
 const CHINA_PLANT = {                 // var $/kg, fixed $M/yr per module, module kt
   magnet: { v: 4.0, fx: 12.0, kt: 40 },
@@ -124,65 +126,53 @@ export const CHINA_CONVERSION: { magnet: number; alloy: number } = META?.competi
   magnet: CHINA_PLANT.magnet.v + CHINA_PLANT.magnet.fx / CHINA_PLANT.magnet.kt,   // $4.30/kg
   alloy:  CHINA_PLANT.alloy.v + CHINA_PLANT.alloy.fx / CHINA_PLANT.alloy.kt,      // $2.25/kg
 };
-/** The asserted spreads the screen used before re-anchoring, kept as anchors. */
-export const LEGACY_CONVERSION: { magnet: number; alloy: number } =
-  META?.legacy_conversion ?? { magnet: 25, alloy: 15 };
 export const MAGNET_CONVERSION_DEFAULT = CHINA_CONVERSION.magnet;
 export const ALLOY_CONVERSION_DEFAULT = CHINA_CONVERSION.alloy;
 const OXIDE_CHINA = { ndpr: 113, dytb: 285 };      // Chinese domestic benchmark
 const OXIDE_EXCHINA = { ndpr: 184, dytb: 1625 };   // ex-China, post-2025 bifurcation
 
-export const PRICE_WORLDS: Record<string, Prices> = {
-  ex_china: pricesFromOxide(OXIDE_EXCHINA.ndpr, OXIDE_EXCHINA.dytb),
-  china_benchmark: pricesFromOxide(OXIDE_CHINA.ndpr, OXIDE_CHINA.dytb),
-  neutral: { ...C.prices },
-};
-
 /**
- * Oxide prices at an arbitrary multiple of TODAY'S ex-China spread.
- *
- * Three named regimes were a worse control than one continuous axis: the real
- * question is not "China or ex-China" but "how far does the bifurcation go", and
- * a reader needs to be able to push it past what we observe as well as back to
- * parity. `spread` = 0 is the Chinese benchmark, 1 is today's ex-China level,
- * 2 is twice today's gap.
+ * Prices with oxide at a multiple of TODAY'S ex-China premium over China's
+ * benchmark: 0 is China's price, 1 today's price outside China. Alloy and magnet
+ * prices are built up from the oxide price, so a converter pays the premium in
+ * what it buys and gets it back in what it sells.
  */
-export const priceAtSpread = (spread: number, magnetConv = MAGNET_CONVERSION_DEFAULT): Prices =>
+export const priceAtSpread = (spread: number): Prices =>
   pricesFromOxide(
     OXIDE_CHINA.ndpr + spread * (OXIDE_EXCHINA.ndpr - OXIDE_CHINA.ndpr),
     OXIDE_CHINA.dytb + spread * (OXIDE_EXCHINA.dytb - OXIDE_CHINA.dytb),
-    ALLOY_CONVERSION_DEFAULT, magnetConv,
   );
+/** The market every plant is screened against: China's. */
+export const BASE_PRICES: Prices = priceAtSpread(0);
 
 /**
- * History of the magnet CONVERSION SPREAD, kept because it explains the anchor.
+ * THE PREMIUM, per stage.
  *
- * At an asserted $25/kg this single number was why the least-cost plan looked bankable almost everywhere,
- * and it deserves to be a control rather than a constant. The model gives EVERY
- * region the same spread — a US plant sells at the same world magnet price as a
- * Chinese one and buys alloy at the same world price — so China's lower cost
- * makes it MORE profitable without making the US plant UNprofitable. There is no
- * mechanism by which a cheaper Chinese producer depresses the price a US plant
- * receives, because the planner allocates quantities and the screen only asks
- * whether NPV clears at world prices. It tests ABSOLUTE VIABILITY, not
- * COMPETITIVENESS.
+ * For a plant that sells OXIDE (separation, recycling) the premium is quoted per
+ * kilogram of Nd/Pr oxide, and Dy/Tb oxide moves with it in today's observed
+ * proportion, because that is how the premium is observed: outside China both
+ * oxides cost more, heavy by far the more. Today it is
+ * $71/kg of Nd/Pr oxide. Ore carries no premium in the screen, so an
+ * oxide maker keeps all of it.
  *
- * At the calibrated $25/kg, US conversion costs $11-12/kg all-in, so the margin
- * is comfortable. US projects stop clearing below roughly $15/kg. Worth knowing
- * when judging $25: it implies a Chinese converter earns ~$18/kg on ~$7/kg of
- * cost, which is a fat markup for a commodity step.
+ * For every other plant it is dollars per kilogram of its own product, added to
+ * what it is paid and to nothing it buys. No such premium is OBSERVED for alloy
+ * or magnets net of their inputs: what buyers pay extra for a non-Chinese magnet
+ * today is, as far as the prices show, the oxide premium inside it, which its
+ * maker pays away upstream. So those stages open at zero.
  */
-
-/** What today's ex-China spread is worth per kg of FINISHED MAGNET — the oxide
- *  price gap carried through the bill of materials. This is the concrete number
- *  the provenance-premium slider is anchored to, so a reader setting that slider
- *  knows what one observed spread actually looks like. */
-export const EXCHINA_SPREAD_PER_MAGNET_KG: number = (() => {
-  const [nm, dm] = C.grade_ladder[C.grade];
-  const at = (o: { ndpr: number; dytb: number }) =>
-    C.oxide_factor * (nm * o.ndpr + dm * o.dytb);
-  return at(OXIDE_EXCHINA) - at(OXIDE_CHINA);
-})();
+export const TODAY_OXIDE_PREMIUM: number = OXIDE_EXCHINA.ndpr - OXIDE_CHINA.ndpr;
+/** Dy/Tb oxide's observed premium per dollar of Nd/Pr oxide's. */
+export const HEAVY_PER_LIGHT_PREMIUM: number =
+  (OXIDE_EXCHINA.dytb - OXIDE_CHINA.dytb) / (OXIDE_EXCHINA.ndpr - OXIDE_CHINA.ndpr);
+/** The stage whose product a row sells: the last of an owned chain. */
+const sells = (b: Buildout): string => (b.own?.length ? b.own[b.own.length - 1] : b.s);
+/** Does a plant at this stage sell oxide, so that its premium is an oxide price? */
+export const sellsOxide = (stage: string): boolean =>
+  stage === 'separation' || stage === 'recycling';
+/** Where a stage's premium opens: today's observed level where one is observed. */
+export const defaultPremium = (stage: string): number =>
+  (sellsOxide(stage) ? TODAY_OXIDE_PREMIUM : 0);
 
 const crf = (r: number, n: number) => (r <= 0 ? 1 / n : (r * (1 + r) ** n) / ((1 + r) ** n - 1));
 
@@ -280,12 +270,9 @@ export function evaluate(b: Buildout, prices: Prices, opts: {
    *  first-of-a-kind plant costs the same as an nth-of-a-kind, at 2 it is twice
    *  as penalised. Scaling the multiplier directly would make 0 mean "free". */
   foakMult?: number;
-  /** $/kg a non-China producer can charge for provenance. The model charges the
-   *  ex-China premium as a COST on imported Dy/Tb but never credits it as
-   *  REVENUE to an ex-China producer, so a US plant carries the premium's
-   *  burden and none of its benefit — which is precisely backwards for the
-   *  hedging demand that motivates the program. Defaults to 0, because we
-   *  have no defensible number for it; it is here to be swept. */
+  /** $/kg added to what the plant is paid for its product, and to nothing it
+   *  buys: the premium as it applies to a plant that does not sell oxide. A
+   *  plant that does is given its premium through `prices` instead (`screen`). */
   provenancePremium?: number;
 } = {}): Verdict {
   const rate = opts.rate ?? hurdleRate(b.r);
@@ -382,44 +369,43 @@ export type ByStage = number | Record<string, number>;
 const forStage = (v: ByStage | undefined, stage: string, fallback: number): number =>
   v === undefined ? fallback : typeof v === 'number' ? v : (v[stage] ?? fallback);
 
-/** What a separation plant's premium is quoted on. The screen works per kg of
- *  TREO fed; the premium a buyer pays is per kg of the Nd/Pr and Dy/Tb oxide that
- *  comes out, so it is scaled by the magnet-oxide share of the feed. */
-export const premiumBasis = (b: Buildout): number =>
+/** The magnet oxide in a kilogram of what a separation plant is fed. The screen
+ *  works per kg of TREO fed; the plants a reader knows are rated in the Nd/Pr and
+ *  Dy/Tb oxide they make. 1 for every other stage. */
+export const oxideShare = (b: Buildout): number =>
   b.s === 'separation' && b.basket
     ? (b.basket.NdPr ?? 0) + (b.basket.DyTb ?? 0) : 1;
 
-/** Screen a whole build-out. Relief is resolved PER STAGE, because a price floor
- *  on magnets does nothing for a separation plant — see instrumentRelief. So are
- *  the provenance premium and the cost disadvantage, when given per stage. */
-export const screen = (rows: Buildout[], prices: Prices, opts: {
+export type ScreenOpts = {
   offtake?: number; floorInterface?: string | null; floorRelief?: number;
   floorLevel?: number; creditSupport?: number;
   support?: number; rate?: number; costMult?: ByStage; foakMult?: number;
-  provenancePremium?: ByStage;
-} = {}): Verdict[] =>
-  rows.map((b) => evaluate(b, prices, {
-    ...opts,
-    costMult: forStage(opts.costMult, b.s, 1),
-    provenancePremium: forStage(opts.provenancePremium, b.s, 0) * premiumBasis(b),
-    relief: instrumentRelief(b.s, opts),
-  }));
+  /** The premium the plant keeps, one number for every stage or one per stage.
+   *  A stage with no entry takes `defaultPremium`. */
+  premium?: ByStage;
+};
 
-/** Does this stage's margin depend on the oxide premium at all? Conversion stages
- *  are paid a fixed margin over their input (magnet = alloy + margin), so their
- *  revenue and their purchased input move together and the oxide price cancels
- *  exactly. A MINE sells concentrate, whose price the premium does not move
- *  (`pricesFromOxide` leaves `concentrate` at its constant), so the premium is
- *  kept by whoever turns concentrate or scrap into oxide: separation and
- *  recycling. Mining was listed here until 2026-09-27, which was wrong. */
-export const priceSensitive = (stage: string): boolean =>
-  stage === 'separation' || stage === 'recycling';
+/** Screen a whole build-out against China's prices plus the premium. Relief is
+ *  resolved PER STAGE, because a price floor on magnets does nothing for a
+ *  separation plant (see instrumentRelief). So are the premium and the cost
+ *  disadvantage, when given per stage. */
+export const screen = (rows: Buildout[], opts: ScreenOpts = {}): Verdict[] =>
+  rows.map((b) => {
+    const premium = forStage(opts.premium, b.s, defaultPremium(b.s));
+    const oxide = sellsOxide(sells(b));
+    return evaluate(b, oxide ? priceAtSpread(premium / TODAY_OXIDE_PREMIUM) : BASE_PRICES, {
+      support: opts.support, rate: opts.rate, foakMult: opts.foakMult,
+      costMult: forStage(opts.costMult, b.s, 1),
+      provenancePremium: oxide ? 0 : premium,
+      relief: instrumentRelief(b.s, opts),
+    });
+  });
 
 /** Tonnage to DRAW and to count for a build-out row. The model states separation
  *  in TREO fed; the plants a reader knows are rated in the Nd/Pr and Dy/Tb oxide
  *  they make, so a separation row is counted as the magnet oxide in its feed.
  *  Every other stage is already in the unit its plants are rated in. */
-export const drawnKt = (b: Buildout): number => b.kt * premiumBasis(b);
+export const drawnKt = (b: Buildout): number => b.kt * oxideShare(b);
 
 /** The US rows a firm is asked to decide on. Committed construction is built
  *  whatever the screen says, so it is not judged. */

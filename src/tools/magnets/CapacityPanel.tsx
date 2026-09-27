@@ -30,18 +30,23 @@
  * that are. Gaps inside it separate the real plants, named where there is room,
  * because "MP Fort Worth is most of US magnet capacity" is the fact a reader
  * needs — the full name, capacity and note are on hover.
+ *
+ * NEW CAPACITY IS NOT ALL PROJECTS. The plan expands model rows, and only some
+ * of them stand for a plant someone has announced (facilities.ts). What the
+ * plan asks for is reported as capacity, split between expansions at named
+ * plants and capacity with no announced project behind it.
+ *
+ * Breakpoints are on the PANEL's width, not the window's: on a desktop the
+ * panel shares the window with the controls rail.
  */
 import { Pickaxe, FlaskConical, Flame, Magnet, Recycle } from 'lucide-react';
-import { useState } from 'react';
-import { screen, PLANNER_RATE, priceSensitive, groupProjects, judgedRows,
-         priceAtSpread, MAGNET_CONVERSION_DEFAULT, ALLOY_CONVERSION_DEFAULT, LEGACY_CONVERSION,
-         type Buildout, type Project } from './projectFinance';
+import { useEffect, useRef, useState, type MouseEvent as RMouseEvent, type ReactNode } from 'react';
+import { screen, groupProjects, judgedRows, type Buildout, type Project } from './projectFinance';
+import { splitByKind, type Part } from './facilities';
 import { stageBreakdown, stageBreakdownClass, riskColor, riskChip } from './tri';
 import type { Scenario } from './interp';
 import { HEAVY_YIELD, LIGHT_MINE_YIELD, LIGHT_MINE_HEAVY_TRACE } from './projects';
 import BankabilityFrontier from './BankabilityFrontier';
-import HurdleComponents from './HurdleComponents';
-import Slider from './Slider';
 
 /** Stage -> the flow interface whose mass it produces. Used to express a stage's
  *  capacity in units of ONE rare-earth class, by the share of that interface's
@@ -86,8 +91,9 @@ const abbrev = (name: string): string => name
   .replace(/\b(separation|recycling|mining|mine|magnets?|metal\/alloy|alloy)\b/ig, '')
   .replace(/\s{2,}/g, ' ').trim();
 
-/** Height of every capacity column, px. */
-const COLUMN_H = 220;
+/** Height of every capacity column, px: on a phone, and in the desktop's
+ *  results column, where the chain above has to stay in view with it. */
+const COLUMN_H_FULL = 220, COLUMN_H_COMPACT = 172;
 /** Round tonnage ticks for one column: three to five marks inside its total. */
 const ktTicks = (total: number): number[] => {
   if (total <= 0) return [];
@@ -98,15 +104,12 @@ const ktTicks = (total: number): number[] => {
 };
 
 const STAGES = ['mining', 'separation', 'alloy', 'magnet', 'recycling'] as const;
-/** Why the plan never asks the United States for upstream capacity: in all
- *  cells of the solved grid it adds no US mine and no US separation plant. It
- *  does not even fill the ones that exist (in 2035 the mine runs at about a
- *  third and separation at about a fifth of capacity, the floors the model
- *  imposes), so it has nothing to expand. Diagnosed 2026-09-26; the causes,
- *  two of them artefacts of how the model costs separation and scopes the export
- *  restriction, are in rare-magnets-cem docs/15 section 11. Printed under the
+/** Why the plan asks the United States for so little upstream. Diagnosed
+ *  2026-09-26 and re-run on the corrected model (rare-magnets-cem docs/15,
+ *  sections 11, 13 and 14): the plan adds no US mine at any cost, and runs the
+ *  mine and the light separation the US has below capacity. Printed under the
  *  verdict whenever a stage the US operates is left unexpanded. */
-const UNASKED_NOTE = 'The plan runs the mine and the separation plants the United States already has well below capacity, so it has no reason to add to them: allied and Chinese supply is cheaper per kilogram, and no rule in the scenario requires oxide to be made here. The one US heavy deposit, Round Top, costs about three times what expanding allied heavy mining does. How the model prices US separation is under review, so read this as a feature of the model before a finding about the world.';
+const UNASKED_NOTE = 'The plan runs what the United States already has at that stage below capacity: allied and Chinese supply is cheaper per kilogram, and no rule in the scenario requires it to be produced here.';
 const LABEL: Record<string, string> = {
   mining: 'Mining', separation: 'Separation', alloy: 'Alloying',
   magnet: 'Magnet', recycling: 'Recycling',
@@ -122,48 +125,66 @@ const ICON: Record<string, JSX.Element> = {
   magnet: <Magnet size={14} strokeWidth={1.5} />,
   recycling: <Recycle size={14} strokeWidth={1.5} />,
 };
-export default function CapacityPanel({ buildout, incumbent, priceSpread, onPriceSpread,
-                                        conversion, onConversion,
-                                        rate, onRate, instruments, onInstruments,
+/** What a block of a column says when it is pointed at. */
+type Card = { head: string; lines: { text: string; sub?: string }[]; note?: string };
+
+export default function CapacityPanel({ buildout, incumbent, rate, instruments,
                                         sc, alliedHHI, reClass, onReClass,
-                                        costMult, onCostMult, foakMult, onFoakMult,
-                                        provenancePremium, onProvenancePremium, floorLevel }: {
+                                        costMult, onCostMult, foakMult,
+                                        premium, onPremium, floorLevel, compact = false,
+                                        controls }: {
   buildout: Buildout[] | undefined;
   incumbent: Record<string, Incumbent[]>;
-  /** Oxide prices as a multiple of today's ex-China premium. 0 = China parity. */
-  priceSpread: number;
-  onPriceSpread: (v: number) => void;
-  /** Magnet conversion margin, $/kg. The number the bankability result hinges on. */
-  conversion: number;
-  onConversion: (v: number) => void;
+  /** The firm's hurdle rate and the instruments acting on it: set in the rail. */
   rate: number;
-  onRate: (r: number) => void;
   instruments: Record<string, number>;
-  onInstruments: (i: Record<string, number>) => void;
   /** How far the planner-side price floor is set (0-1). Scales the floor's relief. */
   floorLevel: number;
   sc: Scenario;
   alliedHHI?: Record<string, number>;
   reClass: ReClass;
   onReClass: (c: ReClass) => void;
-  /** US cost disadvantage and provenance premium, one of each per stage: the
-   *  positions of the markers on the frontiers below. */
+  /** US cost disadvantage and the premium, one of each per stage: the positions
+   *  of the markers on the frontier below. */
   costMult: Record<string, number>;
   onCostMult: (v: Record<string, number>) => void;
   foakMult: number;
-  onFoakMult: (v: number) => void;
-  provenancePremium: Record<string, number>;
-  onProvenancePremium: (v: Record<string, number>) => void;
+  premium: Record<string, number>;
+  onPremium: (v: Record<string, number>) => void;
+  /** The desktop's results column: shorter columns, tighter padding. */
+  compact?: boolean;
+  /** The hurdle-rate controls, where the page has no rail to hold them (a
+   *  phone): shown between the columns and the frontier. */
+  controls?: ReactNode;
 }) {
+  const COLUMN_H = compact ? COLUMN_H_COMPACT : COLUMN_H_FULL;
+  // THE CARD a block shows when pointed at, and keeps when clicked or tapped,
+  // until a click or tap anywhere else. Declared before the early return below:
+  // hooks cannot come after it.
+  const root = useRef<HTMLElement>(null);
+  const [card, setCard] = useState<(Card & { x: number; y: number; pinned: boolean; key: string }) | null>(null);
+  useEffect(() => {
+    if (!card?.pinned) return;
+    const away = (e: Event) => {
+      if (!(e.target as HTMLElement | null)?.closest?.('.cap-seg')) setCard(null);
+    };
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setCard(null); };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', key);
+    };
+  }, [card?.pinned]);
   if (!buildout) {
     return (
       <section style={{ border: '1px dashed var(--rule-strong)', borderRadius: 10,
-                        padding: '14px 18px', background: 'var(--paper)', marginTop: 22 }}>
+                        padding: '14px 18px', background: 'var(--paper)', marginTop: compact ? 12 : 22 }}>
         <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em',
                      textTransform: 'uppercase', opacity: 0.6, margin: '0 0 6px' }}>
           Would it actually be built?
         </h2>
-        <p style={{ fontSize: 11.5, opacity: 0.7, margin: 0, maxWidth: 620, lineHeight: 1.45 }}>
+        <p style={{ fontSize: 11.5, opacity: 0.7, margin: 0, lineHeight: 1.45 }}>
           Waiting on a grid that carries the planner build-out. The model emits it; this
           panel appears when a regrid carrying it is deployed.
         </p>
@@ -214,13 +235,19 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
     return classFrac(stage);
   };
   const us = judgedRows(buildout);
-  const verdicts: Project[] = groupProjects(us, screen(us, priceAtSpread(priceSpread, conversion), {
+  const verdicts: Project[] = groupProjects(us, screen(us, {
     rate,
     offtake: instruments.offtake,
     floorInterface: 'magnet', floorRelief: instruments.floor, floorLevel,
     creditSupport: instruments.guarantee,
-    costMult, foakMult, provenancePremium,
+    costMult, foakMult, premium,
   }));
+  // The same capacity, by what stands behind it.
+  const parts: Part[] = verdicts.flatMap(splitByKind);
+  const kt = (list: Part[], what: 'kt' | 'short' = 'kt') =>
+    list.reduce((a, x) => a + (what === 'kt' ? x.kt : x.kt - x.fundedKt), 0);
+  const named = parts.filter((x) => x.kind === 'named');
+  const generic = parts.filter((x) => x.kind === 'generic');
   const byStage = (s: string) => verdicts.filter((v) => v.stage === s);
   const incKt = (s: string) => (incumbent[s] ?? []).reduce((a, f) => a + f.kt, 0);
   const shortfall = verdicts.filter((v) => !v.funded);
@@ -231,119 +258,98 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
   // FINANCING, and only the second is what an offtake or a guarantee can fix.
   const unasked = STAGES.filter((s) => s !== 'recycling' && incKt(s) > 0 && byStage(s).length === 0);
   const asked = STAGES.filter((s) => byStage(s).length > 0);
-  const anyPriceSensitive = verdicts.some((v) => priceSensitive(v.stage));
   const names = (list: readonly string[]) => {
     const l = list.map((s) => LABEL[s].toLowerCase());
     return l.length > 1 ? `${l.slice(0, -1).join(', ')} or ${l[l.length - 1]}` : l[0];
   };
-  // What a tapped block says. A phone has no hover, so the text a mouse gets
-  // from the tooltip is printed under the columns instead.
-  const [note, setNote] = useState<string | null>(null);
+  const n1 = (v: number) => (v >= 10 ? v.toFixed(0) : v.toFixed(1));
+  /** A plant's name without the stage in brackets, which the column already says. */
+  const plant = (name: string) => name.replace(/\s*\((alloy|recycling)\)$/, '');
+  // The chips under the columns: each named plant, then ONE entry a stage for
+  // the capacity with no project behind it. The planner books that capacity on
+  // several rows (more of an existing plant, or a new one); to a reader it is
+  // one thing, tonnage nobody has announced, and may end up as several plants.
+  type Chip = { key: string; kind: 'named' | 'generic'; label: string; kt: number; fundedKt: number;
+                support: number; title: string };
+  const chips: Chip[] = STAGES.flatMap((st) => {
+    const mine = parts.filter((x) => x.stage === st);
+    const out: Chip[] = mine.filter((x) => x.kind === 'named').map((x) => ({
+      key: `${st}|${x.facility}`, kind: 'named' as const, label: x.label, kt: x.kt, fundedKt: x.fundedKt,
+      support: x.support, title: x.basis ? `Announced: ${x.basis}` : '' }));
+    const gen = mine.filter((x) => x.kind === 'generic');
+    if (gen.length) {
+      out.push({ key: `${st}|generic`, kind: 'generic', label: gen[0].label,
+        kt: kt(gen), fundedKt: gen.reduce((a, x) => a + x.fundedKt, 0),
+        support: gen.reduce((a, x) => a + x.support, 0),
+        title: 'No announced project stands behind this, and it may end up as more than one plant. The plan costs it as: '
+          + gen.map((x) => `${n1(x.kt)} kt ${x.at ? `more of ${plant(x.at)}, beyond anything announced there` : 'of new plant'}`).join('; ') + '.' });
+    }
+    return out;
+  });
+  const show = (e: RMouseEvent, key: string, c: Card, pin: boolean) => {
+    if (card?.pinned && !pin) return;
+    if (pin && card?.pinned && card.key === key) { setCard(null); return; }
+    const box = root.current?.getBoundingClientRect();
+    if (!box) return;
+    setCard({ ...c, key, pinned: pin, x: e.clientX - box.left, y: e.clientY - box.top });
+  };
 
   return (
-    <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20,
-                      background: 'var(--paper)', marginTop: 22 }}>
-      <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em',
-                   textTransform: 'uppercase', opacity: 0.6, margin: '0 0 4px' }}>
-        Would it actually be built?
-      </h2>
-      <p style={{ fontSize: 11.5, opacity: 0.7, margin: '0 0 14px', maxWidth: 640, lineHeight: 1.45 }}>
-        US capacity the least-cost planner calls for, against what clears a private hurdle
-        rate at these prices, stage by stage along the chain. Red is capacity the plan
-        depends on that no firm would fund.
-      </p>
-
-      <style>{`
-        .cap-controls { display: grid; gap: 14px 24px; grid-template-columns: 1fr; margin-bottom: 16px; }
-        @media (min-width: 720px) { .cap-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-      `}</style>
-      {/* THE PRICES A US PLANT IS PAID, each with what it is printed beneath it
-          (a tooltip is never seen on a phone and seldom found on a desktop).
-
-          TWO DIFFERENT THINGS ARE CALLED A PREMIUM on this page and they are not
-          linked. The OXIDE premium here is a market price level: one number, from
-          which alloy and magnet prices are built up (`pricesFromOxide`), so it is
-          counted once, by whoever turns ore or scrap into oxide. The PROVENANCE
-          premium on the frontier below is extra revenue on one stage's own
-          product with nothing added to what that stage pays for its inputs. */}
-      <div className="cap-controls">
-        <Slider label="Ex-China oxide premium" value={priceSpread} min={0} max={2} step={0.05}
-          onChange={onPriceSpread} fmt={(v) => `${v.toFixed(2)}×`}
-          ticks={[{ at: 0, label: 'China’s price' }, { at: 1, label: 'today' }, { at: 2, label: 'twice today’s gap' }]}
-          note={<>
-            Since the 2025 export controls, rare-earth oxide sold outside China costs
-            more than the same oxide inside it. This sets one price level for oxide:
-            China&rsquo;s at 0, today&rsquo;s outside China at 1. Whoever turns ore or scrap
-            into oxide, a separation plant or a recycler, is paid it. It is counted
-            once: alloy and magnet prices are built up from the oxide price, so a
-            converter pays the premium in what it buys and gets it back in what it
-            sells, and a mine sells concentrate, which this does not move.
-            {!anyPriceSensitive && (
-              <> <b>No effect in this scenario:</b> the plan asks for no separation or
-                recycling plant here, so no verdict below depends on it.</>
-            )}
-          </>} />
-        <Slider label="Magnet conversion margin" value={conversion} min={2} max={40} step={0.25}
-          onChange={onConversion} fmt={(v) => `$${v.toFixed(2)}/kg`}
-          ticks={[{ at: MAGNET_CONVERSION_DEFAULT, label: 'China’s cost and return' },
-                  { at: LEGACY_CONVERSION.magnet, label: 'earlier assumption' },
-                  { at: 40, label: '$40' }]}
-          note={<>
-            What a magnet maker is paid per kilogram over the alloy it buys. It is not
-            profit: it has to cover the plant&rsquo;s running costs, its capital and its
-            return. It is stated here because the screen takes prices as given; the
-            planner that chose these plants has none. The default,
-            ${MAGNET_CONVERSION_DEFAULT.toFixed(2)}, is what the marginal Chinese producer
-            needs, which is where the price settles in a market China dominates. A US
-            plant needs several times that. Alloy makers are paid
-            ${ALLOY_CONVERSION_DEFAULT.toFixed(2)} on the same reasoning, held fixed.
-          </>} />
+    <section ref={root} className="cap-root"
+      style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: compact ? '12px 16px 14px' : 20,
+               background: 'var(--paper)', marginTop: compact ? 12 : 22, position: 'relative' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                    gap: '4px 16px', flexWrap: 'wrap', marginBottom: 4 }}>
+        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em',
+                     textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>
+          Would it actually be built?
+        </h2>
         {/* Which RE class the columns and the risk figures describe. Dy/Tb is the
             real chokepoint; Nd/Pr is far more diversified, so a single "All"
             reading averages the problem away. */}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>Rare-earth class shown</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {CLASSES.map((c) => {
-              const on = reClass === c.key;
-              return (
-                <button key={c.key} onClick={() => onReClass(c.key)} aria-pressed={on}
-                  style={{ font: '600 10.5px var(--font-mono)', padding: '3px 9px', borderRadius: 6,
-                           cursor: 'pointer',
-                           border: `1px solid ${on ? 'var(--accent)' : 'var(--rule-strong)'}`,
-                           background: on ? 'var(--paper-2)' : 'transparent', color: 'var(--ink)' }}>
-                  {c.label}
-                </button>
-              );
-            })}
-          </div>
-          <p style={{ fontSize: 10.5, opacity: 0.7, lineHeight: 1.45, margin: '6px 0 0' }}>
-            All counts what each stage handles, in its own product: ore with its
-            lanthanum and cerium, alloy and magnets with their iron and boron. Dy/Tb and
-            Nd/Pr count only that class&rsquo;s contained oxide, so the two do not add up
-            to All. Heavy is where the exposure is.
-          </p>
+        <div role="group" aria-label="Rare-earth class shown"
+          style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ font: '400 10px var(--font-mono)', opacity: 0.55 }}>class shown</span>
+          {CLASSES.map((c) => {
+            const on = reClass === c.key;
+            return (
+              <button key={c.key} onClick={() => onReClass(c.key)} aria-pressed={on}
+                style={{ font: '600 10px var(--font-mono)', padding: '2px 8px', borderRadius: 6,
+                         cursor: 'pointer',
+                         border: `1px solid ${on ? 'var(--accent)' : 'var(--rule-strong)'}`,
+                         background: on ? 'var(--paper-2)' : 'transparent', color: 'var(--ink)' }}>
+                {c.label}
+              </button>
+            );
+          })}
         </div>
       </div>
+      <p style={{ fontSize: 11, opacity: 0.7, margin: '0 0 10px', lineHeight: 1.45 }}>
+        US capacity the least-cost plan calls for, against what clears a private hurdle
+        rate, stage by stage along the chain. Red is capacity the plan depends on that no
+        firm would fund. All counts each stage in its own product (ore with its lanthanum
+        and cerium, magnets with their iron); Dy/Tb and Nd/Pr count only that
+        class&rsquo;s contained oxide, so the two do not add up to All.
+      </p>
 
       <style>{`
+        .cap-root { container-type: inline-size; }
         .cap-unit, .cap-long, .cap-side, .cap-out { display: none !important; }
         .cap-short { display: block; font-size: 9.5px; }
         .cap-head { flex-direction: column; gap: 2px; }
         .cap-col { display: grid; min-width: 0; justify-content: center;
                    grid-template-columns: minmax(0, ${BAR_W}px); }
         .cap-in { font-size: 8px; }
-        .cap-note { display: block; }
-        @media (min-width: 720px) {
+        @container (min-width: 600px) {
           .cap-unit, .cap-long, .cap-side { display: block !important; }
           span.cap-long[style] { display: inline !important; }
           .cap-short { display: none; }
           .cap-head { flex-direction: row; gap: 5px; }
           .cap-col { grid-template-columns: minmax(0, 1fr) ${BAR_W}px minmax(0, 1fr); }
           .cap-in { font-size: 9px; }
-          .cap-note { display: none; }
         }
-        @media (min-width: 1000px) { .cap-out { display: block !important; } }
+        @container (min-width: 860px) { .cap-out { display: block !important; } }
+        .cap-seg { cursor: pointer; }
         .cap-seg:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
       `}</style>
       {(() => {
@@ -355,7 +361,7 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
           const inc = fac.reduce((a, f) => a + f.kt, 0);
           const askedKt = vs.reduce((a, v) => a + v.newKt, 0) * cf;
           const funded = vs.reduce((a, v) => a + v.fundedKt, 0) * cf;
-          return { s, vs, fac, inc, asked: askedKt, funded, declined: askedKt - funded,
+          return { s, vs, cf, fac, inc, asked: askedKt, funded, declined: askedKt - funded,
                    total: inc + askedKt, tri: triByStage[s] };
         }).filter((c) => c.total > 0);
         const fmt = (v: number) => (v >= 10 ? v.toFixed(0) : v >= 0.1 ? v.toFixed(1) : v.toFixed(2));
@@ -395,14 +401,27 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
             {cols.map((c) => {
               const h = (v: number) => (v / c.total) * COLUMN_H;
               // Bottom-up: each existing plant, then what is funded, then what is declined.
-              const segs = [
+              const mine = parts.filter((x) => x.stage === c.s);
+              const lines = (what: 'funded' | 'declined') => mine
+                .map((x) => ({ x, v: (what === 'funded' ? x.fundedKt : x.kt - x.fundedKt) * c.cf }))
+                .filter(({ v }) => v > 0.005)
+                .map(({ x, v }) => ({
+                  text: `${x.label}${x.at ? `, costed as more of ${plant(x.at)}` : ''}: ${fmt(v)} kt`,
+                  sub: what === 'declined' && x.support > 0.5
+                    ? `needs $${x.support.toFixed(0)}M a year to clear` : x.basis,
+                }));
+              const segs: { key: string; kt: number; fill: string; word: string; name: string;
+                            card: Card }[] = [
                 ...c.fac.map((f) => ({ key: f.name, kt: f.kt, fill: GREY, word: '',
                   name: abbrev(f.name),
-                  tip: `${f.name}: ${fmt(f.kt)} kt/yr, already built${f.note ? `\n\n${f.note}` : ''}` })),
+                  card: { head: f.name, lines: [{ text: `${fmt(f.kt)} kt/yr, already built` }],
+                          note: f.note } })),
                 { key: 'funded', kt: c.funded, fill: FUNDED, word: 'funded', name: '',
-                  tip: `${c.funded.toFixed(1)} kt/yr of new ${LABEL[c.s].toLowerCase()} capacity a firm would fund` },
+                  card: { head: `${fmt(c.funded)} kt/yr of new ${LABEL[c.s].toLowerCase()} capacity a firm would fund`,
+                          lines: lines('funded') } },
                 { key: 'declined', kt: c.declined, fill: DECLINED, word: 'declined', name: '',
-                  tip: `${c.declined.toFixed(1)} kt/yr of new ${LABEL[c.s].toLowerCase()} capacity the plan depends on that no firm would fund` },
+                  card: { head: `${fmt(c.declined)} kt/yr of new ${LABEL[c.s].toLowerCase()} capacity no firm would fund`,
+                          lines: lines('declined') } },
               ].filter((g) => g.kt > 0.005);
               // Where each block sits, and where the label of one too short to
               // hold its own name goes: beside the bar, nudged up off the one below.
@@ -441,12 +460,20 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
                                 flexDirection: 'column-reverse', gap: 2,
                                 borderBottom: '1px solid var(--rule-strong)' }}>
                     {placed.map((g) => (
-                      <div key={g.key} className="cap-seg" tabIndex={0} title={g.tip}
-                        aria-label={g.tip.split('\n')[0]}
-                        onClick={() => setNote(g.tip.split('\n')[0])}
+                      <div key={g.key} className="cap-seg" tabIndex={0} role="button"
+                        aria-label={`${g.card.head}. ${g.card.lines.map((l) => l.text).join('; ')}`}
+                        onMouseMove={(e) => show(e, `${c.s}|${g.key}`, g.card, false)}
+                        onMouseLeave={() => { if (!card?.pinned) setCard(null); }}
+                        onClick={(e) => show(e, `${c.s}|${g.key}`, g.card, true)}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter' && e.key !== ' ') return;
+                          e.preventDefault();
+                          const r = e.currentTarget.getBoundingClientRect();
+                          show({ clientX: r.right, clientY: r.top + r.height / 2 } as RMouseEvent,
+                               `${c.s}|${g.key}`, g.card, true);
+                        }}
                         style={{ height: Math.max(1, g.px - 2), flexShrink: 0, position: 'relative',
-                                 background: g.fill, borderRadius: 1, cursor: 'help',
-                                 overflow: 'hidden' }}>
+                                 background: g.fill, borderRadius: 1, overflow: 'hidden' }}>
                         {g.fits && g.name && (
                           <span className="cap-in" style={{ position: 'absolute', left: 3, right: 2, top: 2,
                                          fontFamily: 'var(--font-mono)', fontWeight: 500,
@@ -507,12 +534,27 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
           </div>
         );
       })()}
-      <p className="cap-note" aria-live="polite"
-        style={{ font: '400 10px var(--font-mono)', opacity: 0.7, margin: '8px 0 0',
-                 minHeight: 28, lineHeight: 1.4 }}>
-        {note ?? 'Tap a block to see the plant or the tonnage behind it.'}
-      </p>
-      <div style={{ display: 'flex', gap: '4px 14px', flexWrap: 'wrap', marginTop: 10,
+      {card && (
+        <div role="status" style={{
+          position: 'absolute', top: card.y + 12, zIndex: 20, pointerEvents: 'none',
+          ...(card.x > (root.current?.clientWidth ?? 0) * 0.6
+            ? { right: Math.max(8, (root.current?.clientWidth ?? 0) - card.x + 10) }
+            : { left: Math.max(8, card.x + 10) }),
+          maxWidth: 'min(300px, calc(100% - 16px))',
+          background: 'var(--paper)', border: `1px solid ${card.pinned ? 'var(--accent)' : 'var(--rule-strong)'}`,
+          borderRadius: 8, padding: '7px 10px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08)' }}>
+          <div style={{ font: '600 11px var(--font-mono)', lineHeight: 1.3 }}>{card.head}</div>
+          {card.lines.map((l) => (
+            <div key={l.text} style={{ fontSize: 11, lineHeight: 1.35, marginTop: 3 }}>
+              {l.text}
+              {l.sub && <span style={{ display: 'block', fontSize: 10, opacity: 0.6 }}>{l.sub}</span>}
+            </div>
+          ))}
+          {card.note && <div style={{ fontSize: 10.5, opacity: 0.65, lineHeight: 1.4, marginTop: 4 }}>{card.note}</div>}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: '4px 14px', flexWrap: 'wrap', marginTop: 8,
                     font: '400 10px var(--font-mono)', opacity: 0.65 }}>
         <span><span style={{ display: 'inline-block', width: 12, height: 8,
                              background: GREY }} /> already built</span>
@@ -526,35 +568,34 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
         </span>
       </div>
 
-      {/* Name the projects, not just the tonnage: "Ucore does not clear" is
-          actionable where "separation is short 12 kt" is not. */}
-      {verdicts.length > 0 && (
-        <div style={{ display: 'flex', gap: '4px 14px', flexWrap: 'wrap', marginTop: 10,
-                      font: '400 10px var(--font-mono)', opacity: 0.7 }}>
-          {verdicts.map((v) => (
-            <span key={`${v.stage}|${v.facility}`} title={
-              `${v.newKt.toFixed(1)} kt/yr in ${v.cohorts.length} step${v.cohorts.length > 1 ? 's' : ''}` +
-              ` (${v.cohorts.map((c) => `${c.year ?? ''} +${c.newKt.toFixed(1)}`).join(', ')}) · ` +
-              `NPV ${v.npv.toFixed(0)} $M at ${(v.effRate * 100).toFixed(1)}% · ` +
-              `${v.plannerNpv.toFixed(0)} $M at the planner's ${(PLANNER_RATE * 100).toFixed(0)}% ` +
-              `(financing wedge ${(v.plannerNpv - v.npv).toFixed(0)} $M) · ` +
-              `${v.leadYears} yr build` +
-              (v.funded ? '' : ` · needs ${v.supportNeeded.toFixed(0)} $M/yr to clear`)}>
-              <span style={{ color: v.funded ? 'var(--accent)' : 'var(--ink-3)' }}>
-                {v.funded ? '●' : v.fundedKt > 0.005 ? '◐' : '○'}
-              </span>{' '}{v.facility.replace(/_/g, ' ')} +{v.newKt.toFixed(1)}
-              {!v.funded && (
-                <span style={{ opacity: 0.8 }}> · needs {v.supportNeeded.toFixed(0)} $M/yr</span>
-              )}
-            </span>
-          ))}
+      {/* What the new capacity IS, not just how much: a named plant's expansion
+          is actionable, and capacity with no project behind it is a different
+          kind of ask, so the two are marked and worded differently. */}
+      {chips.length > 0 && (
+        <div style={{ display: 'flex', gap: '3px 14px', flexWrap: 'wrap', marginTop: 8,
+                      font: '400 10px var(--font-mono)', opacity: 0.75 }}>
+          {chips.map((x) => {
+            const all = x.fundedKt >= x.kt - 0.005, none = x.fundedKt <= 0.005;
+            return (
+              <span key={x.key} title={x.title}>
+                <span aria-hidden="true" style={{ color: all ? 'var(--brand-green)' : 'var(--ink-3)' }}>
+                  {x.kind === 'named' ? (all ? '●' : none ? '○' : '◐') : (all ? '◆' : '◇')}
+                </span>{' '}
+                {x.label} +{n1(x.kt)} kt
+                {!all && x.support > 0.5 && (
+                  <span style={{ opacity: 0.8 }}> · needs ${x.support.toFixed(0)}M/yr</span>
+                )}
+              </span>
+            );
+          })}
+          <span style={{ opacity: 0.7 }}>· ● a named plant &nbsp;◆ no announced project &nbsp;filled: it clears</span>
         </div>
       )}
 
       {/* The verdict in one line, because the bars answer "how much" and a reader
           still has to be told "so is there a gap or not". */}
-      <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--rule)',
-                    fontSize: 11.5, lineHeight: 1.5, maxWidth: 660 }}>
+      <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--rule)',
+                    fontSize: 11.5, lineHeight: 1.5 }}>
         {verdicts.length === 0 ? (
           <span>
             <strong>The plan asks for no new US capacity here.</strong> Least cost is met by
@@ -564,21 +605,28 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
           </span>
         ) : shortfall.length === 0 ? (
           <span>
-            <strong>No financing gap here.</strong> All {verdicts.length} project
-            {verdicts.length > 1 ? 's' : ''} the planner asks for clear
-            a {(rate * 100).toFixed(1)}% hurdle unaided.
+            <strong>No financing gap here.</strong> All {n1(kt(parts))} kt the plan asks
+            for clears a {(rate * 100).toFixed(1)}% hurdle unaided: {n1(kt(named))} kt at
+            named plants, {n1(kt(generic))} kt of new capacity with no announced project.
           </span>
         ) : (
           <span>
-            <strong>{shortfall.length} of {verdicts.length} project
-            {verdicts.length > 1 ? 's' : ''} do not clear</strong> at
-            a {(rate * 100).toFixed(1)}% hurdle: {shortfall.map((v) => v.facility.replace(/_/g, ' ')).join(', ')}.
-            Closing that needs {shortfall.reduce((a, v) => a + v.supportNeeded, 0).toFixed(0)} $M/yr
-            of support, or an instrument that removes enough risk to lower the rate itself.
+            <strong>
+              {kt(parts, 'short') >= kt(parts) - 0.05 ? 'None' : `${n1(kt(parts) - kt(parts, 'short'))} kt`} of
+              the {n1(kt(parts))} kt the plan asks for clears
+            </strong> a {(rate * 100).toFixed(1)}% hurdle. What does not:{' '}
+            {n1(kt(named, 'short'))} kt at named plants
+            {named.some((x) => x.kt - x.fundedKt > 0.005) && (
+              <> ({named.filter((x) => x.kt - x.fundedKt > 0.005)
+                .map((x) => x.label.replace(', expansion', '')).join(', ')})</>
+            )}
+            , {n1(kt(generic, 'short'))} kt of new capacity with no announced project.
+            Closing that needs ${shortfall.reduce((a, v) => a + v.supportNeeded, 0).toFixed(0)}M
+            a year of support, or an instrument that removes enough risk to lower the rate itself.
           </span>
         )}
-        {UNASKED_NOTE && verdicts.length > 0 && unasked.length > 0 && (
-          <p style={{ margin: '8px 0 0', opacity: 0.8 }}>
+        {verdicts.length > 0 && unasked.length > 0 && (
+          <p style={{ margin: '6px 0 0', opacity: 0.8 }}>
             <strong>No new US {names(unasked)} is asked for</strong>, so
             {asked.length > 0 ? <> the plan builds only {names(asked).replace(' or ', ' and ')} capacity and</> : null}
             {' '}the exposure at {unasked.length > 1 ? 'those stages' : 'that stage'} is a gap in
@@ -587,16 +635,13 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
         )}
       </div>
 
-      <HurdleComponents rate={rate} onRate={onRate}
-        instruments={instruments} onInstruments={onInstruments} floorLevel={floorLevel}
-        foakMult={foakMult} onFoakMult={onFoakMult}
-        stages={STAGES.filter((s) => byStage(s).length > 0)} />
+      {controls}
 
-      <BankabilityFrontier rows={us} priceSpread={priceSpread} conversion={conversion}
+      <BankabilityFrontier rows={us} compact={compact}
         settings={{ rate, instruments, foakMult, floorLevel }}
-        costMult={costMult} provenancePremium={provenancePremium}
-        onMove={(stage, premium, cost) => {
-          onProvenancePremium({ ...provenancePremium, [stage]: premium });
+        costMult={costMult} premium={premium}
+        onMove={(stage, p, cost) => {
+          onPremium({ ...premium, [stage]: p });
           onCostMult({ ...costMult, [stage]: cost });
         }} />
     </section>

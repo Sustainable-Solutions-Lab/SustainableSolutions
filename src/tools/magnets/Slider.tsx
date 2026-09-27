@@ -130,6 +130,16 @@ export default function Slider({ label, value, max, min = 0, onChange, onCommit,
   ticks?: Tick[];
 }) {
   const [open, setOpen] = useState(false);
+  // A RANGE INPUT STOPS AT THE LAST WHOLE STEP BELOW ITS MAXIMUM. When the
+  // maximum is a whole number of steps from the minimum only in exact
+  // arithmetic (0.35 - 0.07 is 0.27999999999999997, not 56 steps of 0.005), the
+  // browser finds the last step short of it and the thumb stops a step before
+  // the end of its rail: at the right, never the left. So the maximum is put
+  // on the step grid when it is within rounding of it.
+  const steps = (max - min) / step;
+  if (Math.abs(steps - Math.round(steps)) < 1e-6) {
+    max = Number((min + Math.round(steps) * step).toFixed(10));
+  }
   const commit = onCommit
     ? (e: { currentTarget: HTMLInputElement }) => onCommit(Number(e.currentTarget.value))
     : undefined;
@@ -138,7 +148,7 @@ export default function Slider({ label, value, max, min = 0, onChange, onCommit,
     <div style={{ marginBottom: 4, minWidth: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
                     gap: 8, marginBottom: 1 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
           {label}
           {desc && (
             <button onClick={() => setOpen((o) => !o)} aria-label="What is this?" title="What is this?"
@@ -150,13 +160,13 @@ export default function Slider({ label, value, max, min = 0, onChange, onCommit,
             </button>
           )}
         </span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--accent)',
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent)',
                        textAlign: 'right' }}>
           {fmt(value)}
           {aside && <span style={{ fontSize: 10.5, color: 'var(--ink)', opacity: 0.55 }}> {aside}</span>}
         </span>
       </div>
-      <input type="range" min={min} max={max} step={step} value={value} aria-label={label}
+      <input type="range" min={min} max={max} step={step} value={Math.min(value, max)} aria-label={label}
         onChange={(e) => onChange(Number(e.target.value))}
         onPointerUp={commit} onKeyUp={commit}
         style={{ width: '100%' }} />

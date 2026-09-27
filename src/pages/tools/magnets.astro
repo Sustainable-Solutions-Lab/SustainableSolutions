@@ -33,6 +33,14 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'magnets') ?? null;
      this size took several tries to catch with a finger. The input's height is the
      touch target; the rail inside it stays 6px. */
   .magnet-tool { --mag-thumb: 19px; --mag-hit: 22px; }
+  /* The site holds prose to a reading measure. Inside the explorer a caption
+     belongs to its panel and runs the panel's width. */
+  .magnet-tool p { max-width: none; }
+  /* A desktop with a mouse: the controls are a rail, and a smaller thumb is as
+     easy to catch. */
+  @media (pointer: fine) and (min-width: 1000px) {
+    .magnet-tool { --mag-thumb: 15px; --mag-hit: 18px; }
+  }
   @media (pointer: coarse) {
     .magnet-tool { --mag-thumb: 28px; --mag-hit: 44px; }
     /* A finger is followed by Slider.tsx's followTouches, not by the input,

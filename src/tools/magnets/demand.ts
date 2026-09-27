@@ -85,7 +85,12 @@ function downshift(mix: Record<string, number>, amount: number): Record<string, 
   }
   return out;
 }
-const gradeDytbOxide = (grade: string, thrift: number) => GRADE_LADDER[grade][1] * OXF * (1 - thrift);
+// Heavy demand is calibrated to what magnets are observed to use
+// (magnet_bom.DYTB_CALIBRATION, in grid meta since 2026-09-27). Grids written
+// before that carry no factor and were uncalibrated, hence the fallback of 1.
+const DYTB_CAL = (CFG.dytb_calibration as number | undefined) ?? 1;
+const gradeDytbOxide = (grade: string, thrift: number) =>
+  GRADE_LADDER[grade][1] * OXF * DYTB_CAL * (1 - thrift);
 
 /** per sector -> per grade -> per-year magnet kt */
 export function sectorGradeDemand(scenario: PerSectorScenario, lv: Levers) {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { AXES, AXIS_DOMAIN, BASE, HAS_ALLIED_TARIFF, RESTRICTION_SCOPE, ensureAlliedTariffSlices, alliedTariffReady, interpScenario, applyStockpile, STOCKPILE_COST_DEFAULT, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, ensurePriceFloorSlices, priceFloorReady, ensureAbatementCeilingSlices,
          abatementCeilingReady, HAS_ABATEMENT_CEILING, ABATEMENT_CEILINGS, type Scenario } from './interp';
 import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
@@ -1073,9 +1073,21 @@ export default function MagnetExplorer() {
               live chart that reacts as you drag, which is the point on mobile. */}
           {!sheetOpen && (
             <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 16px', background: 'var(--paper)', borderTop: '1px solid var(--rule-strong)', boxShadow: '0 -4px 16px rgba(0,0,0,0.12)' }}>
-              <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>
-                <span style={{ fontSize: 12.5 }}><b style={{ ...riskChip(riskColor(tri)), fontFamily: 'var(--font-mono)' }}>TRI {tri.toFixed(2)}</b> <span style={{ opacity: 0.5 }}>trade-risk</span></span>
-                <span style={{ fontSize: 11 }}><b style={{ fontFamily: 'var(--font-mono)' }}>{musd(usCostReal)}</b> <span style={{ opacity: 0.5 }}>US cost, 2026–35</span></span>
+              {/* Label, then the number as a chip, the same way on both rows, so
+                  the two figures line up and read as a pair. */}
+              <span style={{ display: 'grid', gridTemplateColumns: 'auto auto', alignItems: 'center',
+                             gap: '4px 8px', fontSize: 11.5, lineHeight: 1.2, minWidth: 0 }}>
+                {([
+                  ['Trade Risk Index:', tri.toFixed(2), riskColor(tri), 'var(--risk-chip-bg)'],
+                  ['US cost, 2026–2035:', musd(usCostReal), 'var(--ink)', 'var(--paper-2)'],
+                ] as const).map(([label, value, color, background]) => (
+                  <Fragment key={label}>
+                    <span style={{ opacity: 0.6, whiteSpace: 'nowrap' }}>{label}</span>
+                    <b style={{ justifySelf: 'start', font: '600 11.5px var(--font-mono)', color, background,
+                                padding: '1px 7px', borderRadius: 6, border: '1px solid var(--rule)',
+                                whiteSpace: 'nowrap' }}>{value}</b>
+                  </Fragment>
+                ))}
               </span>
               <button onClick={() => setSheetOpen(true)}
                 style={{ font: '600 13px var(--font-mono)', color: 'var(--paper)', background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '11px 16px', cursor: 'pointer', whiteSpace: 'nowrap' }}>

@@ -59,6 +59,12 @@ function Row({ r, effect, tag, best, mobile }: {
           {effect && effect.dTRI > 0.005 ? `−${effect.dTRI.toFixed(2)} · ${effect.cost >= 0 ? '+' : '−'}${musd(Math.abs(effect.cost))}` : ''}
         </span>
       )}
+      {mobile && (per != null) && (
+        <div style={{ gridColumn: '1 / -1', height: 6, borderRadius: 3, background: 'var(--paper-2)', overflow: 'hidden' }}>
+          {per > 0 && <div style={{ width: `${barLen(per)}%`, height: '100%', background: dealColor(per) }} />}
+          {free && <div style={{ width: '100%', height: '100%', background: 'repeating-linear-gradient(90deg, #66C2A5 0 6px, transparent 6px 12px)', opacity: 0.6 }} />}
+        </div>
+      )}
     </div>
   );
 }
@@ -69,6 +75,9 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
   mobile?: boolean;
 }) {
   const { deployed, next, inert } = rankPlanner(planner);
+  // Whether any row carries a rated, coloured bar; the key is shown only then.
+  const rated = [...deployed.map((r) => r.bought), ...next.map((r) => r.next)]
+    .some((e) => perTenth(e) != null);
   const gap = actor.now;
   const actorRows = [...actor.rows].sort((a, b) => b.closedKt - a.closedKt || b.supportRemoved - a.supportRemoved);
 
@@ -85,7 +94,10 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
       <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 18px 16px', background: 'var(--paper)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
           <span style={H2}>Planner: security per dollar</span>
-          <span style={{ fontSize: 10.5, opacity: 0.5 }}>$ per 0.1 of integrated trade risk · 2026–35 · green cheap, red dear</span>
+          <span style={{ fontSize: 10.5, opacity: 0.5 }}>
+            $ per 0.1 of integrated trade risk · 2026–35
+            {rated && <> · bar length is the price, <span style={{ color: '#66C2A5' }}>■</span> cheap to <span style={{ color: '#D53E4F' }}>■</span> dear</>}
+          </span>
         </div>
 
         <div style={SUBHEAD}>Deployed by these settings</div>
@@ -131,14 +143,14 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
           </p>
         ) : gap.unfunded === 0 ? (
           <p style={{ ...MUTED, margin: '10px 0 0' }}>
-            <b style={{ opacity: 0.85 }}>No gap: all {gap.total} expansions ({gap.totalKt.toFixed(0)} kt) clear
+            <b style={{ opacity: 0.85 }}>No gap: all {gap.total} projects ({gap.totalKt.toFixed(0)} kt) clear
             at these prices and instruments.</b> Financing conditions are not what stands
             between this plan and its build-out.
           </p>
         ) : (
           <>
             <p style={{ ...MUTED, margin: '10px 0 8px' }}>
-              <b style={{ opacity: 0.85, color: 'var(--ink)' }}>{gap.unfunded} of {gap.total} expansions
+              <b style={{ opacity: 0.85, color: 'var(--ink)' }}>{gap.unfunded} of {gap.total} projects
               ({gap.unfundedKt.toFixed(0)} of {gap.totalKt.toFixed(0)} kt) do not clear</b>, and closing
               every shortfall would take {musd(gap.support)}/yr of support. Each instrument
               below, applied in full on its own:
@@ -163,6 +175,11 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textAlign: 'right', fontWeight: 600 }}>
                       {r.closedKt > 0.05 ? `closes ${r.closedKt.toFixed(0)} kt` : 'closes none'}
                     </span>
+                    {mobile && (
+                      <div style={{ gridColumn: '1 / -1', height: 6, borderRadius: 3, background: 'var(--paper-2)', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.min(100, share * 100)}%`, height: '100%', background: share >= 0.999 ? '#66C2A5' : '#3288BD' }} />
+                      </div>
+                    )}
                     {!mobile && (
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, opacity: 0.6, textAlign: 'right' }}>
                         {r.supportRemoved > 0.5 ? `−${musd(r.supportRemoved)}/yr support` : ''}

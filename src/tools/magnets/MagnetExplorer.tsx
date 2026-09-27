@@ -8,7 +8,7 @@ import CapacityPanel, { type ReClass } from './CapacityPanel';
 import InterventionLedger from './InterventionLedger';
 import { actorGap, actorRow, type PlannerRow, type ScreenOpts } from './ledger';
 import { chooseCollection, chooseStockpile, chooseRd, collectedKtNPV, UNMET_VALUE_ANCHORS, UNMET_VALUE_DEFAULT } from './deploy';
-import { hurdleRate, RELIEF_DEFAULTS, MAGNET_CONVERSION_DEFAULT, PLANNER_RATE, priceAtSpread, EXCHINA_SPREAD_PER_MAGNET_KG, type Buildout } from './projectFinance';
+import { hurdleRate, RELIEF_DEFAULTS, MAGNET_CONVERSION_DEFAULT, PLANNER_RATE, priceAtSpread, EXCHINA_SPREAD_PER_MAGNET_KG, judgedRows, type Buildout } from './projectFinance';
 import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
 // Phones get a leaner layout (essentials only) + the scenario controls in a slide-up
@@ -75,6 +75,8 @@ const musd = (x: number) => `$${(x / 1000).toFixed(1)}B`;
 const musdS = (x: number) => Math.abs(x) >= 1000 ? musd(x) : `$${x.toFixed(0)}M`;
 // Fixed x-axis for the absolute cost bar so it visibly grows/shrinks with sliders
 // (real US cost-of-security spans ~$2.5B baseline to ~$10B under heavy reshoring).
+// Kept for the cost breakdown, which is off the page for now (the total is in the
+// pinned band); COST_DESC and STIPPLE below belong to it too.
 const COST_AXIS_MAX = 12000;  // $M
 
 // Polka-dot overlay marking the cleanly heavy-REE (Dy/Tb) cost on the cost bar —
@@ -506,8 +508,6 @@ export default function MagnetExplorer() {
   type Pin = { coords: Record<AxisKey, number>; tri: number; cost: number;
                imp: number; touch: number; unmet: number };
   const [pin, setPin] = useState<Pin | null>(null);
-  const [infoCost, setInfoCost] = useState(false);
-  const [showCostBar, setShowCostBar] = useState(false);   // ⓘ toggle for the cost-bar method note
   const [resetFlash, setResetFlash] = useState(false); // brief confirm-flash on "reset to baseline"
   // Real-world-anchored Sankey: selected projects locked in by region, China residual.
   const snapshotYears: string[] = Object.keys((sc as any).flows_by_year ?? {}).sort();
@@ -718,7 +718,7 @@ export default function MagnetExplorer() {
   // premium is paid by buyers every year; an offtake or guarantee is a
   // contingent liability the model does not price.
   const actorLedger = useMemo(() => {
-    const us: Buildout[] = (((sc as any).buildout ?? []) as Buildout[]).filter((b) => b.r === 'USA');
+    const us: Buildout[] = judgedRows((sc as any).buildout as Buildout[] | undefined);
     const prices = priceAtSpread(priceSpread, conversion);
     const base: ScreenOpts = {
       rate: hurdle, offtake: instruments.offtake, floorInterface: 'magnet',
@@ -1032,9 +1032,9 @@ export default function MagnetExplorer() {
             incumbent={PROJECTS.filter((pj) => pj.bloc === 'us' && pj.status === 'operating')
               .reduce((acc, pj) => {
                 (acc[pj.stage] ??= []).push({ stage: pj.stage, name: pj.name,
-                                              kt: pj.capacityKt, note: pj.note });
+                                              kt: pj.capacityKt, note: pj.note, heavy: pj.heavy });
                 return acc;
-              }, {} as Record<string, { stage: string; name: string; kt: number; note?: string }[]>)}
+              }, {} as Record<string, { stage: string; name: string; kt: number; note?: string; heavy?: boolean }[]>)}
             priceSpread={priceSpread} onPriceSpread={setPriceSpread}
             conversion={conversion} onConversion={setConversion}
             rate={hurdle} onRate={setHurdle}
@@ -1048,75 +1048,11 @@ export default function MagnetExplorer() {
 
           <InterventionLedger planner={plannerLedger} actor={actorLedger} mobile={isMobile} />
 
-          {/* 4 — combined "Cost and security" section: cost bar (real NPV) + the
-              trade-risk index + cost-of-security ROI, in one block; notes behind ⓘ. */}
+          {/* 4 — the trade-risk index. The cost block that used to share this
+              section is gone: the total is in the pinned band (and in the bottom
+              bar on a phone), and the ledger above says what the money bought. */}
           <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)', marginTop: 22 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-              <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0, display: 'flex', alignItems: 'center' }}>
-                Cost of US magnet supply
-                <button onClick={() => setInfoCost((o) => !o)} aria-label="Details" title="Details"
-                  style={{ width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--rule-strong)', background: infoCost ? 'var(--accent)' : 'transparent', color: infoCost ? 'var(--paper)' : 'var(--ink-3)', font: '600 9px var(--font-mono)', lineHeight: 1, cursor: 'pointer', padding: 0, marginLeft: 6 }}>i</button>
-              </h2>
-              <span style={{ font: '600 14px var(--font-mono)' }}>
-                {musd(usCostReal)} <span style={{ opacity: 0.5, fontWeight: 400 }}>real NPV</span>
-                {usUnmet > 0.05 && <span style={{ color: WORSE, fontWeight: 600 }}> · +{usUnmet.toFixed(1)} kt unmet</span>}
-              </span>
-            </div>
-            {/* The stacked bar is detail, not headline: the total is in the sticky
-                band and the ledger above says what the money bought. It stays
-                behind a toggle for anyone who wants the composition. */}
-            <button onClick={() => setShowCostBar((o) => !o)}
-              style={{ font: '500 10.5px var(--font-mono)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
-                       border: '1px solid var(--rule)', background: 'transparent', color: 'var(--ink)', opacity: 0.75, marginBottom: 8 }}>
-              {showCostBar ? '− hide breakdown' : '+ breakdown by component'}
-            </button>
-            {showCostBar && infoCost && (
-              <p style={{ fontSize: 11.5, opacity: 0.5, margin: '0 0 12px', lineHeight: 1.45 }}>
-                Absolute build + operating cost of US-located capacity by stage, plus the heavy-REE price
-                premium and any stockpile (2026–35 NPV); the bar grows as you force more security and
-                shrinks as imports do the work. The <span style={{
-                  padding: '0 4px', borderRadius: 2, color: '#fff', backgroundColor: '#762A83', ...STIPPLE,
-                }}>stippled</span> segment is the heavy-REE (Dy/Tb) cost. When the chain can’t deliver, that
-                surfaces as <span style={{ color: WORSE }}> unmet demand</span>, not a dollar cost.
-              </p>
-            )}
-            {showCostBar && (<>
-            <div style={{ height: 30, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--rule)', background: 'var(--paper-2)' }}>
-              <div style={{ display: 'flex', height: '100%', width: `${Math.min(100, (usCostReal / COST_AXIS_MAX) * 100)}%`, transition: 'width 0.15s' }}>
-                {REAL_COST_KEYS.map(([k, lbl, color]) => {
-                  const v = Math.max(0, scR.us_cost[k] ?? 0);
-                  if (v <= 0) return null;
-                  const heavy = k === 'dytb_premium';   // stipple the cleanly-heavy (Dy/Tb) cost
-                  return <div key={k} title={`${lbl}: ${musd(v)}${heavy ? ' · heavy-REE (Dy/Tb)' : ''}`}
-                    style={{ width: `${(v / usCostReal) * 100}%`, background: color, ...(heavy ? STIPPLE : {}) }} />;
-                })}
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink)', opacity: 0.45, marginTop: 2 }}>
-              <span>$0B</span><span>{musd(COST_AXIS_MAX / 2)}</span><span>{musd(COST_AXIS_MAX)}+</span>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', marginTop: 10 }}>
-              {REAL_COST_KEYS.map(([k, lbl, color]) => {
-                const v = scR.us_cost[k] ?? 0;
-                if (v <= 0 && (BASE.us_cost[k] ?? 0) <= 0) return null;   // hide irrelevant components
-                const dv = v - (BASE.us_cost[k] ?? 0);
-                const showDelta = Math.abs(dv) >= 100;
-                return (
-                  // compact one-line legend item to squeeze vertical space
-                  <span key={k} title={COST_DESC[k]} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'help' }}>
-                    <span style={{ width: 9, height: 9, borderRadius: 2, background: color, flexShrink: 0, ...(k === 'dytb_premium' ? STIPPLE : {}) }} />
-                    <span style={{ opacity: 0.7 }}>{lbl}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{musd(v)}</span>
-                    {showDelta && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: dv > 0 ? WORSE : 'var(--brand-green)' }}>{dv > 0 ? '+' : ''}{musd(dv)}</span>}
-                  </span>
-                );
-              })}
-            </div>
-            </>)}
-            {/* trade-risk index, folded into the same section */}
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
-              <TradeRiskPanel sc={scR} alliedHHI={alliedHHIMap} />
-            </div>
+            <TradeRiskPanel sc={scR} alliedHHI={alliedHHIMap} />
           </section>
 
           {isMobile && (
@@ -1139,7 +1075,7 @@ export default function MagnetExplorer() {
             <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 16px', background: 'var(--paper)', borderTop: '1px solid var(--rule-strong)', boxShadow: '0 -4px 16px rgba(0,0,0,0.12)' }}>
               <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>
                 <span style={{ fontSize: 12.5 }}><b style={{ ...riskChip(riskColor(tri)), fontFamily: 'var(--font-mono)' }}>TRI {tri.toFixed(2)}</b> <span style={{ opacity: 0.5 }}>trade-risk</span></span>
-                <span style={{ opacity: 0.6, fontSize: 11 }}>{pct(usImportPct)} of US magnets imported</span>
+                <span style={{ fontSize: 11 }}><b style={{ fontFamily: 'var(--font-mono)' }}>{musd(usCostReal)}</b> <span style={{ opacity: 0.5 }}>US cost, 2026–35</span></span>
               </span>
               <button onClick={() => setSheetOpen(true)}
                 style={{ font: '600 13px var(--font-mono)', color: 'var(--paper)', background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '11px 16px', cursor: 'pointer', whiteSpace: 'nowrap' }}>

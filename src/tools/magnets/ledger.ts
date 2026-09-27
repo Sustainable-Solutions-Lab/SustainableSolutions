@@ -14,7 +14,7 @@
  * This module holds the shapes, the ranking, and the actor-side arithmetic,
  * which depends on nothing but the project screen.
  */
-import { screen, type Buildout, type Prices } from './projectFinance';
+import { screen, groupProjects, type Buildout, type Prices } from './projectFinance';
 
 export type Effect = {
   /** Fall in integrated trade risk, index points. Positive = safer. */
@@ -49,9 +49,10 @@ export function perTenth(e?: Effect): number | null {
 }
 
 export type ActorGap = {
-  /** Expansions the plan calls for, and how many do not clear. */
+  /** Projects the plan calls for, and how many do not clear in full. Counted
+   *  by facility, exactly as the capacity columns count them. */
   total: number; unfunded: number;
-  /** kt of new capacity, total and not clearing. */
+  /** kt of new capacity, total and not clearing, in the unit the columns draw. */
   totalKt: number; unfundedKt: number;
   /** Support that would close every shortfall, $M per year. */
   support: number;
@@ -75,13 +76,12 @@ export type ActorRow = {
 export type ScreenOpts = Parameters<typeof screen>[2];
 
 export function actorGap(us: Buildout[], prices: Prices, opts: ScreenOpts): ActorGap {
-  const v = screen(us, prices, opts);
-  const un = v.filter((x) => !x.funded);
+  const v = groupProjects(us, screen(us, prices, opts));
   return {
-    total: v.length, unfunded: un.length,
+    total: v.length, unfunded: v.filter((x) => !x.funded).length,
     totalKt: v.reduce((a, x) => a + x.newKt, 0),
-    unfundedKt: un.reduce((a, x) => a + x.newKt, 0),
-    support: un.reduce((a, x) => a + x.supportNeeded, 0),
+    unfundedKt: v.reduce((a, x) => a + x.newKt - x.fundedKt, 0),
+    support: v.reduce((a, x) => a + x.supportNeeded, 0),
   };
 }
 

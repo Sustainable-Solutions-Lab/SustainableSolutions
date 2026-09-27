@@ -407,3 +407,49 @@ export const screen = (rows: Buildout[], prices: Prices, opts: {
  *  is better than shipping a price-world control that silently does nothing. */
 export const priceSensitive = (stage: string): boolean =>
   stage === 'mining' || stage === 'separation' || stage === 'recycling';
+
+/** Tonnage to DRAW and to count for a build-out row. The model states separation
+ *  in TREO fed; the plants a reader knows are rated in the Nd/Pr and Dy/Tb oxide
+ *  they make, so a separation row is counted as the magnet oxide in its feed.
+ *  Every other stage is already in the unit its plants are rated in. */
+export const drawnKt = (b: Buildout): number => b.kt * premiumBasis(b);
+
+/** The US rows a firm is asked to decide on. Committed construction is built
+ *  whatever the screen says, so it is not judged. */
+export const judgedRows = (rows: Buildout[] | undefined): Buildout[] =>
+  (rows ?? []).filter((b) => b.r === 'USA' && !b.c);
+
+/**
+ * The planner's build-out arrives as COHORTS, one per facility per year it
+ * expands, because each is its own investment decision. A reader thinks in
+ * projects, so the cohorts of one facility are counted, drawn and named
+ * together; the tonnage that clears is still decided cohort by cohort.
+ *
+ * Every count of "projects" on the page comes from here. The capacity columns
+ * and the actor ledger used to count separately, one in plants and one in
+ * cohorts, and so disagreed about the same plan (4 against 18).
+ */
+export type Project = Verdict & {
+  fundedKt: number;
+  cohorts: (Verdict & { year?: number })[];
+};
+export function groupProjects(rows: Buildout[], verdicts: Verdict[]): Project[] {
+  const out = new Map<string, Project>();
+  verdicts.forEach((v, i) => {
+    const kt = drawnKt(rows[i]);
+    const c = { ...v, newKt: kt, year: rows[i].y0 };
+    const key = `${v.stage}|${v.facility}`;
+    const p = out.get(key);
+    if (!p) {
+      out.set(key, { ...c, fundedKt: v.funded ? kt : 0, cohorts: [c] });
+    } else {
+      p.newKt += kt; p.fundedKt += v.funded ? kt : 0;
+      p.npv += v.npv; p.plannerNpv += v.plannerNpv;
+      p.supportNeeded += v.supportNeeded;
+      p.funded = p.funded && v.funded;
+      p.leadYears = Math.max(p.leadYears, v.leadYears);
+      p.cohorts.push(c);
+    }
+  });
+  return [...out.values()];
+}

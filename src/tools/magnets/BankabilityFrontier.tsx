@@ -281,6 +281,10 @@ export default function BankabilityFrontier({ rows, priceSpread, conversion, set
             One line for each stage the plan asks the United States to build. To the
             right of its line, everything asked of that stage clears; in the faint band
             beside it, only part does. Each circle is where your assumptions put that stage.
+            The provenance premium is what a buyer pays extra for that stage&rsquo;s own
+            product because it is not Chinese, with nothing added to what the plant pays
+            for its inputs. It is set stage by stage, and is separate from the oxide
+            premium above.
           </p>
 
           <div ref={wrap} style={{ position: 'relative', height: H, touchAction: 'pan-y',

@@ -20,18 +20,35 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'magnets') ?? null;
 
 <style is:global>
   /* All explorer sliders: a cardinal, grabbable thumb that renders the same on
-     desktop and mobile (native accent-color leaves the thumb white on iOS), plus
-     a tall touch target. The track reads --mag-track so a slider can paint its own
-     gradient (the demand levers' plausibility shading) right on the rail. */
+     desktop and mobile (native accent-color leaves the thumb white on iOS). The
+     track reads --mag-track so a slider can paint its own gradient (the demand
+     levers' plausibility shading) right on the rail.
+
+     --mag-thumb is the thumb's width, and the one number the tick marks under a
+     slider need: a thumb's centre travels from half its width inside one end of
+     the track to half its width inside the other, so a tick at "0%" of the track
+     sits to the left of where the thumb stops (MagnetExplorer's Slider).
+
+     On a touch screen the thumb is larger and the input taller, because a thumb
+     this size took several tries to catch with a finger. The input's height is the
+     touch target; the rail inside it stays 6px. */
+  .magnet-tool { --mag-thumb: 19px; --mag-hit: 22px; }
+  @media (pointer: coarse) {
+    .magnet-tool { --mag-thumb: 28px; --mag-hit: 44px; }
+    /* A finger is followed by Slider.tsx's followTouches, not by the input,
+       which would otherwise jump to any touch that lands on it. */
+    .magnet-tool input[type="range"] { pointer-events: none; }
+    .magnet-tool :has(> input[type="range"]) { touch-action: pan-y; }
+  }
   .magnet-tool input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 18px;            /* compact but still grabbable */
+    height: var(--mag-hit);
     background: transparent;
     cursor: pointer;
     margin: 0;
-    touch-action: none;      /* let a drag move the thumb, not scroll the page */
+    touch-action: pan-y;
   }
   .magnet-tool input[type="range"]::-webkit-slider-runnable-track {
     height: 6px; border-radius: 3px;
@@ -43,14 +60,17 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'magnets') ?? null;
   }
   .magnet-tool input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none; appearance: none;
-    width: 17px; height: 17px; margin-top: -5.5px;
+    box-sizing: border-box;
+    width: var(--mag-thumb); height: var(--mag-thumb);
+    margin-top: calc((6px - var(--mag-thumb)) / 2);
     border-radius: 50%;
     background: var(--cardinal);
     border: 2px solid var(--paper);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   }
   .magnet-tool input[type="range"]::-moz-range-thumb {
-    width: 17px; height: 17px;
+    width: var(--mag-thumb); height: var(--mag-thumb);
+    box-sizing: border-box;
     border-radius: 50%;
     background: var(--cardinal);
     border: 2px solid var(--paper);

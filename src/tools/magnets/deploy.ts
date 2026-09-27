@@ -56,6 +56,10 @@ export type CollectionChoice = {
   systemSaving: number;
   /** The rates considered, with the total the planner weighed for each. */
   ladder: { rate: number; total: number; saving: number; bill: number }[];
+  /** The collection cost, $/kg, below which the planner collects at all: the
+   *  largest saving per kilogram collected that any solved rate offers. Null
+   *  when no rate saves anything, where no price makes collection pay. */
+  breakeven: number | null;
 };
 
 /**
@@ -82,9 +86,13 @@ export function chooseCollection(rates: number[], cellAt: (rate: number) => Scen
   // not deployed on the strength of solver noise.
   let best = ladder[0];
   for (const l of ladder) if (l.total < best.total - 1e-6) best = l;
+  // A rate is chosen over none when its saving exceeds its bill, that is when
+  // the cost per kg is below saving / kt; collection starts at the best of those.
+  const worth = ladder.filter((l) => l.kt > 1e-6 && l.saving > 0).map((l) => l.saving / l.kt);
   return {
     rate: best.rate, collectedKt: best.kt, bill: best.bill, systemSaving: best.saving,
     ladder: ladder.map(({ rate, total, saving, bill }) => ({ rate, total, saving, bill })),
+    breakeven: worth.length ? Math.max(...worth) : null,
   };
 }
 

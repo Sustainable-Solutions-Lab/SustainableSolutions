@@ -34,13 +34,14 @@
 import { Pickaxe, FlaskConical, Flame, Magnet, Recycle } from 'lucide-react';
 import { useState } from 'react';
 import { screen, PLANNER_RATE, priceSensitive, groupProjects, judgedRows,
-         priceAtSpread, MAGNET_CONVERSION_DEFAULT, ALLOY_CONVERSION_DEFAULT,
+         priceAtSpread, MAGNET_CONVERSION_DEFAULT, ALLOY_CONVERSION_DEFAULT, LEGACY_CONVERSION,
          type Buildout, type Project } from './projectFinance';
 import { stageBreakdown, stageBreakdownClass, riskColor, riskChip } from './tri';
 import type { Scenario } from './interp';
 import { HEAVY_YIELD, LIGHT_MINE_YIELD, LIGHT_MINE_HEAVY_TRACE } from './projects';
 import BankabilityFrontier from './BankabilityFrontier';
 import HurdleComponents from './HurdleComponents';
+import Slider from './Slider';
 
 /** Stage -> the flow interface whose mass it produces. Used to express a stage's
  *  capacity in units of ONE rare-earth class, by the share of that interface's
@@ -61,6 +62,9 @@ const PRODUCT: Record<string, string> = {
   mining: 'concentrate', separation: 'Nd/Pr + Dy/Tb oxide', alloy: 'alloy',
   magnet: 'finished magnets', recycling: 'scrap processed',
 };
+/** kg of rare-earth oxide in a kg of NdFeB alloy (the model's config/units.py:
+ *  31% rare earth by mass, 1.16 kg of oxide per kg of metal). */
+const OXIDE_PER_KG_ALLOY = 0.3596;
 const GREEN = 'var(--brand-green)';
 const RED = '#D53E4F';
 // Column fills. The transparency is in the colour, not on the element, so a
@@ -126,10 +130,10 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
                                         provenancePremium, onProvenancePremium, floorLevel }: {
   buildout: Buildout[] | undefined;
   incumbent: Record<string, Incumbent[]>;
-  /** Oxide prices as a multiple of today's ex-China spread. 0 = China parity. */
+  /** Oxide prices as a multiple of today's ex-China premium. 0 = China parity. */
   priceSpread: number;
   onPriceSpread: (v: number) => void;
-  /** Magnet conversion spread, $/kg. The number the bankability result hinges on. */
+  /** Magnet conversion margin, $/kg. The number the bankability result hinges on. */
   conversion: number;
   onConversion: (v: number) => void;
   rate: number;
@@ -185,7 +189,13 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
     if (!iface || !re) return 1;
     const sum = (rows?: { value: number }[]) => (rows ?? []).reduce((a, f) => a + f.value, 0);
     const agg = sum(sc.flows?.[iface]);
-    return agg > 1e-9 ? sum(re) / agg : 1;
+    // The model's alloy flows are in the oxide the alloy is made from, while an
+    // alloy plant is rated in alloy, so a class share of those flows is a share
+    // of the OXIDE in the alloy and needs the oxide in a kilogram of alloy with
+    // it. Without that the Dy/Tb and Nd/Pr columns for alloy were 2.8 times
+    // too tall: 18 kt of alloy was drawn as holding 18 kt of Nd/Pr.
+    const basis = stage === 'alloy' ? OXIDE_PER_KG_ALLOY : 1;
+    return agg > 1e-9 ? basis * sum(re) / agg : 1;
   };
 
   // An EXISTING mine or separation plant in a class view is counted by what it
@@ -230,20 +240,6 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
   // from the tooltip is printed under the columns instead.
   const [note, setNote] = useState<string | null>(null);
 
-  const control = (label: string, slider: JSX.Element, read: JSX.Element, text: JSX.Element,
-                   dim = false) => (
-    <div style={{ minWidth: 0 }}>
-      <label style={{ display: 'block', fontSize: 11.5, opacity: dim ? 0.55 : 1 }}>
-        <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontWeight: 600 }}>{label}</span>
-          <span style={{ font: '600 11px var(--font-mono)' }}>{read}</span>
-        </span>
-        {slider}
-      </label>
-      <p style={{ fontSize: 10.5, opacity: 0.65, lineHeight: 1.45, margin: '3px 0 0' }}>{text}</p>
-    </div>
-  );
-
   return (
     <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20,
                       background: 'var(--paper)', marginTop: 22 }}>
@@ -261,51 +257,52 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
         .cap-controls { display: grid; gap: 14px 24px; grid-template-columns: 1fr; margin-bottom: 16px; }
         @media (min-width: 720px) { .cap-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
       `}</style>
-      {/* THE PRICES A US PLANT IS PAID. Both were sliders with their meaning in a
-          tooltip, which a phone never shows and a desktop reader never finds.
-          They decide the verdicts below, so what each is, and whose revenue it
-          is, is printed. */}
+      {/* THE PRICES A US PLANT IS PAID, each with what it is printed beneath it
+          (a tooltip is never seen on a phone and seldom found on a desktop).
+
+          TWO DIFFERENT THINGS ARE CALLED A PREMIUM on this page and they are not
+          linked. The OXIDE premium here is a market price level: one number, from
+          which alloy and magnet prices are built up (`pricesFromOxide`), so it is
+          counted once, by whoever turns ore or scrap into oxide. The PROVENANCE
+          premium on the frontier below is extra revenue on one stage's own
+          product with nothing added to what that stage pays for its inputs. */}
       <div className="cap-controls">
-        {control('Ex-China oxide spread',
-          <input type="range" min={0} max={2} step={0.05} value={priceSpread}
-            onChange={(e) => onPriceSpread(parseFloat(e.target.value))}
-            style={{ width: '100%', accentColor: 'var(--accent)', margin: '4px 0 0' }} />,
-          <>{priceSpread.toFixed(2)}×{' '}
-            <span style={{ opacity: 0.55, fontWeight: 400 }}>
-              {priceSpread === 0 ? 'China parity' : Math.abs(priceSpread - 1) < 0.03 ? 'today’s' : ''}
-            </span></>,
-          <>
-            Since the 2025 export controls, rare-earth oxide sold outside China has cost
-            more than the same oxide inside it. This sets how much of that gap a producer
-            here is paid: none at 0, today&rsquo;s at 1, twice today&rsquo;s at 2. It is the
-            revenue of a mine, a separation plant or a recycler, so it decides whether
-            they clear.{' '}
-            {anyPriceSensitive
-              ? 'Alloy and magnet makers buy oxide and sell it on inside their product, so for them it cancels.'
-              : 'Nothing the plan asks for here sells oxide: alloy and magnet makers buy it and sell it on inside their product, so moving this changes no verdict below.'}
-          </>, !anyPriceSensitive)}
-        {control('Magnet conversion spread',
-          <input type="range" min={2} max={40} step={0.25} value={conversion}
-            onChange={(e) => onConversion(parseFloat(e.target.value))}
-            style={{ width: '100%', accentColor: 'var(--accent)', margin: '4px 0 0' }} />,
-          <>${conversion.toFixed(2)}/kg{' '}
-            <span style={{ opacity: 0.55, fontWeight: 400 }}>
-              {Math.abs(conversion - MAGNET_CONVERSION_DEFAULT) < 0.13 ? 'China cost + return' : ''}
-            </span></>,
-          <>
-            What a magnet maker is paid for turning alloy into finished magnets, over the
-            price of the alloy: the whole margin its plant lives on. The default is what
-            the marginal Chinese producer needs, ${MAGNET_CONVERSION_DEFAULT.toFixed(2)} a
-            kilogram, because in a market China dominates that is where the price
-            settles. A US plant needs several times that, and the difference is what a
-            provenance premium or an offtake has to cover. Alloy makers are paid
-            ${ALLOY_CONVERSION_DEFAULT.toFixed(2)} on the same reasoning.
-          </>)}
+        <Slider label="Ex-China oxide premium" value={priceSpread} min={0} max={2} step={0.05}
+          onChange={onPriceSpread} fmt={(v) => `${v.toFixed(2)}×`}
+          ticks={[{ at: 0, label: 'China’s price' }, { at: 1, label: 'today' }, { at: 2, label: 'twice today’s gap' }]}
+          note={<>
+            Since the 2025 export controls, rare-earth oxide sold outside China costs
+            more than the same oxide inside it. This sets one price level for oxide:
+            China&rsquo;s at 0, today&rsquo;s outside China at 1. Whoever turns ore or scrap
+            into oxide, a separation plant or a recycler, is paid it. It is counted
+            once: alloy and magnet prices are built up from the oxide price, so a
+            converter pays the premium in what it buys and gets it back in what it
+            sells, and a mine sells concentrate, which this does not move.
+            {!anyPriceSensitive && (
+              <> <b>No effect in this scenario:</b> the plan asks for no separation or
+                recycling plant here, so no verdict below depends on it.</>
+            )}
+          </>} />
+        <Slider label="Magnet conversion margin" value={conversion} min={2} max={40} step={0.25}
+          onChange={onConversion} fmt={(v) => `$${v.toFixed(2)}/kg`}
+          ticks={[{ at: MAGNET_CONVERSION_DEFAULT, label: 'China’s cost and return' },
+                  { at: LEGACY_CONVERSION.magnet, label: 'earlier assumption' },
+                  { at: 40, label: '$40' }]}
+          note={<>
+            What a magnet maker is paid per kilogram over the alloy it buys. It is not
+            profit: it has to cover the plant&rsquo;s running costs, its capital and its
+            return. It is stated here because the screen takes prices as given; the
+            planner that chose these plants has none. The default,
+            ${MAGNET_CONVERSION_DEFAULT.toFixed(2)}, is what the marginal Chinese producer
+            needs, which is where the price settles in a market China dominates. A US
+            plant needs several times that. Alloy makers are paid
+            ${ALLOY_CONVERSION_DEFAULT.toFixed(2)} on the same reasoning, held fixed.
+          </>} />
         {/* Which RE class the columns and the risk figures describe. Dy/Tb is the
             real chokepoint; Nd/Pr is far more diversified, so a single "All"
             reading averages the problem away. */}
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 5 }}>Rare-earth class shown</div>
+          <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>Rare-earth class shown</div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {CLASSES.map((c) => {
               const on = reClass === c.key;
@@ -320,9 +317,11 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
               );
             })}
           </div>
-          <p style={{ fontSize: 10.5, opacity: 0.65, lineHeight: 1.45, margin: '6px 0 0' }}>
-            Columns and risk figures for everything a stage handles, or for the heavy
-            or light rare earths it contains. Heavy is where the exposure is.
+          <p style={{ fontSize: 10.5, opacity: 0.7, lineHeight: 1.45, margin: '6px 0 0' }}>
+            All counts what each stage handles, in its own product: ore with its
+            lanthanum and cerium, alloy and magnets with their iron and boron. Dy/Tb and
+            Nd/Pr count only that class&rsquo;s contained oxide, so the two do not add up
+            to All. Heavy is where the exposure is.
           </p>
         </div>
       </div>
@@ -377,7 +376,8 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
                 {/* Columns at different stages measure DIFFERENT products, so the
                     unit is named on each. */}
                 <div className="cap-unit" style={{ font: '400 9.5px var(--font-mono)', opacity: 0.45 }}>
-                  kt/yr {PRODUCT[c.s]}
+                  kt/yr {reClass === 'all' || c.s === 'recycling' ? PRODUCT[c.s]
+                    : `contained ${reClass === 'heavy' ? 'Dy/Tb' : 'Nd/Pr'}`}
                 </div>
               </div>
             ))}
@@ -521,8 +521,8 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
         <span><span style={{ display: 'inline-block', width: 12, height: 8,
                              background: DECLINED }} /> new, declined</span>
         <span style={{ opacity: 0.8 }}>
-          · each column is 100% of its own stage, in {reClass === 'all' ? 'the product named above it'
-            : `contained ${reClass === 'heavy' ? 'Dy/Tb' : 'Nd/Pr'}`}; total and trade risk beneath
+          · each column is 100% of its own stage, in {reClass === 'all' ? 'its own product'
+            : `contained ${reClass === 'heavy' ? 'Dy/Tb' : 'Nd/Pr'} (recycling in scrap)`}; total and trade risk beneath
         </span>
       </div>
 

@@ -130,6 +130,11 @@ const ATARIFF_EAGER: number[] = (data as any).meta.allied_tariff_eager ?? [0];
 export const RESTRICTION_SCOPE: 'pooled' | 'per_destination' =
   (data as any).meta.export_restriction_scope ?? 'pooled';
 
+/** Whether this grid's restriction covers ore and concentrate as well as oxide,
+ *  alloy and magnets. A grid that does not say is one that left them out. */
+export const RESTRICTS_CONCENTRATE: boolean =
+  ((data as any).meta.restricted_interfaces ?? []).includes('concentrate');
+
 /** Every axis's solved grid points, ascending — the domain the scenario bar draws.
  *  Two of these (dytb, dscale) have no slider: they are computed from the Demand
  *  Builder, which is exactly why the bar has to show them. */

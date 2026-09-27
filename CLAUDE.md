@@ -502,6 +502,9 @@ When ready to start coding, first task:
 - `_engine/` — the reusable config-driven data-explorer engine.
 - `materials/` (+ future `calue/`) — thin **configs** that drive `_engine`.
 - `magnets/`, `firemap/` — **bespoke** standalone tools (don't use the engine).
+  The magnets scenario grid is NOT in git: it lives in
+  `Dropbox/Sites/SustainableSolutions-data/magnets-grid/` and
+  `scripts/fetch-magnet-grid.js` fetches it (see `docs/magnet-grid.md`).
 
 Generated tool data (Astro build, map tiles, materials lazy layers) goes to the
 gitignored `dist/` (Astro) and `build/` (everything else) folders, never committed.

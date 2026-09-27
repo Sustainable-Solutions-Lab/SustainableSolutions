@@ -64,6 +64,9 @@ export type Scenario = {
   // of scaling the aggregate by a flat mass fraction. Optional: only present once the
   // grid is regenerated with the per-class flow emit; realworld.ts falls back otherwise.
   flows_re?: { light: Record<string, Flow[]>; heavy: Record<string, Flow[]> };
+  /** The same for each snapshot year before the last. Absent on a grid that
+   *  stored the final year only; the class views are then of that year. */
+  flows_re_by_year?: Record<string, NonNullable<Scenario['flows_re']>>;
   path: {
     us_mix: Record<string, number[]>;   // domestic / allied / china / unmet, per year
     us_cap: Record<string, number[]>;   // mining / separation / alloy / magnet, per year
@@ -328,20 +331,30 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
     (flows[iface] ??= []).push({ from, to, value: v });
   }
   // per-RE-class flows (light/heavy → iface → Flow[]): same weighted-merge as `flows`
-  let flows_re: Scenario['flows_re'];
-  if (ps.some((p) => p.s.flows_re)) {
+  const blendRe = (of: (s: Scenario) => Scenario['flows_re']): Scenario['flows_re'] => {
+    if (!ps.some((p) => of(p.s))) return undefined;
     const frm = new Map<string, number>();   // cls|iface|from|to → value
-    for (const { s, w } of ps)
+    for (const { s, w } of ps) {
+      const re = of(s);
       for (const cls of ['light', 'heavy'] as const)
-        for (const iface in s.flows_re?.[cls] ?? {})
-          for (const f of s.flows_re![cls][iface])
+        for (const iface in re?.[cls] ?? {})
+          for (const f of re![cls][iface])
             frm.set(`${cls}|${iface}|${f.from}|${f.to}`, (frm.get(`${cls}|${iface}|${f.from}|${f.to}`) || 0) + f.value * w);
-    flows_re = { light: {}, heavy: {} };
+    }
+    const out: NonNullable<Scenario['flows_re']> = { light: {}, heavy: {} };
     for (const [k, v] of frm) {
       if (v < 0.02) continue;
       const [cls, iface, from, to] = k.split('|') as ['light' | 'heavy', string, string, string];
-      (flows_re[cls][iface] ??= []).push({ from, to, value: v });
+      (out[cls][iface] ??= []).push({ from, to, value: v });
     }
+    return out;
+  };
+  const flows_re = blendRe((s) => s.flows_re);
+  // The class flows of the years before the last, where the grid carries them.
+  let flows_re_by_year: Scenario['flows_re_by_year'];
+  for (const y of new Set(ps.flatMap((p) => Object.keys(p.s.flows_re_by_year ?? {})))) {
+    const re = blendRe((s) => s.flows_re_by_year?.[y]);
+    if (re) (flows_re_by_year ??= {})[y] = re;
   }
   // annual pathway series: element-wise weighted sum
   const H = base.path.cost_annual.length;
@@ -454,7 +467,7 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
     dscale: base.dscale, kpis: wDict('kpis'), cost: wDict('cost'), us_cost: wDict('us_cost'),
     production: wNested('production') as any, us_supply: wNested('us_supply') as any,
     us_supply_re: wSupplyRe(),
-    utilization: wNested('utilization') as any, flows, flows_re, path: wPath(),
+    utilization: wNested('utilization') as any, flows, flows_re, flows_re_by_year, path: wPath(),
     flows_ready,
     exposed_by_year: ps.every((p) => p.s.exposed_by_year)
       ? Object.fromEntries((['all', 'heavy', 'light'] as const).map((k) =>

@@ -555,12 +555,22 @@ export default function MagnetExplorer() {
     // only when the total is the final year's too.
     const years = Object.keys((sc as any).flows_by_year ?? {}).sort();
     const finalYear = !byYear || flowYear === years[years.length - 1];
+    // The class views are of the chosen year where the grid carries the class
+    // flows of that year, and of the final year where it does not.
+    const reY = finalYear ? undefined : sc.flows_re_by_year?.[flowYear];
+    const scC = reY ? { ...scY, flows_re: reY } : { ...sc, flows_re: sc.flows_re };
     return {
-      total: realWorldFlows(scY, activeProjects, {}, undefined, finalYear),
-      heavy: realWorldFlows(scY, activeProjects, {}, 'heavy'),
-      light: realWorldFlows(scY, activeProjects, {}, 'light'),
+      total: realWorldFlows(reY ? scC : scY, activeProjects, {}, undefined, finalYear || !!reY),
+      heavy: realWorldFlows(scC, activeProjects, {}, 'heavy'),
+      light: realWorldFlows(scC, activeProjects, {}, 'light'),
     };
   }, [sc, activeProjects, flowYear]);
+  /** The year the Dy/Tb and Nd/Pr views describe. */
+  const classYear = useMemo(() => {
+    const years = Object.keys((sc as any).flows_by_year ?? {}).sort();
+    const last = years[years.length - 1] ?? String(YEARS[YEARS.length - 1]);
+    return flowYear === last || sc.flows_re_by_year?.[flowYear] ? flowYear : last;
+  }, [sc, flowYear]);
   // Imported share read off the SAME object the Sankey draws, not off the raw grid
   // KPI. They disagreed — 70% on the diagram against 88% on the chip — because the
   // Sankey floors each stage with real project capacity and the KPI does not, so a
@@ -1319,7 +1329,7 @@ export default function MagnetExplorer() {
       {/* 1 — the whole chain first, so users learn the stages + connections.
           Flows are real-world-anchored (selected projects locked in, China residual). */}
       {isMobile && yearPicker}
-      <FlowDiagram flows={rwFlows} active={activeProjects} year={flowYear} pending={!flowsReady}
+      <FlowDiagram flows={rwFlows} active={activeProjects} year={flowYear} classYear={classYear} pending={!flowsReady}
         compact={!isMobile} controls={isMobile ? undefined : yearPicker} />
 
       {/* 2 — the ACTOR view. Sits directly under the planner's chain because the

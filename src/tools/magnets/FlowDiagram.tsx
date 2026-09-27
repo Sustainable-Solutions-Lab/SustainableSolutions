@@ -110,9 +110,11 @@ const outSum = (fl: FlowMap, iface: string, r: string) =>
 const inSum = (fl: FlowMap, iface: string, r: string) =>
   (fl[iface] ?? []).filter((f) => f.to === r).reduce((a, f) => a + f.value, 0);
 
-export default function FlowDiagram({ flows, active, scale = {}, year, pending = false,
+export default function FlowDiagram({ flows, active, scale = {}, year, classYear, pending = false,
                                       compact = false, controls }: {
   flows: FlowsByClass; active: Set<string>; scale?: Record<string, number>; year?: string;
+  /** The year the class views are of, where it is not the year chosen. */
+  classYear?: string;
   /** The flows for these settings have not arrived yet. The box keeps the
    *  diagram's shape, so the page does not move when they do. */
   pending?: boolean;
@@ -122,6 +124,7 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
   controls?: ReactNode;
 }) {
   const [cls, setCls] = useState<'total' | 'heavy' | 'light'>('total');
+  const shownYear = cls === 'total' ? year : (classYear ?? year);
   const fl = flows[cls];
   const wrapRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLElement>(null);
@@ -390,7 +393,7 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
       </div>
       <p style={{ fontSize: 11, opacity: 0.55, margin: 0, lineHeight: 1.35, maxWidth: 'none' }}>
         <b>Least-cost supply chain</b> showing regions’ share by stage under selected
-        assumptions{year ? <>, <b>{year}</b></> : null}. Note that masses differ by stage
+        assumptions{shownYear ? <>, <b>{shownYear}</b></> : null}. Note that masses differ by stage
         (hover any bar): first 3 columns are rare-earth oxide (RE content), while magnet
         and demand are finished-magnet mass (RE + iron + boron; ~3× heavier). Colors
         indicate US-security:
@@ -398,14 +401,13 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
         <span style={{ color: '#FDAE61', fontWeight: 600 }}> allies</span> (medium) ·
         <span style={{ color: '#D53E4F', fontWeight: 600 }}> China</span> (exposed).
       </p>
-      {cls === 'heavy' && (
-        <p style={{ fontSize: 11, opacity: 0.72, marginTop: 6, lineHeight: 1.5,
+      {cls !== 'total' && (
+        <p style={{ fontSize: 11, opacity: 0.72, margin: '6px 0 0', lineHeight: 1.45, maxWidth: 'none',
                     borderLeft: '2px solid var(--cardinal)', paddingLeft: 8 }}>
-          <b>Reading the Dy/Tb view:</b> the mining and separation bars are <b>ore and oxide tonnage</b>,
-          not pure dysprosium + terbium. A “heavy” deposit is heavy-<i>enriched</i> but still mostly light
-          REO — only ~6% of its output is Dy/Tb — so an ex-China heavy project covers far less of the heavy
-          chokepoint than its headline capacity implies, and the binding constraint is heavy <b>ore</b>
-          (a China/Myanmar ion-clay near-monopoly), not where the separation plant sits.
+          {shownYear !== year && <>This view is drawn for <b>{shownYear}</b> only. </>}
+          Bars are contained {cls === 'heavy' ? 'Dy/Tb' : 'Nd/Pr'}, not ore tonnage.
+          {cls === 'heavy' && <> Myanmar’s clays count as China, where they are separated.</>}
+          {' '}Ore from allies and the US is what the plan has built by {shownYear}, not what is mined today.
         </p>
       )}
     </section>

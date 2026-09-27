@@ -14,7 +14,8 @@
  * This module holds the shapes, the ranking, and the actor-side arithmetic,
  * which depends on nothing but the project screen.
  */
-import { screen, groupProjects, type Buildout, type Prices } from './projectFinance';
+import { screen, groupProjects, type Buildout, type ScreenOpts } from './projectFinance';
+import { splitByKind } from './facilities';
 
 export type Effect = {
   /** Fall in integrated trade risk, index points. Positive = safer. */
@@ -49,11 +50,14 @@ export function perTenth(e?: Effect): number | null {
 }
 
 export type ActorGap = {
-  /** Projects the plan calls for, and how many do not clear in full. Counted
-   *  by facility, exactly as the capacity columns count them. */
+  /** Expansions the plan calls for (one per model row), and how many do not
+   *  clear in full. */
   total: number; unfunded: number;
   /** kt of new capacity, total and not clearing, in the unit the columns draw. */
   totalKt: number; unfundedKt: number;
+  /** The capacity that does not clear, split by what stands behind it: a plant
+   *  with a name, or capacity with no announced project. */
+  unfundedNamedKt: number; unfundedGenericKt: number;
   /** Support that would close every shortfall, $M per year. */
   support: number;
 };
@@ -73,14 +77,18 @@ export type ActorRow = {
   note?: string;
 };
 
-export type ScreenOpts = Parameters<typeof screen>[2];
+export type { ScreenOpts };
 
-export function actorGap(us: Buildout[], prices: Prices, opts: ScreenOpts): ActorGap {
-  const v = groupProjects(us, screen(us, prices, opts));
+export function actorGap(us: Buildout[], opts: ScreenOpts): ActorGap {
+  const v = groupProjects(us, screen(us, opts));
+  const parts = v.flatMap((x) => splitByKind(x));
+  const short = (kind: 'named' | 'generic') =>
+    parts.filter((x) => x.kind === kind).reduce((a, x) => a + x.kt - x.fundedKt, 0);
   return {
     total: v.length, unfunded: v.filter((x) => !x.funded).length,
     totalKt: v.reduce((a, x) => a + x.newKt, 0),
     unfundedKt: v.reduce((a, x) => a + x.newKt - x.fundedKt, 0),
+    unfundedNamedKt: short('named'), unfundedGenericKt: short('generic'),
     support: v.reduce((a, x) => a + x.supportNeeded, 0),
   };
 }
@@ -89,10 +97,10 @@ export function actorGap(us: Buildout[], prices: Prices, opts: ScreenOpts): Acto
  * One actor row: the gap with the instrument fully applied, against the gap
  * now. `apply` returns the screen options with the instrument at full.
  */
-export function actorRow(name: string, us: Buildout[], prices: Prices, now: ActorGap,
+export function actorRow(name: string, us: Buildout[], now: ActorGap,
                          base: ScreenOpts, apply: (o: ScreenOpts) => ScreenOpts,
                          deployed: boolean, costPerYear: number | null, note?: string): ActorRow {
-  const after = actorGap(us, prices, apply({ ...base }));
+  const after = actorGap(us, apply({ ...base }));
   return {
     name, deployed, after, costPerYear, note,
     closedKt: Math.max(0, now.unfundedKt - after.unfundedKt),

@@ -56,7 +56,7 @@ const list = (xs: string[]) =>
   (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] ?? '');
 
 export default function HurdleComponents({ rate, onRate, instruments, onInstruments, floorLevel,
-                                           foakMult, onFoakMult, stages }: {
+                                           foakMult, onFoakMult, stages, rail = false }: {
   rate: number;
   onRate: (r: number) => void;
   instruments: Record<string, number>;
@@ -66,6 +66,8 @@ export default function HurdleComponents({ rate, onRate, instruments, onInstrume
   onFoakMult: (v: number) => void;
   /** Stages the plan asks the US to build: each can end at a different rate. */
   stages: string[];
+  /** In the controls rail or the phone's sheet: one column, no rule above. */
+  rail?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const premium = Math.max(0, rate - PLANNER_RATE);
@@ -127,10 +129,10 @@ export default function HurdleComponents({ rate, onRate, instruments, onInstrume
       note={state ? (state.inert ? <><b>No effect now.</b> {state.text}</> : state.text) : undefined} />
   );
   const group = (title: string, children: ReactNode) => (
-    <div style={{ marginTop: 14 }}>
+    <div style={{ marginTop: 12 }}>
       <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em',
                     textTransform: 'uppercase', color: 'var(--cardinal)', opacity: 0.85,
-                    margin: '0 0 7px' }}>
+                    margin: '0 0 5px' }}>
         {title}
       </div>
       <div className="hurdle-grid">{children}</div>
@@ -138,14 +140,15 @@ export default function HurdleComponents({ rate, onRate, instruments, onInstrume
   );
 
   return (
-    <div style={{ marginTop: 14, borderTop: '1px solid var(--rule)', paddingTop: 10 }}>
+    <div style={rail ? undefined
+      : { marginTop: 14, borderTop: '1px solid var(--rule)', paddingTop: 10 }}>
       <style>{`
-        .hurdle-grid { display: grid; gap: 14px 24px; grid-template-columns: 1fr; align-items: start; }
+        .hurdle-grid { display: grid; gap: 10px 24px; grid-template-columns: 1fr; align-items: start; }
         .hurdle-wide { grid-column: auto; }
-        @media (min-width: 720px) {
+        ${rail ? '' : `@media (min-width: 720px) {
           .hurdle-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
           .hurdle-wide { grid-column: span 2; }
-        }
+        }`}
         .hurdle-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       `}</style>
       <button type="button" className="hurdle-toggle" aria-expanded={open}

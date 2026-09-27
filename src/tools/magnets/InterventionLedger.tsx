@@ -29,14 +29,16 @@ const SUBHEAD = { font: '600 10px var(--font-mono)', letterSpacing: '0.08em', te
                   color: 'var(--cardinal)', opacity: 0.85, margin: '14px 0 6px' } as const;
 const MUTED = { fontSize: 11, opacity: 0.55, lineHeight: 1.45 } as const;
 
-function Row({ r, effect, tag, best, mobile }: {
+function Row({ r, effect, tag, best, mobile, wide }: {
   r: PlannerRow; effect?: { dTRI: number; cost: number }; tag: string; best?: boolean; mobile: boolean;
+  /** Room for the name and its note on fewer lines. */
+  wide?: boolean;
 }) {
   const per = perTenth(effect);
   const free = per === 0;
   return (
     <div style={{ display: 'grid', gap: '2px 10px', alignItems: 'center', fontSize: 12,
-                  gridTemplateColumns: mobile ? '1fr 84px' : '150px 1fr 96px 150px' }}>
+                  gridTemplateColumns: mobile ? '1fr 84px' : `${wide ? 230 : 150}px 1fr 96px 150px` }}>
       <span style={{ fontWeight: 600, opacity: 0.85, lineHeight: 1.25 }}>
         {r.name}
         {best && <span title="most cost-effective next move" style={{ color: 'var(--accent)' }}> ▲</span>}
@@ -69,11 +71,17 @@ function Row({ r, effect, tag, best, mobile }: {
   );
 }
 
-export default function InterventionLedger({ planner, actor, mobile = false }: {
+export default function InterventionLedger({ planner, actor, mobile = false, compact = false }: {
   planner: PlannerRow[];
   actor: { now: ActorGap; rows: ActorRow[]; hurdlePct: number };
   mobile?: boolean;
+  /** The desktop's results column: tighter padding, prose at the panel's width. */
+  compact?: boolean;
 }) {
+  const BOX = { border: '1px solid var(--rule)', borderRadius: compact ? 8 : 10,
+                padding: compact ? '10px 14px 12px' : '14px 18px 16px',
+                background: 'var(--paper)' } as const;
+  const kt1 = (v: number) => (v >= 10 ? v.toFixed(0) : v.toFixed(1));
   const { deployed, next, inert } = rankPlanner(planner);
   // Whether any row carries a rated, coloured bar; the key is shown only then.
   const rated = [...deployed.map((r) => r.bought), ...next.map((r) => r.next)]
@@ -82,16 +90,16 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
   const actorRows = [...actor.rows].sort((a, b) => b.closedKt - a.closedKt || b.supportRemoved - a.supportRemoved);
 
   return (
-    <section style={{ marginTop: 30 }}>
+    <section style={{ marginTop: compact ? 14 : 30 }}>
       <h2 style={{ ...H2, margin: '0 0 4px' }}>What interventions buy</h2>
-      <p style={{ fontSize: 11.5, opacity: 0.65, margin: '0 0 6px', maxWidth: 680, lineHeight: 1.45 }}>
+      <p style={{ fontSize: 11.5, opacity: 0.65, margin: '0 0 6px', maxWidth: compact ? 'none' : 680, lineHeight: 1.45 }}>
         Two ledgers, because a lever can improve the <b>plan</b> and separately improve
         whether <b>firms fund the plan</b>, and conflating them is how a tool starts
         implying security is free.
       </p>
 
       {/* ── PLANNER ── */}
-      <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 18px 16px', background: 'var(--paper)' }}>
+      <div style={BOX}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
           <span style={H2}>Planner: security per dollar</span>
           <span style={{ fontSize: 10.5, opacity: 0.5 }}>
@@ -105,7 +113,7 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
           <p style={{ ...MUTED, margin: 0 }}>Nothing yet: the settings deploy no intervention.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {deployed.map((r) => <Row key={r.name} r={r} effect={r.bought} tag="deployed" mobile={mobile} />)}
+            {deployed.map((r) => <Row key={r.name} r={r} effect={r.bought} tag="deployed" mobile={mobile} wide={compact} />)}
           </div>
         )}
 
@@ -117,7 +125,7 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {next.map((r, i) => <Row key={r.name} r={r} effect={r.next} tag={r.overlay ? 'assumed build' : 'next step'} best={i === 0} mobile={mobile} />)}
+            {next.map((r, i) => <Row key={r.name} r={r} effect={r.next} tag={r.overlay ? 'assumed build' : 'next step'} best={i === 0} mobile={mobile} wide={compact} />)}
           </div>
         )}
         {next.some((r) => r.overlay) && (
@@ -136,7 +144,7 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
       </div>
 
       {/* ── ACTOR ── */}
-      <div style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 18px 16px', background: 'var(--paper)', marginTop: 12 }}>
+      <div style={{ ...BOX, marginTop: compact ? 10 : 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
           <span style={H2}>Actor: the build gap, and what closes it</span>
           <span style={{ fontSize: 10.5, opacity: 0.5 }}>at a {actor.hurdlePct.toFixed(1)}% hurdle · from the capacity panel above</span>
@@ -151,24 +159,25 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
           </p>
         ) : gap.unfunded === 0 ? (
           <p style={{ ...MUTED, margin: '10px 0 0' }}>
-            <b style={{ opacity: 0.85 }}>No gap: all {gap.total} projects ({gap.totalKt.toFixed(0)} kt) clear
-            at these prices and instruments.</b> Financing conditions are not what stands
-            between this plan and its build-out.
+            <b style={{ opacity: 0.85 }}>No gap: all {kt1(gap.totalKt)} kt of new capacity the plan
+            asks for clears at this premium and these instruments.</b> Financing conditions
+            are not what stands between this plan and its build-out.
           </p>
         ) : (
           <>
             <p style={{ ...MUTED, margin: '10px 0 8px' }}>
-              <b style={{ opacity: 0.85, color: 'var(--ink)' }}>{gap.unfunded} of {gap.total} projects
-              ({gap.unfundedKt.toFixed(0)} of {gap.totalKt.toFixed(0)} kt) do not clear</b>, and closing
-              every shortfall would take {musd(gap.support)}/yr of support. Each instrument
-              below, applied in full on its own:
+              <b style={{ opacity: 0.85, color: 'var(--ink)' }}>{kt1(gap.unfundedKt)} of the {kt1(gap.totalKt)} kt
+              of new capacity the plan asks for does not clear</b>: {kt1(gap.unfundedNamedKt)} kt at
+              named plants and {kt1(gap.unfundedGenericKt)} kt with no announced project behind
+              it. Closing every shortfall would take {musd(gap.support)}/yr of support. Each
+              instrument below, applied in full on its own:
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {actorRows.map((r) => {
                 const share = gap.unfundedKt > 0 ? r.closedKt / gap.unfundedKt : 0;
                 return (
                   <div key={r.name} style={{ display: 'grid', gap: '2px 10px', alignItems: 'center', fontSize: 12,
-                                             gridTemplateColumns: mobile ? '1fr 96px' : '170px 1fr 96px 170px' }}>
+                                             gridTemplateColumns: mobile ? '1fr 96px' : `${compact ? 230 : 170}px 1fr 96px 170px` }}>
                     <span style={{ fontWeight: 600, opacity: 0.85, lineHeight: 1.25 }}>
                       {r.name}
                       <span style={{ display: 'block', fontWeight: 400, fontSize: 9.5, opacity: 0.55, fontFamily: 'var(--font-mono)' }}>
@@ -200,8 +209,10 @@ export default function InterventionLedger({ planner, actor, mobile = false }: {
             </div>
             <p style={{ ...MUTED, margin: '10px 0 0' }}>
               An offtake or a guarantee costs the public nothing unless it is called, which
-              is why they rank by what they close rather than by a price; a provenance
-              premium is paid by buyers every year and is priced here.
+              is why they rank by what they close rather than by a price. A premium is paid
+              by buyers every year and is priced here. One is observed today for oxide that
+              never touched China; none is observed for alloy or magnets once the premium
+              on their inputs is taken off, so none is assumed for them.
             </p>
           </>
         )}

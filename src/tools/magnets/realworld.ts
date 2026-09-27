@@ -229,12 +229,29 @@ function scaleTo(r: Reg, total: number): Reg {
 
 /** STEP 1: each stage's per-region PRODUCTION = max(model, selected-project capacity)
  * for ex-China, with China the residual that fills the model's total throughput (0 if
- * ex-China capacity already exceeds it). */
-function stageProduction(flows: Record<string, Flow[]>, stage: Stage, iface: string, active: Set<string>, scale: Record<string, number>, frac: number, capFrac: number, cls?: 'heavy' | 'light'): Reg {
+ * ex-China capacity already exceeds it).
+ *
+ * `re` is the scenario's real per-class flows, given when they describe the same
+ * year as `flows`. With them, a mine or separation plant's production in a class
+ * is the LARGER of what the plan itself produces of that class and what the
+ * listed projects can. Until 2026-09-27 the class views used the listed
+ * projects alone, so where the plan expands allied heavy mines tenfold the
+ * Dy/Tb view still drew China mining 98% of heavy ore, against 72% in the plan
+ * the rest of the page reports. */
+function stageProduction(flows: Record<string, Flow[]>, stage: Stage, iface: string, active: Set<string>, scale: Record<string, number>, frac: number, capFrac: number, cls?: 'heavy' | 'light', re?: Scenario['flows_re']): Reg {
   const model = modelProduction(flows, iface, frac);
   const T = sumReg(model);
   let usP: number, rowP: number;
-  if (!cls && (stage === 'mining' || stage === 'separation')) {
+  if (!cls && re && (stage === 'mining' || stage === 'separation')) {
+    // AGGREGATE view, with the plan's class flows to hand: the sum of what each
+    // class view shows, so the total is its two parts by construction.
+    usP = 0; rowP = 0;
+    for (const c of ['light', 'heavy'] as const) {
+      const m = modelProduction(re[c] ?? {}, iface, 1);
+      const cap = rampedCapacityRe(stage, active, c, scale);
+      usP += Math.max(m.USA, cap.USA); rowP += Math.max(m.RoW, cap.RoW);
+    }
+  } else if (!cls && (stage === 'mining' || stage === 'separation')) {
     // AGGREGATE view of an element-specific stage. The floor must be the SUM of the
     // class floors, not the raw project nameplate.
     //
@@ -254,8 +271,11 @@ function stageProduction(flows: Record<string, Flow[]>, stage: Stage, iface: str
     // attribute (e.g. the US's light Mountain Pass ore would show up as ~2% of HEAVY
     // mining); there are no listed US heavy-mining facilities, so US heavy = 0 here
     // until a heavy project (Round Top, …) is selected. China is the residual.
+    // That holds for the listed projects. Where the plan's own class flows are
+    // to hand, what the plan produces of the class counts as well.
     const cap = rampedCapacityRe(stage, active, cls, scale);
-    usP = cap.USA; rowP = cap.RoW;
+    usP = re ? Math.max(model.USA, cap.USA) : cap.USA;
+    rowP = re ? Math.max(model.RoW, cap.RoW) : cap.RoW;
   } else {
     // Element-AGNOSTIC alloy/magnet stage. The project capacity is in TOTAL magnet-mass
     // units, so it must be scaled to this class before flooring the (class-unit) model
@@ -307,7 +327,10 @@ function route(supplyIn: Reg, demandIn: Reg, usMix: { allied?: number; china?: n
 /** Real-world-anchored flows: project-floored production per stage (STEP 1), routed
  * stage-to-stage with the model's US sourcing mix (STEP 2) so mass is conserved
  * end-to-end and allies→US shows. See the header. */
-export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<string, number> = {}, cls?: 'heavy' | 'light'): Record<string, Flow[]> {
+export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<string, number> = {}, cls?: 'heavy' | 'light',
+                               /** `sc.flows` and `sc.flows_re` describe the same year. The class
+                                *  flows are the final year's; a snapshot of another year is not. */
+                               sameYear = true): Record<string, Flow[]> {
   // Prefer the model's REAL per-class flows (emitted as flows_re) so the heavy/light
   // Sankey shows the model's actual Dy/Tb (or Nd/Pr) shipments. Fall back to scaling the
   // aggregate flows by the RE class's mass fraction only for older JSON without flows_re.
@@ -325,7 +348,8 @@ export function realWorldFlows(sc: Scenario, active: Set<string>, scale: Record<
   };
   // STEP 1: production bars per stage.
   const prod: Record<string, Reg> = {};
-  for (const [iface, stage] of IFACE_STAGE) prod[iface] = stageProduction(flows, stage, iface, active, scale, frac, capFracFor(iface), cls);
+  const re = sc.flows_re && (cls ? true : sameYear) ? sc.flows_re : undefined;
+  for (const [iface, stage] of IFACE_STAGE) prod[iface] = stageProduction(flows, stage, iface, active, scale, frac, capFracFor(iface), cls, re);
   // STEP 2: route each interface's supply to the next stage's production (demand). The
   // magnet interface's demand is the model's consumption endpoint (who uses magnets).
   const out: Record<string, Flow[]> = {};

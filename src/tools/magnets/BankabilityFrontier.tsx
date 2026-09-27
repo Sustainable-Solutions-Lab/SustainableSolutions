@@ -5,9 +5,12 @@
  * calibration. The honest object is the FRONTIER: sweep the two assumptions the
  * US conclusion actually turns on and show the line they cross.
  *
- *   x  provenance premium — what a buyer pays extra for non-China supply. The
- *      hedging demand that motivates the whole program, and the one thing the
- *      model charges the US as a cost while never crediting it as revenue.
+ *   x  the premium — what a buyer pays extra per kilogram of a plant's product
+ *      because it never touched China, net of any premium the plant pays for
+ *      its own inputs: the premium the plant KEEPS. It is the only price lever
+ *      on the page. Every other price is fixed at China's. For a plant that
+ *      sells oxide it is per kg of Nd/Pr oxide, Dy/Tb moving in today's
+ *      proportion, and today's observed level is marked on the axis.
  *   y  US cost — the plant's cost to build and run, as a multiple of what the
  *      model charges a US plant.
  *
@@ -28,20 +31,23 @@
  */
 import { useEffect, useMemo, useRef, useState,
          type KeyboardEvent, type PointerEvent as RPointerEvent } from 'react';
-import { screen, priceAtSpread, drawnKt, type Buildout, type Prices } from './projectFinance';
+import { screen, drawnKt, defaultPremium, sellsOxide, TODAY_OXIDE_PREMIUM,
+         type Buildout } from './projectFinance';
 
 const COST_MIN = 0.5, COST_MAX = 3.5, COST_STEP = 0.05;
 /** Cost levels each frontier is solved at. */
 const NY = 31;
-const H = 300;
+const H_FULL = 300;
 const M = { l: 48, r: 16, t: 12, b: 38 };
+/** Compact, for the desktop's results column. */
+const H_COMPACT = 250;
 /** Air between the cost axis and $0, so a marker at no premium clears the tick labels. */
 const INSET = 18;
 
 /** What the premium is paid on. */
 const PER: Record<string, string> = {
-  mining: 'concentrate', separation: 'oxide', alloy: 'alloy',
-  magnet: 'magnet', recycling: 'scrap',
+  mining: 'concentrate', separation: 'Nd/Pr oxide', alloy: 'alloy',
+  magnet: 'magnet', recycling: 'Nd/Pr oxide',
 };
 const LABEL: Record<string, string> = {
   mining: 'Mining', separation: 'Separation', alloy: 'Alloying',
@@ -61,8 +67,10 @@ export type ScreenSettings = {
   floorLevel: number;
 };
 
-/** Premium each cohort needs at one cost level, $/kg of the stage's product. */
-function needs(rows: Buildout[], prices: Prices, settings: ScreenSettings, cost: number): number[] {
+/** Premium each cohort needs at one cost level, $/kg of the stage's product.
+ *  NPV is linear in the premium for every stage, an oxide maker's included,
+ *  because its prices are linear in the premium. */
+function needs(rows: Buildout[], settings: ScreenSettings, cost: number): number[] {
   const opts = {
     rate: settings.rate,
     offtake: settings.instruments.offtake,
@@ -71,8 +79,8 @@ function needs(rows: Buildout[], prices: Prices, settings: ScreenSettings, cost:
     creditSupport: settings.instruments.guarantee,
     costMult: cost, foakMult: settings.foakMult,
   };
-  const at0 = screen(rows, prices, { ...opts, provenancePremium: 0 });
-  const at1 = screen(rows, prices, { ...opts, provenancePremium: 1 });
+  const at0 = screen(rows, { ...opts, premium: 0 });
+  const at1 = screen(rows, { ...opts, premium: 1 });
   return at0.map((v, i) => (v.npv >= -1e-6 ? 0
     : -v.npv / Math.max(1e-9, at1[i].npv - v.npv)));
 }
@@ -91,36 +99,38 @@ type Stage = {
   needed: number;
 };
 
-export default function BankabilityFrontier({ rows, priceSpread, conversion, settings,
-                                              costMult, provenancePremium, onMove }: {
+export default function BankabilityFrontier({ rows, settings, costMult, premium: premiums,
+                                              onMove, compact = false }: {
   rows: Buildout[];
-  priceSpread: number;
-  conversion: number;
   settings: ScreenSettings;
   costMult: Record<string, number>;
-  provenancePremium: Record<string, number>;
+  /** The premium each stage's plants keep, $/kg of product; absent = the default. */
+  premium: Record<string, number>;
   onMove: (stage: string, premium: number, costMult: number) => void;
+  compact?: boolean;
 }) {
-  const prices = useMemo(() => priceAtSpread(priceSpread, conversion), [priceSpread, conversion]);
+  const H = compact ? H_COMPACT : H_FULL;
   const keys = ORDER.filter((s) => rows.some((b) => b.s === s));
-  // Separation premiums are quoted per kg of oxide and run higher.
-  const xMax = keys.includes('separation') ? 120 : 60;
+  // An oxide premium is per kg of Nd/Pr oxide and runs higher: today's is
+  // $71, and the axis has to hold it with room either side.
+  const oxide = keys.some(sellsOxide);
+  const xMax = oxide ? 140 : 60;
 
   const lines = useMemo(() => Object.fromEntries(keys.map((s) => {
     const mine = rows.filter((b) => b.s === s);
     return [s, Array.from({ length: NY }, (_, j) => {
       const cost = COST_MIN + (j / (NY - 1)) * (COST_MAX - COST_MIN);
-      const n = needs(mine, prices, settings, cost);
+      const n = needs(mine, settings, cost);
       return { cost, all: Math.max(...n), any: Math.min(...n) };
     })];
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  })), [rows, prices, settings.rate, settings.foakMult, settings.floorLevel,
+  })), [rows, settings.rate, settings.foakMult, settings.floorLevel,
         settings.instruments.offtake, settings.instruments.floor, settings.instruments.guarantee]);
 
   const stages: Stage[] = keys.map((s) => {
     const mine = rows.filter((b) => b.s === s);
-    const premium = provenancePremium[s] ?? 0, cost = costMult[s] ?? 1;
-    const n = needs(mine, prices, settings, cost);
+    const premium = premiums[s] ?? defaultPremium(s), cost = costMult[s] ?? 1;
+    const n = needs(mine, settings, cost);
     const kt = mine.map(drawnKt);
     const asked = kt.reduce((a, v) => a + v, 0) || 1;
     return {
@@ -253,7 +263,7 @@ export default function BankabilityFrontier({ rows, priceSpread, conversion, set
                            -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
         .frontier-marker:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
         .frontier-rows { display: grid; gap: 8px; grid-template-columns: 1fr; }
-        @media (min-width: 720px) {
+        @container (min-width: 640px) {
           .frontier-rows { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
         .frontier-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -277,14 +287,15 @@ export default function BankabilityFrontier({ rows, priceSpread, conversion, set
         </p>
       ) : (
         <>
-          <p style={{ fontSize: 11, opacity: 0.65, lineHeight: 1.45, margin: '0 0 10px', maxWidth: 640 }}>
+          <p style={{ fontSize: 11, opacity: 0.65, lineHeight: 1.45, margin: '0 0 10px' }}>
             One line for each stage the plan asks the United States to build. To the
             right of its line, everything asked of that stage clears; in the faint band
-            beside it, only part does. Each circle is where your assumptions put that stage.
-            The provenance premium is what a buyer pays extra for that stage&rsquo;s own
-            product because it is not Chinese, with nothing added to what the plant pays
-            for its inputs. It is set stage by stage, and is separate from the oxide
-            premium above.
+            beside it, only part does. Each circle is where your assumptions put that
+            stage. Every price is China&rsquo;s except the premium: what a buyer pays
+            extra per kilogram of a plant&rsquo;s product because it never touched
+            China, after any premium the plant pays for its own inputs.
+            {oxide && <> For oxide it is per kilogram of Nd/Pr oxide, with Dy/Tb oxide
+              in today&rsquo;s proportion, and opens at today&rsquo;s observed level.</>}
           </p>
 
           <div ref={wrap} style={{ position: 'relative', height: H, touchAction: 'pan-y',
@@ -313,7 +324,7 @@ export default function BankabilityFrontier({ rows, priceSpread, conversion, set
             }}
             onPointerLeave={() => setHover(null)}>
             <svg width={w} height={H} role="img" style={{ display: 'block', overflow: 'visible' }}
-              aria-label="Provenance premium each stage needs to clear, against US cost">
+              aria-label="The premium each stage needs to clear, against US cost">
               <defs>
                 <clipPath id="frontier-clip">
                   <rect x={M.l} y={M.t} width={iw + INSET} height={ih} />
@@ -345,8 +356,29 @@ export default function BankabilityFrontier({ rows, priceSpread, conversion, set
               <line x1={M.l} x2={w - M.r} y1={H - M.b} y2={H - M.b} stroke="var(--rule-strong)" />
               <text x={M.l + INSET + iw / 2} y={H - 6} textAnchor="middle"
                 style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-2)' }}>
-                provenance premium, $ per kg of the stage’s product
+                premium the plant keeps, $ per kg of its product
               </text>
+              {/* where the premium stands today, for the plants that sell oxide */}
+              {oxide && (
+                <g>
+                  <line x1={sx(TODAY_OXIDE_PREMIUM)} x2={sx(TODAY_OXIDE_PREMIUM)} y1={M.t}
+                    y2={H - M.b} stroke="var(--ink-3)" strokeWidth={1} strokeDasharray="3 3" />
+                  {/* on one line where there is room to the right of the mark,
+                      on two where there is not (a phone) */}
+                  {w - M.r - sx(TODAY_OXIDE_PREMIUM) > 200 ? (
+                    <text x={sx(TODAY_OXIDE_PREMIUM) + 4} y={M.t + 9}
+                      style={{ font: '400 9px var(--font-mono)', fill: 'var(--ink-3)' }}>
+                      today’s observed oxide premium, ${TODAY_OXIDE_PREMIUM.toFixed(0)}
+                    </text>
+                  ) : (
+                    <text x={sx(TODAY_OXIDE_PREMIUM) + 4} y={M.t + 9}
+                      style={{ font: '400 9px var(--font-mono)', fill: 'var(--ink-3)' }}>
+                      <tspan x={sx(TODAY_OXIDE_PREMIUM) + 4}>today’s observed</tspan>
+                      <tspan x={sx(TODAY_OXIDE_PREMIUM) + 4} dy={10}>oxide premium, ${TODAY_OXIDE_PREMIUM.toFixed(0)}</tspan>
+                    </text>
+                  )}
+                </g>
+              )}
               <text transform={`translate(11, ${M.t + ih / 2}) rotate(-90)`} textAnchor="middle"
                 style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-2)' }}>
                 US cost, × the model’s
@@ -387,7 +419,7 @@ export default function BankabilityFrontier({ rows, priceSpread, conversion, set
               const d = 14 + 9 * k;
               return (
                 <div key={s.key} role="slider" tabIndex={0} className="frontier-marker"
-                  aria-label={`${LABEL[s.key]}: provenance premium and US cost`}
+                  aria-label={`${LABEL[s.key]}: premium and US cost`}
                   aria-valuemin={0} aria-valuemax={xMax} aria-valuenow={s.premium}
                   aria-valuetext={`$${s.premium.toFixed(0)} per kilogram premium, ${s.cost.toFixed(2)} times cost, `
                     + `${(s.share * 100).toFixed(0)}% of capacity clears`}

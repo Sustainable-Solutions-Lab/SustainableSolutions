@@ -9,7 +9,7 @@
  */
 
 import { Pickaxe, FlaskConical, Flame, Magnet, Zap } from 'lucide-react';
-import { useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { facilityBreakdown, type Stage } from './projects';
 
 type Flow = { from: string; to: string; value: number };
@@ -73,14 +73,21 @@ const cleanName = (name: string, stage: Stage) => {
     .replace(/[,;]\s*\)/g, ')').replace(/\(\s*[,;]?\s*\)/g, '')   // tidy "(Estonia, )" / empty "()"
     .replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').replace(/\s{2,}/g, ' ').trim();
 };
-const W = 900, PADX = 64, PADY = 52, NODE_W = 16;
+// The canvas. On a phone it is drawn 900 wide and scaled to the screen. In the
+// desktop's results column (`compact`) it is drawn at the width it is given, in
+// true pixels, and shallower, so that the capacity columns under it are in view
+// with it.
+const W_FULL = 900, PADX = 64, PADY = 52, NODE_W = 16;
+const INNER_H_FULL = 408, INNER_H_COMPACT = 268;
+/** Under the bars when there is no return loop: the caption sits right below. */
+const FOOT = 6;
 // One Lucide glyph per process stage, set inline to the LEFT of the column
 // label. Inline rather than stacked above because PADY is 52 and a stacked
 // icon pushes the two-line sub-labels into the top of the bars.
 // The label font is MONOSPACE, so half its width is exactly
 // length x 9.6 / 2 and the icon can be placed deterministically without
 // measuring text.
-const LABEL_CH = 9.6, ICON = 15;
+const ICON = 15;
 const STAGE_ICON: Record<string, JSX.Element> = {
   Mining: <Pickaxe size={ICON} strokeWidth={1.5} />,
   Separation: <FlaskConical size={ICON} strokeWidth={1.5} />,
@@ -97,24 +104,48 @@ const STAGE_ICON: Record<string, JSX.Element> = {
 const LOOP_GAP = 3;        // between nested loops
 const LOOP_CLEAR = 18;     // between the bars and the nearest loop
 const LOOP_BEND = 8;       // inside radius of the tightest loop
-const LOOP_LABEL = 22;     // room for the caption under the lowest loop
-const innerH = 408;
-const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
+const LOOP_LABEL = 20;     // room for the label under the lowest loop
 
 const outSum = (fl: FlowMap, iface: string, r: string) =>
   (fl[iface] ?? []).filter((f) => f.from === r).reduce((a, f) => a + f.value, 0);
 const inSum = (fl: FlowMap, iface: string, r: string) =>
   (fl[iface] ?? []).filter((f) => f.to === r).reduce((a, f) => a + f.value, 0);
 
-export default function FlowDiagram({ flows, active, scale = {}, year, pending = false }: {
+export default function FlowDiagram({ flows, active, scale = {}, year, pending = false,
+                                      compact = false, controls }: {
   flows: FlowsByClass; active: Set<string>; scale?: Record<string, number>; year?: string;
   /** The flows for these settings have not arrived yet. The box keeps the
    *  diagram's shape, so the page does not move when they do. */
   pending?: boolean;
+  /** In the desktop's results column: drawn at its own width, and shallower. */
+  compact?: boolean;
+  /** Shown in the heading row, after the title (the year selector). */
+  controls?: ReactNode;
 }) {
   const [cls, setCls] = useState<'total' | 'heavy' | 'light'>('total');
   const fl = flows[cls];
   const wrapRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLElement>(null);
+  const [boxW, setBoxW] = useState(W_FULL);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el || !compact || typeof ResizeObserver === 'undefined') return;
+    const measure = () => {
+      const cs = getComputedStyle(el);
+      const w = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      if (w > 0) setBoxW(Math.round(w));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [compact]);
+  const W = compact ? Math.max(640, boxW) : W_FULL;
+  const innerH = compact ? INNER_H_COMPACT : INNER_H_FULL;
+  const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
+  // Type is in true pixels when compact, and scaled with the drawing when not.
+  const F = compact ? { pct: 13, label: 14, sub: 10.5 } : { pct: 15, label: 16, sub: 11 };
+  const LABEL_CH = F.label * 0.6;   // monospace: a character is 0.6 em wide
   type Hover = { x: number; y: number; flip: boolean; head: string; sub: string; rows: { name: string; country: string; pct: number; mass: number }[]; note: string };
   const [hover, setHover] = useState<Hover | null>(null);
 
@@ -182,8 +213,7 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
   const loopSpan = loops.reduce((a, r) => a + r.w + LOOP_GAP, 0);
   const padRight = Math.max(PADX, loops.length ? LOOP_CLEAR + loopSpan + 6 : 0);
   const CW = W - PADX + padRight;
-  const H = Math.max(2 * PADY + innerH,
-    PADY + innerH + (loops.length ? LOOP_CLEAR + loopSpan + LOOP_LABEL + 8 : 0));
+  const H = PADY + innerH + (loops.length ? LOOP_CLEAR + loopSpan + LOOP_LABEL : FOOT);
   if (loops.length) {
     const yFloor = PADY + innerH;
     const xOut = colX[iDem] + NODE_W, xIn = colX[iSep];
@@ -251,9 +281,13 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
   });
 
   return (
-    <section style={{ border: '1px solid var(--rule)', borderRadius: 10, padding: 20, background: 'var(--paper)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ font: '600 13px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Global supply chain</h2>
+    <section ref={boxRef} style={{ border: '1px solid var(--rule)', borderRadius: compact ? 8 : 10,
+                      padding: compact ? '10px 14px 10px' : 20, background: 'var(--paper)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: compact ? 2 : 6, flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <h2 style={{ font: `600 ${compact ? 12 : 13}px var(--font-mono)`, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6, margin: 0 }}>Global supply chain</h2>
+          {controls}
+        </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 4 }}>
             {(['total', 'heavy', 'light'] as const).map((c) => (
@@ -275,7 +309,7 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
         </div>
       </div>
       {pending && (
-        <div role="status" style={{ aspectRatio: `${W} / ${2 * PADY + innerH}`, display: 'flex',
+        <div role="status" style={{ aspectRatio: `${W} / ${PADY + innerH + FOOT}`, display: 'flex',
                       alignItems: 'center', justifyContent: 'center',
                       font: '400 12px var(--font-mono)', color: 'var(--ink-3)' }}>
           Loading the flows for these settings
@@ -292,7 +326,7 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
               const s = segY[i][r], hh = s.y1 - s.y0;
               if (hh < 0.6) return null;
               return <rect key={r} x={colX[i]} y={s.y0} width={NODE_W} height={hh} fill={REGION_COLOR[r]} stroke="var(--paper)" strokeWidth={1}
-                style={{ cursor: 'help' }}
+                style={{ cursor: 'pointer' }}
                 onMouseMove={(e) => onNodeMove(e, i, r, hh)} onMouseLeave={() => setHover(null)} />;
             })}
             {REGIONS.map((r) => {
@@ -302,7 +336,7 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
               return (
                 <text key={r + 'p'} x={last ? colX[i] - 6 : colX[i] + NODE_W + 6} y={(s.y0 + s.y1) / 2}
                   textAnchor={last ? 'end' : 'start'} dominantBaseline="central"
-                  style={{ font: '600 15px var(--font-mono)', fill: REGION_COLOR[r] }}>
+                  style={{ font: `600 ${F.pct}px var(--font-mono)`, fill: REGION_COLOR[r] }}>
                   {Math.round((h / innerH) * 100)}%
                 </text>
               );
@@ -311,12 +345,12 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
               width={ICON} height={ICON} style={{ color: 'var(--ink)', opacity: 0.7, overflow: 'visible' }}>
               {STAGE_ICON[c.label]}
             </svg>
-            <text x={colX[i] + NODE_W / 2} y={15} textAnchor="middle" style={{ font: '600 16px var(--font-mono)', fill: 'var(--ink)', opacity: 0.85, cursor: 'help' }}>
+            <text x={colX[i] + NODE_W / 2} y={15} textAnchor="middle" style={{ font: `600 ${F.label}px var(--font-mono)`, fill: 'var(--ink)', opacity: 0.85, cursor: 'default' }}>
               {c.label}<title>{c.desc}</title>
             </text>
             {wrapLabel(c.sub).map((ln, li, arr) => (
               <text key={`sub${li}`} x={colX[i] + NODE_W / 2} y={(arr.length === 2 ? 31 : 36) + li * 11} textAnchor="middle"
-                style={{ font: '400 11px var(--font-mono)', fill: 'var(--accent)', opacity: 0.75, cursor: 'help' }}>
+                style={{ font: `400 ${F.sub}px var(--font-mono)`, fill: 'var(--accent)', opacity: 0.75, cursor: 'default' }}>
                 {ln}<title>{c.desc}</title>
               </text>
             ))}
@@ -344,7 +378,7 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
         </div>
       )}
       </div>
-      <p style={{ fontSize: 11, opacity: 0.55, margin: '1px 0 0', lineHeight: 1.35, maxWidth: 'none' }}>
+      <p style={{ fontSize: 11, opacity: 0.55, margin: 0, lineHeight: 1.35, maxWidth: 'none' }}>
         <b>Least-cost supply chain</b> showing regions’ share by stage under selected
         assumptions{year ? <>, <b>{year}</b></> : null}. Note that masses differ by stage
         (hover any bar): first 3 columns are rare-earth oxide (RE content), while magnet

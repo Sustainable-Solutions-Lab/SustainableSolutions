@@ -42,3 +42,7 @@ __pycache__/
 
 # food-emissions local dev tiles (production copy lives on R2)
 public/tools/food-emissions/*.pmtiles
+
+# magnets scenario grid: model output kept in Dropbox, fetched by
+# scripts/fetch-magnet-grid.js (docs/magnet-grid.md). The manifest IS committed.
+src/tools/magnets/scenarios*.json

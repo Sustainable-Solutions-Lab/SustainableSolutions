@@ -11,7 +11,9 @@
     "astro": "astro",
     "fetch:sheets": "node scripts/fetch-sheets.js",
     "build:materials": "node scripts/build-materials.js",
-    "prebuild": "node scripts/fetch-sheets.js && node scripts/fetch-external-pubs.js && node scripts/fetch-github.js",
+    "prebuild": "node scripts/fetch-sheets.js && node scripts/fetch-external-pubs.js && node scripts/fetch-github.js && node scripts/fetch-magnet-grid.js",
+    "predev": "node scripts/fetch-magnet-grid.js",
+    "fetch:magnet-grid": "node scripts/fetch-magnet-grid.js",
     "refresh-scholar": "node scripts/scrape-scholar.js && node scripts/scholar-to-csv.js && node scripts/commit-scholar-refresh.js",
     "fetch:github": "node scripts/fetch-github.js"
   },
@@ -39,6 +41,7 @@
     "d3-scale-chromatic": "^3.1.0",
     "d3-selection": "^3.0.0",
     "d3-shape": "^3.2.0",
+    "fflate": "^0.8.2",
     "lucide-react": "^0.469.0",
     "maplibre-gl": "^4.5.0",
     "pmtiles": "^3.2.0",

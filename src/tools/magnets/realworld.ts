@@ -57,8 +57,12 @@ function rampedCapacity(stage: Stage, active: Set<string>, scale: Record<string,
 // demand. Per-stage requirement = US magnet demand × this factor.
 const OXIDE_INTENSITY = 0.3596;
 const AVG_RECOVERY = 0.86;
+// Each factor is in the unit the project list states capacity in: separation in
+// NdPr + Dy/Tb oxide, alloy in tonnes of ALLOY (a kg of magnet takes a kg of
+// alloy), magnets in finished magnet. Alloy was compared in oxide until 2026-09-27,
+// which credited an alloy plant with 2.8 times the magnets it can supply.
 const STAGE_REQ_FACTOR: Record<string, number> = {
-  mining: OXIDE_INTENSITY / AVG_RECOVERY, separation: OXIDE_INTENSITY, alloy: OXIDE_INTENSITY, magnet: 1,
+  mining: OXIDE_INTENSITY / AVG_RECOVERY, separation: OXIDE_INTENSITY, alloy: 1, magnet: 1,
 };
 
 /** Horizon-average annual US magnet demand from the pathway stack. */

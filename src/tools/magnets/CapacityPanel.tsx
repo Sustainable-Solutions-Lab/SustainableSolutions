@@ -46,9 +46,16 @@ export type ReClass = 'all' | 'heavy' | 'light';
 /** What each stage's kt actually measures. Named per row because the bars are
  *  NOT commensurate across stages — 42 kt of concentrate is not 42 kt of magnet. */
 const PRODUCT: Record<string, string> = {
-  mining: 'concentrate', separation: 'oxide', alloy: 'alloy',
-  magnet: 'finished magnets', recycling: 'recovered oxide',
+  mining: 'concentrate', separation: 'Nd/Pr + Dy/Tb oxide', alloy: 'alloy',
+  magnet: 'finished magnets', recycling: 'scrap processed',
 };
+/** Tonnage to DRAW for a build-out row. The model states separation in TREO fed;
+ *  the plants a reader knows are rated in the Nd/Pr and Dy/Tb oxide they make, so
+ *  a separation row is drawn as the magnet oxide in its feed. Every other stage
+ *  is already in the unit its plants are rated in. */
+const drawnKt = (b: Buildout): number =>
+  b.s === 'separation' && b.basket
+    ? b.kt * ((b.basket.NdPr ?? 0) + (b.basket.DyTb ?? 0)) : b.kt;
 const GREEN = 'var(--brand-green)';
 const RED = '#D53E4F';
 /** One operating plant, for the hairlines inside the existing block. */
@@ -161,14 +168,38 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
     return agg > 1e-9 ? sum(re) / agg : 1;
   };
 
-  const us = buildout.filter((b) => b.r === 'USA');
-  const verdicts: Verdict[] = screen(us, priceAtSpread(priceSpread, conversion), {
+  // Committed construction is built whatever the screen says, so it is not judged.
+  const us = buildout.filter((b) => b.r === 'USA' && !b.c);
+  const cohorts: Verdict[] = screen(us, priceAtSpread(priceSpread, conversion), {
     rate,
     offtake: instruments.offtake,
     floorInterface: 'magnet', floorRelief: instruments.floor, floorLevel,
     creditSupport: instruments.guarantee,
     costMult, foakMult, provenancePremium,
   });
+  // The planner's build-out arrives as COHORTS, one per facility per year it
+  // expands, because each is its own investment decision. A reader thinks in
+  // plants, so the cohorts of one facility are drawn and named together; the
+  // tonnage that clears is still counted cohort by cohort.
+  type Plant = Verdict & { fundedKt: number; cohorts: (Verdict & { year?: number })[] };
+  const plants = new Map<string, Plant>();
+  cohorts.forEach((v, i) => {
+    const kt = drawnKt(us[i]);
+    const c = { ...v, newKt: kt, year: us[i].y0 };
+    const p = plants.get(`${v.stage}|${v.facility}`);
+    if (!p) {
+      plants.set(`${v.stage}|${v.facility}`,
+        { ...c, fundedKt: v.funded ? kt : 0, cohorts: [c] });
+    } else {
+      p.newKt += kt; p.fundedKt += v.funded ? kt : 0;
+      p.npv += v.npv; p.plannerNpv += v.plannerNpv;
+      p.supportNeeded += v.supportNeeded;
+      p.funded = p.funded && v.funded;
+      p.leadYears = Math.max(p.leadYears, v.leadYears);
+      p.cohorts.push(c);
+    }
+  });
+  const verdicts: Plant[] = [...plants.values()];
   const byStage = (s: string) => verdicts.filter((v) => v.stage === s);
   const incKt = (s: string) => (incumbent[s] ?? []).reduce((a, f) => a + f.kt, 0);
   const maxKt = Math.max(0.001, ...STAGES.map((s) =>
@@ -217,7 +248,7 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
             </span>
           </span>
         </label>
-        <label title={`What turning alloy into a finished magnet is worth, over and above the alloy consumed. Every region is paid the same spread, so this is the price a US plant must live on. The default is what the marginal CHINESE producer needs — its cost plus a normal return, $${MAGNET_CONVERSION_DEFAULT.toFixed(2)}/kg from the model's plant data — because in a market China dominates that is where the price settles. US conversion costs $13-16/kg all-in at its hurdle, so at the competitive spread no US plant clears unaided: the provenance premium below, or an offtake, is what has to make up the difference. $${LEGACY_CONVERSION.magnet} is the earlier asserted value, under which the plan looked bankable almost everywhere.`}
+        <label title={`What turning alloy into a finished magnet is worth, over and above the alloy consumed. Every region is paid the same spread, so this is the price a US plant must live on. The default is what the marginal CHINESE producer needs — its cost plus a normal return, $${MAGNET_CONVERSION_DEFAULT.toFixed(2)}/kg from the model's plant data — because in a market China dominates that is where the price settles. US conversion costs several times that all-in at its hurdle, so at the competitive spread no US plant clears unaided: the provenance premium below, or an offtake, is what has to make up the difference. $${LEGACY_CONVERSION.magnet} is the earlier asserted value, under which the plan looked bankable almost everywhere.`}
           style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
           <span style={{ whiteSpace: 'nowrap' }}>Conversion spread</span>
           <input type="range" min={2} max={40} step={0.25} value={conversion}
@@ -360,7 +391,7 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
           .filter((f) => f.kt > 0).sort((a, b) => b.kt - a.kt);
         const inc = fac.reduce((a, f) => a + f.kt, 0);
         const asked = vs.reduce((a, v) => a + v.newKt, 0) * cf;
-        const funded = vs.filter((v) => v.funded).reduce((a, v) => a + v.newKt, 0) * cf;
+        const funded = vs.reduce((a, v) => a + v.fundedKt, 0) * cf;
         const declined = asked - funded;
         if (inc <= 0 && asked <= 0) return null;
         const pc = (v: number) => `${(v / maxKt) * 100}%`;
@@ -463,14 +494,16 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
                             font: '400 9.5px var(--font-mono)', opacity: 0.65 }}>
                 {vs.map((v) => (
                   <span key={v.facility} title={
+                    `${v.newKt.toFixed(1)} kt/yr in ${v.cohorts.length} step${v.cohorts.length > 1 ? 's' : ''}` +
+                    ` (${v.cohorts.map((c) => `${c.year ?? ''} +${c.newKt.toFixed(1)}`).join(', ')}) · ` +
                     `NPV ${v.npv.toFixed(0)} $M at ${(v.effRate * 100).toFixed(1)}% · ` +
                     `${v.plannerNpv.toFixed(0)} $M at the planner's ${(PLANNER_RATE * 100).toFixed(0)}% ` +
                     `(financing wedge ${(v.plannerNpv - v.npv).toFixed(0)} $M) · ` +
-                    `${v.leadYears} yr build · breakeven ${v.breakeven.toFixed(1)} $/kg` +
+                    `${v.leadYears} yr build` +
                     (v.funded ? '' : ` · needs ${v.supportNeeded.toFixed(0)} $M/yr to clear`)}>
                     <span style={{ color: v.funded ? 'var(--accent)' : 'var(--ink-3)' }}>
-                      {v.funded ? '●' : '○'}
-                    </span>{' '}{v.facility}
+                      {v.funded ? '●' : v.fundedKt > 0.005 ? '◐' : '○'}
+                    </span>{' '}{v.facility.replace(/_/g, ' ')} +{v.newKt.toFixed(1)}
                     {!v.funded && (
                       <span style={{ opacity: 0.8 }}> · needs {v.supportNeeded.toFixed(0)} $M/yr</span>
                     )}
@@ -508,7 +541,7 @@ export default function CapacityPanel({ buildout, incumbent, priceSpread, onPric
         ) : (
           <span>
             <strong>{shortfall.length} of {verdicts.length} expansions do not clear</strong> at
-            a {(rate * 100).toFixed(1)}% hurdle: {shortfall.map((v) => v.facility).join(', ')}.
+            a {(rate * 100).toFixed(1)}% hurdle: {shortfall.map((v) => v.facility.replace(/_/g, ' ')).join(', ')}.
             Closing that needs {shortfall.reduce((a, v) => a + v.supportNeeded, 0).toFixed(0)} $M/yr
             of support, or an instrument that removes enough risk to lower the rate itself.
           </span>

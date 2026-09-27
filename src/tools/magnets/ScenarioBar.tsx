@@ -40,6 +40,10 @@ function Chip({ axis, value, onJump }: { axis: AxisKey; value: number; onJump?: 
   const exact = dom.some((d) => Math.abs(d - value) < 1e-6);
   const derived = DERIVED.includes(axis);
   const clamped = Math.max(lo, Math.min(hi, value));
+  // Outside what was solved. The answer shown is the one at the nearest solved
+  // value, and it has to say so: a setting that silently reads as another one
+  // is how the 1.15 slice went unnoticed for months.
+  const outside = Math.abs(clamped - value) > 1e-6;
   return (
     <div
       onClick={derived ? onJump : undefined}
@@ -62,7 +66,12 @@ function Chip({ axis, value, onJump }: { axis: AxisKey; value: number; onJump?: 
       </div>
       <div style={{ font: '600 12px var(--font-mono)', marginTop: 1, color: 'var(--ink)' }}>
         {FMT[axis](value)}
-        {!exact && <span style={{ fontSize: 9, opacity: 0.45, marginLeft: 3 }}>interp</span>}
+        {outside
+          ? <span style={{ fontSize: 9, opacity: 0.7, marginLeft: 3 }}
+              title={`Beyond the solved range (${lo} to ${hi}). Results are shown at ${FMT[axis](clamped)}.`}>
+              shown at {FMT[axis](clamped)}
+            </span>
+          : !exact && <span style={{ fontSize: 9, opacity: 0.45, marginLeft: 3 }}>interp</span>}
       </div>
       {/* domain track: ticks are solved cells, the dot is you */}
       <div style={{ position: 'relative', height: 9, marginTop: 3 }}>

@@ -370,15 +370,36 @@ export function evaluate(b: Buildout, prices: Prices, opts: {
   };
 }
 
+/** A quantity that is one number for every stage, or one per stage. A provenance
+ *  premium and a cost disadvantage are per-stage things: $10 a kilogram is a
+ *  different claim about alloy than about finished magnets, and the US pays a
+ *  different penalty to separate than to sinter. */
+export type ByStage = number | Record<string, number>;
+const forStage = (v: ByStage | undefined, stage: string, fallback: number): number =>
+  v === undefined ? fallback : typeof v === 'number' ? v : (v[stage] ?? fallback);
+
+/** What a separation plant's premium is quoted on. The screen works per kg of
+ *  TREO fed; the premium a buyer pays is per kg of the Nd/Pr and Dy/Tb oxide that
+ *  comes out, so it is scaled by the magnet-oxide share of the feed. */
+export const premiumBasis = (b: Buildout): number =>
+  b.s === 'separation' && b.basket
+    ? (b.basket.NdPr ?? 0) + (b.basket.DyTb ?? 0) : 1;
+
 /** Screen a whole build-out. Relief is resolved PER STAGE, because a price floor
- *  on magnets does nothing for a separation plant — see instrumentRelief. */
+ *  on magnets does nothing for a separation plant — see instrumentRelief. So are
+ *  the provenance premium and the cost disadvantage, when given per stage. */
 export const screen = (rows: Buildout[], prices: Prices, opts: {
   offtake?: number; floorInterface?: string | null; floorRelief?: number;
   floorLevel?: number; creditSupport?: number;
-  support?: number; rate?: number; costMult?: number; foakMult?: number;
-  provenancePremium?: number;
+  support?: number; rate?: number; costMult?: ByStage; foakMult?: number;
+  provenancePremium?: ByStage;
 } = {}): Verdict[] =>
-  rows.map((b) => evaluate(b, prices, { ...opts, relief: instrumentRelief(b.s, opts) }));
+  rows.map((b) => evaluate(b, prices, {
+    ...opts,
+    costMult: forStage(opts.costMult, b.s, 1),
+    provenancePremium: forStage(opts.provenancePremium, b.s, 0) * premiumBasis(b),
+    relief: instrumentRelief(b.s, opts),
+  }));
 
 /** Does this stage's margin depend on the price world at all? Conversion stages
  *  earn a fixed spread over their input (magnet = alloy + spread), so their revenue and their

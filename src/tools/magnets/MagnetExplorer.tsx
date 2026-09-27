@@ -372,9 +372,11 @@ export default function MagnetExplorer() {
   const [rdCostPerKg, setRdCostPerKg] = useState(50);   // $ per kg of capability unlocked
   // The actor-side calibration. Exposed rather than fixed because these are the
   // numbers the US conclusion turns on and the ones we are least sure of.
-  const [costMult, setCostMult] = useState(1);            // x the US cost disadvantage
+  // Per STAGE: the reader drags one marker for each stage the plan asks the US to
+  // build. A stage with no entry sits at the calibration (1x cost, no premium).
+  const [costMult, setCostMult] = useState<Record<string, number>>({});          // x the US cost disadvantage
   const [foakMult, setFoakMult] = useState(1);            // x the FOAK premium above one
-  const [provenancePremium, setProvenancePremium] = useState(0);   // $/kg for non-China supply
+  const [provenancePremium, setProvenancePremium] = useState<Record<string, number>>({});   // $/kg of the stage's product
   const [ceilingReady, setCeilingReady] = useState(abatementCeilingReady());
   useEffect(() => {
     if (ceilingReady || !HAS_ABATEMENT_CEILING) return;
@@ -733,7 +735,7 @@ export default function MagnetExplorer() {
       actorRow('Price floor, as de-risking', us, prices, now, base, (o) => ({ ...o, floorLevel: 1, floorRelief: RELIEF_DEFAULTS.floor }),
         pfloor > 0, null, 'covered stages only'),
       actorRow('Provenance premium at today\'s spread', us, prices, now, base, (o) => ({ ...o, provenancePremium: EXCHINA_SPREAD_PER_MAGNET_KG }),
-        provenancePremium > 0, EXCHINA_SPREAD_PER_MAGNET_KG * ktYr, `$${EXCHINA_SPREAD_PER_MAGNET_KG.toFixed(0)}/kg, paid by buyers`),
+        Object.values(provenancePremium).some((v) => v > 0), EXCHINA_SPREAD_PER_MAGNET_KG * ktYr, `$${EXCHINA_SPREAD_PER_MAGNET_KG.toFixed(0)}/kg, paid by buyers`),
       actorRow('Public finance at the planner\'s rate', us, prices, now, base, (o) => ({ ...o, rate: PLANNER_RATE }),
         hurdle <= PLANNER_RATE + 1e-9, null, `${(PLANNER_RATE * 100).toFixed(0)}% instead of ${(hurdle * 100).toFixed(1)}%`),
     ];

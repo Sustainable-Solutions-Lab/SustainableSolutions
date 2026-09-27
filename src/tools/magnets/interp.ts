@@ -5,6 +5,26 @@
  * driven by the client-side demand builder; the rest are supply-side sliders.
  */
 import data from './scenarios.json';
+// Every other slice is a STATIC FILE fetched when first needed, not a module.
+// As modules the twelve files put some 400 MB of JSON through the bundler, and
+// the build was killed for memory once the grid grew to 46,656 cells. `?url`
+// makes the bundler copy a file and hand back its address, nothing more.
+import url_pf1 from './scenarios.pf1.json?url';
+import url_pf2 from './scenarios.pf2.json?url';
+import url_ab1 from './scenarios.ab1.json?url';
+import url_ab1_pf1 from './scenarios.ab1.pf1.json?url';
+import url_ab1_pf2 from './scenarios.ab1.pf2.json?url';
+import url_at2 from './scenarios.at2.json?url';
+import url_pf1_at2 from './scenarios.pf1.at2.json?url';
+import url_pf2_at2 from './scenarios.pf2.at2.json?url';
+import url_ab1_at2 from './scenarios.ab1.at2.json?url';
+import url_ab1_pf1_at2 from './scenarios.ab1.pf1.at2.json?url';
+import url_ab1_pf2_at2 from './scenarios.ab1.pf2.at2.json?url';
+const fetchSlice = (url: string) => (): Promise<any> =>
+  fetch(url).then((r) => {
+    if (!r.ok) throw new Error(`grid slice ${url}: ${r.status}`);
+    return r.json();
+  });
 
 export type Flow = { from: string; to: string; value: number };
 export type Scenario = {
@@ -116,12 +136,11 @@ const key = (s: Point) =>
 const LOOKUP = new Map(SC.map((s) => [key(s), s]));
 
 // Price-floor slices ship separately so the default page load is unchanged: the eager
-// grid IS the floor=0 slice; the half/full slices (~3 MB gz) are dynamically imported
-// (code-split into lazy chunks) the first time the user engages the price-floor slider,
+// grid IS the floor=0 slice; the half/full slices are fetched the first time the user engages the price-floor slider,
 // then merged into LOOKUP. Until loaded, a pfloor>0 query gracefully degrades to floor=0.
 const SLICE_LOADERS: Record<string, () => Promise<any>> = {
-  '0.5': () => import('./scenarios.pf1.json'),
-  '1.0': () => import('./scenarios.pf2.json'),
+  '0.5': fetchSlice(url_pf1),
+  '1.0': fetchSlice(url_pf2),
 };
 const loadedSlices = new Set<string>();
 let pfLoadPromise: Promise<void> | null = null;
@@ -146,9 +165,9 @@ export function ensurePriceFloorSlices(): Promise<void> {
 // keyed (abunlock, pfloor) because the ceiling crosses the floor: all three have to
 // be resident before a query at unlock=1 can be answered at any floor level.
 const AB_SLICE_LOADERS: Record<string, () => Promise<any>> = {
-  '1.0|0.0': () => import('./scenarios.ab1.json'),
-  '1.0|0.5': () => import('./scenarios.ab1.pf1.json'),
-  '1.0|1.0': () => import('./scenarios.ab1.pf2.json'),
+  '1.0|0.0': fetchSlice(url_ab1),
+  '1.0|0.5': fetchSlice(url_ab1_pf1),
+  '1.0|1.0': fetchSlice(url_ab1_pf2),
 };
 const loadedAb = new Set<string>();
 let abLoadPromise: Promise<void> | null = null;
@@ -176,12 +195,12 @@ export function ensureAbatementCeilingSlices(): Promise<void> {
 // tariff slider goes above the eager levels; until then a query up there
 // degrades to the highest eager level rather than emptying out.
 const AT_SLICE_LOADERS: Record<string, () => Promise<any>> = {
-  '0.0|0.0': () => import('./scenarios.at2.json'),
-  '0.0|0.5': () => import('./scenarios.pf1.at2.json'),
-  '0.0|1.0': () => import('./scenarios.pf2.at2.json'),
-  '1.0|0.0': () => import('./scenarios.ab1.at2.json'),
-  '1.0|0.5': () => import('./scenarios.ab1.pf1.at2.json'),
-  '1.0|1.0': () => import('./scenarios.ab1.pf2.at2.json'),
+  '0.0|0.0': fetchSlice(url_at2),
+  '0.0|0.5': fetchSlice(url_pf1_at2),
+  '0.0|1.0': fetchSlice(url_pf2_at2),
+  '1.0|0.0': fetchSlice(url_ab1_at2),
+  '1.0|0.5': fetchSlice(url_ab1_pf1_at2),
+  '1.0|1.0': fetchSlice(url_ab1_pf2_at2),
 };
 const loadedAt = new Set<string>();
 let atLoadPromise: Promise<void> | null = null;

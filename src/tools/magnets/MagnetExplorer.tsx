@@ -1,6 +1,7 @@
-import { Fragment, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AXES, AXIS_DOMAIN, BASE, HAS_ALLIED_TARIFF, RESTRICTION_SCOPE, ensureAlliedTariffSlices, alliedTariffReady, interpScenario, applyStockpile, STOCKPILE_COST_DEFAULT, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, ensurePriceFloorSlices, priceFloorReady, ensureAbatementCeilingSlices,
-         abatementCeilingReady, HAS_ABATEMENT_CEILING, ABATEMENT_CEILINGS, type Scenario } from './interp';
+         abatementCeilingReady, HAS_ABATEMENT_CEILING, ABATEMENT_CEILINGS,
+         ensureFlowsFor, flowsReadyFor, type Scenario } from './interp';
 import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
 import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import DemandChips from './DemandChips';
@@ -275,10 +276,9 @@ export default function MagnetExplorer() {
   // (~15% on Japan/EU/Korea since 2025). Opens at that level where the grid
   // carries the axis; a pre-axis grid solved it as 0 and the control says so.
   const [atariff, setAtariff] = useState(HAS_ALLIED_TARIFF ? 0.15 : 0);
+  // Which slices are needed depends on the price floor, declared further down
+  // with the interventions; the three loading effects sit together below it.
   const [atReady, setAtReady] = useState(alliedTariffReady());
-  useEffect(() => {
-    if (atariff > 0.15 + 1e-9 && !atReady) void ensureAlliedTariffSlices().then(() => setAtReady(true));
-  }, [atariff, atReady]);
   // BASE CASE is a partially restricted world, not an open market. The study
   // exists because buyers are already paying to hedge Chinese supply, and an
   // undisrupted default answers a question nobody is asking: of course the
@@ -302,21 +302,39 @@ export default function MagnetExplorer() {
   const [unmetValueLog, setUnmetValueLog] = useState(Math.log10(UNMET_VALUE_DEFAULT));
   const unmetValue = 10 ** unmetValueLog;
   const [pfloor, setPfloor] = useState(0);           // US price floor on China imports (0 / .5 / 1)
-  // The floor=0 grid is eager; the half/full slices load on first use of the slider.
-  const [pfReady, setPfReady] = useState(priceFloorReady());
-  useEffect(() => {
-    if (pfloor > 0 && !pfReady) ensurePriceFloorSlices().then(() => setPfReady(true));
-  }, [pfloor, pfReady]);
-  // The ledger rates the price floor as a next move even while it is off, so its
-  // slices load in idle time after first paint rather than on first drag.
-  useEffect(() => {
-    if (pfReady) return;
-    const go = () => { void ensurePriceFloorSlices().then(() => setPfReady(true)); };
+  // SLICES LOAD FOR THE SETTINGS IN FORCE. The base slice is bundled. The
+  // price-floor and ceiling slices the ledger and the research decision need
+  // (the floor levels this setting sits between, plus none and full) load in
+  // idle time after first paint, and again whenever the floor slider moves
+  // into levels that are not yet here. At the default that is three files of
+  // the five there are.
+  const [pfReady, setPfReady] = useState(priceFloorReady(pfloor));
+  const firstLoad = useRef(true);
+  const whenIdle = (go: () => void, timeout: number) => {
     const w = window as any;
+    if (!firstLoad.current) { go(); return () => undefined; }
     const id = typeof w.requestIdleCallback === 'function'
-      ? w.requestIdleCallback(go, { timeout: 6000 }) : window.setTimeout(go, 2500);
+      ? w.requestIdleCallback(go, { timeout }) : window.setTimeout(go, timeout / 2);
     return () => { if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(id); else window.clearTimeout(id); };
-  }, [pfReady]);
+  };
+  useEffect(() => {
+    if (priceFloorReady(pfloor)) { setPfReady(true); return; }
+    setPfReady(false);
+    let live = true;
+    const cancel = whenIdle(() => {
+      void ensurePriceFloorSlices(pfloor).then(() => { if (live) setPfReady(true); });
+    }, 5000);
+    return () => { live = false; cancel(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pfloor]);
+  useEffect(() => {
+    if (atariff <= 0.15 + 1e-9) return;
+    if (alliedTariffReady(pfloor)) { setAtReady(true); return; }
+    setAtReady(false);
+    let live = true;
+    void ensureAlliedTariffSlices(pfloor).then(() => { if (live) setAtReady(true); });
+    return () => { live = false; };
+  }, [atariff, pfloor]);
   // Abatement ceiling: 0 = today's sectoral availability, 1 = the barrier broken.
   // Whether it is broken is the planner's call, made below against this R&D cost.
   // Its three slices (one per price-floor level) load in idle time after first
@@ -333,21 +351,23 @@ export default function MagnetExplorer() {
   const [costMult, setCostMult] = useState<Record<string, number>>({});          // x the US cost disadvantage
   const [foakMult, setFoakMult] = useState(1);            // x the FOAK premium above one
   const [provenancePremium, setProvenancePremium] = useState<Record<string, number>>({});   // $/kg of the stage's product
-  const [ceilingReady, setCeilingReady] = useState(abatementCeilingReady());
+  const [ceilingReady, setCeilingReady] = useState(abatementCeilingReady(pfloor));
   // The slices could not be fetched. The research then stays unevaluated and the
   // page shows the baseline ceiling, which is a settled state, not a pending one.
   const [ceilingFailed, setCeilingFailed] = useState(false);
   useEffect(() => {
-    if (ceilingReady || !HAS_ABATEMENT_CEILING) return;
-    const go = () => {
-      void ensureAbatementCeilingSlices().then(() => setCeilingReady(true))
-        .catch(() => setCeilingFailed(true));
-    };
-    const w = window as any;
-    const id = typeof w.requestIdleCallback === 'function'
-      ? w.requestIdleCallback(go, { timeout: 4000 }) : window.setTimeout(go, 1500);
-    return () => { if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(id); else window.clearTimeout(id); };
-  }, [ceilingReady]);
+    if (!HAS_ABATEMENT_CEILING) return;
+    if (abatementCeilingReady(pfloor)) { setCeilingReady(true); firstLoad.current = false; return; }
+    setCeilingReady(false);
+    let live = true;
+    const cancel = whenIdle(() => {
+      void ensureAbatementCeilingSlices(pfloor)
+        .then(() => { if (live) { setCeilingReady(true); firstLoad.current = false; } })
+        .catch(() => { if (live) setCeilingFailed(true); });
+    }, 4000);
+    return () => { live = false; cancel(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pfloor]);
   // Real-world projects overlay (default = operating only; construction + planned off). The
   // active allied set drives the country-level allied HHI in the trade-risk index.
   // Only the uncertain future supply is toggled; operating plants are always in.
@@ -411,6 +431,12 @@ export default function MagnetExplorer() {
   const REAL_COST_KEYS = US_COST_KEYS.filter(([k]) => k !== 'shortage');
   const realCost = (s: Scenario) => REAL_COST_KEYS.reduce((a, [k]) => a + Math.max(0, s.us_cost[k] ?? 0), 0);
 
+  // FLOWS ARRIVE SEPARATELY. A cell's flow fields (what the Sankey draws) are
+  // fetched for the slices the settings touch, after the numbers are already
+  // on the page; `flowsTick` re-reads the grid when a batch lands. Everything
+  // that is not a diagram is complete without them.
+  const [flowsTick, setFlowsTick] = useState(0);
+
   // ── THE PLANNER'S DEPLOYMENTS ────────────────────────────────────────────
   // Three decisions, in the order they depend on each other. Collection is a
   // world parameter, chosen on the world objective at the baseline ceiling; the
@@ -419,7 +445,7 @@ export default function MagnetExplorer() {
   const cellAt = useCallback((o: Record<string, number>) => interpScenario({
     make, source, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, atariff, abunlock: 0, ...o,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [make, source, china, rcost, demand, dscale, pfloor, atariff, atReady, pfReady, ceilingReady]);
+  }), [make, source, china, rcost, demand, dscale, pfloor, atariff, atReady, pfReady, ceilingReady, flowsTick]);
   const collection = useMemo(
     () => chooseCollection(AXIS_DOMAIN.rec, (r) => cellAt({ rec: r }), collectCost),
     [cellAt, collectCost]);
@@ -443,6 +469,14 @@ export default function MagnetExplorer() {
   const stockpile = stockChoice.kt;
   const sc = useMemo(() => applyStockpile(scBase, stockpile, stockCost), [scBase, stockpile, stockCost]);
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
+  const flowsReady = sc.flows_ready !== false;
+  useEffect(() => {
+    const at = { pfloor, abunlock, atariff };
+    if (flowsReadyFor(at)) { if (!flowsReady) setFlowsTick((t) => t + 1); return; }
+    let live = true;
+    ensureFlowsFor(at).then(() => { if (live) setFlowsTick((t) => t + 1); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [pfloor, abunlock, atariff, pfReady, ceilingReady, atReady, flowsReady]);
   // THE HEADLINE NUMBERS WAIT for the research decision. Whether the thrifting
   // research is funded changes the scenario every figure is read from, and it
   // cannot be decided until the higher-ceiling slices have arrived, a second or
@@ -1016,8 +1050,8 @@ export default function MagnetExplorer() {
               { v: pct(chinaTouch * 100), c: riskColor(chinaTouch), s: 'Dy/Tb · flow-traced', cls: 'Dy/Tb' },
               { v: pct(lightFeoc), c: riskColor(lightFeoc / 100), s: 'Nd/Pr · flow-traced', cls: 'Nd/Pr' },
             ] },
-      { l: 'US magnets imported', v: pct(usImportPct), c: 'var(--ink)',
-        s: `${flowYear} · same flows as the Sankey` },
+      { l: 'US magnets imported', v: flowsReady ? pct(usImportPct) : '…', c: 'var(--ink)',
+        s: flowsReady ? `${flowYear} · same flows as the Sankey` : 'loading flows' },
       { l: 'Unmet US demand', v: `${usUnmet.toFixed(1)} kt`,
         c: usUnmet > 0.05 ? WORSE : 'var(--ink)',
         // A shortfall a stockpile covers is still a shortfall the chain left.
@@ -1025,8 +1059,8 @@ export default function MagnetExplorer() {
                             : '2026–35 cumulative' },
       { l: 'US cost of supply', v: musd2(usCostReal), c: 'var(--ink)', s: '2026–35 NPV',
         tip: `$${Math.round(usCostReal).toLocaleString('en-US')}M: ` + REAL_COST_KEYS
-          .filter(([k]) => (scR.us_cost[k] ?? 0) > 0.5)
-          .map(([k, lbl]) => `${lbl} ${Math.round(scR.us_cost[k])}`).join(' · ') },
+          .filter(([k]) => ((scR.us_cost as Record<string, number>)[k] ?? 0) > 0.5)
+          .map(([k, lbl]) => `${lbl} ${Math.round((scR.us_cost as Record<string, number>)[k])}`).join(' · ') },
     ];
     const sub: CSSProperties = { ...CARD_SUB, fontSize: 8.5, paddingTop: 3, whiteSpace: 'nowrap',
                                  overflow: 'hidden', textOverflow: 'ellipsis' };
@@ -1196,7 +1230,7 @@ export default function MagnetExplorer() {
               ))}
             </div>
           )}
-          <FlowDiagram flows={rwFlows} active={activeProjects} year={flowYear} />
+          <FlowDiagram flows={rwFlows} active={activeProjects} year={flowYear} pending={!flowsReady} />
 
 
           {/* 3 — the ACTOR view. Sits directly under the planner's chain and KPIs

@@ -5,24 +5,43 @@
  * driven by the client-side demand builder; the rest are supply-side sliders.
  */
 import data from './scenarios.json';
-// Every other slice is a STATIC FILE fetched when first needed, not a module.
-// As modules the twelve files put some 400 MB of JSON through the bundler, and
-// the build was killed for memory once the grid grew to 46,656 cells. `?url`
-// makes the bundler copy a file and hand back its address, nothing more.
-import url_pf1 from './scenarios.pf1.json?url';
-import url_pf2 from './scenarios.pf2.json?url';
-import url_ab1 from './scenarios.ab1.json?url';
-import url_ab1_pf1 from './scenarios.ab1.pf1.json?url';
-import url_ab1_pf2 from './scenarios.ab1.pf2.json?url';
-import url_at2 from './scenarios.at2.json?url';
-import url_pf1_at2 from './scenarios.pf1.at2.json?url';
-import url_pf2_at2 from './scenarios.pf2.at2.json?url';
-import url_ab1_at2 from './scenarios.ab1.at2.json?url';
-import url_ab1_pf1_at2 from './scenarios.ab1.pf1.at2.json?url';
-import url_ab1_pf2_at2 from './scenarios.ab1.pf2.at2.json?url';
-const fetchSlice = (url: string) => (): Promise<any> =>
+// EVERY SLICE IS TWO FILES. `scenarios<slice>.json` holds its cells' CORE: what
+// the indices, the costs, the build-out and the ledgers are computed from.
+// `scenarios<slice>.flows.json` holds the same cells' FLOW fields, in the same
+// order, which only the diagrams read and which are about half of a cell. The
+// base slice's core is bundled, so the page can compute as soon as it runs;
+// every other file is a static file fetched when first needed (`?url` makes the
+// bundler copy a file and hand back its address, nothing more: as modules the
+// slices put 400 MB of JSON through the bundler and the build ran out of
+// memory). Cores of the other slices arrive in idle time, because the ledgers
+// rate levers that are switched off; flows arrive only for the slices the
+// current settings touch.
+import flows_base from './scenarios.flows.json?url';
+import core_pf1 from './scenarios.pf1.json?url';
+import flows_pf1 from './scenarios.pf1.flows.json?url';
+import core_pf2 from './scenarios.pf2.json?url';
+import flows_pf2 from './scenarios.pf2.flows.json?url';
+import core_ab1 from './scenarios.ab1.json?url';
+import flows_ab1 from './scenarios.ab1.flows.json?url';
+import core_ab1_pf1 from './scenarios.ab1.pf1.json?url';
+import flows_ab1_pf1 from './scenarios.ab1.pf1.flows.json?url';
+import core_ab1_pf2 from './scenarios.ab1.pf2.json?url';
+import flows_ab1_pf2 from './scenarios.ab1.pf2.flows.json?url';
+import core_at2 from './scenarios.at2.json?url';
+import flows_at2 from './scenarios.at2.flows.json?url';
+import core_pf1_at2 from './scenarios.pf1.at2.json?url';
+import flows_pf1_at2 from './scenarios.pf1.at2.flows.json?url';
+import core_pf2_at2 from './scenarios.pf2.at2.json?url';
+import flows_pf2_at2 from './scenarios.pf2.at2.flows.json?url';
+import core_ab1_at2 from './scenarios.ab1.at2.json?url';
+import flows_ab1_at2 from './scenarios.ab1.at2.flows.json?url';
+import core_ab1_pf1_at2 from './scenarios.ab1.pf1.at2.json?url';
+import flows_ab1_pf1_at2 from './scenarios.ab1.pf1.at2.flows.json?url';
+import core_ab1_pf2_at2 from './scenarios.ab1.pf2.at2.json?url';
+import flows_ab1_pf2_at2 from './scenarios.ab1.pf2.at2.flows.json?url';
+const fetchJson = (url: string): Promise<any> =>
   fetch(url).then((r) => {
-    if (!r.ok) throw new Error(`grid slice ${url}: ${r.status}`);
+    if (!r.ok) throw new Error(`grid file ${url}: ${r.status}`);
     return r.json();
   });
 
@@ -45,7 +64,11 @@ export type Scenario = {
   us_supply_re?: { light: Record<string, { domestic: number; allied: number; china: number }>;
                    heavy: Record<string, { domestic: number; allied: number; china: number }> };
   utilization: Record<string, Record<string, number | null>>;
+  /** Absent on a cell whose flow file has not arrived; see `flows_ready`. */
   flows: Record<string, Flow[]>;
+  /** False on an interpolated scenario built from any cell still without its
+   *  flows: the diagrams must wait, everything else is complete. */
+  flows_ready?: boolean;
   // Real per-RE-class inter-regional flows (kt of that class), emitted by the model so
   // the heavy/light Sankey shows the model's actual Dy/Tb (or Nd/Pr) shipments instead
   // of scaling the aggregate by a flat mass fraction. Optional: only present once the
@@ -135,96 +158,135 @@ const key = (s: Point) =>
   `${s.make}|${s.source}|${s.rec}|${s.dytb}|${s.china}|${s.rcost}|${s.dscale}|${s.pfloor ?? 0}|${s.atariff ?? 0}|${s.abunlock ?? 0}`;
 const LOOKUP = new Map(SC.map((s) => [key(s), s]));
 
-// Price-floor slices ship separately so the default page load is unchanged: the eager
-// grid IS the floor=0 slice; the half/full slices are fetched the first time the user engages the price-floor slider,
-// then merged into LOOKUP. Until loaded, a pfloor>0 query gracefully degrades to floor=0.
-const SLICE_LOADERS: Record<string, () => Promise<any>> = {
-  '0.5': fetchSlice(url_pf1),
-  '1.0': fetchSlice(url_pf2),
-};
-const loadedSlices = new Set<string>();
-let pfLoadPromise: Promise<void> | null = null;
-export function priceFloorReady(): boolean {
-  return Object.keys(SLICE_LOADERS).every((k) => loadedSlices.has(k));
-}
-export function ensurePriceFloorSlices(): Promise<void> {
-  if (priceFloorReady()) return Promise.resolve();
-  if (!pfLoadPromise) {
-    pfLoadPromise = Promise.all(
-      Object.entries(SLICE_LOADERS).map(async ([lvl, load]) => {
-        if (loadedSlices.has(lvl)) return;
-        const mod: any = await load();
-        for (const s of (((mod.default ?? mod).scenarios as Scenario[]) || [])) LOOKUP.set(key(s), s);
-        loadedSlices.add(lvl);
-      }),
-    ).then(() => undefined);
+// ── THE SLICES ───────────────────────────────────────────────────────────────
+// One slice per (abatement ceiling, price-floor level, allied-tariff band). The
+// base slice is floor 0, baseline ceiling, the tariff levels a reader meets
+// first. Until a slice's core is resident a query that needs it degrades to the
+// nearest slice that is (see interpScenario), so a control is safe to move
+// before its data arrives.
+type Slice = { id: string; ab: number; pf: number; at2: boolean; core: string | null; flows: string };
+const SLICES: Slice[] = [
+  { id: 'base', ab: 0, pf: 0, at2: false, core: null, flows: flows_base },
+  { id: 'pf1', ab: 0, pf: 0.5, at2: false, core: core_pf1, flows: flows_pf1 },
+  { id: 'pf2', ab: 0, pf: 1, at2: false, core: core_pf2, flows: flows_pf2 },
+  { id: 'ab1', ab: 1, pf: 0, at2: false, core: core_ab1, flows: flows_ab1 },
+  { id: 'ab1.pf1', ab: 1, pf: 0.5, at2: false, core: core_ab1_pf1, flows: flows_ab1_pf1 },
+  { id: 'ab1.pf2', ab: 1, pf: 1, at2: false, core: core_ab1_pf2, flows: flows_ab1_pf2 },
+  { id: 'at2', ab: 0, pf: 0, at2: true, core: core_at2, flows: flows_at2 },
+  { id: 'pf1.at2', ab: 0, pf: 0.5, at2: true, core: core_pf1_at2, flows: flows_pf1_at2 },
+  { id: 'pf2.at2', ab: 0, pf: 1, at2: true, core: core_pf2_at2, flows: flows_pf2_at2 },
+  { id: 'ab1.at2', ab: 1, pf: 0, at2: true, core: core_ab1_at2, flows: flows_ab1_at2 },
+  { id: 'ab1.pf1.at2', ab: 1, pf: 0.5, at2: true, core: core_ab1_pf1_at2, flows: flows_ab1_pf1_at2 },
+  { id: 'ab1.pf2.at2', ab: 1, pf: 1, at2: true, core: core_ab1_pf2_at2, flows: flows_ab1_pf2_at2 },
+];
+/** Cells of each resident slice, in file order: what a flows file is matched to. */
+const cellsOf = new Map<string, Scenario[]>([['base', SC]]);
+const corePending = new Map<string, Promise<void>>();
+const flowsResident = new Set<string>();
+const flowsPending = new Map<string, Promise<void>>();
+
+function ensureCore(sl: Slice): Promise<void> {
+  if (cellsOf.has(sl.id) || !sl.core) return Promise.resolve();
+  let p = corePending.get(sl.id);
+  if (!p) {
+    p = fetchJson(sl.core).then((doc) => {
+      const cells = ((doc.scenarios as Scenario[]) || []);
+      for (const c of cells) LOOKUP.set(key(c), c);
+      cellsOf.set(sl.id, cells);
+    });
+    corePending.set(sl.id, p);
   }
-  return pfLoadPromise;
+  return p;
 }
-// Aspirational abatement-ceiling slices. Same lazy pattern as the price floor, but
-// keyed (abunlock, pfloor) because the ceiling crosses the floor: all three have to
-// be resident before a query at unlock=1 can be answered at any floor level.
-const AB_SLICE_LOADERS: Record<string, () => Promise<any>> = {
-  '1.0|0.0': fetchSlice(url_ab1),
-  '1.0|0.5': fetchSlice(url_ab1_pf1),
-  '1.0|1.0': fetchSlice(url_ab1_pf2),
-};
-const loadedAb = new Set<string>();
-let abLoadPromise: Promise<void> | null = null;
-/** True once every aspirational slice is resident. Until then a query at
- *  unlock=1 degrades to the baseline ceiling rather than returning nothing. */
-export function abatementCeilingReady(): boolean {
-  return Object.keys(AB_SLICE_LOADERS).every((k) => loadedAb.has(k));
-}
-export function ensureAbatementCeilingSlices(): Promise<void> {
-  if (abatementCeilingReady()) return Promise.resolve();
-  if (!abLoadPromise) {
-    abLoadPromise = Promise.all(
-      Object.entries(AB_SLICE_LOADERS).map(async ([k, load]) => {
-        if (loadedAb.has(k)) return;
-        const mod: any = await load();
-        for (const s of (((mod.default ?? mod).scenarios as Scenario[]) || [])) LOOKUP.set(key(s), s);
-        loadedAb.add(k);
-      }),
-    ).then(() => undefined);
+function ensureSliceFlows(sl: Slice): Promise<void> {
+  if (flowsResident.has(sl.id)) return Promise.resolve();
+  let p = flowsPending.get(sl.id);
+  if (!p) {
+    p = Promise.all([ensureCore(sl), fetchJson(sl.flows)]).then(([, doc]) => {
+      const cells = cellsOf.get(sl.id) ?? [];
+      // Matched by position, so a pair that does not belong together is refused
+      // rather than drawn: a diagram of the wrong scenario is worse than none.
+      if (doc.cells !== cells.length || (doc.flows ?? []).length !== cells.length)
+        throw new Error(`flows for slice ${sl.id}: ${doc.cells} cells against ${cells.length}`);
+      cells.forEach((c, i) => Object.assign(c, doc.flows[i]));
+      flowsResident.add(sl.id);
+    });
+    flowsPending.set(sl.id, p);
+    // a failed fetch may be retried
+    p.catch(() => flowsPending.delete(sl.id));
   }
-  return abLoadPromise;
+  return p;
 }
-// Allied-tariff HIGH-level companions: one ".at2" sibling per file above (and
-// of the eager file), keyed (abunlock, pfloor). Loaded the first time the
-// tariff slider goes above the eager levels; until then a query up there
-// degrades to the highest eager level rather than emptying out.
-const AT_SLICE_LOADERS: Record<string, () => Promise<any>> = {
-  '0.0|0.0': fetchSlice(url_at2),
-  '0.0|0.5': fetchSlice(url_pf1_at2),
-  '0.0|1.0': fetchSlice(url_pf2_at2),
-  '1.0|0.0': fetchSlice(url_ab1_at2),
-  '1.0|0.5': fetchSlice(url_ab1_pf1_at2),
-  '1.0|1.0': fetchSlice(url_ab1_pf2_at2),
+const group = (test: (sl: Slice) => boolean) => SLICES.filter(test);
+const allCore = (g: Slice[]) => g.every((sl) => cellsOf.has(sl.id));
+const loadCore = (g: Slice[]) => Promise.all(g.map(ensureCore)).then(() => undefined);
+/** The price-floor levels the page needs at a given setting: the two it sits
+ *  between, plus none and full, because the ledger values the floor against
+ *  the same world without it and rates its next step at full. At the default
+ *  that is two levels of three, so a third of these files never load. */
+const pfNeeded = (pfloor = 0): ((sl: Slice) => boolean) => {
+  const levels = AX.price_floor ?? [0];
+  const [lo, hi, t] = bracket(levels, pfloor);
+  const want = new Set([Math.min(...levels), Math.max(...levels)]);
+  if (t < 1 - 1e-9) want.add(lo);
+  if (t > 1e-9) want.add(hi);
+  return (sl) => want.has(sl.pf);
 };
-const loadedAt = new Set<string>();
-let atLoadPromise: Promise<void> | null = null;
-export function alliedTariffReady(): boolean {
+
+// Price-floor slices: floor above zero, baseline ceiling, eager tariff levels.
+const PF_SLICES = group((sl) => sl.ab === 0 && sl.pf > 0 && !sl.at2);
+export function priceFloorReady(pfloor = 0): boolean { return allCore(PF_SLICES.filter(pfNeeded(pfloor))); }
+export function ensurePriceFloorSlices(pfloor = 0): Promise<void> {
+  return loadCore(PF_SLICES.filter(pfNeeded(pfloor)));
+}
+// Aspirational abatement-ceiling slices, one per price-floor level, because the
+// ceiling crosses the floor: a query at unlock=1 needs the ceiling slice of each
+// floor level it draws on.
+const AB_SLICES = group((sl) => sl.ab === 1 && !sl.at2);
+/** True once the aspirational slices this floor setting needs are resident.
+ *  Until then a query at unlock=1 degrades to the baseline ceiling. */
+export function abatementCeilingReady(pfloor = 0): boolean {
+  return allCore(AB_SLICES.filter(pfNeeded(pfloor)));
+}
+export function ensureAbatementCeilingSlices(pfloor = 0): Promise<void> {
+  return loadCore(AB_SLICES.filter(pfNeeded(pfloor)));
+}
+// Allied-tariff HIGH-level companions: one ".at2" sibling per slice above.
+// Loaded the first time the tariff slider goes above the eager levels; until
+// then a query up there degrades to the highest eager level.
+const AT_SLICES = group((sl) => sl.at2);
+export function alliedTariffReady(pfloor = 0): boolean {
   if (!HAS_ALLIED_TARIFF) return true;
-  return Object.keys(AT_SLICE_LOADERS).every((k) => loadedAt.has(k));
+  return allCore(AT_SLICES.filter(pfNeeded(pfloor)));
 }
-export function ensureAlliedTariffSlices(): Promise<void> {
-  if (alliedTariffReady()) return Promise.resolve();
-  if (!atLoadPromise) {
-    atLoadPromise = Promise.all(
-      Object.entries(AT_SLICE_LOADERS).map(async ([k, load]) => {
-        if (loadedAt.has(k)) return;
-        try {
-          const mod: any = await load();
-          for (const s of (((mod.default ?? mod).scenarios as Scenario[]) || [])) LOOKUP.set(key(s), s);
-        } catch {
-          // A grid that predates the axis ships no such file; the fallback below covers it.
-        }
-        loadedAt.add(k);
-      }),
-    ).then(() => undefined);
-  }
-  return atLoadPromise;
+export function ensureAlliedTariffSlices(pfloor = 0): Promise<void> {
+  // A grid that predates the axis ships no such files; the fallback covers it.
+  return Promise.all(AT_SLICES.filter(pfNeeded(pfloor))
+    .map((sl) => ensureCore(sl).catch(() => { cellsOf.set(sl.id, []); })))
+    .then(() => undefined);
+}
+
+/** The slices a query draws on: the price-floor levels it sits between, the
+ *  ceiling or both, and the tariff band or both. */
+function slicesFor(pt: { pfloor?: number; abunlock?: number; atariff?: number }): Slice[] {
+  const [lo, hi, t] = bracket(AX.price_floor ?? [0], pt.pfloor ?? 0);
+  const pfs = new Set([t < 1 - 1e-9 ? lo : hi, t > 1e-9 ? hi : lo]);
+  const ab = Math.max(0, Math.min(1, pt.abunlock ?? 0));
+  const abs = new Set(ab > 1e-9 && ab < 1 - 1e-9 ? [0, 1] : [ab >= 0.5 ? 1 : 0]);
+  const top = Math.max(...ATARIFF_EAGER, 0);
+  const at = pt.atariff ?? 0;
+  const bands = new Set<boolean>();
+  if (at <= top + 1e-9 || !HAS_ALLIED_TARIFF) bands.add(false);
+  else { bands.add(true); bands.add(false); }   // between the top eager level and the high one
+  return SLICES.filter((sl) => pfs.has(sl.pf) && abs.has(sl.ab) && bands.has(sl.at2));
+}
+/** True when every cell a query at `pt` would draw on carries its flows. */
+export function flowsReadyFor(pt: { pfloor?: number; abunlock?: number; atariff?: number }): boolean {
+  return slicesFor(pt).every((sl) => flowsResident.has(sl.id));
+}
+/** Fetch the flows a query at `pt` needs. Resolves when they are attached. */
+export function ensureFlowsFor(pt: { pfloor?: number; abunlock?: number; atariff?: number }): Promise<void> {
+  return Promise.all(slicesFor(pt).map(ensureSliceFlows)).then(() => undefined);
 }
 /** The ceilings the deployed grid actually carries, as fractions of Dy/Tb that can
  *  be designed out at any price. Read from meta so the label cannot drift from the
@@ -277,7 +339,8 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
     return out;
   };
   const fm = new Map<string, number>();
-  for (const { s, w } of ps) for (const iface in s.flows) for (const f of s.flows[iface])
+  const flows_ready = ps.every((p) => !!p.s.flows);
+  for (const { s, w } of ps) for (const iface in s.flows ?? {}) for (const f of s.flows[iface])
     fm.set(`${iface}|${f.from}|${f.to}`, (fm.get(`${iface}|${f.from}|${f.to}`) || 0) + f.value * w);
   const flows: Record<string, Flow[]> = {};
   for (const [k, v] of fm) {
@@ -413,6 +476,7 @@ function combine(parts: { s: Scenario; w: number }[]): Scenario {
     production: wNested('production') as any, us_supply: wNested('us_supply') as any,
     us_supply_re: wSupplyRe(),
     utilization: wNested('utilization') as any, flows, flows_re, path: wPath(),
+    flows_ready,
   };
 }
 

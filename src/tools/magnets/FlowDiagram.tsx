@@ -106,8 +106,11 @@ const outSum = (fl: FlowMap, iface: string, r: string) =>
 const inSum = (fl: FlowMap, iface: string, r: string) =>
   (fl[iface] ?? []).filter((f) => f.to === r).reduce((a, f) => a + f.value, 0);
 
-export default function FlowDiagram({ flows, active, scale = {}, year }: {
+export default function FlowDiagram({ flows, active, scale = {}, year, pending = false }: {
   flows: FlowsByClass; active: Set<string>; scale?: Record<string, number>; year?: string;
+  /** The flows for these settings have not arrived yet. The box keeps the
+   *  diagram's shape, so the page does not move when they do. */
+  pending?: boolean;
 }) {
   const [cls, setCls] = useState<'total' | 'heavy' | 'light'>('total');
   const fl = flows[cls];
@@ -271,7 +274,15 @@ export default function FlowDiagram({ flows, active, scale = {}, year }: {
           </div>
         </div>
       </div>
-      <div ref={wrapRef} style={{ position: 'relative' }} onMouseLeave={() => setHover(null)}>
+      {pending && (
+        <div role="status" style={{ aspectRatio: `${W} / ${2 * PADY + innerH}`, display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
+                      font: '400 12px var(--font-mono)', color: 'var(--ink-3)' }}>
+          Loading the flows for these settings
+        </div>
+      )}
+      <div ref={wrapRef} style={{ position: 'relative', display: pending ? 'none' : 'block' }}
+        onMouseLeave={() => setHover(null)}>
       <svg viewBox={`0 0 ${CW} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Supply-chain Sankey">
         {ribbons}
         {recycleArcs}

@@ -9,8 +9,8 @@
  * - what an instrument removes   an offtake, a price floor or a guarantee
  *                                takes away part of the PREMIUM, never the base
  *
- * Collapsed, this is one line. Open, each part has its own control and the bar
- * shows what is left. Reliefs do not stack: a project whose volume is already
+ * Collapsed, which is how it starts, this is the rate and nothing else. Open,
+ * the bar shows the parts and each has its own control. Reliefs do not stack: a project whose volume is already
  * contracted does not become twice as safe because a floor also covers it, so
  * the largest single relief is the one that counts.
  */
@@ -95,12 +95,16 @@ export default function HurdleComponents({ rate, onRate, instruments, onInstrume
         </span>
         <span style={{ font: '600 13px var(--font-mono)' }}>{pct(effective(worst))}</span>
         <span style={{ fontSize: 11, opacity: 0.65 }}>
-          planner {pct(PLANNER_RATE, 0)} + risk premium {(premium * 100).toFixed(1)} points
-          {removed > 1e-9
-            ? ` − ${(removed * 100).toFixed(1)} removed by an instrument`
-            : ' · no instrument applied'}
+          {open
+            ? `planner ${pct(PLANNER_RATE, 0)} + risk premium ${(premium * 100).toFixed(1)} points`
+              + (removed > 1e-9
+                ? ` − ${(removed * 100).toFixed(1)} removed by an instrument`
+                : ' · no instrument applied')
+            : 'show what it is made of'}
         </span>
       </button>
+
+      {open && (<>
 
       {/* The rate as a bar: what the planner charges, what risk still adds, and
           what an instrument has taken away. */}
@@ -145,7 +149,6 @@ export default function HurdleComponents({ rate, onRate, instruments, onInstrume
         )}
       </div>
 
-      {open && (
         <div style={{ marginTop: 14 }}>
           <div className="hurdle-grid">
             {slider('Risk premium',
@@ -180,7 +183,7 @@ export default function HurdleComponents({ rate, onRate, instruments, onInstrume
             premium is a price, so they act on opposite sides of the same sum.
           </p>
         </div>
-      )}
+      </>)}
     </div>
   );
 }

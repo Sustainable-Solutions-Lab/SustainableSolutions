@@ -45,18 +45,17 @@ const IFACE_TO_STAGE: Record<string, Stage> = {
 };
 // kt formatter: integers for big numbers, one decimal for small (heavy oxide ~1 kt).
 const kt = (v: number) => (v >= 10 ? Math.round(v).toString() : v.toFixed(1));
-// Wrap a stage sub-label onto ≤2 centered lines so the step lists don't overrun the
-// column width; the split point is chosen to balance the two lines. Short labels
-// (≤14 chars, e.g. "Consumption") stay on one line.
-const wrapLabel = (s: string): string[] => {
-  const words = s.split(' ');
-  if (s.length <= 14 || words.length === 1) return [s];
-  let best = 1, bestMax = Infinity;
-  for (let k = 1; k < words.length; k++) {
-    const mx = Math.max(words.slice(0, k).join(' ').length, words.slice(k).join(' ').length);
-    if (mx < bestMax) { bestMax = mx; best = k; }
+// Wrap a stage's sub-label into lines no longer than `max` characters, so that
+// the labels of neighbouring columns cannot run into each other however
+// narrow the diagram is drawn. A word longer than a line keeps a line to itself.
+const wrapLabel = (s: string, max: number): string[] => {
+  const lines: string[] = [];
+  for (const word of s.split(' ')) {
+    const last = lines[lines.length - 1];
+    if (last !== undefined && last.length + 1 + word.length <= max) lines[lines.length - 1] = `${last} ${word}`;
+    else lines.push(word);
   }
-  return [words.slice(0, best).join(' '), words.slice(best).join(' ')];
+  return lines;
 };
 // Drop the stage word from a facility name — it's redundant with the column we're
 // hovering (e.g. "Mountain Pass separation" → "Mountain Pass", "MP Fort Worth
@@ -144,7 +143,14 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
   const innerH = compact ? INNER_H_COMPACT : INNER_H_FULL;
   const colX = COLS.map((_, i) => PADX + i * ((W - 2 * PADX - NODE_W) / (COLS.length - 1)));
   // Type is in true pixels when compact, and scaled with the drawing when not.
-  const F = compact ? { pct: 13, label: 14, sub: 10.5 } : { pct: 15, label: 16, sub: 11 };
+  const F0 = compact ? { pct: 13, label: 14, sub: 10 } : { pct: 15, label: 16, sub: 10 };
+  // The sub-labels are fitted to the space between two columns: wrapped to it,
+  // and set smaller when that takes more than two lines.
+  const between = colX[1] - colX[0];
+  const room = (size: number) => Math.max(8, Math.floor((between - 14) / (size * 0.6)));
+  const tooTall = COLS.some((c) => wrapLabel(c.sub, room(F0.sub)).length > 2);
+  const F = { ...F0, sub: tooTall ? F0.sub - 1.5 : F0.sub };
+  const subLines = COLS.map((c) => wrapLabel(c.sub, room(F.sub)).slice(0, 3));
   const LABEL_CH = F.label * 0.6;   // monospace: a character is 0.6 em wide
   type Hover = { x: number; y: number; flip: boolean; head: string; sub: string; rows: { name: string; country: string; pct: number; mass: number }[]; note: string };
   const [hover, setHover] = useState<Hover | null>(null);
@@ -348,8 +354,10 @@ export default function FlowDiagram({ flows, active, scale = {}, year, pending =
             <text x={colX[i] + NODE_W / 2} y={15} textAnchor="middle" style={{ font: `600 ${F.label}px var(--font-mono)`, fill: 'var(--ink)', opacity: 0.85, cursor: 'default' }}>
               {c.label}<title>{c.desc}</title>
             </text>
-            {wrapLabel(c.sub).map((ln, li, arr) => (
-              <text key={`sub${li}`} x={colX[i] + NODE_W / 2} y={(arr.length === 2 ? 31 : 36) + li * 11} textAnchor="middle"
+            {subLines[i].map((ln, li, arr) => (
+              <text key={`sub${li}`} x={colX[i] + NODE_W / 2}
+                y={(arr.length === 1 ? 36 : arr.length === 2 ? 31 : 27.5) + li * (arr.length === 3 ? 10 : 11)}
+                textAnchor="middle"
                 style={{ font: `400 ${F.sub}px var(--font-mono)`, fill: 'var(--accent)', opacity: 0.75, cursor: 'default' }}>
                 {ln}<title>{c.desc}</title>
               </text>

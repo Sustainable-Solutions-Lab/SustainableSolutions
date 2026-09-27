@@ -105,6 +105,10 @@ const COST_KEYS: [string, string, string][] = [
   ['us_projects', 'US strategic projects (selected)', '#3288BD'],
   ['stockpile', 'Strategic stockpile', '#5E4FA2'],
   ['dytb_premium', 'Heavy-REE price premium', '#762A83'],
+  ['demand_abatement', 'Dy/Tb thrifting', '#9970AB'],
+  ['rd', 'Thrifting research', '#9970AB'],
+  ['collection', 'End-of-life collection', '#66C2A5'],
+  ['price_feedback', 'Import price escalation', '#762A83'],
   ['price_floor', 'Price floor (tariff on China imports)', '#5E4FA2'],
   ['allied_tariff', 'Tariff on allied imports', '#9970AB'],
   ['consumer_premium', 'Consumer premium (ally imports)', '#9970AB'],
@@ -125,6 +129,10 @@ const COST_DESC: Record<string, string> = {
   price_floor: 'Cost of the US price-floor policy: the tariff paid on whatever Chinese oxide / alloy / magnet the US still imports after the floor is set (rate scaled by the slider, sized to the ex-China premium). Borne by consumers as a higher import price, not US capital — no factory needed. As the floor rises it pushes China out of US sourcing, so this line often falls toward zero while the avoided-China cost reappears as domestic build + the ally consumer premium.',
   allied_tariff: 'US tariff paid on alloy and magnets imported from allies at the rate set in the scenario box. A transfer to the Treasury, but a real cost to US buyers, so it belongs in the bill exactly as the price-floor tariff does.',
   consumer_premium: 'The ex-China premium US buyers pay for ALLY-sourced supply rather than cheaper Chinese material — the Nd/Pr-oxide premium on allied light oxide (~$45/kg) plus a manufacturing premium on any finished magnets imported from allies (~$15/kg). Borne as a higher import price, not US capital, so it rises with friendshoring. The heavy Dy/Tb premium is shown separately above.',
+  demand_abatement: 'What US magnet makers and buyers spend designing Dy/Tb out of magnets (grain-boundary diffusion, lower grades, rare-earth-free motors), wherever that is cheaper than buying it.',
+  rd: 'The research that raises how much Dy/Tb can be designed out, at the cost per kilogram set in the scenario. In the bill only when the planner funds it.',
+  collection: 'Collecting end-of-life magnets in the US, at the cost per kilogram set in the scenario, for the tonnage the planner chooses to collect.',
+  price_feedback: 'The rise in what the US pays for imports as it buys more of a restricted supply. Zero on this grid, which holds import prices fixed.',
   shortage: 'Penalty on US unmet magnet demand: unmet tonnes × a high penalty rate. Not a market cost — it flags US demand the chain can’t deliver in time (e.g. under a ban).',
 };
 const WORSE = '#D53E4F';
@@ -587,11 +595,17 @@ export default function MagnetExplorer() {
       // Cyclic, …) cost money to build AND lower the TRI; both must move together, or the
       // tool shows security for free. Their build cost flows into REAL_COST_KEYS so the NPV
       // + cost bar rise; the model meets the residual demand at modeled cost.
-      us_cost: { ...sc.us_cost, consumer_premium: consumerPremium(rpath), us_projects: usProjectsBuildCost(activeProjects) },
+      // The research and the collection are decisions the planner made above,
+      // paid for by the US, so they are in the bill the headline shows. They
+      // used to be in the ledger's bill only, which made a lever's cost in the
+      // ledger the difference between two figures the page never showed.
+      us_cost: { ...sc.us_cost, consumer_premium: consumerPremium(rpath), us_projects: usProjectsBuildCost(activeProjects),
+                 rd: abunlock > 0 ? rdChoice.rd.rdCost : 0,
+                 collection: collectCost * collectedKtNPV(sc, 'USA') },
       path: rpath,
       _di: hasUSHeavyMine ? { ...sc._di, mining: ROUND_TOP_MINING_DI } : sc._di,
     };
-  }, [sc, activeProjects, hasUSHeavyMine]);
+  }, [sc, activeProjects, hasUSHeavyMine, abunlock, rdChoice, collectCost]);
   const usCostReal = realCost(scR);   // includes the consumer premium on ally-sourced supply
   // baseline = do-nothing (no US policy/projects) at the SAME demand scenario + threat, so
   // the delta is the cost of the security choices made (can be negative if reshoring avoids
@@ -1041,7 +1055,7 @@ export default function MagnetExplorer() {
   // Mines, separation, alloy and magnet plants carry both classes in the same
   // tonnes, so their cost is joint and is not split.
   const heavyOnlyCost = REAL_COST_KEYS
-    .filter(([k]) => k === 'dytb_premium' || k === 'demand_abatement')
+    .filter(([k]) => k === 'dytb_premium' || k === 'demand_abatement' || k === 'rd')
     .reduce((a, [k]) => a + Math.max(0, (scR.us_cost as Record<string, number>)[k] ?? 0), 0);
 
   /** The six headline readouts, as a grid with `cols` columns. Shared by the
@@ -1143,7 +1157,7 @@ export default function MagnetExplorer() {
         tip: `$${Math.round(usCostReal).toLocaleString('en-US')}M: ` + REAL_COST_KEYS
           .filter(([k]) => ((scR.us_cost as Record<string, number>)[k] ?? 0) > 0.5)
           .map(([k, lbl]) => `${lbl} ${Math.round((scR.us_cost as Record<string, number>)[k])}`).join(' · ')
-          + `. Of this, $${Math.round(heavyOnlyCost).toLocaleString('en-US')}M is there only because of Dy/Tb: the premium on the Dy/Tb the US buys. `
+          + `. Of this, $${Math.round(heavyOnlyCost).toLocaleString('en-US')}M is there only because of Dy/Tb: the premium on the Dy/Tb the US buys, and what is spent designing it out and on the research that allows more of that. `
           + 'Mines, separation, alloy and magnet plants carry both classes in the same tonnes, so their cost is joint and is not split by class.' },
     ];
   const kpiCards = (cols: number, tight = false) => {

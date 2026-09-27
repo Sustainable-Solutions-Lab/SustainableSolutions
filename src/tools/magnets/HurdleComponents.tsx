@@ -10,28 +10,48 @@
  *                                takes away part of the PREMIUM, never the base
  *
  * Collapsed, which is how it starts, this is the rate and nothing else. Open,
- * the bar shows the parts and each has its own control. Reliefs do not stack: a project whose volume is already
- * contracted does not become twice as safe because a floor also covers it, so
- * the largest single relief is the one that counts.
+ * the bar shows the parts and the controls sit in three groups, by what they
+ * do: raise the rate, lower it, or raise the COST of the plant and leave the
+ * rate alone. The last group is first-of-a-kind capital, which readers took
+ * for a part of the rate because it sat among them: it moves the frontier and
+ * not the number, and the grouping is there to say why.
+ *
+ * Reliefs do not stack: a project whose volume is already contracted does not
+ * become twice as safe because a floor also covers it, so the largest single
+ * relief is the one that counts. An instrument that is switched on and changes
+ * nothing, because another removes more or because the scenario has no floor
+ * for it to act through, says so under its slider rather than sitting inert.
  */
-import { useState } from 'react';
-import { PLANNER_RATE, hurdleRate, instrumentRelief, RELIEF_DEFAULTS } from './projectFinance';
+import { useState, type ReactNode } from 'react';
+import { PLANNER_RATE, hurdleRate, instrumentRelief, floorCovers,
+         RELIEF_DEFAULTS } from './projectFinance';
 
+const FLOOR_INTERFACE = 'magnet';
 const INSTRUMENTS = [
   { key: 'offtake', label: 'Offtake agreement',
     hint: 'A committed buyer removes volume risk, the largest part of the premium a first US plant pays. Costs the public nothing unless the buyer walks. The share it removes is a judgement, not a measurement.' },
   { key: 'floor', label: 'Price floor',
-    hint: 'How much of the premium a full price floor removes. What reaches a project is this times how far the floor is set in the scenario above, and only for the stages the floor covers: a floor on magnets does nothing for a separation plant.' },
+    hint: 'How much of the premium a full price floor removes. What reaches a project is this times how far the floor is set in the scenario, and only for the stages the floor covers: a floor on magnets does nothing for a separation plant.' },
   { key: 'guarantee', label: 'Loan guarantee',
     hint: 'Public credit support. At 100% the project is financed at the planner’s rate outright. A cost subsidy is absent on purpose: it makes a project cheaper in every state of the world, including the ones where it fails, so it removes no risk.' },
 ] as const;
+type Key = typeof INSTRUMENTS[number]['key'];
 
 const LABEL: Record<string, string> = {
   mining: 'mining', separation: 'separation', alloy: 'alloying',
   magnet: 'magnets', recycling: 'recycling',
 };
+const PLANTS: Record<string, string> = {
+  mining: 'mines', separation: 'separation plants', alloy: 'alloy plants',
+  magnet: 'magnet plants', recycling: 'recycling plants',
+};
+const NAME: Record<Key, string> = {
+  offtake: 'the offtake agreement', floor: 'the price floor', guarantee: 'the loan guarantee',
+};
 const RATE_MAX = 0.35;
 const pct = (v: number, d = 1) => `${(v * 100).toFixed(d)}%`;
+const list = (xs: string[]) =>
+  (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] ?? '');
 
 export default function HurdleComponents({ rate, onRate, instruments, onInstruments, floorLevel,
                                            foakMult, onFoakMult, stages }: {
@@ -48,7 +68,7 @@ export default function HurdleComponents({ rate, onRate, instruments, onInstrume
   const [open, setOpen] = useState(false);
   const premium = Math.max(0, rate - PLANNER_RATE);
   const reliefFor = (stage: string) => instrumentRelief(stage, {
-    offtake: instruments.offtake, floorInterface: 'magnet',
+    offtake: instruments.offtake, floorInterface: FLOOR_INTERFACE,
     floorRelief: instruments.floor, floorLevel, creditSupport: instruments.guarantee,
   });
   const effective = (stage: string) => PLANNER_RATE + (1 - reliefFor(stage)) * premium;
@@ -60,27 +80,84 @@ export default function HurdleComponents({ rate, onRate, instruments, onInstrume
   const removed = relief * premium;
   const w = (v: number) => `${(v / RATE_MAX) * 100}%`;
 
+  // What each instrument removes at a stage, on its own, and whether it is the
+  // one that counts there.
+  const covered = floorCovers(FLOOR_INTERFACE);
+  const alone = (k: Key, stage: string): number =>
+    k === 'offtake' ? (instruments.offtake ?? 0)
+      : k === 'guarantee' ? (instruments.guarantee ?? 0)
+        : covered.includes(stage) ? (instruments.floor ?? 0) * floorLevel : 0;
+  const reach = (k: Key) => (k === 'floor' ? shown.filter((s) => covered.includes(s)) : shown);
+  /** The instrument that outdoes this one at every stage it reaches, if any. */
+  const outdoneBy = (k: Key): Key | null => {
+    const at = reach(k);
+    if (!at.length || at.every((s) => alone(k, s) <= 1e-9)) return null;
+    const others = INSTRUMENTS.map((i) => i.key).filter((o) => o !== k);
+    const beaten = at.every((s) => others.some((o) => alone(o, s) > alone(k, s) + 1e-9));
+    if (!beaten) return null;
+    return others.reduce((a, o) => (alone(o, at[0]) > alone(a, at[0]) ? o : a), others[0]);
+  };
+  const stateOf = (k: Key): { dim: boolean; text: string } | null => {
+    if (k === 'floor') {
+      const where = `Covers ${list(covered.map((s) => PLANTS[s] ?? s))} only.`;
+      if (floorLevel <= 1e-9) {
+        return { dim: true, text: `Off in this scenario, so moving this changes nothing. `
+          + `The floor itself is set by “US price floor on China imports” in the scenario `
+          + `controls; this is the share of the premium a full floor would remove. ${where}` };
+      }
+      if (!reach('floor').length) {
+        return { dim: true, text: `${where} The plan asks for none here, so moving this changes nothing.` };
+      }
+      const by = outdoneBy('floor');
+      return { dim: !!by, text: `The scenario’s floor is set at ${pct(floorLevel, 0)}, so `
+        + `${pct((instruments.floor ?? 0) * floorLevel, 0)} of the premium is removed. ${where}`
+        + (by ? ` No effect now: ${NAME[by]} already removes more.` : '') };
+    }
+    const by = outdoneBy(k);
+    return by ? { dim: true, text: `No effect now: ${NAME[by]} already removes more, and only the largest counts.` } : null;
+  };
+
   const slider = (label: string, hint: string, value: number, min: number, max: number,
-                  step: number, set: (v: number) => void, read: string, note?: string) => (
-    <label title={hint} style={{ display: 'block', fontSize: 11.5, minWidth: 0 }}>
-      <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-        <span>{label}</span>
-        <span style={{ font: '600 11px var(--font-mono)' }}>
-          {read}
-          {note && <span style={{ opacity: 0.55, fontWeight: 400 }}> {note}</span>}
+                  step: number, set: (v: number) => void, read: string, note?: string,
+                  state?: { dim: boolean; text: string } | null) => (
+    <div style={{ minWidth: 0 }}>
+      <label title={hint} style={{ display: 'block', fontSize: 11.5, opacity: state?.dim ? 0.5 : 1 }}>
+        <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+          <span>{label}</span>
+          <span style={{ font: '600 11px var(--font-mono)' }}>
+            {read}
+            {note && <span style={{ opacity: 0.55, fontWeight: 400 }}> {note}</span>}
+          </span>
         </span>
-      </span>
-      <input type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => set(parseFloat(e.target.value))}
-        style={{ width: '100%', accentColor: 'var(--accent)', margin: '4px 0 0' }} />
-    </label>
+        <input type="range" min={min} max={max} step={step} value={value}
+          onChange={(e) => set(parseFloat(e.target.value))}
+          style={{ width: '100%', accentColor: 'var(--accent)', margin: '4px 0 0' }} />
+      </label>
+      {state && (
+        <p style={{ fontSize: 10.5, opacity: 0.65, lineHeight: 1.4, margin: '3px 0 0' }}>{state.text}</p>
+      )}
+    </div>
+  );
+  const group = (title: string, children: ReactNode) => (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: 'var(--cardinal)', opacity: 0.85,
+                    margin: '0 0 7px' }}>
+        {title}
+      </div>
+      <div className="hurdle-grid">{children}</div>
+    </div>
   );
 
   return (
     <div style={{ marginTop: 14, borderTop: '1px solid var(--rule)', paddingTop: 10 }}>
       <style>{`
-        .hurdle-grid { display: grid; gap: 14px 24px; grid-template-columns: 1fr; }
-        @media (min-width: 720px) { .hurdle-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        .hurdle-grid { display: grid; gap: 14px 24px; grid-template-columns: 1fr; align-items: start; }
+        .hurdle-wide { grid-column: auto; }
+        @media (min-width: 720px) {
+          .hurdle-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+          .hurdle-wide { grid-column: span 2; }
+        }
         .hurdle-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       `}</style>
       <button type="button" className="hurdle-toggle" aria-expanded={open}
@@ -90,21 +167,22 @@ export default function HurdleComponents({ rate, onRate, instruments, onInstrume
                  textAlign: 'left' }}>
         <span style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.06em',
                        textTransform: 'uppercase', opacity: 0.55 }}>
-          <span aria-hidden="true" style={{ display: 'inline-block', width: 12 }}>{open ? '▾' : '▸'}</span>
           Hurdle rate
         </span>
         <span style={{ font: '600 13px var(--font-mono)' }}>{pct(effective(worst))}</span>
-        <span style={{ fontSize: 11, opacity: 0.65 }}>
-          {open
-            ? `planner ${pct(PLANNER_RATE, 0)} + risk premium ${(premium * 100).toFixed(1)} points`
-              + (removed > 1e-9
-                ? ` − ${(removed * 100).toFixed(1)} removed by an instrument`
-                : ' · no instrument applied')
-            : 'show what it is made of'}
+        <span style={{ fontSize: 11, color: 'var(--accent)' }}>
+          <span aria-hidden="true" style={{ display: 'inline-block', width: 12 }}>{open ? '▾' : '▸'}</span>
+          {open ? 'hide breakdown' : 'see breakdown'}
         </span>
       </button>
 
       {open && (<>
+      <p style={{ fontSize: 11, opacity: 0.7, margin: '8px 0 0', lineHeight: 1.45 }}>
+        The planner’s {pct(PLANNER_RATE, 0)}, plus a risk premium of {(premium * 100).toFixed(1)} points
+        {removed > 1e-9
+          ? <>, less {(removed * 100).toFixed(1)} removed by an instrument</>
+          : <>; no instrument is removing any of it</>}.
+      </p>
 
       {/* The rate as a bar: what the planner charges, what risk still adds, and
           what an instrument has taken away. */}
@@ -134,7 +212,7 @@ export default function HurdleComponents({ rate, onRate, instruments, onInstrume
             </span>
           ))}
       </div>
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 5,
+      <div style={{ display: 'flex', gap: '4px 14px', flexWrap: 'wrap', marginTop: 5,
                     font: '400 10px var(--font-mono)', opacity: 0.65 }}>
         <span><span style={{ display: 'inline-block', width: 10, height: 8,
                              background: 'var(--ink-3)', opacity: 0.45 }} /> planner&rsquo;s rate</span>
@@ -149,40 +227,49 @@ export default function HurdleComponents({ rate, onRate, instruments, onInstrume
         )}
       </div>
 
-        <div style={{ marginTop: 14 }}>
-          <div className="hurdle-grid">
-            {slider('Risk premium',
-              'What a private developer demands on top of the planner’s rate before committing: its cost of capital including the risk of the project. This is the only thing that separates a firm from the planner, which discounts the same cash flows at the planner’s rate.',
-              premium, 0, RATE_MAX - PLANNER_RATE, 0.005,
-              (v) => onRate(PLANNER_RATE + v), `${(premium * 100).toFixed(1)} points`,
-              Math.abs(rate - hurdleRate('USA')) < 1e-9 ? 'US default' : undefined)}
-            {INSTRUMENTS.map((i) => {
-              const v = instruments[i.key] ?? 0;
-              const reaches = i.key === 'floor' ? v * floorLevel : v;
-              return (
-                <div key={i.key}>
-                  {slider(i.label, i.hint, v, 0, 1, 0.05,
-                    (x) => onInstruments({ ...instruments, [i.key]: x }),
-                    `removes ${(v * 100).toFixed(0)}%`,
-                    i.key === 'floor' && Math.abs(reaches - v) > 1e-9
-                      ? `(${(reaches * 100).toFixed(0)}% at this floor)` : undefined)}
-                </div>
-              );
-            })}
-            {slider('First-of-a-kind capital',
-              'The extra capital cost of being first, on top of the steady cost disadvantage on the frontier: unproven process, no local supply chain, learning still ahead. Capital only. 0 builds like an established plant, 1 is as calibrated, 2 is twice that penalty.',
-              foakMult, 0, 2.5, 0.05, onFoakMult, `${foakMult.toFixed(2)}×`,
-              Math.abs(foakMult - 1) < 1e-9 ? 'as calibrated' : undefined)}
+      {group('Raises the rate', <>
+        {slider('Risk premium',
+          'What a private developer demands on top of the planner’s rate before committing: its cost of capital including the risk of the project. This is the only thing that separates a firm from the planner, which discounts the same cash flows at the planner’s rate.',
+          premium, 0, RATE_MAX - PLANNER_RATE, 0.005,
+          (v) => onRate(PLANNER_RATE + v), `${(premium * 100).toFixed(1)} points`,
+          Math.abs(rate - hurdleRate('USA')) < 1e-9 ? 'US default' : undefined)}
+        <p className="hurdle-wide" style={{ fontSize: 10.5, opacity: 0.65, lineHeight: 1.45, margin: 0 }}>
+          What a private developer demands on top of the planner&rsquo;s rate before it
+          commits. It is the one thing that separates a firm from the planner, which
+          discounts the same cash flows at {pct(PLANNER_RATE, 0)}.
+        </p>
+      </>)}
+
+      {group('Lowers the rate', INSTRUMENTS.map((i) => {
+        const v = instruments[i.key] ?? 0;
+        return (
+          <div key={i.key} style={{ minWidth: 0 }}>
+            {slider(i.label, i.hint, v, 0, 1, 0.05,
+              (x) => onInstruments({ ...instruments, [i.key]: x }),
+              `removes ${(v * 100).toFixed(0)}%`, undefined, stateOf(i.key))}
           </div>
-          <p style={{ fontSize: 10.5, opacity: 0.55, margin: '12px 0 0', lineHeight: 1.45, maxWidth: 700 }}>
-            An instrument removes part of the risk premium, never the planner&rsquo;s rate
-            beneath it, and the largest one is the one that counts: they do not add up.
-            The defaults ({(RELIEF_DEFAULTS.offtake * 100).toFixed(0)}% for an offtake,{' '}
-            {(RELIEF_DEFAULTS.floor * 100).toFixed(0)}% for a floor) are judgements about
-            ordering, not measurements. A hurdle rate is a discount rate and a provenance
-            premium is a price, so they act on opposite sides of the same sum.
-          </p>
-        </div>
+        );
+      }))}
+      <p style={{ fontSize: 10.5, opacity: 0.55, margin: '8px 0 0', lineHeight: 1.45, maxWidth: 700 }}>
+        An instrument removes part of the risk premium, never the planner&rsquo;s rate
+        beneath it, and the largest one is the one that counts: they do not add up.
+        The defaults ({(RELIEF_DEFAULTS.offtake * 100).toFixed(0)}% for an offtake,{' '}
+        {(RELIEF_DEFAULTS.floor * 100).toFixed(0)}% for a floor) are judgements about
+        ordering, not measurements.
+      </p>
+
+      {group('Raises the cost, not the rate', <>
+        {slider('First-of-a-kind capital',
+          'The extra capital cost of being first, on top of the steady cost disadvantage on the frontier: unproven process, no local supply chain, learning still ahead. Capital only. 0 builds like an established plant, 1 is as calibrated, 2 is twice that penalty.',
+          foakMult, 0, 2.5, 0.05, onFoakMult, `${foakMult.toFixed(2)}×`,
+          Math.abs(foakMult - 1) < 1e-9 ? 'as calibrated' : undefined)}
+        <p className="hurdle-wide" style={{ fontSize: 10.5, opacity: 0.65, lineHeight: 1.45, margin: 0 }}>
+          The extra capital a first plant costs to build. It is a cost, not a part of
+          the rate: it makes the plant dearer, which moves the bankability frontier and
+          the verdicts above, and leaves the rate its cash flows are discounted at where
+          it is. 0 builds like an established plant, 1 is as calibrated.
+        </p>
+      </>)}
       </>)}
     </div>
   );

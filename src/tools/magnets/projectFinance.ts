@@ -233,6 +233,10 @@ export function instrumentRelief(stage: string, opts: {
   return Math.min(1, relief);
 }
 
+/** The stages a price floor on one interface de-risks. A floor on magnets does
+ *  nothing for a separation plant. */
+export const floorCovers = (iface: string): string[] => C.floor_covers[iface] ?? [];
+
 /** The asserted defaults. NOT empirical: the ORDERING is defensible (an offtake
  *  removes more risk than a floor; a guarantee removes all of it; a cost subsidy
  *  removes none, which is why it is absent), the magnitudes are judgement. They

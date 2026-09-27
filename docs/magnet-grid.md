@@ -20,8 +20,11 @@ and fails the build if one is missing or the wrong size.
 
 ## Vercel setup, once
 
-1. In Dropbox, share the `magnets-grid` folder with "anyone with the link can
-   view" and copy the link.
+1. In Dropbox, share the `magnets-grid` folder and copy its **link for
+   viewing**, set to "anyone with link". Do not use the link for editing:
+   whoever holds it can change the files. (The build would refuse them, since
+   every file is checked against the SHA-256 in the manifest, but the site
+   could then not be deployed until the folder was restored.)
 2. Set it as `MAGNET_GRID_URL` in the Vercel project, for production and
    preview: `vercel env add MAGNET_GRID_URL`.
 

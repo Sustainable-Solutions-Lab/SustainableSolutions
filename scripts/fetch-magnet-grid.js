@@ -20,9 +20,10 @@
  *      grid left the repository): nothing to do.
  *
  * WHICH grid is wanted is written in the repository, in
- * src/tools/magnets/grid-manifest.json: a version, and every file with its size.
- * A download that does not match it fails the build, so a Dropbox folder caught
- * halfway through a sync cannot be deployed. After a regrid:
+ * src/tools/magnets/grid-manifest.json: a version, and every file with its size
+ * and SHA-256. A download that does not match it fails the build, so neither a
+ * Dropbox folder caught halfway through a sync nor a file changed by someone
+ * holding the link can be deployed. After a regrid:
  *
  *     node scripts/fetch-magnet-grid.js --write-manifest
  *
@@ -50,14 +51,17 @@ const MANIFEST = join(ROOT, 'src', 'tools', 'magnets', 'grid-manifest.json');
 const IS_GRID = /^scenarios[.\w-]*\.json$/;
 
 const manifest = () => (existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : null);
+const digest = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
 
-/** What in `dir` disagrees with the manifest; empty when it is the grid wanted. */
-function mismatches(dir, want) {
+/** What in `dir` disagrees with the manifest; empty when it is the grid wanted.
+ *  Contents are hashed only when asked: it reads every byte of the grid. */
+function mismatches(dir, want, { contents = false } = {}) {
   const have = gridFiles(dir);
   const out = [];
-  for (const [f, bytes] of Object.entries(want.files)) {
+  for (const [f, { bytes, sha256 }] of Object.entries(want.files)) {
     if (!have.includes(f)) out.push(`${f} is missing`);
     else if (statSync(join(dir, f)).size !== bytes) out.push(`${f} is ${statSync(join(dir, f)).size} bytes, not ${bytes}`);
+    else if (contents && digest(join(dir, f)) !== sha256) out.push(`${f} does not have the contents recorded`);
   }
   for (const f of have) if (!(f in want.files)) out.push(`${f} is not in the manifest`);
   return out;
@@ -66,10 +70,11 @@ function mismatches(dir, want) {
 function writeManifest(dir) {
   const names = gridFiles(dir).sort();
   if (!names.includes('scenarios.json')) throw new Error(`${dir} holds no scenarios.json`);
-  const files = Object.fromEntries(names.map((f) => [f, statSync(join(dir, f)).size]));
-  // The version is a digest of the core file, so it changes when the grid does
+  const files = Object.fromEntries(names.map((f) => [f,
+    { bytes: statSync(join(dir, f)).size, sha256: digest(join(dir, f)) }]));
+  // The version is a digest of the digests, so it changes when any file does
   // and at no other time.
-  const version = createHash('sha256').update(readFileSync(join(dir, 'scenarios.json'))).digest('hex').slice(0, 12);
+  const version = createHash('sha256').update(names.map((f) => files[f].sha256).join('')).digest('hex').slice(0, 12);
   writeFileSync(MANIFEST, `${JSON.stringify({ version, files }, null, 2)}\n`);
   console.log(`[magnet-grid] manifest written: version ${version}, ${names.length} files`);
 }
@@ -145,7 +150,7 @@ async function download(url, want) {
   unzip.push(new Uint8Array(0), true);
   await Promise.all(writes);
   console.log(`[magnet-grid] downloaded ${(bytes / 1e6).toFixed(0)} MB`);
-  const wrong = mismatches(dir, want);
+  const wrong = mismatches(dir, want, { contents: true });
   if (wrong.length) {
     rmSync(dir, { recursive: true, force: true });
     throw new Error(`the Dropbox folder is not grid ${version}: ${wrong.slice(0, 5).join('; ')}`

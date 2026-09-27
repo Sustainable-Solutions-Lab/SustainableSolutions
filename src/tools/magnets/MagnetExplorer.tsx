@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { AXES, AXIS_DOMAIN, BASE, HAS_ALLIED_TARIFF, RESTRICTION_SCOPE, ensureAlliedTariffSlices, alliedTariffReady, interpScenario, applyStockpile, STOCKPILE_COST_DEFAULT, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS, ensurePriceFloorSlices, priceFloorReady, ensureAbatementCeilingSlices,
-         abatementCeilingReady, HAS_ABATEMENT_CEILING, ABATEMENT_CEILINGS,
-         ensureFlowsFor, flowsReadyFor, type Scenario } from './interp';
+import { AXES, AXIS_DOMAIN, BASE, HAS_ALLIED_TARIFF, RESTRICTION_SCOPE, interpScenario, applyStockpile, STOCKPILE_COST_DEFAULT, applyRoundTop, reshoreSupply, ROUND_TOP_COST, ROUND_TOP_MINING_DI, STOCKPILE_MAX, YEARS,
+         HAS_ABATEMENT_CEILING, ABATEMENT_CEILINGS, HAS_LIGHT_RULE, coreReadyFor, ensureCoreFor,
+         ensureFlowsFor, flowsReadyFor, type Scenario, type SliceNeed } from './interp';
 import { integratedTRI, integratedRE, classTRI, stageBreakdownClass, RE_CLASS_WEIGHT, riskColor, riskChip } from './tri';
 import { axisDiff, AXIS_LABEL, AXIS_FMT, type AxisKey } from './ScenarioBar';
 import CapacityPanel, { type ReClass } from './CapacityPanel';
@@ -287,9 +287,12 @@ export default function MagnetExplorer() {
   // (~15% on Japan/EU/Korea since 2025). Opens at that level where the grid
   // carries the axis; a pre-axis grid solved it as 0 and the control says so.
   const [atariff, setAtariff] = useState(HAS_ALLIED_TARIFF ? 0.15 : 0);
-  // Which slices are needed depends on the price floor, declared further down
-  // with the interventions; the three loading effects sit together below it.
-  const [atReady, setAtReady] = useState(alliedTariffReady());
+  // A US friendshoring rule covers BOTH classes; China's reach is about the
+  // heavy rare earths. So the heavy requirement is the larger of the two
+  // (`source`, above) and the light requirement is the US rule alone. A grid
+  // written before the light chain of custody existed has no such axis and the
+  // rule is then heavy-only, as it was.
+  const light = HAS_LIGHT_RULE ? sourceMandate : 0;
   // BASE CASE is a partially restricted world, not an open market. The study
   // exists because buyers are already paying to hedge Chinese supply, and an
   // undisrupted default answers a question nobody is asking: of course the
@@ -313,13 +316,17 @@ export default function MagnetExplorer() {
   const [unmetValueLog, setUnmetValueLog] = useState(Math.log10(UNMET_VALUE_DEFAULT));
   const unmetValue = 10 ** unmetValueLog;
   const [pfloor, setPfloor] = useState(0);           // US price floor on China imports (0 / .5 / 1)
-  // SLICES LOAD FOR THE SETTINGS IN FORCE. The base slice is bundled. The
-  // price-floor and ceiling slices the ledger and the research decision need
-  // (the floor levels this setting sits between, plus none and full) load in
-  // idle time after first paint, and again whenever the floor slider moves
-  // into levels that are not yet here. At the default that is three files of
-  // the five there are.
-  const [pfReady, setPfReady] = useState(priceFloorReady(pfloor));
+  // SLICES LOAD FOR THE SETTINGS IN FORCE, in two steps. The base slice is
+  // bundled. First the pair of ceilings at these settings, which is what the
+  // research decision needs. Then, at the ceiling that decision chose, the
+  // slices the ledger probes: the price floor off and full, the friendshoring
+  // rule off and full. Anything else is fetched when a control moves onto it.
+  const [ceilingReady, setCeilingReady] = useState(false);
+  const [probesReady, setProbesReady] = useState(false);
+  // The slices could not be fetched. The research then stays unevaluated and the
+  // page shows the baseline ceiling, which is a settled state, not a pending one.
+  const [ceilingFailed, setCeilingFailed] = useState(false);
+  const pfReady = probesReady, atReady = probesReady;
   const firstLoad = useRef(true);
   const whenIdle = (go: () => void, timeout: number) => {
     const w = window as any;
@@ -329,23 +336,20 @@ export default function MagnetExplorer() {
     return () => { if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(id); else window.clearTimeout(id); };
   };
   useEffect(() => {
-    if (priceFloorReady(pfloor)) { setPfReady(true); return; }
-    setPfReady(false);
+    const here = { pfloor, atariff, light };
+    const pair: SliceNeed[] = HAS_ABATEMENT_CEILING
+      ? [{ ...here, abunlock: 0 }, { ...here, abunlock: 1 }] : [{ ...here, abunlock: 0 }];
+    if (coreReadyFor(pair)) { setCeilingReady(true); firstLoad.current = false; return; }
+    setCeilingReady(false);
     let live = true;
     const cancel = whenIdle(() => {
-      void ensurePriceFloorSlices(pfloor).then(() => { if (live) setPfReady(true); });
-    }, 5000);
+      void ensureCoreFor(pair)
+        .then(() => { if (live) { setCeilingReady(true); firstLoad.current = false; } })
+        .catch(() => { if (live) setCeilingFailed(true); });
+    }, 3000);
     return () => { live = false; cancel(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pfloor]);
-  useEffect(() => {
-    if (atariff <= 0.15 + 1e-9) return;
-    if (alliedTariffReady(pfloor)) { setAtReady(true); return; }
-    setAtReady(false);
-    let live = true;
-    void ensureAlliedTariffSlices(pfloor).then(() => { if (live) setAtReady(true); });
-    return () => { live = false; };
-  }, [atariff, pfloor]);
+  }, [pfloor, atariff, light]);
   // Abatement ceiling: 0 = today's sectoral availability, 1 = the barrier broken.
   // Whether it is broken is the planner's call, made below against this R&D cost.
   // Its three slices (one per price-floor level) load in idle time after first
@@ -366,23 +370,6 @@ export default function MagnetExplorer() {
   // A stage with no entry sits at its default: today's observed premium for the
   // stages that sell oxide, nothing for the rest (projectFinance.defaultPremium).
   const [premium, setPremium] = useState<Record<string, number>>({});
-  const [ceilingReady, setCeilingReady] = useState(abatementCeilingReady(pfloor));
-  // The slices could not be fetched. The research then stays unevaluated and the
-  // page shows the baseline ceiling, which is a settled state, not a pending one.
-  const [ceilingFailed, setCeilingFailed] = useState(false);
-  useEffect(() => {
-    if (!HAS_ABATEMENT_CEILING) return;
-    if (abatementCeilingReady(pfloor)) { setCeilingReady(true); firstLoad.current = false; return; }
-    setCeilingReady(false);
-    let live = true;
-    const cancel = whenIdle(() => {
-      void ensureAbatementCeilingSlices(pfloor)
-        .then(() => { if (live) { setCeilingReady(true); firstLoad.current = false; } })
-        .catch(() => { if (live) setCeilingFailed(true); });
-    }, 4000);
-    return () => { live = false; cancel(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pfloor]);
   // Real-world projects overlay (default = operating only; construction + planned off). The
   // active allied set drives the country-level allied HHI in the trade-risk index.
   // Only the uncertain future supply is toggled; operating plants are always in.
@@ -458,9 +445,9 @@ export default function MagnetExplorer() {
   // research decision is then made at that collection rate; the stockpile last,
   // against whatever shortfall is left. Every step is a grid read.
   const cellAt = useCallback((o: Record<string, number>) => interpScenario({
-    make, source, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, atariff, abunlock: 0, ...o,
+    make, source, light, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, atariff, abunlock: 0, ...o,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [make, source, china, rcost, demand, dscale, pfloor, atariff, atReady, pfReady, ceilingReady, flowsTick]);
+  }), [make, source, light, china, rcost, demand, dscale, pfloor, atariff, atReady, pfReady, ceilingReady, flowsTick]);
   const collection = useMemo(
     () => chooseCollection(AXIS_DOMAIN.rec, (r) => cellAt({ rec: r }), collectCost),
     [cellAt, collectCost]);
@@ -486,12 +473,26 @@ export default function MagnetExplorer() {
   const usUnmet = sc.kpis.us_unmet_kt ?? 0;
   const flowsReady = sc.flows_ready !== false;
   useEffect(() => {
-    const at = { pfloor, abunlock, atariff };
+    const at = { pfloor, abunlock, atariff, light };
     if (flowsReadyFor(at)) { if (!flowsReady) setFlowsTick((t) => t + 1); return; }
     let live = true;
     ensureFlowsFor(at).then(() => { if (live) setFlowsTick((t) => t + 1); }).catch(() => undefined);
     return () => { live = false; };
-  }, [pfloor, abunlock, atariff, pfReady, ceilingReady, atReady, flowsReady]);
+  }, [pfloor, abunlock, atariff, light, pfReady, ceilingReady, atReady, flowsReady]);
+  // Step two of the loading: what the ledger probes, at the ceiling now chosen.
+  useEffect(() => {
+    if (!ceilingReady && !ceilingFailed) return;
+    const here = { pfloor, atariff, light, abunlock };
+    const probes: SliceNeed[] = [
+      { ...here, pfloor: 0 }, { ...here, pfloor: AXES.pfloorMax },
+      { ...here, light: 0 }, ...(HAS_LIGHT_RULE ? [{ ...here, light: AXES.sourceMax }] : []),
+    ];
+    if (coreReadyFor(probes)) { setProbesReady(true); return; }
+    setProbesReady(false);
+    let live = true;
+    void ensureCoreFor(probes).then(() => { if (live) setProbesReady(true); });
+    return () => { live = false; };
+  }, [pfloor, atariff, light, abunlock, ceilingReady, ceilingFailed]);
   // THE HEADLINE NUMBERS WAIT for the research decision. Whether the thrifting
   // research is funded changes the scenario every figure is read from, and it
   // cannot be decided until the higher-ceiling slices have arrived, a second or
@@ -595,7 +596,7 @@ export default function MagnetExplorer() {
   // baseline = do-nothing (no US policy/projects) at the SAME demand scenario + threat, so
   // the delta is the cost of the security choices made (can be negative if reshoring avoids
   // more China premium than it costs to build).
-  const baseNPV = realCost(interpScenario({ make: 0, source: reach, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale, atariff, abunlock }));
+  const baseNPV = realCost(interpScenario({ make: 0, source: reach, light: 0, rec: 0, china, rcost, dytb: demand.dytb_intensity, dscale, atariff, abunlock }));
   const npvDelta = usCostReal - baseNPV;
   const tri = integratedRE(scR, alliedHHIMap);   // live readout (light+heavy weighted)
   // China-exposed demand — FAITHFUL flow-traced provenance from the model export
@@ -610,6 +611,11 @@ export default function MagnetExplorer() {
   // card responsive to the INTERACTIVE project toggles — the same way the TRI, Sankey, and
   // pathway move — we nudge the faithful base by the project-floor delta the old per-stage
   // proxy still captures (reconciled minus raw US per-stage China share).
+  const exposedIn = (cls: 'heavy' | 'light'): number | null => {
+    const i = YEARS.indexOf(Number(flowYear));
+    const v = sc.exposed_by_year?.[cls]?.[i];
+    return v == null || i < 0 ? null : v;
+  };
   const proxyTouch = (u: typeof scR.us_supply) => 1 - ['mining', 'separation', 'alloy', 'magnet']
     .reduce((p, st) => p * (1 - Math.min(1, Math.max(0, u?.[st]?.china ?? 0))), 1);
   // Headline the HEAVY (Dy/Tb) China-exposure — the binding chokepoint and the paper's
@@ -684,7 +690,7 @@ export default function MagnetExplorer() {
     projects?: Set<string>; stockpileKt?: number; roundTop?: boolean; reshore?: string[];
   } = {}) => {
     const abu = o.abunlock ?? abunlock;
-    let scn = interpScenario({ make, source, rec, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, atariff, abunlock: abu, ...o });
+    let scn = interpScenario({ make, source, light, rec, china, rcost, dytb: demand.dytb_intensity, dscale, pfloor, atariff, abunlock: abu, ...o });
     if (opt.reshore) scn = reshoreSupply(scn, opt.reshore, 0.9);
     if (opt.roundTop) scn = applyRoundTop(scn, true);
     const kt = opt.stockpileKt ?? chooseStockpile(scn, stockCost, unmetValue, STOCKPILE_MAX).kt;
@@ -695,7 +701,7 @@ export default function MagnetExplorer() {
       + (abu > 0 ? rdChoice.rd.rdCost : 0);
     return { tri: integratedRE(fin, alliedHHIMap), bill, unmet: (scn.path.us_mix.unmet ?? []).reduce((a, u) => a + u, 0) };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [make, source, rec, china, rcost, demand, dscale, pfloor, atariff, atReady, abunlock, stockCost, unmetValue, collectCost, rdChoice, activeProjects, alliedHHIMap, finishScn, pfReady, ceilingReady]);
+  }, [make, source, light, rec, china, rcost, demand, dscale, pfloor, atariff, atReady, abunlock, stockCost, unmetValue, collectCost, rdChoice, activeProjects, alliedHHIMap, finishScn, pfReady, ceilingReady]);
 
   const plannerLedger = useMemo<PlannerRow[]>(() => {
     const cur = evalAt({});
@@ -707,11 +713,17 @@ export default function MagnetExplorer() {
     rows.push({ name: 'US-make mandate', deployed: make > 0, level: make > 0 ? pct(make * 100) : undefined,
       bought: make > 0 ? bought(evalAt({ make: 0 })) : undefined,
       next: make < AXES.makeMax ? next(evalAt({ make: AXES.makeMax })) : undefined });
-    rows.push({ name: 'Friendshore mandate', deployed: sourceMandate > reach,
-      level: sourceMandate > reach ? pct(sourceMandate * 100) : undefined,
-      bought: sourceMandate > reach ? bought(evalAt({ source: reach })) : undefined,
-      next: source < AXES.sourceMax ? next(evalAt({ source: AXES.sourceMax })) : undefined,
-      note: reach > 0 ? `beyond China's ${pct(reach * 100)} reach · consumer premium` : 'consumer premium' });
+    // Deployed when it adds anything: on the heavy side that is beyond China's
+    // reach, on the light side from the first point, since no Chinese rule
+    // asks for clean Nd/Pr.
+    const friendOn = HAS_LIGHT_RULE ? sourceMandate > 1e-9 : sourceMandate > reach;
+    const friendMax = HAS_LIGHT_RULE ? sourceMandate >= AXES.sourceMax - 1e-9 : source >= AXES.sourceMax - 1e-9;
+    rows.push({ name: 'Friendshore mandate', deployed: friendOn,
+      level: friendOn ? pct(sourceMandate * 100) : undefined,
+      bought: friendOn ? bought(evalAt({ source: reach, light: 0 })) : undefined,
+      next: friendMax ? undefined : next(evalAt({ source: AXES.sourceMax, light: HAS_LIGHT_RULE ? AXES.sourceMax : 0 })),
+      note: HAS_LIGHT_RULE ? 'Nd/Pr and Dy/Tb · consumer premium'
+        : reach > 0 ? `beyond China's ${pct(reach * 100)} reach · consumer premium` : 'consumer premium' });
     rows.push({ name: 'Price floor on China imports', deployed: pfloor > 0, level: pfloor > 0 ? pct(pfloor * 100) : undefined,
       bought: pfloor > 0 ? bought(evalAt({ pfloor: 0 })) : undefined,
       next: pfloor < AXES.pfloorMax ? next(evalAt({ pfloor: AXES.pfloorMax })) : undefined,
@@ -742,7 +754,7 @@ export default function MagnetExplorer() {
     rows.push({ name: 'Build US magnet', deployed: false, overlay: true, next: next(evalAt({}, { reshore: ['magnet'] }), US_MAGNET_RESHORE_COST),
       note: `90% US-made, at an assumed ${musd(US_MAGNET_RESHORE_COST)}` });
     return rows;
-  }, [evalAt, make, source, sourceMandate, reach, pfloor, rec, stockpile, abunlock, rdChoice, activeProjects, collectCost, stockCost, rdCostPerKg]);
+  }, [evalAt, make, source, light, sourceMandate, reach, pfloor, rec, stockpile, abunlock, rdChoice, activeProjects, collectCost, stockCost, rdCostPerKg]);
 
   // ── THE ACTOR LEDGER ────────────────────────────────────────────────────
   // The same screen the capacity panel runs, once at the current instruments
@@ -814,11 +826,15 @@ export default function MagnetExplorer() {
       make: makeInert
         ? `No effect in this scenario: the plan already makes ${pct(usMade('2030') * 100)} of the magnets the US uses in 2030 and ${pct(usMade('2035') * 100)} in 2035 here, so a requirement to make them here changes nothing. It governs where magnets are made, not where their alloy comes from.`
         : null,
-      source: reach >= AXES.sourceMax - 1e-9
-        ? `No effect in this scenario: China’s extraterritorial reach, set at ${pct(reach * 100)} above, already forces all of the US Dy/Tb onto clean supply. The two take the larger value, so lower the reach to see this act.`
-        : sourceMandate <= reach + 1e-9
-          ? `No effect until it passes ${pct(reach * 100)}: China’s reach already forces that much clean sourcing, and the two take the larger value.`
-          : null,
+      source: HAS_LIGHT_RULE
+        ? (reach > 1e-9 && sourceMandate <= reach + 1e-9
+          ? `Acts on Nd/Pr only until it passes ${pct(reach * 100)}: China’s reach, set above, already forces that much of the US Dy/Tb onto clean supply.`
+          : null)
+        : reach >= AXES.sourceMax - 1e-9
+          ? `No effect in this scenario: China’s extraterritorial reach, set at ${pct(reach * 100)} above, already forces all of the US Dy/Tb onto clean supply. The two take the larger value, so lower the reach to see this act.`
+          : sourceMandate <= reach + 1e-9
+            ? `No effect until it passes ${pct(reach * 100)}: China’s reach already forces that much clean sourcing, and the two take the larger value.`
+            : null,
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [evalAt, sc, reach, sourceMandate]);
@@ -910,10 +926,12 @@ export default function MagnetExplorer() {
           ticks={[{ at: 0, label: 'none' }, { at: 0.5, label: 'half' }, { at: AXES.makeMax, label: 'all US-made' }]}
           note={leverNotes.make}
           desc="The share of the magnets the US uses that must be made in the US: the last step of the chain only, like the component rule of the IRA vehicle credit. It says nothing about what they are made from, so a US magnet plant may still run on imported alloy, Chinese alloy included, as far as the export restriction allows." />
-        <Slider label="Clean heavy sourcing (friendshore)" value={sourceMandate} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
+        <Slider label={HAS_LIGHT_RULE ? 'Clean sourcing (friendshore)' : 'Clean heavy sourcing (friendshore)'} value={sourceMandate} max={AXES.sourceMax} onChange={setSource} fmt={(v) => pct(v * 100)}
           ticks={[{ at: 0, label: 'none' }, { at: 0.5, label: 'half' }, { at: AXES.sourceMax, label: 'all China-free' }]}
           note={leverNotes.source}
-          desc="The share of the dysprosium and terbium the US uses that must come from a supply that never touched China at any stage: ore, oxide or alloy. It covers the heavy rare earths only. The neodymium and praseodymium that make up most of a magnet’s rare-earth content are not covered, so Chinese alloy can still reach US magnet plants, as far as the export restriction allows, carrying clean Dy/Tb or none. The US pays a premium for the clean supply." />
+          desc={HAS_LIGHT_RULE
+            ? 'The share of the rare earths the US uses, light (Nd/Pr) and heavy (Dy/Tb) alike, that must come from a supply that never touched China at any stage: ore, oxide, alloy or magnet. A plant exports only what it makes, so the rule cannot be met by exporting clean magnets and using Chinese ones. It takes force in 2032, the soonest the capacity could exist, and does nothing before. The US pays a premium for the clean supply.'
+            : 'The share of the dysprosium and terbium the US uses that must come from a supply that never touched China at any stage: ore, oxide or alloy. It covers the heavy rare earths only. The neodymium and praseodymium that make up most of a magnet’s rare-earth content are not covered, so Chinese alloy can still reach US magnet plants, as far as the export restriction allows, carrying clean Dy/Tb or none. The US pays a premium for the clean supply.'} />
         <Slider label="US price floor on China imports" value={pfloor} max={AXES.pfloorMax} onChange={setPfloor} fmt={(v) => pct(v * 100)}
           ticks={[{ at: 0, label: 'off' }, { at: 0.5, label: 'half premium' }, { at: 1, label: 'full premium' }]}
           desc="A US guaranteed price floor (DoD / MP-Materials-style), modeled as a tariff lifting the price of Chinese oxide, alloy and magnet imports toward the ex-China premium. It makes domestic and allied supply cost-competitive WITHOUT a mandate, so the market reshores on price rather than by rule; its cost falls on consumers as a higher import price. The SAME instrument also de-risks covered projects in actor mode below, and that relief scales with this setting." />
@@ -1078,9 +1096,9 @@ export default function MagnetExplorer() {
         ) },
       { l: 'Tightest chokepoint', k: 'Chokepoint',
         halves: [
-          { v: cpHeavy.label.split(' ')[0], c: riskColor(cpHeavy.tri), s: `Dy/Tb · index ${cpHeavy.tri.toFixed(2)}`,
+          { v: cpHeavy.label.split(' ')[0], c: riskColor(cpHeavy.tri), s: `Dy/Tb · ${cpHeavy.tri.toFixed(2)}`,
             cls: 'Dy/Tb', extra: cpHeavy.tri.toFixed(2) },
-          { v: cpLight.label.split(' ')[0], c: riskColor(cpLight.tri), s: `Nd/Pr · index ${cpLight.tri.toFixed(2)}`,
+          { v: cpLight.label.split(' ')[0], c: riskColor(cpLight.tri), s: `Nd/Pr · ${cpLight.tri.toFixed(2)}`,
             cls: 'Nd/Pr', extra: cpLight.tri.toFixed(2) },
         ] },
       // Light has a flow-traced twin only in grids from 2026-09-25 on; without
@@ -1091,9 +1109,14 @@ export default function MagnetExplorer() {
         ? { l: 'China-exposed demand', k: 'China-exposed', v: pct(chinaTouch * 100), c: riskColor(chinaTouch),
             chip: true, s: `${feocIsHeavy ? 'Dy/Tb · ' : ''}flow-traced · 2026–35` }
         : { l: 'China-exposed demand · 2026–35', k: 'China-exposed',
+            // The decade's figure hides the path: a clean rule does nothing until
+            // it takes force and everything after. Where the grid carries the
+            // yearly series the sub-line gives the snapshot year beside it.
             halves: [
-              { v: pct(chinaTouch * 100), c: riskColor(chinaTouch), s: 'Dy/Tb · flow-traced', cls: 'Dy/Tb' },
-              { v: pct(lightFeoc), c: riskColor(lightFeoc / 100), s: 'Nd/Pr · flow-traced', cls: 'Nd/Pr' },
+              { v: pct(chinaTouch * 100), c: riskColor(chinaTouch), cls: 'Dy/Tb',
+                s: exposedIn('heavy') == null ? 'Dy/Tb · flow-traced' : `Dy/Tb · ${pct(exposedIn('heavy')!)} in ${flowYear}` },
+              { v: pct(lightFeoc), c: riskColor(lightFeoc / 100), cls: 'Nd/Pr',
+                s: exposedIn('light') == null ? 'Nd/Pr · flow-traced' : `Nd/Pr · ${pct(exposedIn('light')!)} in ${flowYear}` },
             ] },
       { l: 'US magnets imported', k: 'Imported', v: flowsReady ? pct(usImportPct) : '…', c: 'var(--ink)',
         s: flowsReady ? `${flowYear} · same flows as the Sankey` : 'loading flows' },
@@ -1169,8 +1192,13 @@ export default function MagnetExplorer() {
                       </div>
                     ) : (
                       <div style={{ flex: '1 1 0', minWidth: 0 }}>
-                        <div style={{ font: `600 ${big}px var(--font-mono)`, lineHeight: 1.15 }}>
-                          <span style={chipOf(h.c)}>{shown(h.v)}</span>
+                        {/* A word ("Separation") is set smaller than a figure, so that
+                            two of them fit side by side in one card. */}
+                        <div style={{ font: `600 ${(h.v ?? '').length > 6 ? Math.round(big * 0.7) : big}px var(--font-mono)`,
+                                      lineHeight: 1.15, minHeight: big * 1.15, display: 'flex', alignItems: 'center' }}>
+                          <span style={{ ...chipOf(h.c), maxWidth: '100%', boxSizing: 'border-box',
+                                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                         ...((h.v ?? '').length > 6 ? { padding: '1px 5px' } : {}) }}>{shown(h.v)}</span>
                         </div>
                         <div style={sub}>{subOf(h.s)}</div>
                       </div>

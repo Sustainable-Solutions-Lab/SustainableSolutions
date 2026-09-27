@@ -1,8 +1,8 @@
 /**
  * Compact real-world-projects control for the supply-explorer scenario aside.
  * Operating plants are always included; the two uncertain tiers — under construction
- * and planned — toggle on/off as groups (like the demand-scenario buttons), with a
- * '＋ Customize project expansion' expander for picking individual projects. The
+ * and planned — toggle on/off as groups, with a '+ customize' expander beneath
+ * them for picking individual projects. The
  * active set drives the real-world-anchored Sankey + the trade-risk index.
  */
 import { useState } from 'react';
@@ -48,8 +48,8 @@ export default function ProjectsAside({ future, onToggle, onSetGroup, rail = fal
   future: Set<string>;
   onToggle: (id: string) => void;
   onSetGroup: (t: Tier, on: boolean) => void;
-  /** In the desktop's controls rail, which is too narrow for a list inside each
-   *  button's column: the lists run the rail's width, under the buttons. */
+  /** In the desktop's controls rail the lists run the rail's width, one tier
+   *  under another; elsewhere they sit side by side where there is room. */
   rail?: boolean;
 }) {
   const [custOpen, setCustOpen] = useState(false);
@@ -66,41 +66,36 @@ export default function ProjectsAside({ future, onToggle, onSetGroup, rail = fal
       <div style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase',
                     color: rail ? 'var(--cardinal)' : 'var(--accent)', opacity: rail ? 0.85 : 0.7,
                     margin: rail ? '0 0 6px' : '12px 0 6px' }}>Projects assumed built</div>
-      {/* Each tier's list renders INSIDE its own button's column, so a list is
-          visually owned by the control that toggles it and the row cannot reflow.
-          The toggle sits above the grid so it stays put when the lists open —
-          otherwise it slides down the page and you have to scroll back to close. */}
-      <button onClick={() => setCustOpen((o) => !o)}
-        style={{ font: '500 10.5px var(--font-mono)', padding: '4px 8px', borderRadius: 6,
-                 cursor: 'pointer', border: '1px solid var(--rule)', background: 'transparent',
-                 color: 'var(--ink)', opacity: 0.75, marginBottom: 6 }}>
-        {custOpen ? '− customize' : '+ customize'}
-      </button>
       <div style={{ display: 'grid', gap: rail ? '0 6px' : '0 16px',
                     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', alignItems: 'start' }}>
         {groups.map(([label, g]) => (
-          <div key={label}>
-            <GroupButton label={label} count={g.on} total={g.list.length} allOn={g.allOn} small={rail}
-              onClick={() => onSetGroup(g.t, !g.allOn)} />
-            {custOpen && !rail && (
-              <div style={{ marginTop: 4 }}>
-                {g.list.map((p) => (
-                  <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />
-                ))}
-              </div>
-            )}
-          </div>
+          <GroupButton key={label} label={label} count={g.on} total={g.list.length} allOn={g.allOn}
+            small={rail} onClick={() => onSetGroup(g.t, !g.allOn)} />
         ))}
       </div>
-      {custOpen && rail && groups.map(([label, g]) => (
-        <div key={label} style={{ marginTop: 8 }}>
-          <div style={{ font: '600 9.5px var(--font-mono)', letterSpacing: '0.06em',
-                        textTransform: 'uppercase', opacity: 0.55, marginBottom: 3 }}>{label}</div>
-          {g.list.map((p) => (
-            <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />
+      {/* Under the three tiers it opens up, with the lists below it in turn, so
+          the button stays where it is when they open and can close them again
+          without scrolling. */}
+      <button onClick={() => setCustOpen((o) => !o)} aria-expanded={custOpen}
+        style={{ font: '500 10.5px var(--font-mono)', padding: '4px 8px', borderRadius: 6,
+                 cursor: 'pointer', border: '1px solid var(--rule)', background: 'transparent',
+                 color: 'var(--ink)', opacity: 0.75, marginTop: 6 }}>
+        {custOpen ? '− customize' : '+ customize'}
+      </button>
+      {custOpen && (
+        <div style={rail ? undefined : { display: 'grid', gap: '0 16px',
+                                         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+          {groups.map(([label, g]) => (
+            <div key={label} style={{ marginTop: 8 }}>
+              <div style={{ font: '600 9.5px var(--font-mono)', letterSpacing: '0.06em',
+                            textTransform: 'uppercase', opacity: 0.55, marginBottom: 3 }}>{label}</div>
+              {g.list.map((p) => (
+                <Row key={p.id} p={p} on={future.has(p.id)} onToggle={() => onToggle(p.id)} />
+              ))}
+            </div>
           ))}
         </div>
-      ))}
+      )}
       <p style={{ fontSize: 10, opacity: 0.5, margin: '8px 0 0', lineHeight: 1.45, maxWidth: 'none' }}>
         An assumption about which projects are <b>destined to get built</b>, whatever the
         economics say. Operating plants are always in. Anything you add here is treated the

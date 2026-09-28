@@ -9,6 +9,7 @@ import InterventionLedger from './InterventionLedger';
 import HurdleComponents from './HurdleComponents';
 import { actorGap, actorRow, type PlannerRow, type ScreenOpts } from './ledger';
 import { chooseCollection, chooseStockpile, chooseRd, collectedKtNPV, UNMET_VALUE_ANCHORS, UNMET_VALUE_DEFAULT } from './deploy';
+import GuidedScenarios, { GUIDED, NO_RESPONSE, type Guided } from './GuidedScenarios';
 import { hurdleRate, RELIEF_DEFAULTS, PLANNER_RATE, TODAY_OXIDE_PREMIUM, defaultPremium, sellsOxide, screen, judgedRows, type Buildout } from './projectFinance';
 import { BusyOverlay } from '../_shell/busy-overlay.jsx';
 
@@ -1324,8 +1325,36 @@ export default function MagnetExplorer() {
       ))}
     </div>
   );
+  // GUIDED SCENARIOS set the sliders to a move by China and, if asked, the
+  // likely US response. The highlight follows the sliders: move one and the
+  // page is no longer showing the scenario it was.
+  const guided = useMemo(() => GUIDED(AXES.sourceMax), []);
+  const [guidedPick, setGuidedPick] = useState<{ id: Guided['id']; respond: boolean } | null>(null);
+  const pickGuided = (id: Guided['id'], respond: boolean) => {
+    const g = guided.find((x) => x.id === id)!;
+    const r = respond && g.response ? g.response : NO_RESPONSE;
+    setChina(g.move.china); setReach(g.move.reach);
+    setSource(r.source); setMake(r.make); setPfloor(r.pfloor); setCollectCost(r.collectCost);
+    setGuidedPick({ id, respond: respond && !!g.response });
+  };
+  const guidedActive = (() => {
+    if (!guidedPick) return null;
+    const g = guided.find((x) => x.id === guidedPick.id)!;
+    const r = guidedPick.respond && g.response ? g.response : NO_RESPONSE;
+    const same = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+    return same(china, g.move.china) && same(reach, g.move.reach) && same(sourceMandate, r.source)
+      && same(make, r.make) && same(pfloor, r.pfloor) && same(collectCost, r.collectCost) ? guidedPick : null;
+  })();
+  const guidedPanel = (
+    <GuidedScenarios items={guided} active={guidedActive?.id ?? null} responding={!!guidedActive?.respond}
+      onPick={pickGuided} mobile={isMobile}
+      metrics={{ tri, costB: usCostReal / 1000, exposedPct: chinaTouch * 100,
+               unmetKt: stockpile > 0.05 ? stockChoice.unmetKt : usUnmet, stockKt: stockpile }} />
+  );
+
   const results = (
     <main style={{ minWidth: 0 }}>
+      {guidedPanel}
       {/* 1 — the whole chain first, so users learn the stages + connections.
           Flows are real-world-anchored (selected projects locked in, China residual). */}
       {isMobile && yearPicker}

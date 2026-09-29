@@ -345,9 +345,10 @@ export default function FlowDiagram({ flows, active, scale = {}, year, classYear
               return (
                 <text key={r + 'p'} x={last ? colX[i] - 6 : colX[i] + NODE_W + 6} y={(s.y0 + s.y1) / 2}
                   textAnchor={last ? 'end' : 'start'} dominantBaseline="central"
-                  // The label lies on ribbons of its own hue; a paper halo keeps it legible.
-                  style={{ font: `600 ${F.pct}px var(--font-mono)`, fill: REGION_COLOR[r],
-                           paintOrder: 'stroke', stroke: 'var(--paper)', strokeWidth: 3, strokeLinejoin: 'round' }}>
+                  // The label lies on ribbons of its own hue, so it is drawn in a
+                  // darker shade of that hue rather than in the hue itself.
+                  style={{ font: `600 ${F.pct}px var(--font-mono)`,
+                           fill: `color-mix(in srgb, ${REGION_COLOR[r]} 55%, black)` }}>
                   {Math.round((h / innerH) * 100)}%
                 </text>
               );

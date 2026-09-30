@@ -11,7 +11,8 @@
  * Controls (buttons, hints about dragging) and explanatory paragraphs are left
  * out. EPS has no transparency, so for the EPS every translucent colour is
  * replaced by the solid colour it makes over what lies beneath it. The PDF and
- * PNG in "for slides" keep the page's own transparency.
+ * PNG in "for slides" keep the page's own transparency. The default folder is
+ * Plots/explorer, kept apart from the paper's figures in Plots itself.
  *
  * Needs Google Chrome and poppler's `pdftocairo` (brew install poppler).
  */
@@ -27,7 +28,7 @@ const arg = (name, fallback) => {
 };
 const URL_ = arg('url', 'https://sustainablesolutions.vercel.app/tools/magnets');
 const OUT = arg('out', join(homedir(), 'Library/CloudStorage/Dropbox/Papers/Active Prep/Rare earth magnets',
-  'Rare earth magnets (w Shahab)/Plots'));
+  'Rare earth magnets (w Shahab)/Plots/explorer'));
 const WIDTH = Number(arg('width', 1440));
 const SLIDES = join(OUT, 'for slides');
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';

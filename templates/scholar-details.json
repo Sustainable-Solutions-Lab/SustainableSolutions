@@ -9294,5 +9294,53 @@
     "doi": null,
     "total_citations": null,
     "citations": []
+  },
+  "Ui_nyea79ooC": {
+    "id": "Ui_nyea79ooC",
+    "title": "Flash energy droughts in solar and wind resources under climate change",
+    "authors": "Yuanyuan Lin, Dongsheng Zheng, Dan Tong, Steven J. Davis, Zhicong Yin, Kebin He, Dan Tong, Qiang Zhang",
+    "publication_date": "2026/9/21",
+    "journal": "Nature Climate Change",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Nature",
+    "abstract": "Flash energy droughts, characterized by sharp declines and prolonged periods of low wind and solar generation, may pose potential challenges to power system operation. Yet, a clear understanding remains lacking regarding the system implications and how climate change may intensify them. Here we find that flash energy droughts may be associated with higher unserved energy, flexibility requirements and electricity costs. Such events show an uptrend under climate change, particularly in duration—by 25.6% for wind, 29.8% for solar and 155.7% for compound events under the SSP1-2.6 scenario. Notably, approximately 70.8% of global wind–solar power capacities face rising frequency and duration of flash energy droughts. While these widespread exposures could be mitigated through strategically prioritizing wind–solar farm deployment, the effectiveness largely depends on climate ambitions and the …",
+    "journal_link": "https://www.nature.com/articles/s41558-026-02753-3",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "w_ORaKkuc5QC": {
+    "id": "w_ORaKkuc5QC",
+    "title": "Global Combustion CO2 Accounting Neglects the Origin of Traded Fossil Fuels",
+    "authors": "Binyuan Liu, Yuli Shan, Yuru Guan, Steven J Davis, Ye Hang, Liang Jing, Xiande Ji, Wenqiang Wang, Klaus Hubacek",
+    "publication_date": "2026/9/3",
+    "journal": "Environmental Science & Technology",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "",
+    "abstract": "Combustion CO 2 emissions are commonly estimated by multiplying fuel consumption by the corresponding emission factors. However, national inventories may apply domestic factors to imported fuels, overlooking differences in fuel properties across extraction origins and creating discrepancies in emission estimates. Here, we trace fossil fuels to their countries of extraction and assign emission factors specific to the extraction country and fuel type. Using 2020 data for 150 countries and regions, we compare this origin-traced estimate with a nonorigin-traced control using the same energy-consumption data but combustion-country emission factors. Globally, the control estimate is 339.2 Mt of CO 2 lower than the origin-traced estimate, equivalent to 1.0% of the origin-traced total, with coal accounting for 89.9% of the discrepancy. Although crude oil had the largest energy-based trade volume among primary fuels …",
+    "journal_link": "https://pubs.acs.org/esthag/article-abstract/60/36/25385/5338997",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
+  },
+  "HevVnK7dagcC": {
+    "id": "HevVnK7dagcC",
+    "title": "Engineered bacterial siderophore production accelerates rock weathering for carbon removal",
+    "authors": "Neil C. Dalvie, Amogh P. Jalihal, Abigail Fitzgibbon, Jan-Tobias Böhnke, Mohammed Hijaz, Quincey A. Justman, Steven J. Davis, Pamela A. Silver, Michael Spring",
+    "publication_date": "2026/8/28",
+    "journal": "Nature Biotechnology",
+    "volume": "",
+    "issue": "",
+    "pages": "",
+    "publisher": "Springer Nature",
+    "abstract": "Silicate mineral weathering (dissolution) is a scalable strategy for capture and storage of CO 2 but is too slow for industrial deployment. Bacteria can accelerate mineral dissolution by secreting siderophores, molecules that solubilize iron released from the mineral. Here we investigate how to deploy siderophore-producing bacteria at scale to continuously enhance dissolution of the mineral olivine. We demonstrate that natural genetic regulation precludes continuous siderophore production in mineral bioreactors. To overcome this limitation, we engineer the marine bacterium Alteromonas macleodii for enhanced siderophore production, conferring a 2.6-fold increase in the rate of olivine dissolution. Life-cycle analysis indicated that renewable feedstocks and minimal replenishment of modified cells are critical to achieve net CO 2 removal at scale. With these guidelines, we constructed pilot-scale continuous mineral …",
+    "journal_link": "https://www.nature.com/articles/s41587-026-03288-w",
+    "doi": null,
+    "total_citations": null,
+    "citations": []
   }
 }

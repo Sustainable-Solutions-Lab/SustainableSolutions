@@ -69,6 +69,22 @@ export type MeasureDef = {
   precomputedLayer?: string;
 };
 
+// ── Drivers and scenarios ───────────────────────────────────────────────────
+//
+// Drivers are the socio-economic quantities that sit upstream of material
+// use. They are the only series that currently run past the historical end
+// year, on the SSP trajectories the paper's projections are built from.
+
+export type DriverName = 'population' | 'gdp' | 'gdp_per_capita';
+
+export type ScenarioName = 'range' | 'SSP1' | 'SSP2' | 'SSP3' | 'SSP4' | 'SSP5';
+
+export const DRIVER_LABELS: Record<DriverName, string> = {
+  population: 'Population',
+  gdp: 'GDP',
+  gdp_per_capita: 'GDP per capita',
+};
+
 // ── Spec (the URL-encoded explorer state) ───────────────────────────────────
 //
 // The user's current view, fully serializable. Encoded into location.hash
@@ -94,6 +110,18 @@ export type Spec = {
   facetBy?: string; // dimension name
   stack?: boolean;
   normalize?: boolean;
+
+  /**
+   * Draw a driver series (population / GDP / GDP per capita) instead of
+   * material flows. Drivers ignore the material filters and carry SSP
+   * projections past the historical end year.
+   */
+  driver?: DriverName;
+  /**
+   * Which scenario to draw past the historical end: a single SSP, or 'range'
+   * for the median across SSP1-5 with the full spread as a band.
+   */
+  scenario?: ScenarioName;
 
   // Chart-specific
   scatterX?: MeasureName;
@@ -132,6 +160,12 @@ export type ExplorerConfig = {
   presets: PresetSpec[];
 
   yearRange: [number, number];
+
+  /**
+   * Last year reachable when a projected series is on screen. Omitted for
+   * tools whose data stops at the observed record.
+   */
+  projectionEnd?: number;
 
   /** JSON layers to fetch. Keys become entries in the loaded DataBundle. */
   data: {

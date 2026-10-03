@@ -1,0 +1,288 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+// Companion schematic for the food-emissions explorer: what the dataset
+// outputs, which inputs set totals versus spatial pattern, and what is
+// built, waiting on collaborators, or still aspirational.
+//
+// noindex matches the explorer itself — both go public when the dataset
+// and paper do.
+//
+// Status is carried by a left rail AND a text label, never colour alone,
+// so it survives greyscale printing and colour-blind readers.
+
+type Status = 'built' | 'wait' | 'aspire' | 'gap';
+
+const STATUS_LABEL: Record<Status, string> = {
+  built: 'built', wait: 'waiting', aspire: 'aspire', gap: 'gap',
+};
+
+const totals: Array<{ n: string; d: string; s: Status; label?: string }> = [
+  { n: 'FAOSTAT QCL', s: 'built', d: 'Crop production and area by country-year, 2000–2024' },
+  { n: 'FAOSTAT GLE', s: 'built', d: 'Livestock Tier 1 national series, gas-native, 2000–2023' },
+  { n: 'SPAM 2000 / 2005 / 2010 / 2020', s: 'built', d: 'Crop production and physical area, 42 crops' },
+  { n: 'EDGAR', s: 'built', d: 'Envelope for liming CO₂' },
+  { n: 'Cornerstone jdLUC event grids', s: 'wait', d: 'Land-use conversion — the whole of LSRS category 1. Handoff pending.' },
+  { n: 'Herrero-extension Tier 2 livestock', s: 'wait', d: 'Replaces the FAOSTAT envelope with gridded intensities. Same API.' },
+];
+
+const pattern: Array<{ n: string; d: string; s: Status }> = [
+  { n: 'SPAM crop masks', s: 'built', d: 'Baseline allocation surface for all crops' },
+  { n: 'Descals oil palm · Wang rubber · Song soy', s: 'built', d: 'Observed 10–30 m maps; palm and rubber carry planting year, so they double as conversion-cohort sources' },
+  { n: 'FDaP cocoa & coffee', s: 'built', d: '2024 in hand, 2022 cocoa built, biennial backfill running. Unreviewed and version-unstable, so a secondary layer.' },
+  { n: 'MapBiomas Brazil', s: 'built', d: '30 m annual, national detail where it matters most' },
+  { n: 'GLW 3 / 4 livestock shares', s: 'built', d: '2010 / 2015 / 2020, interpolated between epochs. Pattern is modelled, not observed.' },
+  { n: 'Trase · Kalischek cocoa shares', s: 'aspire', d: 'District-level and peer-reviewed, already downloaded. Would fix FDaP over-dispersion into marginal districts.' },
+];
+
+const cat2: Array<{ n: string; d: string; s: Status }> = [
+  { n: 'Cropland soil carbon', s: 'built', d: 'IPCC Tier 2 management term (+14.9 Tg C/yr) plus a Sanderman legacy-decay term (−15.0). They near-cancel globally, but the map changes completely: 96% of gain cells flip.' },
+  { n: 'Peatland', s: 'built', d: 'Cornerstone steady-state occupation floor, 37.3 t CO₂e/ha/yr, perpetual while drained' },
+  { n: 'Peat split by land use', s: 'aspire', d: 'IPCC rates span 13× within tropical peat — acacia 20.0, oil palm 11.0, forest 5.3 t CO₂-C/ha/yr. The single rate is, to 8%, the oil-palm value.' },
+  { n: 'Peat as an exhaustible stock', s: 'aspire', d: 'A 0.5 m profile is gone in about 23 years at the current rate. Needs gridded depth, which we lack globally.' },
+  { n: 'Rangeland soil carbon', s: 'aspire', d: 'Powell’s package arrived: 200 runs plus present-day grazing intensity on our grid. Still potential-under-target, not observed history.' },
+  { n: 'Drained forest organic soil', s: 'gap', d: 'Falls between the peat layer, which carries cropland rates only, and the forest layer, which assumes mineral steady state. Counted nowhere, and likely larger than mineral forest soil.' },
+];
+
+const forest = [
+  ['Plot pilots — US FIA, France IGN, Spain IFN', 'Both accounting options from ~334,000 re-measurements', '—', 'built'],
+  ['Mexico INFyS', 'First tropical anchor with coordinates, 26k plot pairs', '1.85×', 'built'],
+  ['GFW / Harris flux', 'The managed-land proxy computed globally', '~2× high', 'validated'],
+  ['UNFCCC CRF, Annex I', 'Pool-matched national inventories', '~2×', 'built'],
+  ['GEDI lidar', 'Emission factors, independent of inventories', '1.29–1.40', 'built'],
+  ['Germany BWI', 'Counterfactual baselines outside FIA', '—', 'aspire · access unresolved'],
+];
+
+const cat3 = ['Fertilizer', 'Manure applied', 'Manure mgmt', 'Pasture N₂O', 'Residues',
+  'Residue burning', 'Rice CH₄', 'Enteric CH₄', 'Urea CO₂', 'Liming CO₂'];
+---
+
+<BaseLayout
+  title="What we are building"
+  description="Schematic of the gridded land-sector emissions dataset: what it outputs, which raw data sets totals versus spatial pattern, and what is built, waiting, or aspired to."
+  noindex
+>
+  <main class="mx-auto w-full max-w-[1180px] px-4 py-10 md:py-14">
+    <p class="eyebrow">Gridded land-sector emissions · schematic</p>
+    <h1 class="font-serif text-[clamp(28px,4.4vw,41px)] leading-[1.12] font-semibold mb-3 text-balance">
+      What we are building, and what it rests on
+    </h1>
+    <p class="text-ink-2 max-w-[66ch] text-base">
+      A global grid of greenhouse-gas emissions by source and commodity, built to the
+      GHG Protocol Land Sector and Removals Standard. The architecture has one
+      organising idea: <strong>national totals and spatial pattern come from different
+      places</strong>, and almost every question about trust resolves to which of the
+      two a given dataset is carrying.
+    </p>
+
+    <!-- legend -->
+    <div class="mt-6 flex flex-wrap gap-x-5 gap-y-2 rounded border border-rule bg-paper-2 px-4 py-3.5">
+      <span class="lg"><i class="sw built"></i>Built and running</span>
+      <span class="lg"><i class="sw wait"></i>Waiting on others</span>
+      <span class="lg"><i class="sw aspire"></i>Aspire / planned</span>
+      <span class="lg"><i class="sw gap"></i>Known gap — counted nowhere</span>
+    </div>
+
+    <!-- inputs -->
+    <section class="band">
+      <h2>Raw data, by the job it does</h2>
+      <p class="sub">The same dataset can be excellent for one job and unusable for the
+      other. Sorting inputs this way is what makes the trust question answerable.</p>
+      <div class="grid gap-6 md:grid-cols-2">
+        <div class="role">
+          <h3>Sets the magnitude <span class="tag tag-t">totals</span></h3>
+          <p class="why">National or sub-national statistics. These fix how much is
+          emitted. They are census-grade and change year to year.</p>
+          {totals.map((c) => (
+            <div class={`card ${c.s}`}>
+              <div class="n"><span>{c.n}</span><span class={`st ${c.s}`}>{STATUS_LABEL[c.s]}</span></div>
+              <div class="d">{c.d}</div>
+            </div>
+          ))}
+        </div>
+        <div class="role">
+          <h3>Sets the pattern <span class="tag tag-p">within-country</span></h3>
+          <p class="why">Maps that say <em>where inside a country</em> the total goes.
+          Their absolute values never reach the output — only their relative weights.</p>
+          {pattern.map((c) => (
+            <div class={`card ${c.s}`}>
+              <div class="n"><span>{c.n}</span><span class={`st ${c.s}`}>{STATUS_LABEL[c.s]}</span></div>
+              <div class="d">{c.d}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- the spine -->
+    <section class="band">
+      <h2>The allocation rule</h2>
+      <p class="sub">Every cropland and livestock source in the dataset is produced this
+      way. It is the reason a mask can be imperfect without corrupting a total.</p>
+      <div class="rounded border border-rule-strong bg-paper-3 p-5">
+        <p class="my-3 overflow-x-auto text-center font-mono text-[clamp(12px,1.8vw,15px)] leading-[2]">
+          cell emissions &nbsp;=&nbsp;
+          <b class="eq eq-t">national total</b> &nbsp;×&nbsp;
+          <b class="eq eq-p">cell&rsquo;s share of the country&rsquo;s mask</b>
+        </p>
+        <p class="note"><strong>What this buys.</strong> National numbers are exact by
+        construction — they are the statistics themselves. A mask that misplaces crop
+        within a country moves emissions between cells but never changes the country&rsquo;s
+        total, so mask error is bounded and local.</p>
+        <p class="note"><strong>What it costs.</strong> Sub-national accuracy is only as
+        good as the mask, and nothing in the pipeline checks it. That is exactly where
+        the Trase cocoa constraint would bite, and why GLW&rsquo;s modelled pattern matters
+        far more for grazing intensity than it ever did for emissions.</p>
+      </div>
+    </section>
+
+    <!-- outputs -->
+    <section class="band">
+      <h2>What comes out</h2>
+      <p class="sub">Emissions on a 5-arcminute global grid, resolved by source,
+      commodity, jurisdiction and year, grouped by LSRS accounting category.</p>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="out">
+          <h3>Category 1 <span class="st wait">waiting</span></h3>
+          <div class="p-3.5 text-[12.5px] text-ink-3">Land-use conversion. Blocked
+          entirely on the jdLUC handoff; there is no interim version.</div>
+        </div>
+        <div class="out">
+          <h3>Category 2 <span class="st built">partly built</span></h3>
+          <div class="p-3.5">
+            <p class="mb-2 text-[12.5px] text-ink-3">Land-management net biogenic CO₂.</p>
+            <div class="chips">
+              <span class="chip">Peatland</span><span class="chip">Soil carbon — cropland</span>
+              <span class="chip off">Soil carbon — rangeland</span>
+              <span class="chip off">Soil carbon — forest</span>
+              <span class="chip off">Forest carbon (pilot)</span>
+            </div>
+          </div>
+        </div>
+        <div class="out">
+          <h3>Category 3 <span class="st built">built</span></h3>
+          <div class="p-3.5">
+            <p class="mb-2 text-[12.5px] text-ink-3">Land-management production — the complete set.</p>
+            <div class="chips">{cat3.map((c) => <span class="chip">{c}</span>)}</div>
+          </div>
+        </div>
+      </div>
+      <p class="my-3.5 text-center font-mono text-[11px] tracking-[0.08em] text-ink-4">↓ delivered as ↓</p>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="card built"><div class="n"><span>Public explorer</span><span class="st built">live</span></div>
+          <div class="d">Gridded and regional views, per-km² intensity, compare mode, bulk download</div></div>
+        <div class="card aspire"><div class="n"><span>Emission-factor product</span><span class="st aspire">aspire</span></div>
+          <div class="d">Per jurisdiction × commodity, adding average and residual land-use-change factors and the claimed share</div></div>
+        <div class="card built"><div class="n"><span>Three papers</span><span class="st built">in prep</span></div>
+          <div class="d">Mapped drivers · forest counterfactuals · DCF residuals</div></div>
+      </div>
+    </section>
+
+    <!-- cat 2 detail -->
+    <section class="band">
+      <h2>Category 2 in detail</h2>
+      <p class="sub">The least finished part of the dataset, and the one where the method
+      is still being decided rather than merely implemented.</p>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {cat2.map((c) => (
+          <div class={`card ${c.s}`}>
+            <div class="n"><span>{c.n}</span><span class={`st ${c.s}`}>{STATUS_LABEL[c.s]}</span></div>
+            <div class="d">{c.d}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- forest -->
+    <section class="band">
+      <h2>Forest carbon runs on its own track</h2>
+      <p class="sub">Two accounting options under the Standard, computed in parallel so
+      they can be compared: the managed-land proxy and an activity-based estimate. Shown
+      in the explorer as a research preview, counted in no total.</p>
+      <div class="overflow-x-auto">
+        <table>
+          <thead><tr><th>Reference</th><th>What it tests</th><th>Result</th><th>Status</th></tr></thead>
+          <tbody>
+            {forest.map(([a, b, c, d]) => (
+              <tr><td>{a}</td><td>{b}</td><td class="tabular-nums whitespace-nowrap">{c}</td><td>{d}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="note ml-0">The verdict that shapes everything downstream: GFW&rsquo;s
+      <em>emissions</em> hold up, its <em>removals</em> run about twice measured, and its
+      per-cell values vary roughly eight times less than reality — so it can carry a
+      total but not a map.</p>
+    </section>
+
+    <p class="mt-11 border-t border-rule pt-4 text-[12px] text-ink-3">
+      Companion to the <a href="/tools/food-emissions">food-emissions explorer</a> and to
+      DeAngelo et al., in preparation. Status reflects the repository on 3 October 2026.
+    </p>
+  </main>
+</BaseLayout>
+
+<style>
+  .eyebrow { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px; }
+  .lg { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
+  .sw { width: 22px; border-top-width: 3px; flex: none; border-radius: 2px; }
+  .sw.built { border-top-style: solid; border-top-color: var(--brand-green); }
+  .sw.wait { border-top-style: dashed; border-top-color: var(--brand-orange); }
+  .sw.aspire { border-top-style: dotted; border-top-color: var(--ink-3); }
+  .sw.gap { border-top-style: solid; border-top-color: var(--cardinal); }
+
+  .band { margin-top: 40px; }
+  .band > h2 { font-family: var(--font-serif, 'Source Serif 4', Georgia, serif);
+    font-size: 23px; font-weight: 600; margin-bottom: 4px; }
+  .band > .sub { color: var(--ink-3); font-size: 13px; margin-bottom: 16px; max-width: 70ch; }
+
+  .role { border: 1px solid var(--rule); border-radius: 4px; padding: 16px;
+    background: var(--paper-2); min-width: 0; }
+  .role h3 { font-size: 14px; font-weight: 600; display: flex; align-items: baseline;
+    gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+  .role .why { color: var(--ink-3); font-size: 12.5px; margin: 4px 0 12px; }
+  .tag { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px;
+    letter-spacing: .1em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; }
+  .tag-t { color: #3288BD; border: 1px solid #3288BD; }
+  .tag-p { color: #9E0142; border: 1px solid #9E0142; }
+  :global([data-theme='dark']) .tag-t { color: #6FB3DC; border-color: #6FB3DC; }
+  :global([data-theme='dark']) .tag-p { color: #D4607F; border-color: #D4607F; }
+
+  .card { border: 1px solid var(--rule); border-left-width: 3px; border-left-style: solid;
+    border-radius: 3px; padding: 9px 11px; background: var(--paper); margin-bottom: 7px; }
+  .card:last-child { margin-bottom: 0; }
+  .card.built { border-left-color: var(--brand-green); }
+  .card.wait { border-left-color: var(--brand-orange); border-left-style: dashed; }
+  .card.aspire { border-left-color: var(--ink-3); border-left-style: dotted; }
+  .card.gap { border-left-color: var(--cardinal); }
+  .card .n { font-weight: 600; font-size: 13px; display: flex; gap: 10px;
+    justify-content: space-between; align-items: baseline; }
+  .card .d { color: var(--ink-3); font-size: 12px; margin-top: 2px; }
+  .st { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px;
+    letter-spacing: .09em; text-transform: uppercase; flex: none; }
+  .st.built { color: var(--brand-green); } .st.wait { color: var(--brand-orange); }
+  .st.aspire { color: var(--ink-3); } .st.gap { color: var(--cardinal); }
+
+  .eq { font-weight: 500; padding: 3px 8px; border-radius: 3px; }
+  .eq-t { color: #3288BD; border: 1px solid #3288BD; }
+  .eq-p { color: #9E0142; border: 1px solid #9E0142; }
+  :global([data-theme='dark']) .eq-t { color: #6FB3DC; border-color: #6FB3DC; }
+  :global([data-theme='dark']) .eq-p { color: #D4607F; border-color: #D4607F; }
+  .note { font-size: 12.5px; color: var(--ink-2); max-width: 72ch; margin-top: 12px; }
+
+  .out { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  .out h3 { margin: 0; padding: 11px 14px; font-size: 13px; background: var(--paper-3);
+    border-bottom: 1px solid var(--rule); display: flex; gap: 10px;
+    justify-content: space-between; align-items: baseline; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px;
+    padding: 3px 8px; border-radius: 3px; border: 1px solid var(--rule-strong); color: var(--ink-2); }
+  .chip.off { color: var(--ink-4); border-style: dashed; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule);
+    vertical-align: top; }
+  th { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+</style>

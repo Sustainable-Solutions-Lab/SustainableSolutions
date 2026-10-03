@@ -14,6 +14,18 @@
 
 import { X } from 'lucide-react'
 
+// A single bordered callout, used for the schematic link. Deliberately not a
+// card: it is a pointer out of the panel, not another section of it.
+const calloutStyle = {
+  margin: '18px 0 24px',
+  padding: '12px 14px',
+  border: '1px solid var(--rule-strong)',
+  borderRadius: 4,
+  background: 'var(--paper-2)',
+  fontSize: 13,
+  lineHeight: 1.5,
+}
+
 export function MethodsPanel({ config, isDark, onClose }) {
   const panelBg = isDark ? 'var(--paper-2)' : 'var(--paper)'
   const ruleColor = 'var(--rule)'
@@ -99,6 +111,22 @@ function FoodEmissionsMethods() {
           rel="noopener noreferrer"
           style={linkStyle}
         >Cornerstone Open Sustainability Data Initiative</a>.
+      </p>
+
+      {/* Orientation before detail: the sections below are a long list of
+          sources, and the schematic is what makes them legible as a system -
+          chiefly which inputs set national totals and which only set the
+          within-country pattern. Placed here rather than at the foot so it is
+          read before the list, not after it. */}
+      <p style={calloutStyle}>
+        <a href="/tools/food-emissions-methods" style={linkStyle}>
+          <strong>Schematic: what we are building, and what it rests on</strong>
+        </a>
+        <span style={{ display: 'block', marginTop: 4, color: 'inherit', opacity: 0.8 }}>
+          One page showing the outputs, which raw data sets totals versus
+          spatial pattern, and what is built, waiting on collaborators, or
+          still aspirational.
+        </span>
       </p>
 
       <h2 style={h2Style}>Where the numbers come from</h2>

@@ -39,7 +39,8 @@ const FB = {
   floor_covers: { oxide: ['mining', 'separation'], alloy: ['alloy'], magnet: ['magnet'], concentrate: ['mining'] },
   separation_recovery: { NdPr: 0.90, DyTb: 0.82 },
   recycle_recovery: 0.90,
-  regional_cost_factor: {} as any,
+  regional_cost_factor: {} as any,   // operating
+  regional_capex_factor: {} as any,  // capital (model since 2026-09-30); falls back to the operating factor
   foak_premium: {} as any,
   lead_years: { USA: { mining: 8, separation: 6, alloy: 4, magnet: 4, recycling: 3 },
                 China: { mining: 4, separation: 3, alloy: 2, magnet: 2, recycling: 2 },
@@ -117,13 +118,13 @@ export function pricesFromOxide(ndpr: number, dytb: number,
  * price for a US plant is the premium, which is the argument of the whole tool.
  */
 const CHINA_PLANT = {                 // var $/kg, fixed $M/yr per module, module kt
-  magnet: { v: 4.0, fx: 12.0, kt: 40 },
+  magnet: { v: 4.0, fx: 41.53, kt: 40 },   // capital from Chinese filings (model, 2026-09-30)
   alloy:  { v: 2.0, fx: 10.0, kt: 40 },
 };
 // The model's own figures when the grid carries them (meta.project_finance),
 // so the spread cannot drift from the facility tables it is read from.
 export const CHINA_CONVERSION: { magnet: number; alloy: number } = META?.competitive_conversion ?? {
-  magnet: CHINA_PLANT.magnet.v + CHINA_PLANT.magnet.fx / CHINA_PLANT.magnet.kt,   // $4.30/kg
+  magnet: CHINA_PLANT.magnet.v + CHINA_PLANT.magnet.fx / CHINA_PLANT.magnet.kt,   // $5.04/kg
   alloy:  CHINA_PLANT.alloy.v + CHINA_PLANT.alloy.fx / CHINA_PLANT.alloy.kt,      // $2.25/kg
 };
 export const MAGNET_CONVERSION_DEFAULT = CHINA_CONVERSION.magnet;
@@ -305,8 +306,9 @@ export function evaluate(b: Buildout, prices: Prices, opts: {
       baseFixed += fx * costMult * (scaled / base);
     } else {
       const cf = (C.regional_cost_factor?.[b.r]?.[stg] ?? 1) * costMult;
+      const cfCap = (C.regional_capex_factor?.[b.r]?.[stg] ?? C.regional_cost_factor?.[b.r]?.[stg] ?? 1) * costMult;
       varPerKg += v * cf;
-      baseFixed += fx * cf * (stg === b.s ? foak : 1 + ((C.foak_premium?.[b.r]?.[stg] ?? 1) - 1) * (opts.foakMult ?? 1));
+      baseFixed += fx * cfCap * (stg === b.s ? foak : 1 + ((C.foak_premium?.[b.r]?.[stg] ?? 1) - 1) * (opts.foakMult ?? 1));
     }
   }
 

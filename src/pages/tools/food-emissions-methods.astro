@@ -8,6 +8,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 // noindex matches the explorer itself — both go public when the dataset
 // and paper do.
 //
+// LIVING DOCUMENT (Steve, 2026-10-05): the status flags, the status date in
+// the footer, and the prose here and in the explorer's Methods panel must be
+// updated WHENEVER the model state changes — a layer ships, a handoff lands,
+// a method decision is taken. A stale "built/waiting/aspire" flag is worse
+// than none, because this page is what collaborators will trust instead of
+// reading the repo. The repo-side rule lives in Gridded LM docs/decisions.md.
+//
 // Status is carried by a left rail AND a text label, never colour alone,
 // so it survives greyscale printing and colour-blind readers.
 
@@ -217,7 +224,11 @@ const cat3 = ['Fertilizer', 'Manure applied', 'Manure mgmt', 'Pasture N₂O', 'R
 
     <p class="mt-11 border-t border-rule pt-4 text-[12px] text-ink-3">
       Companion to the <a href="/tools/food-emissions">food-emissions explorer</a> and to
-      DeAngelo et al., in preparation. Status reflects the repository on 3 October 2026.
+      DeAngelo et al., in preparation. <strong>Status as of 5 October 2026.</strong>
+      This page and the explorer's Methods describe a model under active development;
+      both are maintained to reflect its current state, and the date above moves when
+      they do. If the date looks stale against a published result, say so —
+      that is a bug in the page, not in the model.
     </p>
   </main>
 </BaseLayout>

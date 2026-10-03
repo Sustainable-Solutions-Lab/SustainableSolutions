@@ -117,7 +117,13 @@ function FoodEmissionsMethods() {
           sources, and the schematic is what makes them legible as a system -
           chiefly which inputs set national totals and which only set the
           within-country pattern. Placed here rather than at the foot so it is
-          read before the list, not after it. */}
+          read before the list, not after it.
+
+          LIVING DOCUMENT: every section below, and the schematic page this
+          links to, must be updated whenever the model changes - new layer,
+          new data vintage, changed method. The schematic footer carries the
+          status date; move it when you touch either surface. Rule recorded
+          in Gridded LM docs/decisions.md. */}
       <p style={calloutStyle}>
         <a href="/tools/food-emissions-methods" style={linkStyle}>
           <strong>Schematic: what we are building, and what it rests on</strong>

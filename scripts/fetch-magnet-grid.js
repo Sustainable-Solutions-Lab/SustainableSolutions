@@ -159,6 +159,41 @@ async function download(url, want) {
   copyGrid(dir, `Dropbox, version ${version}`);
 }
 
+const GRID_BASE = 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/magnets-grid';
+
+/** CI path: the slices are fetched by the BROWSER from R2 now (interp.ts
+ *  builds their URLs from the manifest), so a build needs exactly one grid
+ *  file - the bundled core. Fetched from the same versioned R2 prefix the
+ *  runtime uses, sha-verified against the manifest, cached by version.
+ *  After a regrid: --write-manifest, then
+ *    rclone copy <grid-dir> r2:ssl-data/magnets-grid/<version>/ --include "scenarios*.json"
+ *  and commit the manifest. */
+async function fetchCore(want) {
+  const version = want.version;
+  const rec = want.files['scenarios.json'];
+  if (!rec) throw new Error('manifest lists no scenarios.json');
+  const dir = join(CACHE, version);
+  const cached = join(dir, 'scenarios.json');
+  if (!(existsSync(cached) && statSync(cached).size === rec.bytes
+        && digest(cached) === rec.sha256)) {
+    mkdirSync(dir, { recursive: true });
+    const url = `${GRID_BASE}/${version}/scenarios.json`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`R2 answered ${res.status} for ${url}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    writeFileSync(cached, buf);
+    if (statSync(cached).size !== rec.bytes || digest(cached) !== rec.sha256) {
+      rmSync(cached, { force: true });
+      throw new Error(`R2 copy of scenarios.json does not match manifest ${version}`);
+    }
+    console.log(`[magnet-grid] core downloaded from R2 (${(rec.bytes / 1e6).toFixed(0)} MB)`);
+  }
+  mkdirSync(TARGET, { recursive: true });
+  copyFileSync(cached, join(TARGET, 'scenarios.json'));
+  keepOutOfDropbox(join(TARGET, 'scenarios.json'));
+  console.log(`[magnet-grid] core in place, version ${version}; slices served from R2 at runtime`);
+}
+
 async function main() {
   const local = process.env.MAGNET_GRID_DIR || DEFAULT_DIR;
   if (process.argv.includes('--write-manifest')) { writeManifest(local); return; }
@@ -174,6 +209,13 @@ async function main() {
         + 'Run with --write-manifest and commit it to deploy this grid.');
     }
     return;
+  }
+  if (want) {
+    try { await fetchCore(want); return; }
+    catch (err) {
+      if (!process.env.MAGNET_GRID_URL) throw err;
+      console.warn(`[magnet-grid] R2 fetch failed (${err.message}); falling back to Dropbox zip`);
+    }
   }
   if (process.env.MAGNET_GRID_URL) {
     if (!want) throw new Error('src/tools/magnets/grid-manifest.json is missing');

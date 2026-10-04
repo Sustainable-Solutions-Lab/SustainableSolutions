@@ -16,12 +16,23 @@ import data from './scenarios.json';
 // memory). Cores of the other slices arrive in idle time, because the ledgers
 // rate levers that are switched off; flows arrive only for the slices the
 // current settings touch.
-// The addresses of every grid file but the bundled one, by file name. A glob,
-// because the grid is written as dozens of files and the list of them comes
-// from the grid itself (`meta.slices`), not from this module.
-const FILE_URL = import.meta.glob(['./scenarios*.json', '!./scenarios.json'],
-  { query: '?url', import: 'default', eager: true }) as Record<string, string>;
-const urlOf = (file: string): string | undefined => FILE_URL[`./${file}`];
+// The addresses of every grid file but the bundled one, built from the
+// committed manifest and served from R2 rather than minted by the bundler.
+// This used to be an import.meta.glob with `?url`, which made every slice a
+// hashed build asset - correct, but it shipped the whole 1.2 GB grid inside
+// EVERY deployment, and a regrid re-uploaded all of it; that is what was
+// eating Vercel's deployment-storage quota. The grid now lives at a
+// VERSIONED R2 path (immutable by construction, so caching is safe), the
+// manifest names exactly the files that exist, and a deployment carries only
+// the bundled core. The lookup keeps the old contract: undefined for a file
+// the grid does not include, so the slice-filtering below still works.
+import gridManifest from './grid-manifest.json';
+const GRID_BASE =
+  'https://pub-4152429430274d988725593fd52db3ae.r2.dev/magnets-grid';
+const urlOf = (file: string): string | undefined =>
+  (gridManifest as any).files?.[file] !== undefined
+    ? `${GRID_BASE}/${(gridManifest as any).version}/${file}`
+    : undefined;
 const fetchJson = (url: string): Promise<any> =>
   fetch(url).then((r) => {
     if (!r.ok) throw new Error(`grid file ${url}: ${r.status}`);

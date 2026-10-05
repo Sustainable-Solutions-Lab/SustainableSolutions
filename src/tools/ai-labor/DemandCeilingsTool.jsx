@@ -762,10 +762,9 @@ export default function DemandCeilingsTool() {
             <ContourChart sd={sd} astar={astar} />
             <figcaption style={caption}>
               The surface sweeps two levers at once, holding the rest at their slider values;
-              colors follow the lab's Spectral scale from job losses (reds) through no change
-              (the ink contour line) to gains (greens into blue). Dashed crosshair: the current
-              slider values, movable from the rail. When a swept axis is not frontier progress,
-              the surface is evaluated at the marked point ({pct(astar)}).
+              colors indicate the change in jobs. Dashed crosshair: the current slider values,
+              movable from the rail. When a swept axis is not frontier progress, the surface is
+              evaluated at the marked point ({pct(astar)}).
             </figcaption>
           </figure>
 

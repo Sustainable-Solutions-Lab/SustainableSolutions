@@ -1,0 +1,295 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+
+// Companion methods page for the AI and labor sector lens (/tools/ai-labor):
+// the model schematic, the jobs identity, what each lever is and where its
+// value comes from, the Engel-parameter explainer, and the honest caveats.
+// noindex matches the tool itself — both go public when the Tools sheet
+// lists the tool.
+const tool = (tools as Tool[]).find((t) => t.slug === 'ai-labor') ?? null;
+
+const levers = [
+  {
+    sym: 'ε', name: 'Demand ceiling (income elasticity)',
+    what: 'How strongly the sector’s demand responds to income: each 1% of income growth moves the quantity demanded by about ε%.',
+    source: 'Measured per sector: 66 years (1959–2025) of US personal consumption (BEA PCE) regressed on real disposable income per person, bridged from ≈200 spending categories to BEA’s ≈400-industry detail. Loaded automatically when you pick a sector.',
+  },
+  {
+    sym: 'φ', name: 'Provenance premium',
+    what: 'The share of the sector’s demand that insists on attested human work — that slice keeps its human labor and its human cost, whatever AI can do.',
+    source: 'A scenario dial (default 0). Our evidence that such demand exists and behaves as a complement comes from the recorded-vs-live music case study: live performance’s share of music spending rose from 34% to 78% while its relative price more than doubled.',
+  },
+  {
+    sym: 'ℓ', name: 'Labor intensity',
+    what: 'Compensation as a share of the sector’s output value — it bounds how much automation can cut the price.',
+    source: 'BEA 2017 detail benchmark input–output accounts (compensation of employees ÷ gross output). Loaded with the sector.',
+  },
+  {
+    sym: 'θ', name: 'Task mix (physical / analytic / creative)',
+    what: 'How the sector’s wage bill divides across task types. Physical tasks need a body; analytic tasks are compute-like cognition; creative tasks are novel combination and judgment.',
+    source: 'Occupation staffing patterns (BLS OEWS, May 2024) crossed with task content (O*NET): teleworkability separates physical from cognitive work, and analytic/creative composites split the rest. Loaded with the sector.',
+  },
+  {
+    sym: 'g', name: 'AI reach by task type',
+    what: 'The share of each task type AI can perform at full frontier progress. Physical tasks lag cognitive ones while robotics catches up.',
+    source: 'Scenario dials, not measurements (defaults: analytic 95%, creative 60%, physical 25%). The gray slider ticks mark these defaults.',
+  },
+  {
+    sym: 'χ', name: 'Workers’ share of capital income',
+    what: 'Who receives the automation gains. χ = 1: capital income reaches everyone; χ = 0: workers live on wages while the top decile keeps the capital income. Because spending patterns change with income (the Engel logic below), this changes which sectors’ demand grows.',
+    source: 'A scenario dial. The income paths it selects come from our two-group general equilibrium (below).',
+  },
+];
+---
+
+<BaseLayout
+  title="AI and labor — methods"
+  description="Model schematic, equations, and data provenance for the AI and labor sector lens."
+  noindex={tool?.unlisted ?? true}
+>
+  <article class="wrap">
+    <header>
+      <p class="eyebrow">Methods · companion to <a href="/tools/ai-labor">/tools/ai-labor</a></p>
+      <h1>How the sector lens works</h1>
+      <p class="lede">
+        The tool asks one question per sector: as AI takes over a growing share of work, do the
+        jobs in this industry grow or shrink? The answer is a race between demand growth and task
+        displacement, and the sector-specific variables that decide the race are measured, not
+        assumed, wherever the data allows.
+      </p>
+    </header>
+
+    <section>
+      <h2>The model in one picture</h2>
+      <figure>
+        <svg viewBox="0 0 760 340" role="img" aria-label="Schematic: AI frontier progress drives task automation, cheaper output, and income growth; demand and the human task share combine into the jobs index.">
+          <defs>
+            <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0.5 L7.5,4 L0,7.5" fill="none" stroke="var(--ink-3)" stroke-width="1.3" />
+            </marker>
+          </defs>
+          <style>
+            .box { fill: var(--paper-2); stroke: var(--rule-strong); }
+            .out { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1.5; }
+            .t { font-family: var(--font-sans); font-size: 12.5px; fill: var(--ink); }
+            .s { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink-3); }
+            .e { font-family: var(--font-mono); font-size: 10.5px; fill: var(--cardinal); }
+            .f { fill: none; stroke: var(--ink-3); stroke-width: 1.1; marker-end: url(#arr); }
+          </style>
+
+          <rect class="box" x="12" y="140" width="120" height="58" rx="4" />
+          <text class="t" x="72" y="164" text-anchor="middle">AI frontier</text>
+          <text class="t" x="72" y="180" text-anchor="middle">progress a</text>
+
+          <!-- channel 1: displacement -->
+          <rect class="box" x="220" y="24" width="190" height="64" rx="4" />
+          <text class="t" x="315" y="46" text-anchor="middle">Tasks automated</text>
+          <text class="s" x="315" y="62" text-anchor="middle">A = a · (θ‑mix × AI reach g)</text>
+          <text class="e" x="315" y="78" text-anchor="middle">θ measured · g scenario</text>
+
+          <rect class="box" x="470" y="24" width="180" height="64" rx="4" />
+          <text class="t" x="560" y="46" text-anchor="middle">Human task share</text>
+          <text class="s" x="560" y="62" text-anchor="middle">h = φ + (1−φ)(1−A)</text>
+          <text class="e" x="560" y="78" text-anchor="middle">φ provenance floor</text>
+
+          <!-- channel 2: price -->
+          <rect class="box" x="220" y="138" width="190" height="64" rx="4" />
+          <text class="t" x="315" y="160" text-anchor="middle">Cheaper output</text>
+          <text class="s" x="315" y="176" text-anchor="middle">price = 1 − ℓ(1−φ)A·0.9</text>
+          <text class="e" x="315" y="192" text-anchor="middle">ℓ measured</text>
+
+          <!-- channel 3: income -->
+          <rect class="box" x="220" y="252" width="190" height="64" rx="4" />
+          <text class="t" x="315" y="274" text-anchor="middle">Incomes rise</text>
+          <text class="s" x="315" y="290" text-anchor="middle">workers y_w · owners y_k</text>
+          <text class="e" x="315" y="306" text-anchor="middle">χ splits the gains (GE)</text>
+
+          <rect class="box" x="470" y="195" width="180" height="64" rx="4" />
+          <text class="t" x="560" y="217" text-anchor="middle">Sector demand</text>
+          <text class="s" x="560" y="233" text-anchor="middle">D = Σ group y^ε · price^−η</text>
+          <text class="e" x="560" y="249" text-anchor="middle">ε measured per sector</text>
+
+          <!-- output -->
+          <rect class="out" x="600" y="118" width="148" height="46" rx="4" />
+          <text class="t" x="674" y="138" text-anchor="middle" style="font-weight:600">Jobs index</text>
+          <text class="s" x="674" y="154" text-anchor="middle">J = D × h</text>
+
+          <path class="f" d="M132,152 C 170,140 180,80 216,62" />
+          <path class="f" d="M132,169 L 216,169" />
+          <path class="f" d="M132,186 C 170,198 180,258 216,278" />
+          <path class="f" d="M410,56 L 466,56" />
+          <path class="f" d="M410,170 C 436,172 446,200 466,212" />
+          <path class="f" d="M410,284 C 436,282 446,252 466,240" />
+          <path class="f" d="M650,88 C 668,96 672,104 676,114" />
+          <path class="f" d="M650,227 C 668,219 672,180 675,168" />
+        </svg>
+        <figcaption>
+          Three channels from one driver. AI progress automates the sector's tasks (fewer jobs per
+          unit of output), cuts its price (more demand), and raises economy-wide incomes (more
+          demand — up to the sector's ceiling ε, and only for whoever receives the income, χ).
+          Cardinal notes mark which inputs are measured and which are scenario dials.
+        </figcaption>
+      </figure>
+    </section>
+
+    <section>
+      <h2>The jobs identity</h2>
+      <p>At frontier progress <em>a</em> (0 = today, 100% ≈ analytic work fully automated), the sector's jobs index is</p>
+      <pre>J(a) = D(a) · price(a)⁻η · h(a)        (today = 1)
+
+A(a)     = a · (θ_P g_P + θ_A g_A + θ_C g_C)     automated share of tasks
+h(a)     = φ + (1 − φ)(1 − A)                    human task share
+price(a) = 1 − ℓ (1 − φ) A (1 − 0.1)             cost pass-through
+D(a)     = s_w · y_w(a)^ε + (1 − s_w) · y_k(a)^ε  demand at base prices</pre>
+      <p>
+        with η = 0.8 the price elasticity of sector demand and AI performing an automated task at
+        10% of the human cost (both held fixed and stated on the tool). s<sub>w</sub> is the worker
+        group's share of total spending today, and y<sub>w</sub>, y<sub>k</sub> are the worker and
+        capital-owner real income paths — not assumptions, but outputs of the project's general
+        equilibrium model (below), interpolated as you move χ.
+      </p>
+    </section>
+
+    <section>
+      <h2>What each lever is, and where its value comes from</h2>
+      <dl>
+        {levers.map((l) => (
+          <div class="lever">
+            <dt><span class="sym">{l.sym}</span> {l.name}</dt>
+            <dd>
+              <p>{l.what}</p>
+              <p class="src">{l.source}</p>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+
+    <section>
+      <h2>Engel parameters, briefly</h2>
+      <p>
+        An Engel curve traces how spending on a good changes as income rises — named for Ernst
+        Engel's 1857 observation that food's share of the household budget falls as households get
+        richer. The slope of that curve, the income elasticity ε, is the whole demand-ceiling
+        idea in one number: when ε has fallen to zero, more income buys no more of the good — the
+        ceiling binds — and productivity growth in that sector can only cut jobs, never add them.
+        Across US sectors we estimate ε from the 1959–2025 consumption record; the systematic
+        pattern is that physical goods sit low (food at home ≈ 0.5, often near 0) while
+        human-time services and open-ended categories sit high (≈ 2–3). Two cautions the tool
+        inherits: ε is a long-run average slope, not a constant of nature — sectors drift down
+        their Engel curves as saturation approaches — and extrapolating a measured ε across the
+        several-fold income growth the AI scenarios imply stretches it far out of sample.
+      </p>
+    </section>
+
+    <section>
+      <h2>The general-equilibrium backdrop</h2>
+      <p>
+        The income paths behind the χ lever come from the project's formal model: a three-good
+        general equilibrium (physical, analytic, creative output) built on Kording &amp;
+        Marinescu's (2025) task framework, with one change that matters — households have
+        nonhomothetic preferences calibrated to the measured Engel parameters, so demand
+        composition shifts as incomes grow. Two groups share those preferences but not income:
+        workers (90% of people) earn the wage bill plus a share χ of capital income; capital
+        owners (10%) receive the rest. Solving the model along the automation path gives each
+        group's real income trajectory; the tool embeds those paths and interpolates between
+        them. The sector lens is deliberately partial equilibrium on that backdrop: each sector's
+        own wages and prices do not feed back on the economy.
+      </p>
+    </section>
+
+    <section>
+      <h2>Caveats</h2>
+      <ul>
+        <li>Mechanism illustration, not a forecast. Every curve is conditional on dials whose future values nobody knows.</li>
+        <li>Measured elasticities are extrapolated far out of sample at high frontier progress.</li>
+        <li>Task shares divide the wage bill, which proxies output composition imperfectly.</li>
+        <li>Within-sector adjustment — quality upgrading, new product varieties, intensity growth ("twice the chefs per dinner") — is not modeled and works against pure displacement.</li>
+        <li>No labor-market frictions, no adjustment dynamics: the index compares equilibria, not years.</li>
+      </ul>
+      <p class="src">
+        Data: BEA 2017 detail benchmark input–output accounts; BLS QCEW 2025 employment; BLS OEWS
+        May 2024 staffing; O*NET 30.3 task content; Dingel–Neiman (2020) teleworkability; BEA PCE
+        and real disposable income, 1959–2025. The research repository (code, tests, and the
+        general-equilibrium model) is private while the paper is in preparation. Aggregate
+        framework: <a href="https://www.brookings.edu/articles/artificial-intelligence-saturation-and-the-future-of-work/">Kording &amp; Marinescu (2025)</a>.
+      </p>
+    </section>
+  </article>
+</BaseLayout>
+
+<style>
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px clamp(16px, 4vw, 32px) 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 8px;
+  }
+  h1 {
+    font-family: var(--font-serif);
+    font-size: clamp(28px, 4vw, 38px);
+    font-weight: 600;
+    line-height: 1.12;
+    margin: 0 0 12px;
+  }
+  .lede { color: var(--ink-2); font-size: 17px; line-height: 1.55; margin: 0; }
+  h2 {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.28;
+    margin: 0 0 10px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+  }
+  p, li { color: var(--ink-2); font-size: 15px; line-height: 1.6; }
+  p { margin: 0 0 10px; }
+  figure { margin: 0; }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 13.5px;
+    color: var(--ink-3);
+    line-height: 1.45;
+    margin-top: 8px;
+  }
+  pre {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 14px 16px;
+    overflow-x: auto;
+  }
+  dl { margin: 0; display: flex; flex-direction: column; gap: 16px; }
+  .lever dt {
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+  .sym {
+    font-family: var(--font-mono);
+    color: var(--cardinal);
+    margin-right: 4px;
+  }
+  .lever dd { margin: 0; }
+  .src { font-size: 13px; color: var(--ink-3); }
+  ul { margin: 0 0 10px; padding-left: 20px; }
+</style>

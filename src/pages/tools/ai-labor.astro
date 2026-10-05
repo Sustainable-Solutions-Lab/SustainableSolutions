@@ -1,0 +1,86 @@
+---
+import ToolFrame from '../../layouts/ToolFrame.astro';
+import DemandCeilingsTool from '../../tools/ai-labor/DemandCeilingsTool';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+
+const tool = (tools as Tool[]).find((t) => t.slug === 'ai-labor') ?? null;
+---
+
+<ToolFrame
+  title={tool?.title ?? 'Demand ceilings explorer'}
+  description={tool?.summary ??
+    'What happens to a sector’s jobs as AI advances — its demand ceiling, task mix, human-provenance premium, and who captures the gains.'}
+  noindex={tool?.unlisted ?? true}
+  background="var(--paper-2)"
+>
+  <DemandCeilingsTool client:only="react" />
+</ToolFrame>
+
+<style is:global>
+  /* Explorer sliders: a cardinal, grabbable thumb that renders the same on
+     desktop and mobile (native accent-color leaves the thumb white on iOS).
+     Same treatment as the magnet explorer, scoped to this tool. */
+  .dc-tool { --dc-thumb: 19px; --dc-hit: 22px; }
+  .dc-tool p { max-width: none; }
+  @media (pointer: fine) and (min-width: 1000px) {
+    .dc-tool { --dc-thumb: 15px; --dc-hit: 18px; }
+  }
+  @media (pointer: coarse) {
+    .dc-tool { --dc-thumb: 26px; --dc-hit: 40px; }
+  }
+  .dc-tool input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: var(--dc-hit);
+    background: transparent;
+    cursor: pointer;
+    margin: 0;
+    touch-action: pan-y;
+  }
+  .dc-tool input[type='range']::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 3px;
+    background: var(--rule-strong);
+  }
+  .dc-tool input[type='range']::-moz-range-track {
+    height: 6px; border-radius: 3px;
+    background: var(--rule-strong);
+  }
+  .dc-tool input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    box-sizing: border-box;
+    width: var(--dc-thumb); height: var(--dc-thumb);
+    margin-top: calc((6px - var(--dc-thumb)) / 2);
+    border-radius: 50%;
+    background: var(--cardinal);
+    border: 2px solid var(--paper);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  .dc-tool input[type='range']::-moz-range-thumb {
+    width: var(--dc-thumb); height: var(--dc-thumb);
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: var(--cardinal);
+    border: 2px solid var(--paper);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  .dc-tool input[type='range']:focus-visible { outline: none; }
+  .dc-tool input[type='range']:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cardinal) 35%, transparent);
+  }
+  .dc-tool input[type='range']:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cardinal) 35%, transparent);
+  }
+
+  /* K&M panel: controls beside charts on desktop, stacked on phone. */
+  .dc-km-grid {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .dc-km-grid { grid-template-columns: 1fr; }
+  }
+</style>

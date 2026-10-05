@@ -435,12 +435,16 @@ function FoodEmissionsMethods() {
         crediting soil-carbon removals requires multi-year field
         measurement under the GHG Protocol's land standard.
         The layer currently covers cropland; a companion rangeland layer
-        is in development on the grazing-intensity response functions
-        and global stocking-density and forage-demand grids of{' '}
+        has a first historical estimate built on the grazing-intensity
+        response functions, random-forest ensemble, and stocking-density
+        grids of{' '}
 <a href="https://doi.org/10.1126/science.adz4320" target="_blank" rel="noopener noreferrer" style={linkStyle}><strong>Powell et al., <em>Assessing the net-climate benefits of
         improved grazing intensity in global rangelands</em>, Science
-        (2026)</strong></a>, which would extend soil-carbon stock-change
-        coverage to the world's grazing lands.
+        (2026)</strong></a>, evaluated along the observed 2000–2022
+        intensity trajectory (net source, roughly 0.7 Gt CO₂e
+        cumulative). It is not yet in the map: the loss-direction
+        responses sit outside the authors' validated application domain,
+        and that caveat is being resolved before the layer ships.
       </p>
 
       <h2 style={h2Style}>Drivers of change</h2>

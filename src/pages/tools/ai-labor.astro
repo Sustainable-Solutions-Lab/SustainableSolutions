@@ -1,10 +1,10 @@
 ---
 import ToolFrame from '../../layouts/ToolFrame.astro';
-import DemandCeilingsTool from '../../tools/demand-ceilings/DemandCeilingsTool';
+import DemandCeilingsTool from '../../tools/ai-labor/DemandCeilingsTool';
 import tools from '../../data/tools.json';
 import type { Tool } from '../../lib/types';
 
-const tool = (tools as Tool[]).find((t) => t.slug === 'demand-ceilings') ?? null;
+const tool = (tools as Tool[]).find((t) => t.slug === 'ai-labor') ?? null;
 ---
 
 <ToolFrame

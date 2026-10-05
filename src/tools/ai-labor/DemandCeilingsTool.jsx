@@ -12,6 +12,7 @@
  * to restore it below the sector lens.
  */
 import { useMemo, useRef, useState } from 'react';
+import { contours } from 'd3-contour';
 import ToolShell from '../_shell/ToolShell';
 import { ETA, sectorJobs, decompose, sectorSweep } from './model.js';
 import * as km from './km.js';
@@ -125,7 +126,7 @@ function fmtMult(lnv) {
   return `${pc >= 0 ? '+' : ''}${pc.toFixed(0)}%`;
 }
 
-function JobsChart({ data, noceil, astar, at, onScrub }) {
+function JobsChart({ data, noceil, astar, at, onScrub, hairlines }) {
   const W = 640, H = 330, M = { l: 46, r: 96, t: 14, b: 36 };
   const svgRef = useRef(null);
   const [dragging, setDragging] = useState(false);
@@ -182,6 +183,12 @@ function JobsChart({ data, noceil, astar, at, onScrub }) {
           </g>
         ))}
         <text x={M.l - 34} y={M.t + 2} style={svgLabel}>jobs index (today = 1{useLog ? ', log scale' : ''})</text>
+        <clipPath id="dc-jobs-clip"><rect x={M.l} y={M.t} width={W - M.l - M.r} height={H - M.t - M.b} /></clipPath>
+        <g clipPath="url(#dc-jobs-clip)">
+          {hairlines.map((hl, i) => (
+            <path key={i} d={line(hl)} fill="none" stroke="var(--ink-4)" strokeOpacity="0.22" strokeWidth="0.7" />
+          ))}
+        </g>
         <line x1={sx(astar)} y1={M.t + 10} x2={sx(astar)} y2={H - M.b} stroke="var(--accent-brand)" strokeWidth="1" strokeDasharray="2 3" />
         <text x={sx(astar)} y={M.t + 6} textAnchor="middle" style={{ ...svgText, fill: 'var(--accent-brand)' }}>
           {pct(astar)}: jobs {fmtMult(Math.log(at.J))}
@@ -239,6 +246,161 @@ function DecompChart({ dec }) {
         );
       })}
     </svg>
+  );
+}
+
+/* ---------------- two-lever contour sweep ---------------- */
+
+const SWEEP_VARS = {
+  a: { lab: 'AI frontier progress', min: 0, max: 1, fmt: pct },
+  eps: { lab: 'Demand ceiling ε', min: -0.5, max: 2.5, fmt: (v) => v.toFixed(2) },
+  phi: { lab: 'Provenance premium φ', min: 0, max: 0.6, fmt: pct },
+  lint: { lab: 'Labor intensity ℓ', min: 0.05, max: 0.85, fmt: pct },
+  chi: { lab: "Workers' capital share χ", min: 0, max: 1, fmt: pct },
+  gA: { lab: 'AI reach, analytic', min: 0, max: 1, fmt: pct },
+  gC: { lab: 'AI reach, creative', min: 0, max: 1, fmt: pct },
+  gP: { lab: 'AI reach, physical', min: 0, max: 1, fmt: pct },
+};
+// Spectral diverging fills around no change (the lab's signature palette used
+// as a diverging scale); band edges in ln(jobs index), labeled as percents.
+const C_EDGES = [-1.204, -0.693, -0.357, -0.105, 0.095, 0.336, 0.693, 1.194];
+const C_LABELS = ['−70%', '−50%', '−30%', '−10%', '+10%', '+40%', '+100%', '+230%'];
+const C_FILLS = ['#9E0142', '#D53E4F', '#F46D43', '#FDAE61', '#FFFFBF',
+                 '#E6F598', '#ABDDA4', '#66C2A5', '#3288BD'];
+
+function ContourChart({ sd, astar }) {
+  const [cx, setCx] = useState('a');
+  const [cy, setCy] = useState('eps');
+  const [tip, setTip] = useState(null);
+  const wrapRef = useRef(null);
+  const svgRef = useRef(null);
+
+  const W = 640, H = 400, M = { l: 60, r: 148, t: 14, b: 48 };
+  const pw = W - M.l - M.r, ph = H - M.t - M.b;
+  const NX = 49, NY = 37;
+  const X = SWEEP_VARS[cx], Y = SWEEP_VARS[cy];
+
+  const evalJ = (xv, yv) => {
+    const dial = { ...sd };
+    let a = astar;
+    if (cx === 'a') a = xv; else dial[cx] = xv;
+    if (cy === 'a') a = yv; else dial[cy] = yv;
+    return sectorJobs(GE, a, dial).J;
+  };
+
+  const { fillPaths, zeroPath } = useMemo(() => {
+    const vals = new Float64Array(NX * NY);
+    for (let j = 0; j < NY; j++) {
+      const yv = Y.min + (j / (NY - 1)) * (Y.max - Y.min);
+      for (let i = 0; i < NX; i++) {
+        const xv = X.min + (i / (NX - 1)) * (X.max - X.min);
+        vals[j * NX + i] = Math.log(evalJ(xv, yv));
+      }
+    }
+    const toPath = (mp) => mp.coordinates.map((poly) =>
+      poly.map((ring) =>
+        ring.map(([gx, gy], k) =>
+          `${k ? 'L' : 'M'}${(M.l + (gx / NX) * pw).toFixed(1)},${(M.t + ph - (gy / NY) * ph).toFixed(1)}`
+        ).join('') + 'Z'
+      ).join('')
+    ).join('');
+    const gen = contours().size([NX, NY]);
+    return {
+      fillPaths: gen.thresholds(C_EDGES)(vals).map(toPath),
+      zeroPath: toPath(gen.thresholds([0])(vals)[0]),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sd, astar, cx, cy]);
+
+  const pxx = (v) => M.l + ((v - X.min) / (X.max - X.min)) * pw;
+  const pxy = (v) => M.t + ph - ((v - Y.min) / (Y.max - Y.min)) * ph;
+  const curX = cx === 'a' ? astar : sd[cx];
+  const curY = cy === 'a' ? astar : sd[cy];
+
+  const onMove = (ev) => {
+    const box = svgRef.current?.getBoundingClientRect();
+    const fig = wrapRef.current?.getBoundingClientRect();
+    if (!box || !fig) return;
+    const fx = ((ev.clientX - box.left) / box.width) * W;
+    const fy = ((ev.clientY - box.top) / box.height) * H;
+    if (fx < M.l || fx > W - M.r || fy < M.t || fy > H - M.b) return setTip(null);
+    const xv = X.min + ((fx - M.l) / pw) * (X.max - X.min);
+    const yv = Y.min + ((M.t + ph - fy) / ph) * (Y.max - Y.min);
+    const J = evalJ(xv, yv);
+    let x = ev.clientX - fig.left + 14;
+    if (x > fig.width - 250) x -= 270;
+    setTip({
+      x, y: ev.clientY - fig.top - 10,
+      text: `${X.lab.toLowerCase()} ${X.fmt(xv)}  ·  ${Y.lab.toLowerCase()} ${Y.fmt(yv)}  →  jobs ${fmtMult(Math.log(J))}`,
+    });
+  };
+
+  const axisTicks = (V, n = 5) =>
+    Array.from({ length: n }, (_, i) => V.min + (i / (n - 1)) * (V.max - V.min));
+  const selStyle = { font: '12px/1.4 var(--font-sans)', color: 'var(--ink)', background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 2, padding: '3px 6px' };
+  const opts = (other, cur) => Object.entries(SWEEP_VARS).map(([k, v]) => (
+    <option key={k} value={k} disabled={k === other && k !== cur}>{v.lab}</option>
+  ));
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+        <label style={{ fontSize: 12.5, color: 'var(--ink-2)', display: 'flex', gap: 6, alignItems: 'center' }}>
+          across
+          <select value={cx} onChange={(e) => setCx(e.target.value)} style={selStyle} aria-label="Horizontal sweep variable">
+            {opts(cy, cx)}
+          </select>
+        </label>
+        <label style={{ fontSize: 12.5, color: 'var(--ink-2)', display: 'flex', gap: 6, alignItems: 'center' }}>
+          against
+          <select value={cy} onChange={(e) => setCy(e.target.value)} style={selStyle} aria-label="Vertical sweep variable">
+            {opts(cx, cy)}
+          </select>
+        </label>
+      </div>
+      <div ref={wrapRef} style={{ position: 'relative' }} onPointerMove={onMove} onPointerLeave={() => setTip(null)}>
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', height: 'auto' }}
+          aria-label={`Jobs change versus today across ${X.lab} and ${Y.lab}; dashed lines mark the current slider values`}>
+          <rect x={M.l} y={M.t} width={pw} height={ph} fill={C_FILLS[0]} />
+          {fillPaths.map((d, i) => d && <path key={i} d={d} fill={C_FILLS[i + 1]} />)}
+          {zeroPath && <path d={zeroPath} fill="none" stroke="var(--ink)" strokeWidth="1.5" />}
+          <rect x={M.l} y={M.t} width={pw} height={ph} fill="none" stroke="var(--rule-strong)" />
+          {/* dashed crosshair at the current slider values */}
+          <line x1={pxx(curX)} y1={M.t} x2={pxx(curX)} y2={M.t + ph} stroke="var(--ink)" strokeWidth="1.1" strokeDasharray="3 4" />
+          <line x1={M.l} y1={pxy(curY)} x2={M.l + pw} y2={pxy(curY)} stroke="var(--ink)" strokeWidth="1.1" strokeDasharray="3 4" />
+          <circle cx={pxx(curX)} cy={pxy(curY)} r="5" fill="var(--accent-brand)" stroke="var(--paper)" strokeWidth="1.5" />
+          {axisTicks(X).map((t) => (
+            <text key={t} x={pxx(t)} y={H - M.b + 16} textAnchor="middle" style={svgText}>{X.fmt(t)}</text>
+          ))}
+          {axisTicks(Y).map((t) => (
+            <text key={t} x={M.l - 7} y={pxy(t) + 3.5} textAnchor="end" style={svgText}>{Y.fmt(t)}</text>
+          ))}
+          <text x={M.l + pw / 2} y={H - 6} textAnchor="middle" style={svgLabel}>{X.lab}</text>
+          <text transform={`translate(14 ${M.t + ph / 2}) rotate(-90)`} textAnchor="middle" style={svgLabel}>{Y.lab}</text>
+          {/* legend */}
+          {C_FILLS.map((c, i) => {
+            const lh = ph / C_FILLS.length;
+            const y = M.t + ph - (i + 1) * lh;
+            return (
+              <g key={c}>
+                <rect x={W - M.r + 18} y={y} width={14} height={lh - 1} fill={c} />
+                {i < C_EDGES.length && (
+                  <text x={W - M.r + 38} y={y + 3.5} style={svgText}>{C_LABELS[i]}</text>
+                )}
+              </g>
+            );
+          })}
+          <text x={W - M.r + 18} y={M.t - 2} style={{ ...svgLabel, fontSize: 11 }}>jobs vs today</text>
+          <line x1={W - M.r + 18} y1={M.t + ph + 32} x2={W - M.r + 32} y2={M.t + ph + 32} stroke="var(--ink)" strokeWidth="1.5" />
+          <text x={W - M.r + 38} y={M.t + ph + 35.5} style={svgText}>no change</text>
+        </svg>
+        {tip && (
+          <div style={{ position: 'absolute', left: tip.x, top: tip.y, pointerEvents: 'none', background: 'var(--ink)', color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 11.5, lineHeight: 1.5, padding: '6px 9px', borderRadius: 2, whiteSpace: 'nowrap', zIndex: 4 }}>
+            {tip.text}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -443,7 +605,15 @@ export default function DemandCeilingsTool() {
   };
 
   const data = useMemo(() => sectorSweep(GE, sd), [sd]);
-  const noceil = useMemo(() => sectorSweep(GE, { ...sd, eps: 1, chi: 1 }), [sd]);
+  const noceil = useMemo(() => sectorSweep(GE, { ...sd, eps: 1, chi: 1 }, 60), [sd]);
+  // Every industry under the same scenario dials, each at its own measured
+  // eps / labor intensity / task mix — the hairline backdrop.
+  const hairlines = useMemo(() => {
+    const scen = { gP: sd.gP, gA: sd.gA, gC: sd.gC, phi: sd.phi, chi: sd.chi };
+    return SECTORS.map((s) => sectorSweep(
+      GE, { ...scen, eps: s.eps, lint: s.lint, thP: s.thP, thA: s.thA, thC: s.thC }, 60));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sd.gP, sd.gA, sd.gC, sd.phi, sd.chi]);
   const at = sectorJobs(GE, astar, sd);
   const dec = decompose(GE, astar, sd);
   const secName = sel ? sel.name : 'Custom sector';
@@ -554,16 +724,16 @@ export default function DemandCeilingsTool() {
 
           <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <p style={{ ...mono11, margin: 0 }}>Jobs index · demand × price × human task share</p>
-            <h3 style={figTitle}>Jobs as the AI frontier advances — drag across the chart to move the evaluation point</h3>
-            <JobsChart data={data} noceil={noceil} astar={astar} at={at} onScrub={setAstar} />
+            <JobsChart data={data} noceil={noceil} astar={astar} at={at} onScrub={setAstar} hairlines={hairlines} />
             <figcaption style={caption}>
-              Solid: this sector, at income elasticity ε = {sd.eps.toFixed(2)} and workers'
-              capital share χ = {pct(sd.chi)}. Dashed: the same production side if demand simply
-              tracked broadly shared income (ε = 1, χ = 1) — the gap is the demand side: ceiling,
-              luxury tilt, and who gets paid.{' '}
+              Click or drag across the chart to move the evaluation point. Bold: the selected
+              sector, at income elasticity ε = {sd.eps.toFixed(2)} and workers' capital share
+              χ = {pct(sd.chi)}. Thin lines: all 84 industries under the same scenario dials,
+              each at its own measured ε, labor intensity, and task mix. Dashed: demand simply
+              tracking broadly shared income (ε = 1, χ = 1) — the gap is the demand side.{' '}
               {interiorPeak
-                ? `Jobs peak at ${pct(peak.a)} frontier progress, then displacement outruns demand.`
-                : 'No interior peak under these settings.'}
+                ? `This sector's jobs peak at ${pct(peak.a)} frontier progress, then displacement outruns demand.`
+                : 'No interior peak for this sector under these settings.'}
             </figcaption>
           </figure>
 
@@ -579,6 +749,18 @@ export default function DemandCeilingsTool() {
             </figcaption>
           </figure>
 
+          <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <p style={{ ...mono11, margin: 0 }}>Two-lever sweep · surface = jobs vs today at {pct(astar)} frontier progress</p>
+            <ContourChart sd={sd} astar={astar} />
+            <figcaption style={caption}>
+              The surface sweeps two levers at once, holding the rest at their slider values;
+              colors follow the lab's Spectral scale from job losses (reds) through no change
+              (the ink contour line) to gains (greens into blue). Dashed crosshair: the current
+              slider values, movable from the rail. When a swept axis is not frontier progress,
+              the surface is evaluated at the marked point ({pct(astar)}).
+            </figcaption>
+          </figure>
+
           <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 18 }}>
             <div>
               <h3 style={{ ...mono11, fontWeight: 500, margin: '0 0 6px' }}>The mechanism</h3>
@@ -586,10 +768,11 @@ export default function DemandCeilingsTool() {
                 Jobs = demand × human task share. AI progress works every lever at once: it makes
                 the sector's output cheaper (more demand), automates its tasks (fewer jobs per
                 unit), and raises economy-wide incomes (more demand — but only up to the sector's
-                ceiling, and only for whoever receives the income). A saturated sector (ε near 0)
-                cannot convert income growth into jobs; a sector of mostly physical tasks is
-                shielded until robotics catches up; a provenance sector keeps the share of demand
-                that insists on human origin.
+                ceiling, and only for whoever receives the income). The jobs index counts human
+                labor demanded — employment, not pay. The sector's wage is held fixed in this
+                lens, so up to that assumption the same curve is also the sector's wage-bill
+                index; wage levels are a general-equilibrium question, treated in the project's
+                formal model.
               </p>
             </div>
             <div>

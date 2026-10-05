@@ -51,8 +51,8 @@ const levers = [
 >
   <article class="wrap">
     <header>
-      <p class="eyebrow">Methods · companion to <a href="/tools/ai-labor">/tools/ai-labor</a></p>
-      <h1>How the sector lens works</h1>
+      <p class="eyebrow">Model schematic · <a href="/tools/ai-labor">AI and labor</a></p>
+      <h1>What the sector lens rests on</h1>
       <p class="lede">
         The tool asks one question per sector: as AI takes over a growing share of work, do the
         jobs in this industry grow or shrink? The answer is a race between demand growth and task
@@ -137,12 +137,16 @@ const levers = [
     <section>
       <h2>The jobs identity</h2>
       <p>At frontier progress <em>a</em> (0 = today, 100% ≈ analytic work fully automated), the sector's jobs index is</p>
-      <pre>J(a) = D(a) · price(a)⁻η · h(a)        (today = 1)
+      <pre>J(a) = D(a) · price(a)⁻η · h(a)   (today = 1)
 
-A(a)     = a · (θ_P g_P + θ_A g_A + θ_C g_C)     automated share of tasks
-h(a)     = φ + (1 − φ)(1 − A)                    human task share
-price(a) = 1 − ℓ (1 − φ) A (1 − 0.1)             cost pass-through
-D(a)     = s_w · y_w(a)^ε + (1 − s_w) · y_k(a)^ε  demand at base prices</pre>
+automated task share:
+  A = a · (θ_P g_P + θ_A g_A + θ_C g_C)
+human task share:
+  h = φ + (1 − φ)(1 − A)
+cost pass-through:
+  price = 1 − ℓ (1 − φ) A (1 − 0.1)
+demand at base prices:
+  D = s_w · y_w^ε + (1 − s_w) · y_k^ε</pre>
       <p>
         with η = 0.8 the price elasticity of sector demand and AI performing an automated task at
         10% of the human cost (both held fixed and stated on the tool). s<sub>w</sub> is the worker
@@ -276,14 +280,14 @@ D(a)     = s_w · y_w(a)^ε + (1 − s_w) · y_k(a)^ε  demand at base prices</p
   }
   pre {
     font-family: var(--font-mono);
-    font-size: 12.5px;
+    font-size: clamp(11px, 2.9vw, 12.5px);
     line-height: 1.7;
     color: var(--ink);
     background: var(--paper-2);
     border: 1px solid var(--rule);
     border-radius: 4px;
     padding: 14px 16px;
-    overflow-x: auto;
+    white-space: pre-wrap;
   }
   dl { margin: 0; display: flex; flex-direction: column; gap: 16px; }
   .lever dt {
@@ -299,5 +303,6 @@ D(a)     = s_w · y_w(a)^ε + (1 − s_w) · y_k(a)^ε  demand at base prices</p
   }
   .lever dd { margin: 0; }
   .src { font-size: 13px; color: var(--ink-3); }
-  ul { margin: 0 0 10px; padding-left: 20px; }
+  ul { margin: 0 0 10px; padding-left: 20px; list-style: disc; }
+  ul li { margin-bottom: 4px; }
 </style>

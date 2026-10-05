@@ -14,6 +14,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { contours } from 'd3-contour';
 import ToolShell from '../_shell/ToolShell';
+import MethodsPane from './MethodsPane';
+import ForcesChart from './ForcesChart';
 import { ETA, sectorJobs, decompose, sectorSweep } from './model.js';
 import * as km from './km.js';
 import SECTORS from './data/sectors.json';
@@ -126,10 +128,13 @@ function fmtMult(lnv) {
   return `${pc >= 0 ? '+' : ''}${pc.toFixed(0)}%`;
 }
 
-function JobsChart({ data, noceil, astar, at, onScrub, hairlines }) {
+function JobsChart({ data, noceil, astar, at, onScrub, hairlines, selCode, onPickSector }) {
   const W = 640, H = 330, M = { l: 46, r: 96, t: 14, b: 36 };
   const svgRef = useRef(null);
-  const [dragging, setDragging] = useState(false);
+  const wrapRef = useRef(null);
+  const [drag, setDrag] = useState(null);   // {fx, fy, moved}
+  const [near, setNear] = useState(null);   // nearest hairline {code, name, J}
+  const [tip, setTip] = useState(null);
   const sx = (a) => M.l + a * (W - M.l - M.r);
   const allJ = [...data.map((d) => d.J), ...noceil.map((d) => d.J)];
   const useLog = Math.max(...allJ) > 8;
@@ -138,37 +143,83 @@ function JobsChart({ data, noceil, astar, at, onScrub, hairlines }) {
   const jmax = Math.max(...allJ.map(tf)) * 1.06;
   const yof = (v) => H - M.b - ((tf(v) - jmin) / (jmax - jmin)) * (H - M.b - M.t);
   const line = (arr) => arr.map((d, i) => `${i ? 'L' : 'M'}${sx(d.a).toFixed(1)},${yof(d.J).toFixed(1)}`).join('');
-  const ticks = (useLog ? [0.5, 1, 2, 5, 10, 20, 50, 100, 200] : [0.5, 1, 1.5, 2, 3, 4, 6, 8])
+  const ticks = (useLog ? [0.5, 2, 5, 10, 20, 50, 100, 200] : [0.5, 1.5, 2, 3, 4, 6, 8])
     .filter((v) => tf(v) > jmin && tf(v) < jmax);
   const peak = data.reduce((a, b) => (b.J > a.J ? b : a));
   const interiorPeak = peak.a > 0.02 && peak.a < 0.99 && peak.J > data[0].J && peak.J > data[data.length - 1].J;
   const end = data[data.length - 1], endN = noceil[noceil.length - 1];
 
-  const evToA = (ev) => {
+  const toXY = (ev) => {
     const box = svgRef.current?.getBoundingClientRect();
     if (!box) return null;
-    const fx = ((ev.clientX - box.left) / box.width) * W;
-    return Math.min(1, Math.max(0.01, (fx - M.l) / (W - M.l - M.r)));
+    return [((ev.clientX - box.left) / box.width) * W,
+            ((ev.clientY - box.top) / box.height) * H];
   };
-  const scrub = (ev) => {
-    const a = evToA(ev);
-    if (a !== null) onScrub(a);
+  const toA = (fx) => Math.min(1, Math.max(0.01, (fx - M.l) / (W - M.l - M.r)));
+  const lineAt = (pts, a) => pts[Math.round(a * (pts.length - 1))];
+  const nearestLine = (fx, fy) => {
+    const a = toA(fx);
+    let best = null, bestDist = 13;
+    for (const hl of hairlines) {
+      const d = Math.abs(yof(lineAt(hl.pts, a).J) - fy);
+      if (d < bestDist) { bestDist = d; best = { code: hl.code, name: hl.name, J: lineAt(hl.pts, a).J }; }
+    }
+    return best;
+  };
+  const showTip = (ev, fx, fy, hit) => {
+    const fig = wrapRef.current?.getBoundingClientRect();
+    if (!fig) return;
+    const a = toA(fx);
+    const d = lineAt(data, a);
+    let x = ev.clientX - fig.left + 14;
+    if (x > fig.width - 260) x -= 280;
+    setTip({
+      x, y: ev.clientY - fig.top - 10,
+      text: hit && hit.code !== selCode
+        ? `${hit.name} — jobs ${hit.J.toFixed(2)} (click to select)`
+        : `progress ${pct(a)}  jobs ${d.J.toFixed(2)}  human ${pct(d.h)}  demand ${d.D.toFixed(1)}×`,
+    });
   };
 
   return (
-    <HoverFig width={W}
-      xToData={(fx) => {
-        const a = Math.min(1, Math.max(0, (fx - M.l) / (W - M.l - M.r)));
-        return data.reduce((p, c) => (Math.abs(c.a - a) < Math.abs(p.a - a) ? c : p));
-      }}
-      format={(d) => `progress ${pct(d.a)}  jobs ${d.J.toFixed(2)}  human ${pct(d.h)}  demand ${d.D.toFixed(1)}×`}>
+    <div ref={wrapRef} style={{ position: 'relative' }}>
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img"
-        style={{ display: 'block', width: '100%', height: 'auto', touchAction: 'none', cursor: 'col-resize' }}
-        aria-label="Sector jobs index against AI frontier progress; click or drag to move the evaluation point"
-        onPointerDown={(ev) => { ev.currentTarget.setPointerCapture(ev.pointerId); setDragging(true); scrub(ev); }}
-        onPointerMove={(ev) => { if (dragging) scrub(ev); }}
-        onPointerUp={(ev) => { ev.currentTarget.releasePointerCapture(ev.pointerId); setDragging(false); }}
-        onPointerCancel={() => setDragging(false)}>
+        style={{ display: 'block', width: '100%', height: 'auto', touchAction: 'none', cursor: near ? 'pointer' : 'col-resize' }}
+        aria-label="Sector jobs index against AI frontier progress; drag to move the evaluation point, click a line to switch sector"
+        onPointerDown={(ev) => {
+          const xy = toXY(ev);
+          if (!xy) return;
+          setDrag({ fx: xy[0], fy: xy[1], moved: false });
+          // Capture keeps the drag alive if the pointer leaves the chart.
+          // WebKit can throw on SVG pointer capture; dragging merely degrades.
+          try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch { /* noop */ }
+        }}
+        onPointerMove={(ev) => {
+          const xy = toXY(ev);
+          if (!xy) return;
+          const [fx, fy] = xy;
+          if (drag) {
+            const moved = drag.moved || Math.abs(fx - drag.fx) > 3;
+            if (moved !== drag.moved) setDrag({ ...drag, moved });
+            if (moved) { onScrub(toA(fx)); setNear(null); setTip(null); }
+            return;
+          }
+          const hit = nearestLine(fx, fy);
+          setNear(hit);
+          showTip(ev, fx, fy, hit);
+        }}
+        onPointerUp={(ev) => {
+          const xy = toXY(ev);
+          if (drag && !drag.moved && xy) {
+            const hit = nearestLine(xy[0], xy[1]);
+            if (hit && hit.code !== selCode) onPickSector(hit.code);
+            else onScrub(toA(xy[0]));
+          }
+          setDrag(null);
+          try { ev.currentTarget.releasePointerCapture(ev.pointerId); } catch { /* noop */ }
+        }}
+        onPointerCancel={() => setDrag(null)}
+        onPointerLeave={() => { setNear(null); setTip(null); }}>
         <line x1={M.l} y1={H - M.b} x2={W - M.r} y2={H - M.b} stroke="var(--rule-strong)" />
         {[0, 0.25, 0.5, 0.75, 1].map((t) => (
           <text key={t} x={sx(t)} y={H - M.b + 16} textAnchor="middle" style={svgText}>{pct(t)}</text>
@@ -182,11 +233,22 @@ function JobsChart({ data, noceil, astar, at, onScrub, hairlines }) {
             <text x={M.l - 7} y={yof(t) + 3.5} textAnchor="end" style={svgText}>{t}</text>
           </g>
         ))}
+        {/* the break-even line: above it a sector gains jobs, below it loses */}
+        {tf(1) > jmin && tf(1) < jmax && (
+          <g>
+            <line x1={M.l} y1={yof(1)} x2={W - M.r} y2={yof(1)} stroke="var(--ink)" strokeWidth="1.1" />
+            <text x={M.l - 7} y={yof(1) + 3.5} textAnchor="end" style={{ ...svgText, fill: 'var(--ink)', fontWeight: 600 }}>1</text>
+            <text x={M.l + 5} y={yof(1) - 5} style={{ ...svgText, fontSize: 10 }}>today's jobs — above gains, below losses</text>
+          </g>
+        )}
         <text x={M.l - 34} y={M.t + 2} style={svgLabel}>jobs index (today = 1{useLog ? ', log scale' : ''})</text>
         <clipPath id="dc-jobs-clip"><rect x={M.l} y={M.t} width={W - M.l - M.r} height={H - M.t - M.b} /></clipPath>
         <g clipPath="url(#dc-jobs-clip)">
-          {hairlines.map((hl, i) => (
-            <path key={i} d={line(hl)} fill="none" stroke="var(--ink-4)" strokeOpacity="0.22" strokeWidth="0.7" />
+          {hairlines.map((hl) => (
+            <path key={hl.code} d={line(hl.pts)} fill="none"
+              stroke={near?.code === hl.code ? 'var(--ink-2)' : 'var(--ink-4)'}
+              strokeOpacity={near?.code === hl.code ? 0.95 : 0.22}
+              strokeWidth={near?.code === hl.code ? 1.6 : 0.7} />
           ))}
         </g>
         <line x1={sx(astar)} y1={M.t + 10} x2={sx(astar)} y2={H - M.b} stroke="var(--accent-brand)" strokeWidth="1" strokeDasharray="2 3" />
@@ -200,7 +262,12 @@ function JobsChart({ data, noceil, astar, at, onScrub, hairlines }) {
         <text x={sx(1) + 6} y={yof(endN.J) + 4} style={svgText}>ε = 1, χ = 1</text>
         <circle cx={sx(astar)} cy={yof(at.J)} r="4.5" fill="var(--accent-brand)" />
       </svg>
-    </HoverFig>
+      {tip && (
+        <div style={{ position: 'absolute', left: tip.x, top: tip.y, pointerEvents: 'none', background: 'var(--ink)', color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 11.5, lineHeight: 1.5, padding: '6px 9px', borderRadius: 2, whiteSpace: 'nowrap', zIndex: 4 }}>
+          {tip.text}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -590,6 +657,7 @@ export default function DemandCeilingsTool() {
   });
   const [selCode, setSelCode] = useState(SECTORS.find((s) => s.code === '722110') ? '722110' : SECTORS[0]?.code ?? '');
   const [astar, setAstar] = useState(0.6);
+  const [methodsOpen, setMethodsOpen] = useState(false);
 
   const sel = selCode ? SECTORS.find((x) => x.code === selCode) : null;
 
@@ -618,8 +686,11 @@ export default function DemandCeilingsTool() {
   // eps / labor intensity / task mix — the hairline backdrop.
   const hairlines = useMemo(() => {
     const scen = { gP: sd.gP, gA: sd.gA, gC: sd.gC, phi: sd.phi, chi: sd.chi };
-    return SECTORS.map((s) => sectorSweep(
-      GE, { ...scen, eps: s.eps, lint: s.lint, thP: s.thP, thA: s.thA, thC: s.thC }, 60));
+    return SECTORS.map((s) => ({
+      code: s.code, name: s.name,
+      pts: sectorSweep(
+        GE, { ...scen, eps: s.eps, lint: s.lint, thP: s.thP, thA: s.thA, thC: s.thC }, 60),
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sd.gP, sd.gA, sd.gC, sd.phi, sd.chi]);
   const at = sectorJobs(GE, astar, sd);
@@ -636,6 +707,13 @@ export default function DemandCeilingsTool() {
   }, []);
 
   const measured = (v) => (sel ? [{ v, accent: true }] : []);
+
+  const methodsBtn = (label) => (
+    <button type="button" onClick={() => setMethodsOpen(true)}
+      style={{ background: 'none', border: 0, padding: 0, font: 'inherit', color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2, cursor: 'pointer', letterSpacing: 'inherit', textTransform: 'inherit' }}>
+      {label}
+    </button>
+  );
 
   const rail = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -655,7 +733,7 @@ export default function DemandCeilingsTool() {
       </select>
       <div style={{ fontSize: 11.5, color: 'var(--ink-4)', lineHeight: 1.35 }}>
         Cardinal tick marks under the sliders show this sector's measured values; gray ticks
-        mark scenario defaults. <a href="/tools/ai-labor-methods" style={{ color: 'var(--ink-3)' }}>Methods</a>.
+        mark scenario defaults. {methodsBtn('Methods')}
       </div>
 
       <GroupHead>What the sector sells</GroupHead>
@@ -702,7 +780,8 @@ export default function DemandCeilingsTool() {
   );
 
   return (
-    <div className="dc-tool" style={{ height: '100%' }}>
+    <div className="dc-tool" style={{ height: '100%', position: 'relative' }}>
+      {methodsOpen && <MethodsPane onClose={() => setMethodsOpen(false)} />}
       <ToolShell
         eyebrow="Interactive model"
         title="AI and labor"
@@ -713,7 +792,7 @@ export default function DemandCeilingsTool() {
         <div style={{ maxWidth: 880, margin: '0 auto', padding: 'clamp(16px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 26 }}>
           <div>
             <p style={{ ...mono11, margin: 0 }}>
-              Sector lens · 84 US industries · <a href="/tools/ai-labor-methods" style={{ color: 'var(--ink-3)' }}>methods</a>
+              Sector lens · 84 US industries · {methodsBtn('methods')}
             </p>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(24px, 3.4vw, 32px)', fontWeight: 600, lineHeight: 1.12, letterSpacing: '-0.01em', margin: '4px 0 0', color: 'var(--ink)' }}>
               {secName}{sel ? ` — ${sel.emp}M jobs` : ''}
@@ -732,13 +811,16 @@ export default function DemandCeilingsTool() {
 
           <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <p style={{ ...mono11, margin: 0 }}>Jobs index · demand × price × human task share</p>
-            <JobsChart data={data} noceil={noceil} astar={astar} at={at} onScrub={setAstar} hairlines={hairlines} />
+            <JobsChart data={data} noceil={noceil} astar={astar} at={at} onScrub={setAstar}
+              hairlines={hairlines} selCode={selCode} onPickSector={pickSector} />
             <figcaption style={caption}>
-              Click or drag across the chart to move the evaluation point. Bold: the selected
-              sector, at income elasticity ε = {sd.eps.toFixed(2)} and workers' capital share
-              χ = {pct(sd.chi)}. Thin lines: all 84 industries under the same scenario dials,
-              each at its own measured ε, labor intensity, and task mix. Dashed: demand simply
-              tracking broadly shared income (ε = 1, χ = 1) — the gap is the demand side.{' '}
+              Drag across the chart to move the evaluation point; click any thin line to switch
+              to that industry. Bold: the selected sector, at income elasticity
+              ε = {sd.eps.toFixed(2)} and workers' capital share χ = {pct(sd.chi)}. Thin lines:
+              all 84 industries under the same scenario dials, each at its own measured ε, labor
+              intensity, and task mix. The solid horizontal line at 1 is today's employment —
+              the border between gains and losses. Dashed curve: demand simply tracking broadly
+              shared income (ε = 1, χ = 1).{' '}
               {interiorPeak
                 ? `This sector's jobs peak at ${pct(peak.a)} frontier progress, then displacement outruns demand.`
                 : 'No interior peak for this sector under these settings.'}
@@ -765,6 +847,19 @@ export default function DemandCeilingsTool() {
               colors indicate the change in jobs. Dashed crosshair: the current slider values,
               movable from the rail. When a swept axis is not frontier progress, the surface is
               evaluated at the marked point ({pct(astar)}).
+            </figcaption>
+          </figure>
+
+          <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <p style={{ ...mono11, margin: 0 }}>Force mix · every industry at {pct(astar)} frontier progress</p>
+            <h3 style={figTitle}>Which force matters where — sectors sized by their wage bill</h3>
+            <ForcesChart sd={sd} astar={astar} />
+            <figcaption style={caption}>
+              Each column is an industry, width proportional to its wage bill (employment ×
+              average wages); the stack splits 100% by each force's share of the sector's total
+              log jobs change in absolute value, at the current levers. Colors identify the
+              forces; hover any column for the signed values. Wide red columns are the economy's
+              economically important displacement zones; wide blue ones ride income growth.
             </figcaption>
           </figure>
 
@@ -799,8 +894,8 @@ export default function DemandCeilingsTool() {
                 our two-group model (calibrated Engel parameters), but each sector's own wages and
                 prices don't feed back. Elasticities are measured 1959–2025 and extrapolated far
                 out of sample; task exposure is a judgment dial, not a measurement. The tool
-                illustrates mechanisms — it is not a forecast. Full details on the{' '}
-                <a href="/tools/ai-labor-methods">methods page</a>.
+                illustrates mechanisms — it is not a forecast. Full details in the{' '}
+                {methodsBtn('methods pane')}.
               </p>
             </div>
           </div>
@@ -815,9 +910,10 @@ export default function DemandCeilingsTool() {
             on{' '}
             <a href="https://www.brookings.edu/articles/artificial-intelligence-saturation-and-the-future-of-work/">
               Kording & Marinescu (2025)
-            </a>. See the <a href="/tools/ai-labor-methods">methods page</a> for the model
-            schematic, equations, and data provenance. Part of the lab's AI, demand ceilings, and
-            the future of work project.
+            </a>. Full {methodsBtn('methods')} in the tool; the{' '}
+            <a href="/tools/ai-labor-methods">model schematic</a> page carries the equations and
+            data provenance. Part of the lab's AI, demand ceilings, and the future of work
+            project.
           </p>
         </div>
       </ToolShell>

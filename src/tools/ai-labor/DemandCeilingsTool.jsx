@@ -231,15 +231,23 @@ function DecompChart({ dec }) {
             {net ? (
               <>
                 <line x1={x0} y1={y - pad / 2} x2={x1 + 40} y2={y - pad / 2} stroke="var(--rule)" />
-                <circle cx={bx(v)} cy={y + rh / 2} r="6" fill="var(--accent-brand)" />
+                {/* Dot matches the bar fills; the number uses the darker
+                    text-safe variants of the same hues (design-system rule). */}
+                <circle cx={bx(v)} cy={y + rh / 2} r="6" fill={v >= 0 ? 'var(--positive)' : 'var(--negative)'} stroke="var(--paper)" strokeWidth="1" />
                 <text x={bx(v) + (v >= 0 ? 12 : -12)} y={y + rh / 2 + 4} textAnchor={v >= 0 ? 'start' : 'end'}
-                  style={{ ...svgText, fill: 'var(--accent-brand)' }}>{fmtMult(v)}</text>
+                  style={{ ...svgText, fontWeight: 600, fill: v >= 0 ? 'var(--system-food-text)' : 'var(--system-health-text)' }}>{fmtMult(v)}</text>
               </>
             ) : (
               <>
                 <rect x={Math.min(bx(0), bx(v))} y={y + 4} width={Math.max(Math.abs(bx(v) - bx(0)), 1.5)} height={rh - 8}
                   rx="4" fill={v >= 0 ? 'var(--positive)' : 'var(--negative)'} />
-                <text x={bx(v) + (v >= 0 ? 6 : -6)} y={y + rh / 2 + 4} textAnchor={v >= 0 ? 'start' : 'end'} style={svgText}>{fmtMult(v)}</text>
+                {/* a long negative bar would run its label into the row name:
+                    flip the label to the right of the zero line instead */}
+                {v >= 0 || bx(v) > x0 + 55 ? (
+                  <text x={bx(v) + (v >= 0 ? 6 : -6)} y={y + rh / 2 + 4} textAnchor={v >= 0 ? 'start' : 'end'} style={svgText}>{fmtMult(v)}</text>
+                ) : (
+                  <text x={bx(0) + 6} y={y + rh / 2 + 4} textAnchor="start" style={svgText}>{fmtMult(v)}</text>
+                )}
               </>
             )}
           </g>

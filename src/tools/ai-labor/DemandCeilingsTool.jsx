@@ -857,13 +857,17 @@ export default function DemandCeilingsTool() {
           <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <p style={{ ...mono11, margin: 0 }}>Force mix · every industry at {pct(astar)} frontier progress</p>
             <h3 style={figTitle}>Which force matters where — sectors sized by their wage bill</h3>
-            <ForcesChart sd={sd} astar={astar} />
+            <ForcesChart sd={sd} astar={astar} selCode={selCode} onPickSector={pickSector} />
             <figcaption style={caption}>
               Each column is an industry, width proportional to its wage bill (employment ×
-              average wages); the stack splits 100% by each force's share of the sector's total
-              log jobs change in absolute value, at the current levers. Colors identify the
-              forces; hover any column for the signed values. Wide red columns are the economy's
-              economically important displacement zones; wide blue ones ride income growth.
+              average wages); click a column to load that sector. The stack splits 100% by each
+              force's share of the sector's total log jobs change in absolute value, at the
+              current levers. Displacement (red) is the direct substitution: AI performs a share
+              of the sector's tasks, so human work per unit of output falls one-for-one — hover
+              a column to see that share. It dominates most columns at high frontier progress
+              because it is the one unbounded force: as the automated share nears 100% the
+              remaining human work heads to zero, while income growth, the price effect, and the
+              provenance shield all level off. Wide blue columns ride income growth instead.
             </figcaption>
           </figure>
 

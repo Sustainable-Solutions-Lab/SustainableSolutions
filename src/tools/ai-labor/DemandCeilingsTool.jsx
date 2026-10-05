@@ -132,7 +132,7 @@ function JobsChart({ data, noceil, astar, at, onScrub, hairlines, selCode, onPic
   const W = 640, H = 330, M = { l: 46, r: 96, t: 14, b: 36 };
   const svgRef = useRef(null);
   const wrapRef = useRef(null);
-  const [drag, setDrag] = useState(null);   // {fx, fy, moved}
+  const gRef = useRef(null);                // gesture: {x, dragging} in screen px
   const [near, setNear] = useState(null);   // nearest hairline {code, name, J}
   const [tip, setTip] = useState(null);
   const sx = (a) => M.l + a * (W - M.l - M.r);
@@ -157,9 +157,9 @@ function JobsChart({ data, noceil, astar, at, onScrub, hairlines, selCode, onPic
   };
   const toA = (fx) => Math.min(1, Math.max(0.01, (fx - M.l) / (W - M.l - M.r)));
   const lineAt = (pts, a) => pts[Math.round(a * (pts.length - 1))];
-  const nearestLine = (fx, fy) => {
+  const nearestLine = (fx, fy, radius = 13) => {
     const a = toA(fx);
-    let best = null, bestDist = 13;
+    let best = null, bestDist = radius;
     for (const hl of hairlines) {
       const d = Math.abs(yof(lineAt(hl.pts, a).J) - fy);
       if (d < bestDist) { bestDist = d; best = { code: hl.code, name: hl.name, J: lineAt(hl.pts, a).J }; }
@@ -184,12 +184,10 @@ function JobsChart({ data, noceil, astar, at, onScrub, hairlines, selCode, onPic
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img"
-        style={{ display: 'block', width: '100%', height: 'auto', touchAction: 'none', cursor: near ? 'pointer' : 'col-resize' }}
+        style={{ display: 'block', width: '100%', height: 'auto', touchAction: 'pan-y', cursor: near ? 'pointer' : 'col-resize' }}
         aria-label="Sector jobs index against AI frontier progress; drag to move the evaluation point, click a line to switch sector"
         onPointerDown={(ev) => {
-          const xy = toXY(ev);
-          if (!xy) return;
-          setDrag({ fx: xy[0], fy: xy[1], moved: false });
+          gRef.current = { x: ev.clientX, dragging: false };
           // Capture keeps the drag alive if the pointer leaves the chart.
           // WebKit can throw on SVG pointer capture; dragging merely degrades.
           try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch { /* noop */ }
@@ -198,10 +196,13 @@ function JobsChart({ data, noceil, astar, at, onScrub, hairlines, selCode, onPic
           const xy = toXY(ev);
           if (!xy) return;
           const [fx, fy] = xy;
-          if (drag) {
-            const moved = drag.moved || Math.abs(fx - drag.fx) > 3;
-            if (moved !== drag.moved) setDrag({ ...drag, moved });
-            if (moved) { onScrub(toA(fx)); setNear(null); setTip(null); }
+          const g = gRef.current;
+          if (g) {
+            // Drag intent is judged in screen pixels, not viewBox units —
+            // viewBox units shrink on small screens, so a wobbly tap would
+            // otherwise register as a drag and steal the click.
+            if (!g.dragging && Math.abs(ev.clientX - g.x) > 6) g.dragging = true;
+            if (g.dragging) { onScrub(toA(fx)); setNear(null); setTip(null); }
             return;
           }
           const hit = nearestLine(fx, fy);
@@ -209,16 +210,19 @@ function JobsChart({ data, noceil, astar, at, onScrub, hairlines, selCode, onPic
           showTip(ev, fx, fy, hit);
         }}
         onPointerUp={(ev) => {
+          const g = gRef.current;
+          gRef.current = null;
           const xy = toXY(ev);
-          if (drag && !drag.moved && xy) {
-            const hit = nearestLine(xy[0], xy[1]);
-            if (hit && hit.code !== selCode) onPickSector(hit.code);
+          if (g && !g.dragging && xy) {
+            // Wider hit radius for a committed click than for hover; wider
+            // still for fingers.
+            const hit = nearestLine(xy[0], xy[1], ev.pointerType === 'touch' ? 36 : 22);
+            if (hit && hit.code !== selCode) { onPickSector(hit.code); setNear(null); setTip(null); }
             else onScrub(toA(xy[0]));
           }
-          setDrag(null);
           try { ev.currentTarget.releasePointerCapture(ev.pointerId); } catch { /* noop */ }
         }}
-        onPointerCancel={() => setDrag(null)}
+        onPointerCancel={() => { gRef.current = null; }}
         onPointerLeave={() => { setNear(null); setTip(null); }}>
         <line x1={M.l} y1={H - M.b} x2={W - M.r} y2={H - M.b} stroke="var(--rule-strong)" />
         {[0, 0.25, 0.5, 0.75, 1].map((t) => (

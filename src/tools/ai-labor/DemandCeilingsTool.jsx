@@ -1,12 +1,15 @@
 /**
- * Demand ceilings explorer — jobs in one real industry as the AI frontier
- * advances (sector lens), plus the Kording & Marinescu (2025) aggregate
- * model it builds on. Bespoke tool (no _engine/_map); standard ToolShell
- * chrome, rail = sector picker + levers, main = scrolling results.
+ * AI and labor — jobs in one real industry as the AI frontier advances
+ * (sector lens). Bespoke tool (no _engine/_map); standard ToolShell chrome,
+ * rail = sector picker + levers, main = scrolling results.
  *
  * Models live in ./model.js (sector lens; verified against the ai-labor
- * Python reference) and ./km.js (K&M replication). Data in ./data/ — see
- * its README for provenance and the regeneration path.
+ * Python reference) and ./km.js (Kording & Marinescu aggregate replication).
+ * Data in ./data/ — see its README for provenance and regeneration.
+ *
+ * The K&M aggregate panel is built but hidden (SHOW_KM) per SD 2026-10-05
+ * ("maybe drop for now but save ability to bring it back") — flip the flag
+ * to restore it below the sector lens.
  */
 import { useMemo, useRef, useState } from 'react';
 import ToolShell from '../_shell/ToolShell';
@@ -15,13 +18,41 @@ import * as km from './km.js';
 import SECTORS from './data/sectors.json';
 import GE from './data/ge.json';
 
+const SHOW_KM = false;
+
 /* ---------------- shared bits ---------------- */
 
 const mono11 = { fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--ink-3)' };
 const figTitle = { fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 600, lineHeight: 1.28, color: 'var(--ink)', margin: 0 };
 const caption = { fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.45, margin: 0, maxWidth: '68ch' };
 
-function Ctl({ k, lab, min, max, step, value, fmt, sub, onChange, extra }) {
+/** Tick marks under a slider rail. A thumb's center travels from half its
+ *  width inside one end of the track to half inside the other, so a tick at
+ *  value fraction f sits at f·(100% − thumb) + thumb/2 (same geometry as the
+ *  magnet explorer's Slider). Cardinal ticks mark measured values. */
+function Ticks({ min, max, marks }) {
+  const hasLabels = marks.some((m) => m.label);
+  return (
+    <div style={{ position: 'relative', height: hasLabels ? 16 : 7, marginTop: 1 }} aria-hidden="true">
+      {marks.map((m, i) => {
+        const f = Math.min(Math.max((m.v - min) / (max - min), 0), 1);
+        const left = `calc(${f} * (100% - var(--dc-thumb)) + var(--dc-thumb) / 2)`;
+        return (
+          <span key={i}>
+            <span style={{ position: 'absolute', left, top: 0, width: 2, height: 6, marginLeft: -1, background: m.accent ? 'var(--cardinal)' : 'var(--ink-4)' }} />
+            {m.label && (
+              <span style={{ position: 'absolute', left, top: 6, transform: `translateX(${f < 0.12 ? '0%' : f > 0.88 ? '-100%' : '-50%'})`, fontFamily: 'var(--font-mono)', fontSize: 9, color: m.accent ? 'var(--cardinal)' : 'var(--ink-4)', whiteSpace: 'nowrap' }}>
+                {m.label}
+              </span>
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function Ctl({ k, lab, min, max, step, value, fmt, sub, onChange, extra, ticks }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
@@ -32,6 +63,7 @@ function Ctl({ k, lab, min, max, step, value, fmt, sub, onChange, extra }) {
       </div>
       <input id={`dc-${k}`} type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(+e.target.value)} />
+      {ticks && ticks.length > 0 && <Ticks min={min} max={max} marks={ticks} />}
       {sub && <div style={{ fontSize: 11.5, color: 'var(--ink-4)', lineHeight: 1.35 }}>{sub}</div>}
     </div>
   );
@@ -50,7 +82,7 @@ function Tile({ v, l, accent }) {
   );
 }
 
-/** Crosshair-tooltip wrapper for an SVG line chart with a shared x domain. */
+/** Crosshair-tooltip wrapper for an SVG chart with a shared x domain. */
 function HoverFig({ children, width, xToData, format }) {
   const ref = useRef(null);
   const [tip, setTip] = useState(null);
@@ -62,7 +94,7 @@ function HoverFig({ children, width, xToData, format }) {
     const d = xToData(fx);
     if (!d) return setTip(null);
     let x = ev.clientX - fig.left + 14;
-    if (x > fig.width - 190) x -= 210;
+    if (x > fig.width - 230) x -= 250;
     setTip({ x, y: ev.clientY - fig.top - 10, text: format(d) });
   };
   return (
@@ -93,8 +125,10 @@ function fmtMult(lnv) {
   return `${pc >= 0 ? '+' : ''}${pc.toFixed(0)}%`;
 }
 
-function JobsChart({ data, noceil, astar, at }) {
+function JobsChart({ data, noceil, astar, at, onScrub }) {
   const W = 640, H = 330, M = { l: 46, r: 96, t: 14, b: 36 };
+  const svgRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
   const sx = (a) => M.l + a * (W - M.l - M.r);
   const allJ = [...data.map((d) => d.J), ...noceil.map((d) => d.J)];
   const useLog = Math.max(...allJ) > 8;
@@ -108,15 +142,32 @@ function JobsChart({ data, noceil, astar, at }) {
   const peak = data.reduce((a, b) => (b.J > a.J ? b : a));
   const interiorPeak = peak.a > 0.02 && peak.a < 0.99 && peak.J > data[0].J && peak.J > data[data.length - 1].J;
   const end = data[data.length - 1], endN = noceil[noceil.length - 1];
+
+  const evToA = (ev) => {
+    const box = svgRef.current?.getBoundingClientRect();
+    if (!box) return null;
+    const fx = ((ev.clientX - box.left) / box.width) * W;
+    return Math.min(1, Math.max(0.01, (fx - M.l) / (W - M.l - M.r)));
+  };
+  const scrub = (ev) => {
+    const a = evToA(ev);
+    if (a !== null) onScrub(a);
+  };
+
   return (
     <HoverFig width={W}
       xToData={(fx) => {
         const a = Math.min(1, Math.max(0, (fx - M.l) / (W - M.l - M.r)));
         return data.reduce((p, c) => (Math.abs(c.a - a) < Math.abs(p.a - a) ? c : p));
       }}
-      format={(d) => `progress ${pct(d.a)}  jobs ${d.J.toFixed(2)}  human share ${pct(d.h)}`}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', height: 'auto' }}
-        aria-label="Sector jobs index against AI frontier progress">
+      format={(d) => `progress ${pct(d.a)}  jobs ${d.J.toFixed(2)}  human ${pct(d.h)}  demand ${d.D.toFixed(1)}×`}>
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img"
+        style={{ display: 'block', width: '100%', height: 'auto', touchAction: 'none', cursor: 'col-resize' }}
+        aria-label="Sector jobs index against AI frontier progress; click or drag to move the evaluation point"
+        onPointerDown={(ev) => { ev.currentTarget.setPointerCapture(ev.pointerId); setDragging(true); scrub(ev); }}
+        onPointerMove={(ev) => { if (dragging) scrub(ev); }}
+        onPointerUp={(ev) => { ev.currentTarget.releasePointerCapture(ev.pointerId); setDragging(false); }}
+        onPointerCancel={() => setDragging(false)}>
         <line x1={M.l} y1={H - M.b} x2={W - M.r} y2={H - M.b} stroke="var(--rule-strong)" />
         {[0, 0.25, 0.5, 0.75, 1].map((t) => (
           <text key={t} x={sx(t)} y={H - M.b + 16} textAnchor="middle" style={svgText}>{pct(t)}</text>
@@ -131,7 +182,10 @@ function JobsChart({ data, noceil, astar, at }) {
           </g>
         ))}
         <text x={M.l - 34} y={M.t + 2} style={svgLabel}>jobs index (today = 1{useLog ? ', log scale' : ''})</text>
-        <line x1={sx(astar)} y1={M.t} x2={sx(astar)} y2={H - M.b} stroke="var(--accent-brand)" strokeWidth="1" strokeDasharray="2 3" />
+        <line x1={sx(astar)} y1={M.t + 10} x2={sx(astar)} y2={H - M.b} stroke="var(--accent-brand)" strokeWidth="1" strokeDasharray="2 3" />
+        <text x={sx(astar)} y={M.t + 6} textAnchor="middle" style={{ ...svgText, fill: 'var(--accent-brand)' }}>
+          {pct(astar)}: jobs {fmtMult(Math.log(at.J))}
+        </text>
         <path d={line(noceil)} fill="none" stroke="var(--ink-4)" strokeWidth="1.3" strokeDasharray="4 4" />
         <path d={line(data)} fill="none" stroke="var(--ink)" strokeWidth="2.2" />
         {interiorPeak && <circle cx={sx(peak.a)} cy={yof(peak.J)} r="4" fill="var(--accent-brand)" />}
@@ -177,7 +231,7 @@ function DecompChart({ dec }) {
             ) : (
               <>
                 <rect x={Math.min(bx(0), bx(v))} y={y + 4} width={Math.max(Math.abs(bx(v) - bx(0)), 1.5)} height={rh - 8}
-                  rx="4" fill={v >= 0 ? 'var(--info)' : 'var(--negative)'} />
+                  rx="4" fill={v >= 0 ? 'var(--positive)' : 'var(--negative)'} />
                 <text x={bx(v) + (v >= 0 ? 6 : -6)} y={y + rh / 2 + 4} textAnchor={v >= 0 ? 'start' : 'end'} style={svgText}>{fmtMult(v)}</text>
               </>
             )}
@@ -188,7 +242,7 @@ function DecompChart({ dec }) {
   );
 }
 
-/* ---------------- K&M aggregate panel ---------------- */
+/* ---------------- K&M aggregate panel (hidden behind SHOW_KM) ---------------- */
 
 const KM_SLIDERS = [
   { k: 'sig', lab: 'σ — physical vs intelligence', min: 0.3, max: 3, step: 0.01, fmt: (v) => v.toFixed(2), sub: 'Below 1: complements (intelligence saturates). Above 1: substitutes.' },
@@ -367,6 +421,8 @@ export default function DemandCeilingsTool() {
   const [selCode, setSelCode] = useState(SECTORS.find((s) => s.code === '722110') ? '722110' : SECTORS[0]?.code ?? '');
   const [astar, setAstar] = useState(0.6);
 
+  const sel = selCode ? SECTORS.find((x) => x.code === selCode) : null;
+
   const set = (k, v, keepSector = false) => {
     setSd((d) => {
       const n = { ...d, [k]: v };
@@ -390,7 +446,7 @@ export default function DemandCeilingsTool() {
   const noceil = useMemo(() => sectorSweep(GE, { ...sd, eps: 1, chi: 1 }), [sd]);
   const at = sectorJobs(GE, astar, sd);
   const dec = decompose(GE, astar, sd);
-  const secName = selCode ? SECTORS.find((x) => x.code === selCode).name : 'a custom sector';
+  const secName = sel ? sel.name : 'Custom sector';
   const peak = data.reduce((a, b) => (b.J > a.J ? b : a));
   const interiorPeak = peak.a > 0.02 && peak.a < 0.99 && peak.J > data[0].J && peak.J > data[data.length - 1].J;
   const jpc = 100 * (at.J - 1);
@@ -400,6 +456,8 @@ export default function DemandCeilingsTool() {
     for (const s of SECTORS) (g[s.ct] = g[s.ct] || []).push(s);
     return g;
   }, []);
+
+  const measured = (v) => (sel ? [{ v, accent: true }] : []);
 
   const rail = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -417,10 +475,15 @@ export default function DemandCeilingsTool() {
           ) : null
         )}
       </select>
+      <div style={{ fontSize: 11.5, color: 'var(--ink-4)', lineHeight: 1.35 }}>
+        Cardinal tick marks under the sliders show this sector's measured values; gray ticks
+        mark scenario defaults. <a href="/tools/ai-labor-methods" style={{ color: 'var(--ink-3)' }}>Methods</a>.
+      </div>
 
       <GroupHead>What the sector sells</GroupHead>
-      <Ctl k="eps" lab="Demand ceiling ε" min={-0.5} max={2.5} step={0.01} value={sd.eps} fmt={(v) => v.toFixed(2)}
-        sub="Long-run income elasticity of the sector's final demand. 0 = at the ceiling; 1 = tracks income; 2+ = demand headroom."
+      <Ctl k="eps" lab="Demand ceiling ε (income elasticity)" min={-0.5} max={2.5} step={0.01} value={sd.eps} fmt={(v) => v.toFixed(2)}
+        ticks={[{ v: 0, label: 'saturated' }, { v: 1, label: 'tracks income' }, ...measured(sel?.eps ?? 1)]}
+        sub="Each 1% of income growth moves the quantity demanded by about ε%. At ε = 0 the ceiling binds: richer households buy no more. At ε = 2, demand grows twice as fast as income — a doubling of income roughly quadruples demand. Measured per sector from 66 years of US consumption data."
         onChange={(v) => set('eps', v)} />
       <Ctl k="phi" lab="Provenance premium φ" min={0} max={0.6} step={0.01} value={sd.phi} fmt={pct}
         sub="Share of the sector's demand that insists on attested human work — it keeps its labor and its cost."
@@ -428,29 +491,33 @@ export default function DemandCeilingsTool() {
 
       <GroupHead>How it's made</GroupHead>
       <Ctl k="lint" lab="Labor intensity ℓ" min={0.05} max={0.85} step={0.01} value={sd.lint} fmt={pct}
+        ticks={measured(sel?.lint ?? SDEF.lint)}
         sub="Compensation share of output value — how much automation can cut the price."
         onChange={(v) => set('lint', v)} />
       <Ctl k="thA" lab="Analytic task share" min={0} max={1} step={0.01} value={sd.thA} fmt={pct}
+        ticks={measured(sel?.thA ?? SDEF.thA)}
         onChange={(v) => set('thA', v)} />
       <Ctl k="thC" lab="Creative task share" min={0} max={1} step={0.01} value={sd.thC} fmt={pct}
         extra={` (physical ${pct(sd.thP)})`}
-        sub="Physical is the remainder. Measured from OEWS staffing × O*NET task weights."
+        ticks={measured(sel?.thC ?? SDEF.thC)}
+        sub="Physical is the remainder. Measured from occupation staffing × task content (OEWS × O*NET)."
         onChange={(v) => set('thC', v)} />
 
       <GroupHead>AI frontier (exposure by task type)</GroupHead>
       <Ctl k="gA" lab="AI reach into analytic tasks" min={0} max={1} step={0.01} value={sd.gA} fmt={pct}
+        ticks={[{ v: SDEF.gA }]}
         onChange={(v) => set('gA', v, true)} />
       <Ctl k="gC" lab="AI reach into creative tasks" min={0} max={1} step={0.01} value={sd.gC} fmt={pct}
+        ticks={[{ v: SDEF.gC }]}
         onChange={(v) => set('gC', v, true)} />
       <Ctl k="gP" lab="AI reach into physical tasks" min={0} max={1} step={0.01} value={sd.gP} fmt={pct}
-        sub="Share of each task type AI can perform at full frontier progress — embodiment lags cognition."
+        ticks={[{ v: SDEF.gP }]}
+        sub="Share of each task type AI can perform at full frontier progress — physical tasks lag cognitive ones while robotics catches up. Scenario dials, not measurements."
         onChange={(v) => set('gP', v, true)} />
-      <Ctl k="astar" lab="Evaluate at frontier progress" min={0.05} max={1} step={0.01} value={astar} fmt={pct}
-        sub="Marks the point the tiles and the decomposition read."
-        onChange={setAstar} />
 
       <GroupHead>Who gets the gains</GroupHead>
       <Ctl k="chi" lab="Workers' share of capital income χ" min={0} max={1} step={0.01} value={sd.chi} fmt={pct}
+        ticks={[{ v: SDEF.chi }]}
         sub="χ = 1: automation gains reach everyone. χ = 0: wages only. Income paths from our two-group general equilibrium."
         onChange={(v) => set('chi', v, true)} />
     </div>
@@ -459,13 +526,22 @@ export default function DemandCeilingsTool() {
   return (
     <div className="dc-tool" style={{ height: '100%' }}>
       <ToolShell
-        eyebrow="Interactive model · AI & labor project"
-        title="Demand ceilings explorer"
-        summary="What happens to a sector's jobs as AI advances — demand ceiling, task mix, provenance, and who gets the gains."
+        eyebrow="Interactive model"
+        title="AI and labor"
         rail={rail}
+        headerSummary={false}
         mainScroll
       >
         <div style={{ maxWidth: 880, margin: '0 auto', padding: 'clamp(16px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 26 }}>
+          <div>
+            <p style={{ ...mono11, margin: 0 }}>
+              Sector lens · 84 US industries · <a href="/tools/ai-labor-methods" style={{ color: 'var(--ink-3)' }}>methods</a>
+            </p>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(24px, 3.4vw, 32px)', fontWeight: 600, lineHeight: 1.12, letterSpacing: '-0.01em', margin: '4px 0 0', color: 'var(--ink)' }}>
+              {secName}{sel ? ` — ${sel.emp}M jobs` : ''}
+            </h2>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }} aria-live="polite">
             <Tile accent v={`${Math.abs(jpc) >= 200 ? `×${at.J.toFixed(1)}` : `${jpc >= 0 ? '+' : ''}${jpc.toFixed(0)}%`}`}
               l={`jobs at ${pct(astar)} frontier progress vs today`} />
@@ -478,12 +554,13 @@ export default function DemandCeilingsTool() {
 
           <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <p style={{ ...mono11, margin: 0 }}>Jobs index · demand × price × human task share</p>
-            <h2 style={figTitle}>Jobs in {secName === 'a custom sector' ? secName : `“${secName}”`} as the AI frontier advances</h2>
-            <JobsChart data={data} noceil={noceil} astar={astar} at={at} />
+            <h3 style={figTitle}>Jobs as the AI frontier advances — drag across the chart to move the evaluation point</h3>
+            <JobsChart data={data} noceil={noceil} astar={astar} at={at} onScrub={setAstar} />
             <figcaption style={caption}>
-              Solid: this sector (ε = {sd.eps.toFixed(2)}, χ = {pct(sd.chi)}). Dashed: the same
-              production side if demand simply tracked broadly shared income (ε = 1, χ = 1) — the
-              gap is the demand side: ceiling, luxury tilt, and who gets paid.{' '}
+              Solid: this sector, at income elasticity ε = {sd.eps.toFixed(2)} and workers'
+              capital share χ = {pct(sd.chi)}. Dashed: the same production side if demand simply
+              tracked broadly shared income (ε = 1, χ = 1) — the gap is the demand side: ceiling,
+              luxury tilt, and who gets paid.{' '}
               {interiorPeak
                 ? `Jobs peak at ${pct(peak.a)} frontier progress, then displacement outruns demand.`
                 : 'No interior peak under these settings.'}
@@ -492,12 +569,13 @@ export default function DemandCeilingsTool() {
 
           <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <p style={{ ...mono11, margin: 0 }}>Decomposition · log contributions, exact</p>
-            <h2 style={figTitle}>Why: the five forces at {pct(astar)} frontier progress</h2>
+            <h3 style={figTitle}>Why: the five forces at {pct(astar)} frontier progress</h3>
             <DecompChart dec={dec} />
             <figcaption style={caption}>
-              Bars multiply to the net jobs change (they add in logs). “Who gets the gains” is the
-              demand shift from moving capital income between workers and capital owners;
-              “provenance shield” nets the labor it protects against the price advantage it forgoes.
+              Bars multiply to the net jobs change (they add in logs); green raises jobs, red cuts
+              them. "Who gets the gains" is the demand shift from moving capital income between
+              workers and capital owners; "provenance shield" nets the labor it protects against
+              the price advantage it forgoes.
             </figcaption>
           </figure>
 
@@ -509,9 +587,9 @@ export default function DemandCeilingsTool() {
                 the sector's output cheaper (more demand), automates its tasks (fewer jobs per
                 unit), and raises economy-wide incomes (more demand — but only up to the sector's
                 ceiling, and only for whoever receives the income). A saturated sector (ε near 0)
-                cannot convert income growth into jobs; an embodied sector is shielded until
-                robotics catches up; a provenance sector keeps the share of demand that insists on
-                human origin.
+                cannot convert income growth into jobs; a sector of mostly physical tasks is
+                shielded until robotics catches up; a provenance sector keeps the share of demand
+                that insists on human origin.
               </p>
             </div>
             <div>
@@ -531,23 +609,25 @@ export default function DemandCeilingsTool() {
                 our two-group model (calibrated Engel parameters), but each sector's own wages and
                 prices don't feed back. Elasticities are measured 1959–2025 and extrapolated far
                 out of sample; task exposure is a judgment dial, not a measurement. The tool
-                illustrates mechanisms — it is not a forecast.
+                illustrates mechanisms — it is not a forecast. Full details on the{' '}
+                <a href="/tools/ai-labor-methods">methods page</a>.
               </p>
             </div>
           </div>
 
-          <KmSection />
+          {SHOW_KM && <KmSection />}
 
           <p style={{ fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.6, borderTop: '1px solid var(--rule)', paddingTop: 12, margin: 0 }}>
-            Sector lens: BEA 2017 detail benchmark × BLS QCEW 2025 employment × OEWS/O*NET task
+            Sector data: BEA 2017 detail benchmark × BLS QCEW 2025 employment × OEWS/O*NET task
             decomposition × PCE Engel slopes (1959–2025), with income paths from the project's
-            two-group nonhomothetic CES general equilibrium. Constants: price elasticity
-            η = {ETA}; AI performs an automated task at 10% of the human cost. Aggregate model:{' '}
+            two-group general equilibrium. Constants: price elasticity of demand η = {ETA}; AI
+            performs an automated task at 10% of the human cost. The aggregate framework builds
+            on{' '}
             <a href="https://www.brookings.edu/articles/artificial-intelligence-saturation-and-the-future-of-work/">
               Kording & Marinescu (2025)
-            </a>. Shaded band: their “abundant AI” condition fails and the task micro-foundation no
-            longer applies; curves are drawn faint there. Part of the lab's AI, demand ceilings,
-            and the future of work project.
+            </a>. See the <a href="/tools/ai-labor-methods">methods page</a> for the model
+            schematic, equations, and data provenance. Part of the lab's AI, demand ceilings, and
+            the future of work project.
           </p>
         </div>
       </ToolShell>

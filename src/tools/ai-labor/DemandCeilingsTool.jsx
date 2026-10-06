@@ -279,12 +279,14 @@ function JobsChart({ data, noceil, astar, at, onScrub, hairlines, selCode, onPic
 }
 
 function DecompChart({ dec }) {
-  const W = 640, H = 250;
+  const W = 640;
   const rows = [
     ['Income growth (broad)', dec.income],
     ['Who gets the gains', dec.dist],
     ['Cheaper output', dec.cheaper],
-    ['AI does the tasks', dec.displace],
+    ['AI does physical tasks', dec.displace_P],
+    ['AI does analytic tasks', dec.displace_A],
+    ['AI does creative tasks', dec.displace_C],
     ['Provenance shield', dec.prov],
     ['Net jobs change', dec.total],
   ];
@@ -292,10 +294,11 @@ function DecompChart({ dec }) {
   const x0 = 230, x1 = W - 70;
   const bx = (v) => x0 + (x1 - x0) / 2 + (v / (span * 1.08)) * ((x1 - x0) / 2);
   const rh = 26, pad = 9, top = 18;
+  const H = top + rows.length * (rh + pad) + 8;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', height: 'auto' }}
       aria-label="Decomposition of the jobs change into five forces">
-      <line x1={bx(0)} y1={top - 6} x2={bx(0)} y2={top + 6 * (rh + pad) - pad + 6} stroke="var(--rule-strong)" />
+      <line x1={bx(0)} y1={top - 6} x2={bx(0)} y2={top + rows.length * (rh + pad) - pad + 6} stroke="var(--rule-strong)" />
       {rows.map(([lab, v], i) => {
         const y = top + i * (rh + pad);
         const net = i === rows.length - 1;
@@ -887,7 +890,7 @@ export default function DemandCeilingsTool() {
 
           <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <p style={{ ...mono11, margin: 0 }}>Decomposition · log contributions, exact</p>
-            <h3 style={figTitle}>Why: the five forces at {pct(astar)} frontier progress</h3>
+            <h3 style={figTitle}>Why: the forces at {pct(astar)} frontier progress</h3>
             <DecompChart dec={dec} />
             <figcaption style={caption}>
               Bars multiply to the net jobs change (they add in logs); green raises jobs, red cuts
@@ -916,9 +919,10 @@ export default function DemandCeilingsTool() {
               Each column is an industry, width proportional to its wage bill (employment ×
               average wages); click a column to load that sector. The stack splits 100% by each
               force's share of the sector's total log jobs change in absolute value, at the
-              current levers. Displacement (red) is the direct substitution: AI performs a share
-              of the sector's tasks, so human work per unit of output falls one-for-one — hover
-              a column to see that share. It dominates most columns at high frontier progress
+              current levers. Displacement (the three reds, physical darkest) is the direct
+              substitution: AI performs a share of the sector's tasks, so human work per unit of
+              output falls one-for-one, split by the type of task AI takes over. Hover a column
+              to see the shares. It dominates most columns at high frontier progress
               because it is the one unbounded force: as the automated share nears 100% the
               remaining human work heads to zero, while income growth, the price effect, and the
               provenance shield all level off. Wide blue columns ride income growth instead.

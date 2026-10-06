@@ -55,6 +55,11 @@ export function decompose(GE, a, d) {
   const s = sectorJobs(GE, a, d);
   const broad = sectorJobs(GE, a, { ...d, chi: 1 });
   const nophi = sectorJobs(GE, a, { ...d, phi: 0 });
+  // Displacement split by task type, in proportion to each type's share of
+  // the automated tasks (exact; zero when nothing is automated).
+  const aP = a * d.thP * d.gP, aA = a * d.thA * d.gA, aC = a * d.thC * d.gC;
+  const At = aP + aA + aC;
+  const disp = Math.log(nophi.h);
   return {
     income: Math.log(broad.D),
     dist: Math.log(s.D) - Math.log(broad.D),
@@ -64,6 +69,9 @@ export function decompose(GE, a, d) {
       Math.log(s.h) - Math.log(nophi.h) -
       ETA * (Math.log(s.price) - Math.log(nophi.price)),
     total: Math.log(s.J),
+    displace_P: At > 0 ? (disp * aP) / At : 0,
+    displace_A: At > 0 ? (disp * aA) / At : 0,
+    displace_C: At > 0 ? (disp * aC) / At : 0,
   };
 }
 

@@ -311,10 +311,7 @@ export default function DemandCeilingsTool() {
       {methodsOpen && <MethodsPane onClose={() => setMethodsOpen(false)} />}
         <div style={{ maxWidth: 880, margin: '0 auto', padding: 'clamp(16px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 22 }}>
           <div>
-            <p style={{ ...mono11, margin: 0 }}>Interactive model · AI and labor</p>
-            <p style={{ ...mono11, margin: '10px 0 0' }}>
-              All industries at once · general equilibrium · 84 US industries · full AI progress · {methodsBtn('methods')}
-            </p>
+            <p style={{ ...mono11, margin: 0 }}>Interactive model · AI and labor · {methodsBtn('methods')}</p>
             <h2 style={{ ...h2, fontSize: 'clamp(24px, 3.4vw, 32px)' }}>How AI changes jobs and pay across industries</h2>
             <p style={lede}>
               Analytic and creative services (insurance, legal, software, finance) lose jobs under

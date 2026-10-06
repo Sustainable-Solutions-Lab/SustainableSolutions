@@ -11,12 +11,6 @@ research data updates. Current vintage: ai-labor 2026-10-05 (sector-first revisi
   (compensation / gross output, 2017 benchmark), and physical / analytic /
   creative wage-bill task shares (OEWS May 2024 staffing × O*NET task
   weights via Dingel–Neiman teleworkability).
-- `ge.json` — worker and capital-owner per-capita real-income index paths
-  from the project's 84-industry general equilibrium
-  (`analysis/ws4-ces-model/sector_ge_run.py` → `ws4_sectorge_incomes.csv`;
-  central case), per workers'-capital-share chi, plus the workers' base
-  spending share and the model constants (`meta`). Before 2026-10-05 these
-  came from the three-good incidence model (`km_incidence.py`).
 - `tool.json` — everything the tool's general-equilibrium sections show, at
   full AI progress (`web/build_tool_data.py`): per industry, jobs and average
   real wage medians and 5–95% ranges by growth case (no extra growth / real
@@ -26,6 +20,3 @@ research data updates. Current vintage: ai-labor 2026-10-05 (sector-first revisi
   characteristics with central-case changes, the exact force decomposition,
   tornado endpoints, and the growth-by-reach contour grids.
 
-The in-page model (`../model.js`) is verified in ai-labor against a Python
-reference implementation (`web/test_sector_model.mjs`, 20 vectors, machine
-precision); keep edits to either side in sync.

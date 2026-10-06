@@ -61,7 +61,7 @@ export default function ForceMix({ sectors, growth, selCode, onPick }) {
             if (c) tip.show(ev, `${c.s.name}: jobs ${pctChange(Math.exp(c.f.lnJ))}`); else tip.hide();
           }}
           onPointerLeave={tip.hide}
-          onPointerUp={(ev) => { const c = colAt(ev); if (c) { onPick(c.s.code); tip.hide(); } }}>
+          onClick={(ev) => { const c = colAt(ev); if (c) { onPick(c.s.code); tip.hide(); } }}>
           {ticks.map((t) => (
             <g key={t}>
               <line x1={M.l} x2={W - M.r} y1={sy(t)} y2={sy(t)} stroke={t === 0 ? 'var(--ink)' : 'var(--rule)'} strokeWidth={t === 0 ? 1 : 0.6} />

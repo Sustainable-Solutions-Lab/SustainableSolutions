@@ -7,6 +7,7 @@
 import { useMemo, useState } from 'react';
 import { contours } from 'd3-contour';
 import { Chips, VERDICT, mono11, pctChange, svgText, useTip } from './ui.jsx';
+import { FORCES } from './ForceMix';
 
 function Kpi({ v, l, accent }) {
   return (
@@ -19,14 +20,13 @@ function Kpi({ v, l, accent }) {
 
 const range = (q) => `${pctChange(q[0])} to ${pctChange(q[2])}`;
 
-export function Scorecard({ s }) {
+export function Scorecard({ s, nOutcomes }) {
   const g0 = s.by_growth.none, g1 = s.by_growth.growth;
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-      <Kpi accent v={pctChange(s.jobs_all[1])} l={`jobs, median of all scenarios (range ${range(s.jobs_all)})`} />
-      <Kpi v={pctChange(g0.wage[1])} l={`average real wage without extra growth (range ${range(g0.wage)})`} />
-      <Kpi v={pctChange(g1.wage[1])} l={`average real wage with output ×3.5 (range ${range(g1.wage)})`} />
-      <Kpi v={`${pctChange(g0.jobs[1])} / ${pctChange(g1.jobs[1])}`} l="jobs without / with extra growth" />
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
+      <Kpi accent v={pctChange(s.jobs_all[1])} l={`jobs, median of all ${nOutcomes.toLocaleString()} outcomes (5–95%: ${range(s.jobs_all)})`} />
+      <Kpi v={`${pctChange(g0.jobs[1])} / ${pctChange(g1.jobs[1])}`} l="jobs without / with extra growth (medians)" />
+      <Kpi v={`${pctChange(g0.wage[1])} / ${pctChange(g1.wage[1])}`} l="average real wage without / with extra growth (medians)" />
       <Kpi v={`${pctChange(s.worlds.concentrated)} / ${pctChange(s.worlds.broad)}`} l="jobs if capital ownership stays concentrated / becomes broad" />
     </div>
   );
@@ -66,43 +66,50 @@ export function DecidesBar({ s }) {
   );
 }
 
-export function Tornado({ s, metric }) {
-  const rows = s.tornado.filter((t) => t[metric])
-    .map((t) => ({ ...t, v: t[metric], span: Math.abs(Math.log(t[metric][1] / t[metric][0])) }))
-    .sort((a, b) => b.span - a.span);
-  const all = rows.flatMap((r) => r.v);
-  const lo = Math.min(1, ...all), hi = Math.max(1, ...all);
-  const W = 640, rh = 26, M = { l: 236, r: 70, t: 8, b: 26 };
-  const H = M.t + rows.length * rh + M.b;
-  const sx = (j) => M.l + ((j - lo) / (hi - lo || 1)) * (W - M.l - M.r);
+function fmtMult(lnv) {
+  const m = Math.exp(lnv);
+  if (m >= 1.95) return `×${m.toFixed(1)}`;
+  const pc = 100 * (m - 1);
+  return `${pc >= 0 ? '+' : ''}${pc.toFixed(0)}%`;
+}
+
+/** The selected industry's exact GE force decomposition (same forces and
+ *  colours as the skyline), bars adding in logs to the net change. */
+export function ForceBars({ s, growth }) {
+  const f = s.by_growth[growth].forces;
+  const rows = [...FORCES.map(([k, lab, color]) => [lab, f[k], color]), ['Net change in jobs', f.lnJ, null]];
+  const W = 640, rh = 26, pad = 8, top = 10, x0 = 210, x1 = W - 70;
+  const H = top + rows.length * (rh + pad) + 6;
+  const span = Math.max(0.4, ...rows.map((r) => Math.abs(r[1])));
+  const bx = (v) => x0 + (x1 - x0) / 2 + (v / (span * 1.08)) * ((x1 - x0) / 2);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', height: 'auto' }}
-      aria-label={`How far each parameter moves this industry's ${metric === 'jobs' ? 'jobs' : 'average real wage'}`}>
-      <line x1={sx(1)} x2={sx(1)} y1={M.t} y2={H - M.b} stroke="var(--ink)" strokeWidth="1" />
-      {rows.map((r, i) => {
-        const y = M.t + i * rh + rh / 2;
-        const [a, b] = r.v;
+      aria-label="This industry's change in jobs split into the forces behind it">
+      <line x1={bx(0)} y1={top - 4} x2={bx(0)} y2={H - 4} stroke="var(--rule-strong)" />
+      {rows.map(([lab, v, color], i) => {
+        const y = top + i * (rh + pad);
+        const net = color === null;
         return (
-          <g key={r.dial}>
-            <text x={M.l - 10} y={y + 4} textAnchor="end" style={{ fontFamily: 'var(--font-sans)', fontSize: 11.5, fill: 'var(--ink-2)' }}>{r.label}</text>
-            <rect x={Math.min(sx(a), sx(b))} y={y - 7} width={Math.max(Math.abs(sx(b) - sx(a)), 1.5)} height={14} fill="var(--rule-strong)" />
-            <circle cx={sx(a)} cy={y} r="4" fill="var(--paper)" stroke="var(--ink)" strokeWidth="1.2" />
-            <circle cx={sx(b)} cy={y} r="4" fill="var(--ink)" />
+          <g key={lab}>
+            {net && <line x1={x0} x2={x1 + 40} y1={y - pad / 2} y2={y - pad / 2} stroke="var(--rule)" />}
+            <text x={x0 - 10} y={y + rh / 2 + 4} textAnchor="end"
+              style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--ink-2)', fontWeight: net ? 600 : 400 }}>{lab}</text>
+            {net
+              ? <circle cx={bx(v)} cy={y + rh / 2} r="6" fill={v >= 0 ? 'var(--positive)' : 'var(--negative)'} stroke="var(--paper)" />
+              : <rect x={Math.min(bx(0), bx(v))} y={y + 4} width={Math.max(Math.abs(bx(v) - bx(0)), 1.5)} height={rh - 8} rx="3" fill={color} />}
             {(() => {
-              const txt = `${r.lo} → ${r.hi}`;
-              const right = Math.max(sx(a), sx(b)) + 8;
-              const fits = right + txt.length * 5.8 <= W;
+              // a long negative bar would run its label into the row name:
+              // put that label just right of the zero line instead
+              const flip = v < 0 && bx(v) - 10 - 40 < x0;
               return (
-                <text x={fits ? right : Math.min(sx(a), sx(b)) - 8} y={y + 3.5} textAnchor={fits ? 'start' : 'end'}
-                  style={{ ...svgText, fontSize: 9.5 }}>{txt}</text>
+                <text x={flip ? bx(0) + 8 : bx(v) + (v >= 0 ? 10 : -10)} y={y + rh / 2 + 4}
+                  textAnchor={flip || v >= 0 ? 'start' : 'end'}
+                  style={{ ...svgText, fontWeight: net ? 600 : 400, fill: net ? 'var(--ink)' : 'var(--ink-3)' }}>{fmtMult(v)}</text>
               );
             })()}
           </g>
         );
       })}
-      {[lo, 1, hi].map((t) => (
-        <text key={t} x={sx(t)} y={H - 8} textAnchor="middle" style={{ ...svgText, fontSize: 10 }}>{pctChange(t)}</text>
-      ))}
     </svg>
   );
 }

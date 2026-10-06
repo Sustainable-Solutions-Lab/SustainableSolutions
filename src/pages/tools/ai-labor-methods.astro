@@ -3,68 +3,69 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import tools from '../../data/tools.json';
 import type { Tool } from '../../lib/types';
 
-// Companion methods page for the AI and labor sector lens (/tools/ai-labor):
-// the model schematic, the jobs identity, what each lever is and where its
-// value comes from, the Engel-parameter explainer, and the honest caveats.
-// noindex matches the tool itself — both go public when the Tools sheet
-// lists the tool.
+// Companion methods page for the AI and labor tool (/tools/ai-labor): the
+// model schematic, the force identity, what each input is and where its value
+// comes from, the scenario grid behind the ranges, the Engel explainer, and
+// the caveats. noindex matches the tool itself — both go public when the
+// Tools sheet lists the tool.
 const tool = (tools as Tool[]).find((t) => t.slug === 'ai-labor') ?? null;
 
-const levers = [
+const inputs = [
   {
-    sym: 'ε', name: 'Demand ceiling (income elasticity)',
-    what: 'How strongly the sector’s demand responds to income: each 1% of income growth moves the quantity demanded by about ε%.',
-    source: 'Measured per sector: 66 years (1959–2025) of US personal consumption (BEA PCE) regressed on real disposable income per person, bridged from ≈200 spending categories to BEA’s ≈400-industry detail. Loaded automatically when you pick a sector.',
+    sym: 'ε', name: 'Income elasticity of demand',
+    what: 'How strongly demand for the industry’s output responds to income: each 1% of income growth moves the quantity demanded by about ε%.',
+    source: 'Measured per industry: 66 years (1959–2025) of US personal consumption (BEA PCE) regressed on real disposable income per person, bridged from ≈200 spending categories to BEA’s detail industries. Two specifications (levels and price-controlled) bound it in the scenario grid.',
   },
   {
-    sym: 'φ', name: 'Provenance premium',
-    what: 'The share of the sector’s demand that insists on attested human work — that slice keeps its human labor and its human cost, whatever AI can do.',
-    source: 'A scenario dial (default 0). Our evidence that such demand exists and behaves as a complement comes from the recorded-vs-live music case study: live performance’s share of music spending rose from 34% to 78% while its relative price more than doubled.',
+    sym: 'ρ', name: 'Human-attention shield',
+    what: 'The share of an industry’s spending growth that buys more human attention per unit rather than more units: more nurse hours per bed-day, more teachers per pupil. That labor stays human whatever AI can do.',
+    source: 'Measured for 21 industries from natural-unit series (inpatient days, enrollment, consultations, passengers and others) and assigned by demand class elsewhere; 80% of it (50–100% in the scenario grid) is treated as embodied human attention.',
   },
   {
-    sym: 'ℓ', name: 'Labor intensity',
-    what: 'Compensation as a share of the sector’s output value — it bounds how much automation can cut the price.',
-    source: 'BEA 2017 detail benchmark input–output accounts (compensation of employees ÷ gross output). Loaded with the sector.',
+    sym: 'ℓ', name: 'Labor cost share',
+    what: 'Compensation as a share of the industry’s output value; it bounds how much automation can cut the price.',
+    source: 'BEA 2017 detail benchmark input–output accounts (compensation of employees ÷ gross output).',
   },
   {
     sym: 'θ', name: 'Task mix (physical / analytic / creative)',
-    what: 'How the sector’s wage bill divides across task types. Physical tasks need a body; analytic tasks are compute-like cognition; creative tasks are novel combination and judgment.',
-    source: 'Occupation staffing patterns (BLS OEWS, May 2024) crossed with task content (O*NET): teleworkability separates physical from cognitive work, and analytic/creative composites split the rest. Loaded with the sector.',
+    what: 'How the industry’s wage bill divides across task types. Physical tasks need a body; analytic tasks are compute-like cognition; creative tasks are novel combination and judgment.',
+    source: 'Occupation staffing (BLS OEWS, May 2024) crossed with task content (O*NET 30.3): teleworkability separates physical from cognitive work, and analytic and creative composites split the rest.',
   },
   {
     sym: 'g', name: 'AI reach by task type',
-    what: 'The share of each task type AI can perform at full frontier progress. Physical tasks lag cognitive ones while robotics catches up.',
-    source: 'Scenario dials, not measurements (defaults: analytic 95%, creative 60%, physical 25%). The gray slider ticks mark these defaults.',
+    what: 'The share of each task type AI can perform at full progress. An industry’s AI exposure, the automated share of its tasks, is its task mix weighted by these reaches.',
+    source: 'Scenarios, not measurements: central 25% physical, 95% analytic, 60% creative; the grid spans 0–60%, 70–100% and 30–90%.',
   },
   {
     sym: 'χ', name: 'Workers’ share of capital income',
-    what: 'Who receives the automation gains. χ = 1: capital income reaches everyone; χ = 0: workers live on wages while the top decile keeps the capital income. It changes how well off workers are far more than which industries grow.',
-    source: 'A scenario dial. The income paths it selects come from our 84-industry general equilibrium (below).',
+    what: 'Who receives the returns on the capital AI runs on. It changes how well off workers are far more than which industries grow.',
+    source: 'Three worlds in the scenario grid: concentrated (0), today-like (0.3) and broad (all of it).',
   },
 ];
 ---
 
 <BaseLayout
   title="AI and labor — methods"
-  description="Model schematic, equations, and data provenance for the AI and labor sector lens."
+  description="Model schematic, equations, and data provenance for the AI and labor tool."
   noindex={tool?.unlisted ?? true}
 >
   <article class="wrap">
     <header>
       <p class="eyebrow">Model schematic · <a href="/tools/ai-labor">AI and labor</a></p>
-      <h1>What the sector lens rests on</h1>
+      <h1>What the AI and labor tool rests on</h1>
       <p class="lede">
-        The tool asks one question per sector: as AI takes over a growing share of work, do the
-        jobs in this industry grow or shrink? The answer is a race between demand growth and task
-        displacement, and the sector-specific variables that decide the race are measured, not
-        assumed, wherever the data allows.
+        Every chart in the tool reports one model at full AI progress: an 84-industry general
+        equilibrium of the US economy in which one budget and one labor market discipline every
+        industry at once. It asks which industries' jobs AI shrinks or grows, what happens to pay in
+        each, and why. The industry characteristics that decide the answer are measured wherever
+        the data allows; AI capability, growth and ownership are scenarios.
       </p>
     </header>
 
     <section>
       <h2>The model in one picture</h2>
       <figure>
-        <svg viewBox="0 0 760 340" role="img" aria-label="Schematic: AI frontier progress drives task automation, cheaper output, and income growth; demand and the human task share combine into the jobs index.">
+        <svg viewBox="0 0 760 300" role="img" aria-label="Schematic: measured industry characteristics and scenario assumptions feed an 84-industry general equilibrium, which yields each industry's change in jobs and average wage and the forces behind them.">
           <defs>
             <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M0,0.5 L7.5,4 L0,7.5" fill="none" stroke="var(--ink-3)" stroke-width="1.3" />
@@ -79,95 +80,77 @@ const levers = [
             .f { fill: none; stroke: var(--ink-3); stroke-width: 1.1; marker-end: url(#arr); }
           </style>
 
-          <rect class="box" x="12" y="140" width="120" height="58" rx="4" />
-          <text class="t" x="72" y="164" text-anchor="middle">AI frontier</text>
-          <text class="t" x="72" y="180" text-anchor="middle">progress a</text>
+          <rect class="box" x="12" y="24" width="210" height="112" rx="4" />
+          <text class="t" x="117" y="46" text-anchor="middle">Measured, per industry</text>
+          <text class="s" x="117" y="68" text-anchor="middle">ε income elasticity</text>
+          <text class="s" x="117" y="84" text-anchor="middle">ρ human-attention shield</text>
+          <text class="s" x="117" y="100" text-anchor="middle">ℓ labor cost share</text>
+          <text class="s" x="117" y="116" text-anchor="middle">θ task mix</text>
 
-          <!-- channel 1: displacement -->
-          <rect class="box" x="220" y="24" width="190" height="64" rx="4" />
-          <text class="t" x="315" y="46" text-anchor="middle">Tasks automated</text>
-          <text class="s" x="315" y="62" text-anchor="middle">A = a · (θ‑mix × AI reach g)</text>
-          <text class="e" x="315" y="78" text-anchor="middle">θ measured · g scenario</text>
+          <rect class="box" x="12" y="160" width="210" height="112" rx="4" />
+          <text class="t" x="117" y="182" text-anchor="middle">Scenarios (a full grid)</text>
+          <text class="s" x="117" y="204" text-anchor="middle">g AI reach by task type</text>
+          <text class="s" x="117" y="220" text-anchor="middle">productivity growth</text>
+          <text class="s" x="117" y="236" text-anchor="middle">capital supply · ownership χ</text>
+          <text class="e" x="117" y="256" text-anchor="middle">648 economies × 3 worlds</text>
 
-          <rect class="box" x="470" y="24" width="180" height="64" rx="4" />
-          <text class="t" x="560" y="46" text-anchor="middle">Human task share</text>
-          <text class="s" x="560" y="62" text-anchor="middle">h = φ + (1−φ)(1−A)</text>
-          <text class="e" x="560" y="78" text-anchor="middle">φ provenance floor</text>
+          <rect class="box" x="280" y="92" width="210" height="112" rx="4" />
+          <text class="t" x="385" y="116" text-anchor="middle" style="font-weight:600">General equilibrium</text>
+          <text class="s" x="385" y="138" text-anchor="middle">84 industries + rest of economy</text>
+          <text class="s" x="385" y="154" text-anchor="middle">one budget, nonhomothetic demand</text>
+          <text class="s" x="385" y="170" text-anchor="middle">AI takes exposed tasks to capital</text>
+          <text class="s" x="385" y="186" text-anchor="middle">workers move imperfectly</text>
 
-          <!-- channel 2: price -->
-          <rect class="box" x="220" y="138" width="190" height="64" rx="4" />
-          <text class="t" x="315" y="160" text-anchor="middle">Cheaper output</text>
-          <text class="s" x="315" y="176" text-anchor="middle">price = 1 − ℓ(1−φ)A·0.9</text>
-          <text class="e" x="315" y="192" text-anchor="middle">ℓ measured</text>
+          <rect class="out" x="548" y="40" width="200" height="64" rx="4" />
+          <text class="t" x="648" y="64" text-anchor="middle" style="font-weight:600">Jobs by industry</text>
+          <text class="s" x="648" y="82" text-anchor="middle">share of a fixed workforce</text>
 
-          <!-- channel 3: income -->
-          <rect class="box" x="220" y="252" width="190" height="64" rx="4" />
-          <text class="t" x="315" y="274" text-anchor="middle">Incomes rise</text>
-          <text class="s" x="315" y="290" text-anchor="middle">workers y_w · owners y_k</text>
-          <text class="e" x="315" y="306" text-anchor="middle">χ splits the gains (GE)</text>
+          <rect class="out" x="548" y="118" width="200" height="64" rx="4" />
+          <text class="t" x="648" y="142" text-anchor="middle" style="font-weight:600">Average wage by industry</text>
+          <text class="s" x="648" y="160" text-anchor="middle">real, mobility elasticity 2</text>
 
-          <rect class="box" x="470" y="195" width="180" height="64" rx="4" />
-          <text class="t" x="560" y="217" text-anchor="middle">Sector demand</text>
-          <text class="s" x="560" y="233" text-anchor="middle">D = Σ group y^ε · price^−η</text>
-          <text class="e" x="560" y="249" text-anchor="middle">ε measured per sector</text>
+          <rect class="out" x="548" y="196" width="200" height="64" rx="4" />
+          <text class="t" x="648" y="220" text-anchor="middle" style="font-weight:600">The forces behind each</text>
+          <text class="s" x="648" y="238" text-anchor="middle">exact decomposition</text>
 
-          <!-- output -->
-          <rect class="out" x="600" y="118" width="148" height="46" rx="4" />
-          <text class="t" x="674" y="138" text-anchor="middle" style="font-weight:600">Jobs index</text>
-          <text class="s" x="674" y="154" text-anchor="middle">J = D × h</text>
-
-          <path class="f" d="M132,152 C 170,140 180,80 216,62" />
-          <path class="f" d="M132,169 L 216,169" />
-          <path class="f" d="M132,186 C 170,198 180,258 216,278" />
-          <path class="f" d="M410,56 L 466,56" />
-          <path class="f" d="M410,170 C 436,172 446,200 466,212" />
-          <path class="f" d="M410,284 C 436,282 446,252 466,240" />
-          <path class="f" d="M650,88 C 668,96 672,104 676,114" />
-          <path class="f" d="M650,227 C 668,219 672,180 675,168" />
+          <path class="f" d="M222,80 C 250,90 256,120 276,132" />
+          <path class="f" d="M222,216 C 250,206 256,176 276,166" />
+          <path class="f" d="M490,130 C 512,110 520,80 544,74" />
+          <path class="f" d="M490,148 L 544,150" />
+          <path class="f" d="M490,166 C 512,186 520,220 544,226" />
         </svg>
         <figcaption>
-          Three channels from one driver. AI progress automates the sector's tasks (fewer jobs per
-          unit of output), cuts its price (more demand), and raises economy-wide incomes (more
-          demand — up to the sector's ceiling ε, and only for whoever receives the income, χ).
-          Cardinal notes mark which inputs are measured and which are scenario dials.
+          Measured industry characteristics and scenario assumptions feed one general equilibrium,
+          solved at full AI progress for every combination of scenarios. Its outputs are each
+          industry's change in jobs and in average real wage, and the forces behind the jobs change.
         </figcaption>
       </figure>
     </section>
 
     <section>
-      <h2>The jobs identity</h2>
-      <p>At frontier progress <em>a</em> (0 = today, 100% ≈ analytic work fully automated), the sector's jobs index is</p>
-      <pre>J(a) = D(a) · price(a)⁻η · h(a)   (today = 1)
+      <h2>The forces identity</h2>
+      <p>With GDP as the numeraire, an industry's employment is labor per unit of output times its spending share divided by its price, so its log change in jobs splits exactly:</p>
+      <pre>ln J = ln(labor per unit) + ln(spending share) − ln(price)
 
-automated task share:
-  A = a · (θ_P g_P + θ_A g_A + θ_C g_C)
-human task share:
-  h = φ + (1 − φ)(1 − A)
-cost pass-through:
-  price = 1 − ℓ (1 − φ) A (1 − 0.1)
-demand at base prices:
-  D = s_w · y_w^ε + (1 − s_w) · y_k^ε</pre>
+ln(labor per unit) = ln(1 − A)          AI takes over tasks
+                   + ln(h / (1 − A))    human-attention shield
+                   + rest               labor-capital mix
+
+A = θ_P g_P + θ_A g_A + θ_C g_C        (full progress)
+h = ρψ + (1 − ρψ)(1 − A)
+
+workforce share of industry s ∝ base share × w_s^2</pre>
       <p>
-        with η = 0.8 the price elasticity of sector demand and AI performing an automated task at
-        10% of the human cost (both held fixed and stated on the tool). s<sub>w</sub> is the worker
-        group's share of total spending today, and y<sub>w</sub>, y<sub>k</sub> are the worker and
-        capital-owner real income paths — not assumptions, but outputs of the project's general
-        equilibrium model (below), interpolated as you move χ.
-      </p>
-      <p>
-        <strong>Jobs, not wages.</strong> The index counts the quantity of human labor the sector
-        demands — employment — at the sector's going wage, which this partial-equilibrium lens
-        holds fixed. Up to that assumption the same curve is also the sector's wage-bill index.
-        How wages themselves move with automation, and how the gains divide between labor and
-        capital, are general-equilibrium questions treated in the project's formal model — the
-        tool imports that model's income paths rather than re-deriving them per sector.
+        The AI term is split among physical, analytic and creative tasks in proportion to each
+        type's share of the automated tasks (θ_k g_k / A), so the three parts add up to the whole.
+        Cheaper output is −ln(price) and spending shifts are ln(spending share).
       </p>
     </section>
 
     <section>
-      <h2>What each lever is, and where its value comes from</h2>
+      <h2>What each input is, and where its value comes from</h2>
       <dl>
-        {levers.map((l) => (
+        {inputs.map((l) => (
           <div class="lever">
             <dt><span class="sym">{l.sym}</span> {l.name}</dt>
             <dd>
@@ -180,45 +163,48 @@ demand at base prices:
     </section>
 
     <section>
-      <h2>Engel parameters, briefly</h2>
+      <h2>Scenarios and ranges</h2>
       <p>
-        An Engel curve traces how spending on a good changes as income rises — named for Ernst
-        Engel's 1857 observation that food's share of the household budget falls as households get
-        richer. The slope of that curve, the income elasticity ε, is the whole demand-ceiling
-        idea in one number: when ε has fallen to zero, more income buys no more of the good — the
-        ceiling binds — and productivity growth in that sector can only cut jobs, never add them.
-        Across US sectors we estimate ε from the 1959–2025 consumption record; the systematic
-        pattern is that physical goods sit low (food at home ≈ 0.5, often near 0) while
-        human-time services and open-ended categories sit high (≈ 2–3). Two cautions the tool
-        inherits: ε is a long-run average slope, not a constant of nature — sectors drift down
-        their Engel curves as saturation approaches — and extrapolating a measured ε across the
-        several-fold income growth the AI scenarios imply stretches it far out of sample.
+        The model is solved on a full grid of its uncertain assumptions: AI reach into physical (3
+        levels), analytic (3) and creative (3) tasks, capital supply (3), the human share of
+        attention spending (2), productivity growth (2) and the demand estimate (2), 648
+        economies, each in three ownership worlds, 1,944 outcomes per industry. Without additional
+        productivity growth, full AI progress raises real output about 1.2-fold; the growth case
+        raises it about 3.5-fold. Ranges in the tool are the 5th to 95th percentile of an
+        industry's outcomes in the chosen growth case (972 for jobs; 324 for wages, which hold
+        ownership at today-like levels). An industry "loses" or "gains" if it does so in at least
+        90% of all outcomes, and the decision bar splits its uncertainty among capability, demand
+        and ownership by a first-order variance decomposition over the grid.
       </p>
     </section>
 
     <section>
-      <h2>The general-equilibrium backdrop</h2>
+      <h2>Engel parameters, briefly</h2>
       <p>
-        The industry outlook and the income paths behind the χ lever come from the project's
-        formal model: an 84-industry general equilibrium in which one wage clears a fixed workforce, demand follows nonhomothetic preferences calibrated to the measured Engel parameters, automation moves tasks from labor to capital, and workers (90% of people) earn the wage bill plus a share χ of capital income while capital owners receive the rest. Its industry outlook (the chart at the top of the tool) solves that model at full AI progress across 648 combinations of AI reach into physical, analytic and creative tasks, income growth, capital supply, the human share of spending and the demand estimates, each in three ownership worlds (χ = 0, 0.3, 1): 1,944 outcomes per industry. An industry 'loses' or 'gains' if it does so in at least 90% of them, and the decision bar splits its uncertainty among capability, demand and ownership by a variance decomposition. Average wages differ by industry because workers move between industries imperfectly (taste-based mobility with elasticity 2); wage results come from the same 648 economies in that model, with today-like ownership. The sector lens is deliberately partial equilibrium on
-        that backdrop: each sector's
-        own wages and prices do not feed back on the economy.
+        An Engel curve traces how spending on a good changes as income rises, named for Ernst
+        Engel's 1857 observation that food's share of the household budget falls as households get
+        richer. Its slope, the income elasticity ε, is the demand-ceiling idea in one number: when ε
+        has fallen to zero, more income buys no more of the good, and productivity growth in that
+        industry can only cut jobs. Across US industries the systematic pattern is that physical
+        goods sit low (food at home ≈ 0.5) while human-time services and open-ended categories sit
+        high (≈ 2–3). In the model, saturation matters most when automation also makes households
+        much richer, which is why the growth case brings it to the fore.
       </p>
     </section>
 
     <section>
       <h2>Caveats</h2>
       <ul>
-        <li>Mechanism illustration, not a forecast. Every curve is conditional on dials whose future values nobody knows.</li>
-        <li>Measured elasticities are extrapolated far out of sample at high frontier progress.</li>
+        <li>Scenario analysis, not a forecast: results are conditional on assumptions whose future values nobody knows.</li>
+        <li>Total employment is fixed: industry changes are shifts in shares of jobs, not unemployment; transition frictions, wage floors and exit from the labor force are not modeled.</li>
+        <li>Measured elasticities are long-run co-movements, extrapolated out of sample.</li>
         <li>Task shares divide the wage bill, which proxies output composition imperfectly.</li>
-        <li>Within-sector adjustment — quality upgrading, new product varieties, intensity growth ("twice the chefs per dinner") — is not modeled and works against pure displacement.</li>
-        <li>No labor-market frictions, no adjustment dynamics: the index compares equilibria, not years.</li>
+        <li>Wage results rest on an assumed mobility between industries rather than measured worker flows.</li>
       </ul>
       <p class="src">
         Data: BEA 2017 detail benchmark input–output accounts; BLS QCEW 2025 employment; BLS OEWS
         May 2024 staffing; O*NET 30.3 task content; Dingel–Neiman (2020) teleworkability; BEA PCE
-        and real disposable income, 1959–2025. The research repository (code, tests, and the
+        and real disposable income, 1959–2025. The research repository (code, tests and the
         general-equilibrium model) is private while the paper is in preparation. Aggregate
         framework: <a href="https://www.brookings.edu/articles/artificial-intelligence-saturation-and-the-future-of-work/">Kording &amp; Marinescu (2025)</a>.
       </p>

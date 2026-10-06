@@ -254,10 +254,10 @@ export function GEContour({ s, metric, growth }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', fontSize: 12.5, color: 'var(--ink-2)' }}>
         <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          across <select value={xk} onChange={(e) => setXk(e.target.value)} style={sel} aria-label="Horizontal axis">{opts(yk)}</select>
+          Horizontal <select value={xk} onChange={(e) => setXk(e.target.value)} style={sel} aria-label="Horizontal axis">{opts(yk)}</select>
         </label>
         <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          against <select value={yk} onChange={(e) => setYk(e.target.value)} style={sel} aria-label="Vertical axis">{opts(xk)}</select>
+          Vertical <select value={yk} onChange={(e) => setYk(e.target.value)} style={sel} aria-label="Vertical axis">{opts(xk)}</select>
         </label>
       </div>
       <div ref={tip.ref} style={{ position: 'relative' }}

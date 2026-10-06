@@ -952,8 +952,9 @@ export default function ContrailsTool() {
         <div className="mt-3 border-t border-rule pt-3">
           <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">Companion paper</p>
           <p className="mt-1 text-xs italic leading-snug opacity-70">
-            Davis, Whiteson, Bonnemaizon, Caldeira &amp; Shapiro (in preparation) —
-            preprint link coming when the paper is submitted.
+            Davis, Whiteson, Bonnemaizon, Caldeira, Teoh &amp; Shapiro, “Flyers can
+            identify the most-warming flights when booking” (submitted) — preprint
+            link coming soon.
           </p>
         </div>
 

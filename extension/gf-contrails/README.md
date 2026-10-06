@@ -43,10 +43,10 @@ average users get one-click install (works in Chrome, Arc, Edge, Brave).
    - Description: Contrails (condensation trails) can warm the climate as
      much as aviation's CO2 — but their warming varies enormously between
      flights and is largely predictable from schedule information alone.
-     This extension adds a "+x% contrail warming" line beside Google's
-     emissions estimate on every search result, predicted by a machine
-     learning model trained on 22 million simulated flights (Sustainable
-     Solutions Lab, Stanford University). Click the info icon on any
+     This extension adds a badge showing each itinerary's predicted
+     contrail warming (kg CO2e per passenger) to every search result,
+     from a machine learning model trained on simulated contrails from 52
+     million flights (Sustainable Solutions Lab, Stanford University). Click the info icon on any
      result for details, or open our companion tool to compare
      lower-warming alternatives.
    - Category: Tools. Language: English.

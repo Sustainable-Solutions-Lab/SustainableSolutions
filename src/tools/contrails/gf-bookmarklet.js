@@ -242,7 +242,7 @@
         pop.appendChild(mk('div', 'color:' + TH.body + ';margin-bottom:10px;',
           'Predicted warming from this itinerary\u2019s condensation trails, per passenger, estimated from its schedule (route, timing, season' +
           (res.error ? '' : (res.ac_estimated ? ', assumed ' : ', ') + res.ac) +
-          ') by a model trained on 22 million flight simulations.'));
+          ') by a model trained on simulated contrails from 52 million flights.'));
         if (res.why && res.why.length) {
           for (var wi = 0; wi < res.why.length; wi++) {
             pop.appendChild(mk('div', 'color:' + TH.body + ';margin-bottom:6px;', res.why[wi] + '.'));

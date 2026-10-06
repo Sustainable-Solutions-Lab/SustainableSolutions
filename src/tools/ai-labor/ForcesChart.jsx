@@ -1,5 +1,6 @@
 /**
- * ForcesChart — a 100% stacked Marimekko of the five forces across sectors.
+ * ForcesChart — a 100% stacked Marimekko of the forces across sectors, with
+ * displacement split by task type (physical, analytic, creative).
  *
  * One column per industry, width proportional to its wage bill (employment ×
  * average wages — economic importance), sorted largest first; the column
@@ -19,7 +20,9 @@ const FORCES = [
   ['income', 'Income growth', 'Income', '#3288BD'],
   ['dist', 'Who gets the gains', 'Gains split', '#66C2A5'],
   ['cheaper', 'Cheaper output', 'Cheaper output', '#FDAE61'],
-  ['displace', 'AI does the tasks', 'Displacement', '#D53E4F'],
+  ['displace_P', 'AI does physical tasks', 'AI: physical', '#9E0142'],
+  ['displace_A', 'AI does analytic tasks', 'AI: analytic', '#D53E4F'],
+  ['displace_C', 'AI does creative tasks', 'AI: creative', '#F46D43'],
   ['prov', 'Provenance shield', 'Provenance', '#5E4FA2'],
 ];
 const svgText = { fontFamily: 'var(--font-mono)', fontSize: 11, fill: 'var(--ink-3)' };
@@ -33,7 +36,7 @@ function fmtMult(lnv) {
 }
 
 export default function ForcesChart({ sd, astar, selCode, onPickSector }) {
-  const W = 640, H = 340, M = { l: 46, r: 14, t: 14, b: 66 };
+  const W = 640, H = 356, M = { l: 46, r: 14, t: 14, b: 82 };
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
   const wrapRef = useRef(null);
   const [tip, setTip] = useState(null);
@@ -121,7 +124,7 @@ export default function ForcesChart({ sd, astar, selCode, onPickSector }) {
           Sectors sorted by wage bill (cumulative) — widest columns matter most economically
         </text>
         {FORCES.map(([k, , short, color], i) => (
-          <g key={k} transform={`translate(${M.l + i * (pw / FORCES.length)}, ${H - 12})`}>
+          <g key={k} transform={`translate(${M.l + (i % 4) * (pw / 4)}, ${H - 28 + Math.floor(i / 4) * 16})`}>
             <rect width="10" height="10" y="-9" fill={color} />
             <text x="14" style={svgText}>{short}</text>
           </g>

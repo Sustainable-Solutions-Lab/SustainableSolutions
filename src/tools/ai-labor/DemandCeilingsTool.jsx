@@ -26,7 +26,7 @@ const SHOW_KM = false;
 
 const mono11 = { fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--ink-3)' };
 const figTitle = { fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 600, lineHeight: 1.28, color: 'var(--ink)', margin: 0 };
-const caption = { fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.45, margin: 0, maxWidth: '68ch' };
+const caption = { fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.45, margin: 0 };
 
 /** Tick marks under a slider rail. A thumb's center travels from half its
  *  width inside one end of the track to half inside the other, so a tick at
@@ -312,10 +312,10 @@ export default function DemandCeilingsTool() {
         <div style={{ maxWidth: 880, margin: '0 auto', padding: 'clamp(16px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 22 }}>
           <div>
             <p style={{ ...mono11, margin: 0 }}>Interactive model · AI and labor · {methodsBtn('methods')}</p>
-            <h2 style={{ ...h2, fontSize: 'clamp(24px, 3.4vw, 32px)' }}>How AI changes jobs and pay across industries</h2>
+            <h2 style={{ ...h2, fontSize: 'clamp(24px, 3.4vw, 32px)' }}>How AI changes US jobs and pay across industries</h2>
             <p style={lede}>
-              Analytic and creative services (insurance, legal, software, finance) lose jobs under
-              almost any assumption; care, schooling and in-person services gain. AI capability
+              Across 84 US industries employing 71 million people, analytic and creative services
+              (insurance, legal, software, finance) lose jobs under almost any assumption; care, schooling and in-person services gain. AI capability
               decides how far the losers fall. Demand decides the survivors: as people grow richer
               they buy more human attention per unit in care and education. Pay is a separate
               story: unless AI also multiplies output, average real wages fall in every industry.

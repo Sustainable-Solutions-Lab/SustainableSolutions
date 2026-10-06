@@ -1,7 +1,6 @@
 /**
  * Shared bits for the ai-labor tool: a small tooltip that stays inside its
- * chart (phones included), segmented chips, and the colour helpers used by
- * every all-sector chart.
+ * chart (phones included), segmented chips, and colour helpers.
  */
 import { useRef, useState } from 'react';
 
@@ -29,14 +28,21 @@ const SHORT = {
 };
 export const shortName = (n) => SHORT[n] ?? (n.length > 34 ? `${n.slice(0, 32)}…` : n);
 
-/** Diverging fill for a change index j (1 = no change), clamped at ±span. */
-export function changeColor(j, span) {
-  const t = Math.max(-1, Math.min(1, (j - 1) / span));
-  // ColorBrewer Spectral ends (lab palette): red for losses, blue for gains.
-  const neg = [213, 62, 79], mid = [250, 248, 220], pos = [50, 136, 189];
-  const to = t < 0 ? neg : pos, a = Math.abs(t);
-  const c = mid.map((m, i) => Math.round(m + (to[i] - m) * a));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
+/** Text colour for a change index j on the Spectral scale: deep red for large
+ *  losses, red for moderate ones, ink near zero, blue and purple for gains
+ *  (dark enough steps to read as text on the paper background). */
+export function changeText(j) {
+  const d = j - 1;
+  if (d <= -0.4) return '#9E0142';
+  if (d <= -0.05) return '#D53E4F';
+  if (d < 0.05) return 'var(--ink)';
+  if (d < 0.4) return '#3288BD';
+  return '#5E4FA2';
+}
+
+/** A change index as a coloured percentage. */
+export function Pct({ j }) {
+  return <span style={{ color: changeText(j) }}>{pctChange(j)}</span>;
 }
 
 /** Hover / tap tooltip clamped to its container. Wrap a chart's container
@@ -74,24 +80,6 @@ export function Chips({ label, value, options, onChange }) {
           </button>
         );
       })}
-    </div>
-  );
-}
-
-/** Legend swatch for the diverging change scale. */
-export function ChangeLegend({ span, label }) {
-  const stops = [-1, -0.5, 0, 0.5, 1];
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'var(--ink-3)', flexWrap: 'wrap' }}>
-      <span>{label}</span>
-      <span style={{ display: 'inline-flex' }}>
-        {stops.map((t) => (
-          <span key={t} style={{ width: 22, height: 10, background: changeColor(1 + t * span, span) }} />
-        ))}
-      </span>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5 }}>
-        {pctChange(1 - span)} to {pctChange(1 + span)}
-      </span>
     </div>
   );
 }

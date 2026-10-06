@@ -4,15 +4,15 @@
  * tornado of the ensemble parameters, and a contour of its jobs over
  * productivity growth and AI reach. Data: ./data/tool.json.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { contours } from 'd3-contour';
-import { Chips, VERDICT, mono11, pctChange, svgText, useTip } from './ui.jsx';
+import { Pct, VERDICT, mono11, pctChange, svgText, useTip } from './ui.jsx';
 import { FORCES } from './ForceMix';
 
-function Kpi({ v, l, accent }) {
+function Kpi({ v, l }) {
   return (
     <div style={{ borderTop: '2px solid var(--ink)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <span style={{ fontFamily: 'var(--font-serif)', fontSize: 23, fontWeight: 600, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums', color: accent ? 'var(--accent-brand)' : 'var(--ink)' }}>{v}</span>
+      <span style={{ fontFamily: 'var(--font-serif)', fontSize: 23, fontWeight: 600, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums', color: 'var(--ink-3)' }}>{v}</span>
       <span style={{ fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.35 }}>{l}</span>
     </div>
   );
@@ -24,10 +24,10 @@ export function Scorecard({ s, nOutcomes }) {
   const g0 = s.by_growth.none, g1 = s.by_growth.growth;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
-      <Kpi accent v={pctChange(s.jobs_all[1])} l={`jobs, median of all ${nOutcomes.toLocaleString()} outcomes (5–95%: ${range(s.jobs_all)})`} />
-      <Kpi v={`${pctChange(g0.jobs[1])} / ${pctChange(g1.jobs[1])}`} l="jobs without / with extra growth (medians)" />
-      <Kpi v={`${pctChange(g0.wage[1])} / ${pctChange(g1.wage[1])}`} l="average real wage without / with extra growth (medians)" />
-      <Kpi v={`${pctChange(s.worlds.concentrated)} / ${pctChange(s.worlds.broad)}`} l="jobs if capital ownership stays concentrated / becomes broad" />
+      <Kpi v={<Pct j={s.jobs_all[1]} />} l={`jobs, median of all ${nOutcomes.toLocaleString()} outcomes (5–95%: ${range(s.jobs_all)})`} />
+      <Kpi v={<><Pct j={g0.jobs[1]} /> / <Pct j={g1.jobs[1]} /></>} l="jobs without / with extra growth (medians)" />
+      <Kpi v={<><Pct j={g0.wage[1]} /> / <Pct j={g1.wage[1]} /></>} l="average real wage without / with extra growth (medians)" />
+      <Kpi v={<><Pct j={s.worlds.concentrated} /> / <Pct j={s.worlds.broad} /></>} l="jobs if capital ownership stays concentrated / becomes broad" />
     </div>
   );
 }
@@ -118,58 +118,145 @@ const EDGES = [-1.204, -0.693, -0.357, -0.105, 0.095, 0.336, 0.693, 1.194];
 const LABELS = ['−70%', '−50%', '−30%', '−10%', '+10%', '+40%', '+100%', '+230%'];
 const FILLS = ['#9E0142', '#D53E4F', '#F46D43', '#FDAE61', '#FFFFBF', '#E6F598', '#ABDDA4', '#66C2A5', '#3288BD'];
 
-export function GEContour({ s }) {
-  const [dial, setDial] = useState('g_C');
+const BASE = '/tools/ai-labor/contours';
+const cache = new Map();
+function load(name) {
+  if (!cache.has(name)) cache.set(name, fetch(`${BASE}/${name}.json`).then((r) => {
+    if (!r.ok) throw new Error(`${name}: ${r.status}`);
+    return r.json();
+  }));
+  return cache.get(name);
+}
+
+const AXES = ['Z', 'g_C', 'g_A', 'g_P', 'psi', 'eta_K', 'chi'];
+
+function tickLabel(key, v, meta) {
+  if (key === 'Z') return `×${meta.z_output[meta.vars.Z.values.indexOf(v)] ?? v}`;
+  if (key === 'eta_K') return `${v}`;
+  return `${Math.round(100 * v)}%`;
+}
+
+export function GEContour({ s, metric, growth }) {
+  const [xk, setXk] = useState('Z');
+  const [yk, setYk] = useState('g_C');
+  const [meta, setMeta] = useState(null);
+  const [grid, setGrid] = useState(null);
+  const [err, setErr] = useState(null);
   const tip = useTip();
-  const c = s.contours[dial];
-  const NY = c.reach.length, NX = c.J[0].length;
+  useEffect(() => { load('meta').then(setMeta).catch((e) => setErr(String(e))); }, []);
+  useEffect(() => {
+    setGrid(null);
+    load(s.code).then(setGrid).catch((e) => setErr(String(e)));
+  }, [s.code]);
+
   const W = 640, H = 330, M = { l: 58, r: 120, t: 10, b: 44 };
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
-  const outCols = c.output[0].map((_, j) => c.output.reduce((t, row) => t + row[j], 0) / NY);
+  const field = metric === 'jobs' ? 'J' : 'W';
+  const g = (xk === 'Z' || yk === 'Z') ? '-' : growth;
+
+  const surf = useMemo(() => {
+    if (!meta || !grid) return null;
+    const fwd = grid[`${xk}|${yk}|${g}`], rev = grid[`${yk}|${xk}|${g}`];
+    const raw = fwd ?? rev;
+    if (!raw) return null;
+    const scale = meta.scale;
+    // stored row-major: rows = second variable, columns = first
+    const vals = new Float64Array(81);
+    for (let iy = 0; iy < 9; iy++) {
+      for (let ix = 0; ix < 9; ix++) {
+        const k = fwd ? iy * 9 + ix : ix * 9 + iy;
+        const v = raw[field][k];
+        vals[iy * 9 + ix] = v == null ? NaN : v / scale;
+      }
+    }
+    // fill rare unsolved points from the nearest solved neighbour
+    for (let k = 0; k < 81; k++) {
+      if (Number.isNaN(vals[k])) {
+        const nb = [k - 1, k + 1, k - 9, k + 9].find((q) => q >= 0 && q < 81 && !Number.isNaN(vals[q]));
+        vals[k] = nb === undefined ? 1 : vals[nb];
+      }
+    }
+    return vals;
+  }, [meta, grid, xk, yk, g, field]);
+
   const { paths, zero } = useMemo(() => {
-    const vals = new Float64Array(NX * NY);
-    for (let i = 0; i < NY; i++) for (let j = 0; j < NX; j++) vals[i * NX + j] = Math.log(c.J[i][j]);
+    if (!surf) return { paths: [], zero: null };
+    const lv = Float64Array.from(surf, Math.log);
     const toPath = (mp) => mp.coordinates.map((poly) => poly.map((ring) => ring.map(([gx, gy], k) =>
-      `${k ? 'L' : 'M'}${(M.l + ((gx - 0.5) / (NX - 1)) * pw).toFixed(1)},${(M.t + ph - ((gy - 0.5) / (NY - 1)) * ph).toFixed(1)}`
+      `${k ? 'L' : 'M'}${(M.l + ((gx - 0.5) / 8) * pw).toFixed(1)},${(M.t + ph - ((gy - 0.5) / 8) * ph).toFixed(1)}`
     ).join('') + 'Z').join('')).join('');
-    const gen = contours().size([NX, NY]);
-    return { paths: gen.thresholds(EDGES)(vals).map(toPath), zero: toPath(gen.thresholds([0])(vals)[0]) };
+    const gen = contours().size([9, 9]);
+    return { paths: gen.thresholds(EDGES)(lv).map(toPath), zero: toPath(gen.thresholds([0])(lv)[0]) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.code, dial]);
-  const yLab = dial === 'g_C' ? 'AI reach into creative tasks' : 'AI reach into physical tasks';
-  const central = dial === 'g_C' ? 0.6 : 0.25;
-  const ry = (v) => M.t + ph - ((v - c.reach[0]) / (c.reach[NY - 1] - c.reach[0])) * ph;
+  }, [surf]);
+
+  const sel = { font: '12.5px/1.4 var(--font-sans)', color: 'var(--ink)', background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 2, padding: '3px 6px' };
+  const opts = (other) => AXES.map((k) => (
+    <option key={k} value={k} disabled={k === other}>{meta?.vars[k].label ?? k}</option>
+  ));
+  const pos = (key, which) => {
+    const v = meta.vars[key];
+    const c = key === 'Z' ? (growth === 'none' ? 1 : 3) : v.central;
+    // grid position by piecewise-linear interpolation (central values can sit
+    // between grid points, and capital supply is log-spaced)
+    const vs = v.values;
+    let f = 0;
+    for (let i = 0; i < vs.length - 1; i++) {
+      if (c >= vs[i] && c <= vs[i + 1]) { f = (i + (c - vs[i]) / (vs[i + 1] - vs[i])) / (vs.length - 1); break; }
+    }
+    return which === 'x' ? M.l + f * pw : M.t + ph - f * ph;
+  };
+  const what = metric === 'jobs' ? 'jobs' : 'average real wage';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <Chips label="Reach" value={dial} onChange={setDial}
-        options={[['g_C', 'Creative tasks'], ['g_P', 'Physical tasks (robotics)']]} />
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', fontSize: 12.5, color: 'var(--ink-2)' }}>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          across <select value={xk} onChange={(e) => setXk(e.target.value)} style={sel} aria-label="Horizontal axis">{opts(yk)}</select>
+        </label>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          against <select value={yk} onChange={(e) => setYk(e.target.value)} style={sel} aria-label="Vertical axis">{opts(xk)}</select>
+        </label>
+      </div>
       <div ref={tip.ref} style={{ position: 'relative' }}
         onPointerMove={(ev) => {
+          if (!surf || !meta) return;
           const box = ev.currentTarget.querySelector('svg').getBoundingClientRect();
           const fx = ((ev.clientX - box.left) / box.width) * W, fy = ((ev.clientY - box.top) / box.height) * H;
           if (fx < M.l || fx > M.l + pw || fy < M.t || fy > M.t + ph) return tip.hide();
-          const j = Math.round(((fx - M.l) / pw) * (NX - 1)), i = Math.round(((M.t + ph - fy) / ph) * (NY - 1));
-          tip.show(ev, `output ×${outCols[j].toFixed(1)}, reach ${Math.round(100 * c.reach[i])}%: jobs ${pctChange(c.J[i][j])}`);
+          const ix = Math.round(((fx - M.l) / pw) * 8), iy = Math.round(((M.t + ph - fy) / ph) * 8);
+          tip.show(ev, `${tickLabel(xk, meta.vars[xk].values[ix], meta)}, ${tickLabel(yk, meta.vars[yk].values[iy], meta)}: ${what} ${pctChange(surf[iy * 9 + ix])}`);
         }}
         onPointerLeave={tip.hide}>
         <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', height: 'auto' }}
-          aria-label={`Change in this industry's jobs across productivity growth and ${yLab}`}>
-          <clipPath id={`gec-${s.code}`}><rect x={M.l} y={M.t} width={pw} height={ph} /></clipPath>
-          <g clipPath={`url(#gec-${s.code})`}>
-            <rect x={M.l} y={M.t} width={pw} height={ph} fill={FILLS[0]} />
-            {paths.map((d, i) => d && <path key={i} d={d} fill={FILLS[i + 1]} />)}
-            {zero && <path d={zero} fill="none" stroke="var(--ink)" strokeWidth="1.5" />}
-          </g>
+          aria-label={`Change in this industry's ${what} across two selected assumptions`}>
+          {!surf && (
+            <text x={M.l + pw / 2} y={M.t + ph / 2} textAnchor="middle" style={svgText}>{err ? 'surface unavailable' : 'loading…'}</text>
+          )}
+          {surf && (
+            <>
+              <clipPath id={`gec-${s.code}`}><rect x={M.l} y={M.t} width={pw} height={ph} /></clipPath>
+              <g clipPath={`url(#gec-${s.code})`}>
+                <rect x={M.l} y={M.t} width={pw} height={ph} fill={FILLS[0]} />
+                {paths.map((d, i) => d && <path key={i} d={d} fill={FILLS[i + 1]} />)}
+                {zero && <path d={zero} fill="none" stroke="var(--ink)" strokeWidth="1.5" />}
+              </g>
+              <circle cx={pos(xk, 'x')} cy={pos(yk, 'y')} r="5" fill="var(--accent-brand)" stroke="var(--paper)" strokeWidth="1.5" />
+              {[0, 2, 4, 6, 8].map((i) => (
+                <text key={`x${i}`} x={M.l + (i / 8) * pw} y={H - M.b + 15} textAnchor="middle" style={svgText}>{tickLabel(xk, meta.vars[xk].values[i], meta)}</text>
+              ))}
+              {[0, 4, 8].map((i) => (
+                <text key={`y${i}`} x={M.l - 7} y={M.t + ph - (i / 8) * ph + 3.5} textAnchor="end" style={svgText}>{tickLabel(yk, meta.vars[yk].values[i], meta)}</text>
+              ))}
+            </>
+          )}
           <rect x={M.l} y={M.t} width={pw} height={ph} fill="none" stroke="var(--rule-strong)" />
-          <circle cx={M.l} cy={ry(central)} r="5" fill="var(--accent-brand)" stroke="var(--paper)" strokeWidth="1.5" />
-          {outCols.filter((_, j) => j % 2 === 0).map((o, k) => (
-            <text key={k} x={M.l + ((2 * k) / (NX - 1)) * pw} y={H - M.b + 15} textAnchor="middle" style={svgText}>×{o.toFixed(1)}</text>
-          ))}
-          {[0, Math.floor(NY / 2), NY - 1].map((i) => (
-            <text key={i} x={M.l - 7} y={ry(c.reach[i]) + 3.5} textAnchor="end" style={svgText}>{Math.round(100 * c.reach[i])}%</text>
-          ))}
-          <text x={M.l + pw / 2} y={H - 6} textAnchor="middle" style={{ ...svgText, fill: 'var(--ink-2)' }}>real output per person (× today)</text>
-          <text transform={`translate(13 ${M.t + ph / 2}) rotate(-90)`} textAnchor="middle" style={{ ...svgText, fill: 'var(--ink-2)' }}>{yLab}</text>
+          <text x={M.l + pw / 2} y={H - 6} textAnchor="middle" style={{ ...svgText, fill: 'var(--ink-2)' }}>
+            {meta ? (xk === 'Z' ? 'Productivity growth (real output per person, × today)' : meta.vars[xk].label) : ''}
+          </text>
+          <text transform={`translate(13 ${M.t + ph / 2}) rotate(-90)`} textAnchor="middle" style={{ ...svgText, fill: 'var(--ink-2)' }}>
+            {meta ? meta.vars[yk].label : ''}
+          </text>
           {FILLS.map((col, i) => {
             const lh = ph / FILLS.length, y = M.t + ph - (i + 1) * lh;
             return (
@@ -184,7 +271,7 @@ export function GEContour({ s }) {
         {tip.node}
       </div>
       <p style={{ ...mono11, fontSize: 10, margin: 0, textTransform: 'none', letterSpacing: 0 }}>
-        Dot: central case. Other parameters at central values.
+        Dot: central case{g === '-' ? '' : `, ${growth === 'none' ? 'no extra growth' : 'output ×3.5'}`}. Other assumptions at central values.
       </p>
     </div>
   );

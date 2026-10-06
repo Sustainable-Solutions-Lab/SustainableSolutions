@@ -323,7 +323,7 @@ export default function DemandCeilingsTool() {
           </div>
 
           <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--paper)', padding: '8px 0', borderBottom: '1px solid var(--rule)', display: 'flex', gap: '8px 18px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <Chips label="Show" value={metric} onChange={setMetric} options={[['jobs', 'Jobs'], ['wage', 'Average wage']]} />
+            <Chips label="Show" value={metric} onChange={setMetric} options={[['jobs', 'Jobs'], ['wage', 'Average real wage']]} />
             <Chips label="Growth" value={growth} onChange={setGrowth} options={[['none', 'No extra growth'], ['growth', 'Output ×3.5']]} />
             {tsel && (
               <button type="button" onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
@@ -347,7 +347,8 @@ export default function DemandCeilingsTool() {
               combination of AI reach into physical, analytic and creative tasks, capital supply,
               the human share of attention spending, the demand estimate
               {metric === 'jobs' ? ' and capital ownership' : ''}: {nCase.toLocaleString()} outcomes
-              for this growth case. Jobs are shares of a fixed workforce; wages differ by industry
+              for this growth case. Jobs are shares of a fixed workforce. Real wages are buying
+              power, wages deflated by consumer prices that AI lowers; they differ by industry
               because workers move between industries imperfectly
               {metric === 'wage' ? ', and wage outcomes hold ownership at today-like levels' : ''}.
             </p>

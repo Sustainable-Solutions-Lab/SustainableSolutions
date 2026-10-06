@@ -81,7 +81,7 @@ export default function OutlookChart({ sectors, metric, growth, selCode, onPick 
           if (p) tip.show(ev, `${p.s.name}: ${pctChange(p.v[1])}`); else tip.hide();
         }}
         onPointerLeave={tip.hide}
-        onPointerUp={(ev) => { const p = nearest(ev); if (p) { onPick(p.s.code); tip.hide(); } }}>
+        onClick={(ev) => { const p = nearest(ev); if (p) { onPick(p.s.code); tip.hide(); } }}>
         {LANES.map((v, i) => (
           <g key={v}>
             {i > 0 && <line x1={M.l} x2={W - M.r} y1={M.t + laneH * i} y2={M.t + laneH * i} stroke="var(--rule)" />}

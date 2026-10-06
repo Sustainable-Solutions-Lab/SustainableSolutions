@@ -1,12 +1,11 @@
 /**
- * MethodsPane — in-tool methods documentation for the AI and labor sector
- * lens, following the map tools' methods-panel pattern (full overlay inside
+ * MethodsPane — in-tool methods documentation for the AI and labor tool
+ * (general equilibrium at full AI progress), following the map tools' methods-panel pattern (full overlay inside
  * the tool frame, mono eyebrow, X close). The standalone page at
  * /tools/ai-labor-methods keeps the model schematic and data provenance;
  * this pane carries the prose and links out to it.
  */
 import { X } from 'lucide-react';
-import { ETA } from './model.js';
 
 const h2Style = {
   fontFamily: 'var(--font-serif)', fontSize: 19, fontWeight: 600,
@@ -18,25 +17,25 @@ const srcStyle = { ...pStyle, fontSize: 13, color: 'var(--ink-3)' };
 const dtStyle = { fontWeight: 600, color: 'var(--ink)', fontSize: 15, marginBottom: 4 };
 const symStyle = { fontFamily: 'var(--font-mono)', color: 'var(--cardinal)', marginRight: 4 };
 
-const LEVERS = [
-  ['ε', 'Demand ceiling (income elasticity)',
-    'How strongly the sector’s demand responds to income: each 1% of income growth moves the quantity demanded by about ε%.',
-    'Measured per sector: 66 years (1959–2025) of US personal consumption (BEA PCE) regressed on real disposable income per person, bridged to BEA’s ≈400-industry detail. Loaded automatically when you pick a sector.'],
-  ['φ', 'Provenance premium',
-    'The share of the sector’s demand that insists on attested human work — that slice keeps its human labor and its human cost, whatever AI can do.',
-    'A scenario dial (default 0). Evidence that such demand exists and behaves as a complement: live performance’s share of music spending rose from 34% to 78% while its relative price more than doubled.'],
-  ['ℓ', 'Labor intensity',
-    'Compensation as a share of the sector’s output value — it bounds how much automation can cut the price.',
-    'BEA 2017 detail benchmark input–output accounts. Loaded with the sector.'],
+const INPUTS = [
+  ['ε', 'Income elasticity of demand',
+    'How strongly demand for the industry’s output responds to income: each 1% of income growth moves the quantity demanded by about ε%.',
+    'Measured per industry: 66 years (1959–2025) of US personal consumption (BEA PCE) regressed on real disposable income per person, bridged to BEA’s detail industries. Two specifications (levels and price-controlled) bound it in the scenario grid.'],
+  ['ρ', 'Human-attention shield',
+    'The share of an industry’s spending growth that buys more human attention per unit rather than more units (more nurse hours per bed-day, more teachers per pupil). That labor stays human whatever AI can do.',
+    'Measured for 21 industries from natural-unit series (inpatient days, enrollment, consultations, passengers and others) and assigned by demand class elsewhere; 80% of it (50–100% in the scenario grid) is treated as embodied human attention.'],
+  ['ℓ', 'Labor cost share',
+    'Compensation as a share of the industry’s output value; it bounds how much automation can cut the price.',
+    'BEA 2017 detail benchmark input–output accounts.'],
   ['θ', 'Task mix (physical / analytic / creative)',
-    'How the sector’s wage bill divides across task types: physical tasks need a body; analytic tasks are compute-like cognition; creative tasks are novel combination and judgment.',
-    'Occupation staffing (BLS OEWS, May 2024) crossed with task content (O*NET); teleworkability separates physical from cognitive work. Loaded with the sector.'],
+    'How the industry’s wage bill divides across task types: physical tasks need a body; analytic tasks are compute-like cognition; creative tasks are novel combination and judgment.',
+    'Occupation staffing (BLS OEWS, May 2024) crossed with task content (O*NET 30.3); teleworkability separates physical from cognitive work.'],
   ['g', 'AI reach by task type',
-    'The share of each task type AI can perform at full frontier progress. Physical tasks lag cognitive ones while robotics catches up.',
-    'Scenario dials, not measurements (defaults: analytic 95%, creative 60%, physical 25%). The gray slider ticks mark these defaults.'],
+    'The share of each task type AI can perform at full progress. AI exposure, the automated share of an industry’s tasks, is its task mix weighted by these reaches.',
+    'Scenarios, not measurements: central 25% physical, 95% analytic, 60% creative; the grid spans 0–60%, 70–100% and 30–90%.'],
   ['χ', 'Workers’ share of capital income',
-    'Who receives the automation gains. χ = 1: capital income reaches everyone; χ = 0: wages only. It changes how well off workers are far more than which industries grow.',
-    'A scenario dial; the income paths it selects come from our 84-industry general equilibrium.'],
+    'Who receives the returns on the capital AI runs on. It changes how well off workers are far more than which industries grow.',
+    'Three worlds in the scenario grid: concentrated (0), today-like (0.3) and broad (all of it).'],
 ];
 
 export default function MethodsPane({ onClose }) {
@@ -55,56 +54,66 @@ export default function MethodsPane({ onClose }) {
         </div>
 
         <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 32, lineHeight: 1.15, fontWeight: 600, letterSpacing: '-0.01em', margin: '0 0 16px', color: 'var(--ink)' }}>
-          How the sector lens works
+          How the model works
         </h1>
 
         <p style={pStyle}>
-          The tool asks one question per sector: as AI takes over a growing share of work, do the
-          jobs in this industry grow or shrink? The answer is a race between demand growth and
-          task displacement, and the sector-specific variables that decide the race are measured,
-          not assumed, wherever the data allows.
+          Every chart in the tool reports one model at full AI progress: an 84-industry general
+          equilibrium of the US economy in which one budget and one labor market discipline every
+          industry at once. It asks which industries' jobs AI shrinks or grows, what happens to
+          pay in each, and why.
         </p>
 
         <p style={{ margin: '18px 0 24px', padding: '12px 14px', border: '1px solid var(--rule-strong)', borderRadius: 4, background: 'var(--paper-2)', fontSize: 13, lineHeight: 1.5, color: 'var(--ink)' }}>
           <a href="/tools/ai-labor-methods" style={linkStyle}>
-            <strong>Schematic: the model in one picture, with equations and data provenance</strong>
+            <strong>Schematic, equations and data provenance</strong>
           </a>
           <span style={{ display: 'block', marginTop: 4, opacity: 0.8 }}>
-            One page showing the three channels from AI progress to the jobs index, which inputs
-            are measured and which are scenario dials, and where every number comes from.
+            The model in one picture, which inputs are measured and which are scenarios, and where
+            every number comes from.
           </span>
         </p>
 
-        <h2 style={h2Style}>The jobs identity</h2>
+        <h2 style={h2Style}>The model</h2>
         <p style={pStyle}>
-          At frontier progress <em>a</em> (0 = today, 100% ≈ analytic work fully automated):
-        </p>
-        <pre style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, lineHeight: 1.7, color: 'var(--ink)', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 4, padding: '12px 14px', whiteSpace: 'pre-wrap', margin: '0 0 12px' }}>
-{`J = D · price⁻η · h   (jobs index, today = 1)
-
-A = a · (θ-mix × AI reach g)
-h = φ + (1−φ)(1−A)
-price = 1 − ℓ(1−φ)A·0.9
-D = sʷ·yʷ^ε + (1−sʷ)·yᵏ^ε`}
-        </pre>
-        <p style={pStyle}>
-          A is the automated share of tasks, h the human task share, and D demand at base prices,
-          with y<sup>w</sup>, y<sup>k</sup> the worker and capital-owner real income paths from
-          the project's general equilibrium (interpolated as you move χ) and s<sup>w</sup> the
-          workers' base spending share. η = {ETA} is the price elasticity of sector demand, and AI
-          performs an automated task at 10% of the human cost.
-        </p>
-        <p style={pStyle}>
-          <strong>Jobs, not wages.</strong> The index counts the quantity of human labor the
-          sector demands — employment — at the sector's going wage, which this
-          partial-equilibrium lens holds fixed; up to that assumption the same curve is also the
-          sector's wage-bill index. How wages move, and the labor-vs-capital split, are
-          general-equilibrium questions treated in the project's formal model.
+          Demand follows nonhomothetic preferences calibrated to the measured income elasticities,
+          so richer households shift spending toward income-elastic industries and away from
+          saturated ones. Each industry produces with labor and capital; automation reassigns its
+          AI-exposed tasks from labor to capital, except the share protected by the human-attention
+          shield. Total employment is fixed, so an industry's change in jobs is a change in its share
+          of the workforce. Workers move between industries imperfectly (mobility elasticity 2), so
+          average wages differ by industry. Workers (90% of people) earn wages plus a share χ of
+          capital income; capital owners receive the rest.
         </p>
 
-        <h2 style={h2Style}>The levers, and where each value comes from</h2>
+        <h2 style={h2Style}>The forces</h2>
+        <p style={pStyle}>
+          An industry's employment equals labor per unit of output times its spending share
+          divided by its price, so its log change in jobs splits exactly into AI taking over tasks
+          (split by physical, analytic and creative tasks in proportion to each type's share of the
+          automated tasks), the human-attention shield, the shift toward labor as it gets cheaper
+          relative to capital, cheaper output, and spending shifts. The parts add up to the net
+          change.
+        </p>
+
+        <h2 style={h2Style}>Scenarios and ranges</h2>
+        <p style={pStyle}>
+          The model is solved on a full grid of its uncertain assumptions: AI reach into physical
+          (3 levels), analytic (3) and creative (3) tasks, capital supply (3), the human share of
+          attention spending (2), productivity growth (2) and the demand estimate (2), 648
+          economies, each in three ownership worlds, 1,944 outcomes per industry. The growth chip
+          splits them in half: no additional productivity growth (real output about 1.2 times
+          today's at full progress) or growth that raises it about 3.5-fold. Ranges are the 5th to
+          95th percentile of an industry's outcomes in the chosen case (972 for jobs; 324 for wages,
+          which hold ownership at today-like levels). An industry "loses" or "gains" if it does so in
+          at least 90% of all 1,944 outcomes. The decision bar splits an industry's uncertainty
+          among capability, demand and ownership by a first-order variance decomposition over the
+          grid. Scatter colours, the forces and the contour use the central assumptions.
+        </p>
+
+        <h2 style={h2Style}>The inputs, and where each value comes from</h2>
         <dl style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {LEVERS.map(([sym, name, what, source]) => (
+          {INPUTS.map(([sym, name, what, source]) => (
             <div key={sym}>
               <dt style={dtStyle}><span style={symStyle}>{sym}</span>{name}</dt>
               <dd style={{ margin: 0 }}>
@@ -129,21 +138,13 @@ D = sʷ·yʷ^ε + (1−sʷ)·yᵏ^ε`}
           far out of sample.
         </p>
 
-        <h2 style={h2Style}>The general-equilibrium backdrop</h2>
-        <p style={pStyle}>
-          The outlook and the income paths behind χ come from the project's formal model:
-          an 84-industry general equilibrium in which one wage clears a fixed workforce, demand follows nonhomothetic preferences calibrated to the measured Engel parameters, automation moves tasks from labor to capital, and workers (90% of people) earn the wage bill plus a share χ of capital income while capital owners receive the rest. Its industry outlook (the chart at the top of the tool) solves that model at full AI progress across 648 combinations of AI reach into physical, analytic and creative tasks, income growth, capital supply, the human share of spending and the demand estimates, each in three ownership worlds (χ = 0, 0.3, 1): 1,944 outcomes per industry. An industry 'loses' or 'gains' if it does so in at least 90% of them, and the decision bar splits its uncertainty among capability, demand and ownership by a variance decomposition. Average wages differ by industry because workers move between industries imperfectly (taste-based mobility with elasticity 2); wage results come from the same 648 economies in that model, with today-like ownership.
-          The sector lens is deliberately partial equilibrium on that backdrop: each sector's
-          own wage and prices do not feed back on the economy.
-        </p>
-
         <h2 style={h2Style}>Caveats</h2>
         <ul style={{ margin: '0 0 12px', paddingLeft: 20, listStyle: 'disc' }}>
-          {['Mechanism illustration, not a forecast: every curve is conditional on dials whose future values nobody knows.',
-            'Measured elasticities are extrapolated far out of sample at high frontier progress.',
+          {['Scenario analysis, not a forecast: results are conditional on assumptions whose future values nobody knows.',
+            'Total employment is fixed: industry changes are shifts in shares of jobs, not unemployment; transition frictions, wage floors and exit from the labor force are not modeled.',
+            'Measured elasticities are long-run co-movements extrapolated out of sample.',
             'Task shares divide the wage bill, which proxies output composition imperfectly.',
-            'Within-sector adjustment — quality upgrading, new varieties, intensity growth ("twice the chefs per dinner") — is not modeled here and works against pure displacement.',
-            'No labor-market frictions or adjustment dynamics: the index compares equilibria, not years.'].map((t) => (
+            'Wage results rest on an assumed mobility between industries rather than measured worker flows.'].map((t) => (
             <li key={t} style={{ ...pStyle, margin: '0 0 6px' }}>{t}</li>
           ))}
         </ul>

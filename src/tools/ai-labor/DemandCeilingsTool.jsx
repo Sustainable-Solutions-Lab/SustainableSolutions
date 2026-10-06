@@ -1,6 +1,7 @@
 /**
- * AI and labor — jobs in one real industry as the AI frontier advances
- * (sector lens). Bespoke tool (no _engine/_map); standard ToolShell chrome,
+ * AI and labor — which industries' jobs AI shrinks and grows (general
+ * equilibrium outlook, the paper's Fig. 1), then the forces inside one
+ * industry (sector lens). Bespoke tool (no _engine/_map); standard ToolShell chrome,
  * rail = sector picker + levers, main = scrolling results.
  *
  * Models live in ./model.js (sector lens; verified against the ai-labor
@@ -16,10 +17,12 @@ import { contours } from 'd3-contour';
 import ToolShell from '../_shell/ToolShell';
 import MethodsPane from './MethodsPane';
 import ForcesChart from './ForcesChart';
+import OutlookChart, { DecidesBar } from './OutlookChart';
 import { ETA, sectorJobs, decompose, sectorSweep } from './model.js';
 import * as km from './km.js';
 import SECTORS from './data/sectors.json';
 import GE from './data/ge.json';
+import OUTLOOK from './data/outlook.json';
 
 const SHOW_KM = false;
 
@@ -664,6 +667,9 @@ export default function DemandCeilingsTool() {
   const [methodsOpen, setMethodsOpen] = useState(false);
 
   const sel = selCode ? SECTORS.find((x) => x.code === selCode) : null;
+  const ol = selCode ? OUTLOOK.find((x) => x.code === selCode) : null;
+  const VERDICT = { loses: 'loses jobs in ≥90% of scenarios', gains: 'gains jobs in ≥90% of scenarios', contested: 'contested: gains in some scenarios, loses in others' };
+  const pcj = (j) => `${j >= 1 ? '+' : ''}${Math.round(100 * (j - 1))}%`;
 
   const set = (k, v, keepSector = false) => {
     setSd((d) => {
@@ -778,7 +784,7 @@ export default function DemandCeilingsTool() {
       <GroupHead>Who gets the gains</GroupHead>
       <Ctl k="chi" lab="Workers' share of capital income χ" min={0} max={1} step={0.01} value={sd.chi} fmt={pct}
         ticks={[{ v: SDEF.chi }]}
-        sub="χ = 1: automation gains reach everyone. χ = 0: wages only. Income paths from our two-group general equilibrium."
+        sub="χ = 1: automation gains reach everyone. χ = 0: wages only. Income paths from our 84-industry general equilibrium; ownership changes how well off workers are far more than where they work."
         onChange={(v) => set('chi', v, true)} />
     </div>
   );
@@ -794,13 +800,61 @@ export default function DemandCeilingsTool() {
         mainScroll
       >
         <div style={{ maxWidth: 880, margin: '0 auto', padding: 'clamp(16px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 26 }}>
-          <div>
+          <section aria-label="Sector outlook" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <p style={{ ...mono11, margin: 0 }}>
+                General equilibrium · 84 US industries · 1,944 scenarios · {methodsBtn('methods')}
+              </p>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(24px, 3.4vw, 32px)', fontWeight: 600, lineHeight: 1.12, letterSpacing: '-0.01em', margin: '4px 0 6px', color: 'var(--ink)' }}>
+                Which industries' jobs AI shrinks, and which it grows
+              </h2>
+              <p style={{ margin: 0, fontSize: 14.5, color: 'var(--ink-2)', maxWidth: '72ch', lineHeight: 1.5 }}>
+                Analytic and creative services (insurance, legal, software, finance) lose jobs under
+                almost any assumption; care, schooling and in-person services gain. AI capability
+                decides how far the losers fall. Demand decides the survivors: as people grow richer
+                they buy more human attention per unit in care and education, while demand for many
+                other services saturates.
+              </p>
+            </div>
+            <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <OutlookChart outlook={OUTLOOK} sectors={SECTORS} selCode={selCode} onPick={pickSector} />
+              <figcaption style={caption}>
+                Each dot is an industry, sized by employment, at its median change in jobs at full AI
+                progress across 1,944 combinations of AI reach, income growth, capital supply,
+                demand estimates and capital ownership; the workforce is held fixed, so these are
+                shifts in each industry's share of jobs. Click a dot to load that industry below;
+                the bar marks its 5–95% range.
+              </figcaption>
+            </figure>
+            {ol && sel && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, border: '1px solid var(--rule)', borderRadius: 4, padding: '12px 14px', background: 'var(--paper-2)' }}>
+                <p style={{ ...mono11, margin: 0 }}>{sel.name} · across all scenarios</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+                  <Tile accent v={pcj(ol.med)} l="median change in jobs at full AI progress" />
+                  <Tile v={`${pcj(ol.p05)} to ${pcj(ol.p95)}`} l="5–95% range across scenarios" />
+                  <Tile v={`${pcj(ol.wc)} / ${pcj(ol.wb)}`} l="median if capital ownership stays concentrated / becomes broad" />
+                </div>
+                <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-2)' }}>
+                  This industry {VERDICT[ol.v]}. What decides where in that range it lands:
+                </p>
+                <DecidesBar o={ol} />
+              </div>
+            )}
+          </section>
+
+          <div style={{ borderTop: '2px solid var(--ink)', paddingTop: 14 }}>
             <p style={{ ...mono11, margin: 0 }}>
-              Sector lens · 84 US industries · {methodsBtn('methods')}
+              Inside one industry · the forces, partial view · {methodsBtn('methods')}
             </p>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(24px, 3.4vw, 32px)', fontWeight: 600, lineHeight: 1.12, letterSpacing: '-0.01em', margin: '4px 0 0', color: 'var(--ink)' }}>
               {secName}{sel ? ` — ${sel.emp}M jobs` : ''}
             </h2>
+            <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--ink-3)', maxWidth: '72ch', lineHeight: 1.5 }}>
+              The levers below rebuild one industry's outcome by hand, holding its wage fixed and
+              taking income growth from the general equilibrium. Use it to see how displacement,
+              cheaper output, demand and the provenance premium combine; the outlook above is the
+              economy-wide answer.
+            </p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }} aria-live="polite">
@@ -888,19 +942,21 @@ export default function DemandCeilingsTool() {
             <div>
               <h3 style={{ ...mono11, fontWeight: 500, margin: '0 0 6px' }}>What to try</h3>
               <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: 0, lineHeight: 1.55 }}>
-                Load limited-service restaurants (saturated, physical) and watch displacement race
-                thin demand growth. Load legal services (analytic, high ε) — demand headroom fights
-                automation of its own tasks. Give any sector a 25% provenance premium. Then drag
-                workers' share of capital income to 0 and watch mass-market sectors starve while
-                elite demand holds up the top of the market.
+                Click legal services in the outlook, then raise AI reach into creative tasks and
+                watch its jobs fall further. Load hospitals and lower the provenance premium to zero
+                to see what the human-attention margin protects. Load full-service restaurants
+                (saturated demand) and move the income elasticity. Drag workers' share of capital
+                income across its range: it changes how well off workers are far more than where
+                they work.
               </p>
             </div>
             <div>
               <h3 style={{ ...mono11, fontWeight: 500, margin: '0 0 6px' }}>Honest caveats</h3>
               <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: 0, lineHeight: 1.55 }}>
-                Partial equilibrium on a general-equilibrium backdrop: the income paths come from
-                our two-group model (calibrated Engel parameters), but each sector's own wages and
-                prices don't feed back. Elasticities are measured 1959–2025 and extrapolated far
+                The outlook is general equilibrium: one wage clears a fixed workforce, so industry
+                changes are shifts in shares of jobs, not unemployment. The lens below it is
+                partial: income paths come from the same general equilibrium, but each industry's
+                own wage and prices don't feed back. Elasticities are measured 1959–2025 and extrapolated far
                 out of sample; task exposure is a judgment dial, not a measurement. The tool
                 illustrates mechanisms — it is not a forecast. Full details in the{' '}
                 {methodsBtn('methods pane')}.
@@ -912,8 +968,8 @@ export default function DemandCeilingsTool() {
 
           <p style={{ fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.6, borderTop: '1px solid var(--rule)', paddingTop: 12, margin: 0 }}>
             Sector data: BEA 2017 detail benchmark × BLS QCEW 2025 employment × OEWS/O*NET task
-            decomposition × PCE Engel slopes (1959–2025), with income paths from the project's
-            two-group general equilibrium. Constants: price elasticity of demand η = {ETA}; AI
+            decomposition × PCE Engel slopes (1959–2025); outlook and income paths from the
+            project's 84-industry general equilibrium. Constants: price elasticity of demand η = {ETA}; AI
             performs an automated task at 10% of the human cost. The aggregate framework builds
             on{' '}
             <a href="https://www.brookings.edu/articles/artificial-intelligence-saturation-and-the-future-of-work/">

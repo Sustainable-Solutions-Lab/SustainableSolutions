@@ -35,8 +35,8 @@ const LEVERS = [
     'The share of each task type AI can perform at full frontier progress. Physical tasks lag cognitive ones while robotics catches up.',
     'Scenario dials, not measurements (defaults: analytic 95%, creative 60%, physical 25%). The gray slider ticks mark these defaults.'],
   ['χ', 'Workers’ share of capital income',
-    'Who receives the automation gains. χ = 1: capital income reaches everyone; χ = 0: wages only. Because spending patterns change with income, this changes which sectors’ demand grows.',
-    'A scenario dial; the income paths it selects come from our two-group general equilibrium.'],
+    'Who receives the automation gains. χ = 1: capital income reaches everyone; χ = 0: wages only. It changes how well off workers are far more than which industries grow.',
+    'A scenario dial; the income paths it selects come from our 84-industry general equilibrium.'],
 ];
 
 export default function MethodsPane({ onClose }) {
@@ -131,11 +131,10 @@ D = sʷ·yʷ^ε + (1−sʷ)·yᵏ^ε`}
 
         <h2 style={h2Style}>The general-equilibrium backdrop</h2>
         <p style={pStyle}>
-          The income paths behind χ come from the project's formal model: a general equilibrium
-          with nonhomothetic preferences calibrated to the measured Engel parameters, in which
-          workers (90% of people) earn the wage bill plus a share χ of capital income and capital
-          owners receive the rest. The sector lens is deliberately partial equilibrium on that
-          backdrop: each sector's own wages and prices do not feed back on the economy.
+          The outlook and the income paths behind χ come from the project's formal model:
+          an 84-industry general equilibrium in which one wage clears a fixed workforce, demand follows nonhomothetic preferences calibrated to the measured Engel parameters, automation moves tasks from labor to capital, and workers (90% of people) earn the wage bill plus a share χ of capital income while capital owners receive the rest. Its industry outlook (the chart at the top of the tool) solves that model at full AI progress across 648 combinations of AI reach into physical, analytic and creative tasks, income growth, capital supply, the human share of spending and the demand estimates, each in three ownership worlds (χ = 0, 0.3, 1): 1,944 outcomes per industry. An industry 'loses' or 'gains' if it does so in at least 90% of them, and the decision bar splits its uncertainty among capability, demand and ownership by a variance decomposition.
+          The sector lens is deliberately partial equilibrium on that backdrop: each sector's
+          own wage and prices do not feed back on the economy.
         </p>
 
         <h2 style={h2Style}>Caveats</h2>

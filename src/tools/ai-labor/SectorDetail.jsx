@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { contours } from 'd3-contour';
 import { Pct, VERDICT, mono11, pctChange, svgText, useTip } from './ui.jsx';
-import { FORCES } from './ForceMix';
+import { FORCES, FORCE_INFO } from './ForceMix';
 
 function Kpi({ v, l }) {
   return (
@@ -32,36 +32,72 @@ export function Scorecard({ s, nOutcomes }) {
   );
 }
 
+const CLASS = {
+  physical: 'a physical-ceiling industry: demand is capped by physical needs, so richer households eventually buy little more of it',
+  time_budget: 'a time-budget industry: demand is capped by the hours people have to spend on it',
+  open_ended: 'an open-ended industry: no natural ceiling on how much people want',
+  provenance: 'a provenance industry: demand that values human performance or origin',
+};
+const pc = (v) => `${Math.round(100 * v)}%`;
+function saturation(e) {
+  if (e < 0.5) return 'saturated (richer households buy little more)';
+  if (e < 1.2) return 'growing roughly with income';
+  return 'income-elastic (demand grows faster than income)';
+}
+
+/** What the model assumes for this industry, by group: shown on hover/tap. */
+export function assumptions(s) {
+  const [lv, pcx] = s.eps_range ?? [s.eps, s.eps];
+  const shield = s.rho_basis === 'measured'
+    ? `${pc(s.rho)} of its spending growth buys human attention per unit, measured from ${s.rho_from?.split(', ')[1] ?? 'natural-unit data'}`
+    : s.rho_basis === 'imputed'
+      ? `${pc(s.rho)} of its spending growth is assumed to buy human attention per unit, assigned from its demand class (not measured for this industry)`
+      : 'no human-attention shield assumed (not measured; its demand class has none)';
+  return {
+    cap: `AI exposure: ${pc(s.expo)} of its tasks automated at full progress under central reach. Task mix ${pc(s.thP)} physical (AI reach 25%), ${pc(s.thA)} analytic (95%), ${pc(s.thC)} creative (60%), from occupation staffing and task content. Reach varies across scenarios.`,
+    dem: `Modelled as ${CLASS[s.ct] ?? 'an industry'}. Income elasticity ${lv.toFixed(2)} in levels, ${pcx.toFixed(2)} price-controlled (66 years of US consumption data): ${saturation(Math.min(lv, pcx))}${Math.abs(lv - pcx) > 0.4 ? '; the two estimates disagree, so the demand estimate matters here' : ''}. ${shield.charAt(0).toUpperCase() + shield.slice(1)}. Growth matters more the more income-elastic it is.`,
+    own: `Workers' share of capital income: none, 30% or all of it across scenarios. This industry's median jobs change runs from ${pctChange(s.worlds.concentrated)} (concentrated) to ${pctChange(s.worlds.broad)} (broad).`,
+  };
+}
+
 export function DecidesBar({ s }) {
+  const tip = useTip();
+  const info = assumptions(s);
   const parts = [
     { k: 'cap', lab: 'AI capability', color: 'var(--spectral-11)' },
     { k: 'dem', lab: 'Demand (growth, saturation)', color: 'var(--positive)' },
     { k: 'own', lab: 'Who owns capital', color: 'var(--brand-orange)' },
   ];
+  const show = (ev, k) => tip.show(ev, info[k]);
   let x = 0;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div ref={tip.ref} style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6 }} onPointerLeave={tip.hide}>
       <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-2)' }}>
         This industry {VERDICT[s.verdict].lab.toLowerCase().replace('≥', 'at least ')}. What decides where in its range it lands:
       </p>
-      <svg viewBox="0 0 640 18" style={{ display: 'block', width: '100%', height: 'auto' }} role="img"
+      <svg viewBox="0 0 640 18" style={{ display: 'block', width: '100%', height: 'auto', cursor: 'help' }} role="img"
         aria-label="Shares of this industry's outcome uncertainty explained by capability, demand and ownership">
         <rect x="0" y="0" width="640" height="18" fill="var(--paper-3)" />
         {parts.map((p) => {
           const w = 640 * Math.max(0, s.shares[p.k] ?? 0);
-          const r = <rect key={p.k} x={x} y="0" width={w} height="18" fill={p.color} />;
+          const r = <rect key={p.k} x={x} y="0" width={w} height="18" fill={p.color}
+            onPointerEnter={(ev) => ev.pointerType !== 'touch' && show(ev, p.k)} onClick={(ev) => show(ev, p.k)} />;
           x += w;
           return r;
         })}
       </svg>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 12.5, color: 'var(--ink-2)' }}>
         {parts.map((p) => (
-          <span key={p.k} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span key={p.k} role="button" tabIndex={0} aria-label={`${p.lab}: ${info[p.k]}`}
+            onPointerEnter={(ev) => ev.pointerType !== 'touch' && show(ev, p.k)} onClick={(ev) => show(ev, p.k)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'help', borderBottom: '1px dotted var(--ink-4)' }}>
             <span style={{ width: 10, height: 10, background: p.color, display: 'inline-block' }} />
             {p.lab} {Math.round(100 * (s.shares[p.k] ?? 0))}%
           </span>
         ))}
       </div>
+      <p style={{ margin: 0, fontSize: 11.5, color: 'var(--ink-4)' }}>Hover or tap a part to see what the model assumes for this industry.</p>
+      {tip.node}
     </div>
   );
 }
@@ -76,24 +112,28 @@ function fmtMult(lnv) {
 /** The selected industry's exact GE force decomposition (same forces and
  *  colours as the skyline), bars adding in logs to the net change. */
 export function ForceBars({ s, growth }) {
+  const tip = useTip();
   const f = s.by_growth[growth].forces;
-  const rows = [...FORCES.map(([k, lab, color]) => [lab, f[k], color]), ['Net change in jobs', f.lnJ, null]];
+  const rows = [...FORCES.map(([k, lab, color]) => [lab, f[k], color, k]), ['Net change in jobs', f.lnJ, null, 'net']];
   const W = 640, rh = 26, pad = 8, top = 10, x0 = 210, x1 = W - 70;
   const H = top + rows.length * (rh + pad) + 6;
   const span = Math.max(0.4, ...rows.map((r) => Math.abs(r[1])));
   const bx = (v) => x0 + (x1 - x0) / 2 + (v / (span * 1.08)) * ((x1 - x0) / 2);
   return (
+    <div ref={tip.ref} style={{ position: 'relative' }} onPointerLeave={tip.hide}>
     <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', height: 'auto' }}
       aria-label="This industry's change in jobs split into the forces behind it">
       <line x1={bx(0)} y1={top - 4} x2={bx(0)} y2={H - 4} stroke="var(--rule-strong)" />
-      {rows.map(([lab, v, color], i) => {
+      {rows.map(([lab, v, color, key], i) => {
         const y = top + i * (rh + pad);
         const net = color === null;
         return (
           <g key={lab}>
             {net && <line x1={x0} x2={x1 + 40} y1={y - pad / 2} y2={y - pad / 2} stroke="var(--rule)" />}
             <text x={x0 - 10} y={y + rh / 2 + 4} textAnchor="end"
-              style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--ink-2)', fontWeight: net ? 600 : 400 }}>{lab}</text>
+              onPointerEnter={(ev) => ev.pointerType !== 'touch' && tip.show(ev, FORCE_INFO[key])}
+              onClick={(ev) => tip.show(ev, FORCE_INFO[key])}
+              style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--ink-2)', fontWeight: net ? 600 : 400, cursor: 'help', textDecoration: 'underline dotted', textDecorationColor: 'var(--ink-4)' }}>{lab}</text>
             {net
               ? <circle cx={bx(v)} cy={y + rh / 2} r="6" fill={v >= 0 ? 'var(--positive)' : 'var(--negative)'} stroke="var(--paper)" />
               : <rect x={Math.min(bx(0), bx(v))} y={y + 4} width={Math.max(Math.abs(bx(v) - bx(0)), 1.5)} height={rh - 8} rx="3" fill={color} />}
@@ -111,6 +151,8 @@ export function ForceBars({ s, growth }) {
         );
       })}
     </svg>
+    {tip.node}
+    </div>
   );
 }
 

@@ -104,7 +104,8 @@ export default function OutlookChart({ sectors, metric, growth, selCode, onPick 
           <line x1={Math.max(sx(sel.v[0]), M.l)} x2={Math.min(sx(sel.v[2]), W - M.r)} y1={sel.y} y2={sel.y} stroke={sel.color}
             strokeWidth="3" strokeOpacity="0.45" strokeLinecap="round" />
         )}
-        {pts.map((p) => (
+        {/* selected circle drawn last so it sits on top */}
+        {[...pts.filter((p) => p.s.code !== selCode), ...(sel ? [sel] : [])].map((p) => (
           <circle key={p.s.code} cx={p.x} cy={p.y} r={p.r} fill={p.color}
             fillOpacity={p.s.code === selCode ? 1 : 0.55}
             stroke={p.s.code === selCode ? 'var(--ink)' : 'var(--paper)'}

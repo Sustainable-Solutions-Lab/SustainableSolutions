@@ -111,6 +111,11 @@ export default function MethodsPane({ onClose }) {
           grid. Scatter colours, the forces and the contour use the central assumptions.
         </p>
 
+        <h2 style={h2Style}>Wages and prices</h2>
+        <p style={pStyle}>
+          Real wages are wages deflated by a consumer price index, so they already include the fall in prices that automation brings. Deflating instead by what workers themselves buy, which leans toward care and housing whose prices fall least, lowers the central real wage only slightly (0.73 rather than 0.74 of today's). The index covers existing industries' output only: new goods, better quality and free AI services never appear in it, so the decline in living standards is likely overstated on that count. Worker welfare also counts workers' share of capital income, which is why it can hold up while the real wage falls.
+        </p>
+
         <h2 style={h2Style}>The inputs, and where each value comes from</h2>
         <dl style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
           {INPUTS.map(([sym, name, what, source]) => (

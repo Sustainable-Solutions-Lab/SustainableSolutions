@@ -277,7 +277,7 @@ function KmSection() {
 /* ---------------- the tool ---------------- */
 
 export default function DemandCeilingsTool() {
-  const DEFAULT = TOOL.sectors.find((s) => s.code === '541100') ? '541100' : TOOL.sectors[0].code;
+  const DEFAULT = TOOL.sectors.find((s) => s.code === '622000') ? '622000' : TOOL.sectors[0].code;
   const [selCode, setSelCode] = useState(DEFAULT);
   const [metric, setMetric] = useState('jobs');
   const [growth, setGrowth] = useState('none');

@@ -1,8 +1,9 @@
 /**
  * AI and labor: how AI changes jobs and pay across 84 US industries, all in
  * general equilibrium at full AI progress. All industries at once (the range
- * of impacts, why industries differ, what drives each industry), then one
- * industry in detail (scorecard, forces, contour). Data: ./data/tool.json,
+ * of impacts, what drives each industry), then one industry in detail
+ * (industry picker, scorecard, forces, contour over any two assumptions).
+ * A plain scrolling page: no side rail. Data: ./data/tool.json,
  * from the ai-labor research repo (web/build_tool_data.py).
  *
  * The K&M aggregate panel is built but hidden (SHOW_KM) per SD 2026-10-05
@@ -10,13 +11,11 @@
  * to restore it at the bottom.
  */
 import { useMemo, useRef, useState } from 'react';
-import ToolShell from '../_shell/ToolShell';
 import MethodsPane from './MethodsPane';
 import OutlookChart from './OutlookChart';
-import DriversGrid from './DriversGrid';
 import ForceMix from './ForceMix';
 import { Scorecard, DecidesBar, ForceBars, GEContour } from './SectorDetail';
-import { Chips, ChangeLegend, shortName } from './ui.jsx';
+import { Chips, shortName } from './ui.jsx';
 import * as km from './km.js';
 import SECTORS from './data/sectors.json';
 import TOOL from './data/tool.json';
@@ -288,11 +287,6 @@ export default function DemandCeilingsTool() {
   const tsel = TOOL.sectors.find((x) => x.code === selCode) ?? null;
   const emp = Object.fromEntries(SECTORS.map((x) => [x.code, x.emp]));
   const nAll = TOOL.meta.n_outcomes;
-  const span = useMemo(() => {
-    const key = metric === 'jobs' ? 'jobs_central' : 'wage_central';
-    const m = Math.max(...TOOL.sectors.map((x) => Math.abs(x.by_growth[growth][key] - 1)));
-    return Math.ceil(m * 4) / 4;
-  }, [metric, growth]);
   const what = metric === 'jobs' ? 'jobs' : 'average real wage';
   const nCase = metric === 'jobs' ? nAll / 2 : nAll / 6;
   const groups = useMemo(() => {
@@ -312,35 +306,13 @@ export default function DemandCeilingsTool() {
     </button>
   );
 
-  const rail = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <label htmlFor="dc-sector" style={{ ...mono11, fontWeight: 500 }}>Sector</label>
-      <select id="dc-sector" value={selCode} onChange={(e) => setSelCode(e.target.value)}
-        style={{ font: '13px/1.4 var(--font-sans)', color: 'var(--ink)', background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 2, padding: '6px 8px', maxWidth: '100%' }}>
-        {['physical', 'time_budget', 'open_ended', 'provenance'].map((ct) =>
-          groups[ct] ? (
-            <optgroup key={ct} label={CT_NAMES[ct]}>
-              {groups[ct].map((s) => (
-                <option key={s.code} value={s.code}>{s.name} ({s.emp}M)</option>
-              ))}
-            </optgroup>
-          ) : null
-        )}
-      </select>
-      <div style={{ fontSize: 11.5, color: 'var(--ink-4)', lineHeight: 1.35 }}>
-        Choose a sector here or tap any circle or column in the charts; it loads in the detail
-        section. All results are model outcomes at full AI progress. {methodsBtn('Methods')}
-      </div>
-    </div>
-  );
-
   return (
-    <div className="dc-tool" style={{ height: '100%', position: 'relative' }}>
+    <div className="dc-tool" style={{ height: '100%', position: 'relative', overflowY: 'auto', background: 'var(--paper)' }}>
       {methodsOpen && <MethodsPane onClose={() => setMethodsOpen(false)} />}
-      <ToolShell eyebrow="Interactive model" title="AI and labor" rail={rail} headerSummary={false} mainScroll>
         <div style={{ maxWidth: 880, margin: '0 auto', padding: 'clamp(16px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 22 }}>
           <div>
-            <p style={{ ...mono11, margin: 0 }}>
+            <p style={{ ...mono11, margin: 0 }}>Interactive model · AI and labor</p>
+            <p style={{ ...mono11, margin: '10px 0 0' }}>
               All industries at once · general equilibrium · 84 US industries · full AI progress · {methodsBtn('methods')}
             </p>
             <h2 style={{ ...h2, fontSize: 'clamp(24px, 3.4vw, 32px)' }}>How AI changes jobs and pay across industries</h2>
@@ -384,22 +356,6 @@ export default function DemandCeilingsTool() {
             </p>
           </section>
 
-          <section aria-label="Why industries differ" style={sectionRule}>
-            <p style={{ ...mono11, margin: 0 }}>Why industries differ</p>
-            <h3 style={figTitle}>Exposure to AI and demand for human attention explain most of it</h3>
-            <DriversGrid sectors={TOOL.sectors} metric={metric} growth={growth} span={span}
-              selCode={selCode} onPick={setSelCode} />
-            <ChangeLegend span={span} label={`Change in ${what}, central assumptions`} />
-            <p style={caption}>
-              Each panel places every industry by two of its measured characteristics, coloured by
-              its change in {what} at full AI progress under central assumptions. Industries most
-              exposed to AI and least shielded by demand for human attention lose most. With extra
-              growth the income elasticity of demand matters far more: switch the growth chip and
-              watch the second and third panels. The shield is measured for 21 industries and
-              assigned by demand class elsewhere, hence its bands.
-            </p>
-          </section>
-
           <section aria-label="What drives each industry" style={sectionRule}>
             <p style={{ ...mono11, margin: 0 }}>What drives each industry</p>
             <h3 style={figTitle}>The forces behind every industry's change in jobs</h3>
@@ -417,7 +373,21 @@ export default function DemandCeilingsTool() {
             <section ref={detailRef} aria-label="One industry in detail"
               style={{ borderTop: '2px solid var(--ink)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12, scrollMarginTop: 60 }}>
               <p style={{ ...mono11, margin: 0 }}>One industry in detail</p>
-              <h2 style={{ ...h2, margin: '2px 0 0' }}>{tsel.name}{emp[tsel.code] ? ` — ${emp[tsel.code]}M jobs` : ''}</h2>
+              <label htmlFor="dc-sector" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>Industry (or tap any circle or column above)</span>
+                <select id="dc-sector" value={selCode} onChange={(e) => setSelCode(e.target.value)}
+                  style={{ font: '600 clamp(18px, 2.6vw, 24px)/1.25 var(--font-serif)', color: 'var(--ink)', background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 2, padding: '6px 8px', maxWidth: '100%' }}>
+                  {['physical', 'time_budget', 'open_ended', 'provenance'].map((ct) =>
+                    groups[ct] ? (
+                      <optgroup key={ct} label={CT_NAMES[ct]}>
+                        {groups[ct].map((x) => (
+                          <option key={x.code} value={x.code}>{x.name} ({x.emp}M jobs)</option>
+                        ))}
+                      </optgroup>
+                    ) : null
+                  )}
+                </select>
+              </label>
               <Scorecard s={tsel} nOutcomes={nAll} />
               <DecidesBar s={tsel} />
               <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -430,12 +400,13 @@ export default function DemandCeilingsTool() {
                 </figcaption>
               </figure>
               <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <h3 style={{ ...figTitle, fontSize: 16 }}>A bet on capability or on growth</h3>
-                <GEContour s={tsel} />
+                <h3 style={{ ...figTitle, fontSize: 16 }}>How this industry's {what} responds to any two assumptions</h3>
+                <GEContour s={tsel} metric={metric} growth={growth} />
                 <figcaption style={caption}>
-                  Change in this industry's jobs across productivity growth and AI reach, other
-                  parameters at central values. Bands running sideways mean AI capability decides
-                  the outcome; bands running up and down mean growth does.
+                  Change in this industry's {what} at full AI progress across the two assumptions you
+                  choose, all others at central values (growth follows the chip above unless it is on
+                  an axis). Bands running parallel to an axis mean the other assumption decides the
+                  outcome.
                 </figcaption>
               </figure>
             </section>
@@ -446,9 +417,10 @@ export default function DemandCeilingsTool() {
               <h3 style={{ ...mono11, fontWeight: 500, margin: '0 0 6px' }}>What to try</h3>
               <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: 0, lineHeight: 1.55 }}>
                 Switch between jobs and average wage, then turn on growth: pay falls everywhere
-                without it and rises everywhere with it. Tap legal services: AI reach into creative
-                work decides it. Tap full-service restaurants: growth decides it, through saturated
-                food demand. Tap hospitals: the human-attention shield nearly cancels displacement.
+                without it and rises everywhere with it. Pick legal services and put creative reach
+                against growth on the contour: creative reach decides it. Pick full-service
+                restaurants: growth decides it, through saturated food demand. Pick hospitals: the
+                human-attention shield nearly cancels displacement.
               </p>
             </div>
             <div>
@@ -475,7 +447,6 @@ export default function DemandCeilingsTool() {
             data provenance.
           </p>
         </div>
-      </ToolShell>
     </div>
   );
 }

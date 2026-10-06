@@ -1,7 +1,9 @@
 /**
- * AI and labor — which industries' jobs AI shrinks and grows (general
- * equilibrium outlook, the paper's Fig. 1), then the forces inside one
- * industry (sector lens). Bespoke tool (no _engine/_map); standard ToolShell chrome,
+ * AI and labor: how AI changes jobs and pay across 84 US industries. Sections,
+ * all general equilibrium at full AI progress: the range of impacts (jobs or
+ * average wage), why industries differ (driver scatters), all industries at
+ * once (force mix), one industry in detail (scorecard, tornado, contour);
+ * then a hands-on sector lens driven by the rail sliders. Bespoke tool (no _engine/_map); standard ToolShell chrome,
  * rail = sector picker + levers, main = scrolling results.
  *
  * Models live in ./model.js (sector lens; verified against the ai-labor
@@ -13,16 +15,18 @@
  * to restore it below the sector lens.
  */
 import { useMemo, useRef, useState } from 'react';
-import { contours } from 'd3-contour';
 import ToolShell from '../_shell/ToolShell';
 import MethodsPane from './MethodsPane';
-import ForcesChart from './ForcesChart';
-import OutlookChart, { DecidesBar } from './OutlookChart';
+import OutlookChart from './OutlookChart';
+import DriversGrid from './DriversGrid';
+import ForceMix from './ForceMix';
+import { Scorecard, DecidesBar, Tornado, GEContour } from './SectorDetail';
+import { Chips, ChangeLegend } from './ui.jsx';
 import { ETA, sectorJobs, decompose, sectorSweep } from './model.js';
 import * as km from './km.js';
 import SECTORS from './data/sectors.json';
 import GE from './data/ge.json';
-import OUTLOOK from './data/outlook.json';
+import TOOL from './data/tool.json';
 
 const SHOW_KM = false;
 
@@ -334,161 +338,6 @@ function DecompChart({ dec }) {
   );
 }
 
-/* ---------------- two-lever contour sweep ---------------- */
-
-const SWEEP_VARS = {
-  a: { lab: 'AI frontier progress', min: 0, max: 1, fmt: pct },
-  eps: { lab: 'Demand ceiling ε', min: -0.5, max: 2.5, fmt: (v) => v.toFixed(2) },
-  phi: { lab: 'Provenance premium φ', min: 0, max: 0.6, fmt: pct },
-  lint: { lab: 'Labor intensity ℓ', min: 0.05, max: 0.85, fmt: pct },
-  chi: { lab: "Workers' capital share χ", min: 0, max: 1, fmt: pct },
-  gA: { lab: 'AI reach, analytic', min: 0, max: 1, fmt: pct },
-  gC: { lab: 'AI reach, creative', min: 0, max: 1, fmt: pct },
-  gP: { lab: 'AI reach, physical', min: 0, max: 1, fmt: pct },
-};
-// Spectral diverging fills around no change (the lab's signature palette used
-// as a diverging scale); band edges in ln(jobs index), labeled as percents.
-const C_EDGES = [-1.204, -0.693, -0.357, -0.105, 0.095, 0.336, 0.693, 1.194];
-const C_LABELS = ['−70%', '−50%', '−30%', '−10%', '+10%', '+40%', '+100%', '+230%'];
-const C_FILLS = ['#9E0142', '#D53E4F', '#F46D43', '#FDAE61', '#FFFFBF',
-                 '#E6F598', '#ABDDA4', '#66C2A5', '#3288BD'];
-
-function ContourChart({ sd, astar }) {
-  const [cx, setCx] = useState('a');
-  const [cy, setCy] = useState('eps');
-  const [tip, setTip] = useState(null);
-  const wrapRef = useRef(null);
-  const svgRef = useRef(null);
-
-  const W = 640, H = 400, M = { l: 60, r: 148, t: 14, b: 48 };
-  const pw = W - M.l - M.r, ph = H - M.t - M.b;
-  const NX = 49, NY = 37;
-  const X = SWEEP_VARS[cx], Y = SWEEP_VARS[cy];
-
-  const evalJ = (xv, yv) => {
-    const dial = { ...sd };
-    let a = astar;
-    if (cx === 'a') a = xv; else dial[cx] = xv;
-    if (cy === 'a') a = yv; else dial[cy] = yv;
-    return sectorJobs(GE, a, dial).J;
-  };
-
-  const { fillPaths, zeroPath } = useMemo(() => {
-    const vals = new Float64Array(NX * NY);
-    for (let j = 0; j < NY; j++) {
-      const yv = Y.min + (j / (NY - 1)) * (Y.max - Y.min);
-      for (let i = 0; i < NX; i++) {
-        const xv = X.min + (i / (NX - 1)) * (X.max - X.min);
-        vals[j * NX + i] = Math.log(evalJ(xv, yv));
-      }
-    }
-    const toPath = (mp) => mp.coordinates.map((poly) =>
-      poly.map((ring) =>
-        ring.map(([gx, gy], k) =>
-          `${k ? 'L' : 'M'}${(M.l + (gx / NX) * pw).toFixed(1)},${(M.t + ph - (gy / NY) * ph).toFixed(1)}`
-        ).join('') + 'Z'
-      ).join('')
-    ).join('');
-    const gen = contours().size([NX, NY]);
-    return {
-      fillPaths: gen.thresholds(C_EDGES)(vals).map(toPath),
-      zeroPath: toPath(gen.thresholds([0])(vals)[0]),
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sd, astar, cx, cy]);
-
-  const pxx = (v) => M.l + ((v - X.min) / (X.max - X.min)) * pw;
-  const pxy = (v) => M.t + ph - ((v - Y.min) / (Y.max - Y.min)) * ph;
-  const curX = cx === 'a' ? astar : sd[cx];
-  const curY = cy === 'a' ? astar : sd[cy];
-
-  const onMove = (ev) => {
-    const box = svgRef.current?.getBoundingClientRect();
-    const fig = wrapRef.current?.getBoundingClientRect();
-    if (!box || !fig) return;
-    const fx = ((ev.clientX - box.left) / box.width) * W;
-    const fy = ((ev.clientY - box.top) / box.height) * H;
-    if (fx < M.l || fx > W - M.r || fy < M.t || fy > H - M.b) return setTip(null);
-    const xv = X.min + ((fx - M.l) / pw) * (X.max - X.min);
-    const yv = Y.min + ((M.t + ph - fy) / ph) * (Y.max - Y.min);
-    const J = evalJ(xv, yv);
-    let x = ev.clientX - fig.left + 14;
-    if (x > fig.width - 250) x -= 270;
-    setTip({
-      x, y: ev.clientY - fig.top - 10,
-      text: `${X.lab.toLowerCase()} ${X.fmt(xv)}  ·  ${Y.lab.toLowerCase()} ${Y.fmt(yv)}  →  jobs ${fmtMult(Math.log(J))}`,
-    });
-  };
-
-  const axisTicks = (V, n = 5) =>
-    Array.from({ length: n }, (_, i) => V.min + (i / (n - 1)) * (V.max - V.min));
-  const selStyle = { font: '12px/1.4 var(--font-sans)', color: 'var(--ink)', background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 2, padding: '3px 6px' };
-  const opts = (other, cur) => Object.entries(SWEEP_VARS).map(([k, v]) => (
-    <option key={k} value={k} disabled={k === other && k !== cur}>{v.lab}</option>
-  ));
-
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-        <label style={{ fontSize: 12.5, color: 'var(--ink-2)', display: 'flex', gap: 6, alignItems: 'center' }}>
-          across
-          <select value={cx} onChange={(e) => setCx(e.target.value)} style={selStyle} aria-label="Horizontal sweep variable">
-            {opts(cy, cx)}
-          </select>
-        </label>
-        <label style={{ fontSize: 12.5, color: 'var(--ink-2)', display: 'flex', gap: 6, alignItems: 'center' }}>
-          against
-          <select value={cy} onChange={(e) => setCy(e.target.value)} style={selStyle} aria-label="Vertical sweep variable">
-            {opts(cx, cy)}
-          </select>
-        </label>
-      </div>
-      <div ref={wrapRef} style={{ position: 'relative' }} onPointerMove={onMove} onPointerLeave={() => setTip(null)}>
-        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', height: 'auto' }}
-          aria-label={`Jobs change versus today across ${X.lab} and ${Y.lab}; dashed lines mark the current slider values`}>
-          <rect x={M.l} y={M.t} width={pw} height={ph} fill={C_FILLS[0]} />
-          {fillPaths.map((d, i) => d && <path key={i} d={d} fill={C_FILLS[i + 1]} />)}
-          {zeroPath && <path d={zeroPath} fill="none" stroke="var(--ink)" strokeWidth="1.5" />}
-          <rect x={M.l} y={M.t} width={pw} height={ph} fill="none" stroke="var(--rule-strong)" />
-          {/* dashed crosshair at the current slider values */}
-          <line x1={pxx(curX)} y1={M.t} x2={pxx(curX)} y2={M.t + ph} stroke="var(--ink)" strokeWidth="1.1" strokeDasharray="3 4" />
-          <line x1={M.l} y1={pxy(curY)} x2={M.l + pw} y2={pxy(curY)} stroke="var(--ink)" strokeWidth="1.1" strokeDasharray="3 4" />
-          <circle cx={pxx(curX)} cy={pxy(curY)} r="5" fill="var(--accent-brand)" stroke="var(--paper)" strokeWidth="1.5" />
-          {axisTicks(X).map((t) => (
-            <text key={t} x={pxx(t)} y={H - M.b + 16} textAnchor="middle" style={svgText}>{X.fmt(t)}</text>
-          ))}
-          {axisTicks(Y).map((t) => (
-            <text key={t} x={M.l - 7} y={pxy(t) + 3.5} textAnchor="end" style={svgText}>{Y.fmt(t)}</text>
-          ))}
-          <text x={M.l + pw / 2} y={H - 6} textAnchor="middle" style={svgLabel}>{X.lab}</text>
-          <text transform={`translate(14 ${M.t + ph / 2}) rotate(-90)`} textAnchor="middle" style={svgLabel}>{Y.lab}</text>
-          {/* legend */}
-          {C_FILLS.map((c, i) => {
-            const lh = ph / C_FILLS.length;
-            const y = M.t + ph - (i + 1) * lh;
-            return (
-              <g key={c}>
-                <rect x={W - M.r + 18} y={y} width={14} height={lh - 1} fill={c} />
-                {i < C_EDGES.length && (
-                  <text x={W - M.r + 38} y={y + 3.5} style={svgText}>{C_LABELS[i]}</text>
-                )}
-              </g>
-            );
-          })}
-          <text x={W - M.r + 18} y={M.t - 2} style={{ ...svgLabel, fontSize: 11 }}>jobs vs today</text>
-          <line x1={W - M.r + 18} y1={M.t + ph + 32} x2={W - M.r + 32} y2={M.t + ph + 32} stroke="var(--ink)" strokeWidth="1.5" />
-          <text x={W - M.r + 38} y={M.t + ph + 35.5} style={svgText}>no change</text>
-        </svg>
-        {tip && (
-          <div style={{ position: 'absolute', left: tip.x, top: tip.y, pointerEvents: 'none', background: 'var(--ink)', color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 11.5, lineHeight: 1.5, padding: '6px 9px', borderRadius: 2, whiteSpace: 'nowrap', zIndex: 4 }}>
-            {tip.text}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ---------------- K&M aggregate panel (hidden behind SHOW_KM) ---------------- */
 
 const KM_SLIDERS = [
@@ -661,18 +510,29 @@ function KmSection() {
 /* ---------------- the tool ---------------- */
 
 export default function DemandCeilingsTool() {
+  const DEFAULT = SECTORS.find((s) => s.code === '541100') ? '541100' : SECTORS[0]?.code ?? '';
   const [sd, setSd] = useState(() => {
-    const def = SECTORS.find((s) => s.code === '722110') ?? SECTORS[0];
+    const def = SECTORS.find((s) => s.code === DEFAULT) ?? SECTORS[0];
     return { ...SDEF, eps: def.eps, lint: def.lint, thP: def.thP, thA: def.thA, thC: def.thC };
   });
-  const [selCode, setSelCode] = useState(SECTORS.find((s) => s.code === '722110') ? '722110' : SECTORS[0]?.code ?? '');
+  const [selCode, setSelCode] = useState(DEFAULT);
+  const [metric, setMetric] = useState('jobs');
+  const [growth, setGrowth] = useState('none');
   const [astar, setAstar] = useState(0.6);
   const [methodsOpen, setMethodsOpen] = useState(false);
 
   const sel = selCode ? SECTORS.find((x) => x.code === selCode) : null;
-  const ol = selCode ? OUTLOOK.find((x) => x.code === selCode) : null;
-  const VERDICT = { loses: 'loses jobs in ≥90% of scenarios', gains: 'gains jobs in ≥90% of scenarios', contested: 'contested: gains in some scenarios, loses in others' };
-  const pcj = (j) => `${j >= 1 ? '+' : ''}${Math.round(100 * (j - 1))}%`;
+  const tsel = selCode ? TOOL.sectors.find((x) => x.code === selCode) : null;
+  // colour span for the driver scatters: the largest central change, rounded up
+  const span = useMemo(() => {
+    const key = metric === 'jobs' ? 'jobs_central' : 'wage_central';
+    const m = Math.max(...TOOL.sectors.map((x) => Math.abs(x.by_growth[growth][key] - 1)));
+    return Math.ceil(m * 4) / 4;
+  }, [metric, growth]);
+  const what = metric === 'jobs' ? 'jobs' : 'average real wage';
+  const h2 = { fontFamily: 'var(--font-serif)', fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 600, lineHeight: 1.15, letterSpacing: '-0.01em', margin: '4px 0 6px', color: 'var(--ink)' };
+  const lede = { margin: 0, fontSize: 14.5, color: 'var(--ink-2)', maxWidth: '72ch', lineHeight: 1.5 };
+  const sectionRule = { borderTop: '2px solid var(--ink)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 };
 
   const set = (k, v, keepSector = false) => {
     setSd((d) => {
@@ -745,8 +605,11 @@ export default function DemandCeilingsTool() {
         )}
       </select>
       <div style={{ fontSize: 11.5, color: 'var(--ink-4)', lineHeight: 1.35 }}>
-        Cardinal tick marks under the sliders show this sector's measured values; gray ticks
-        mark scenario defaults. {methodsBtn('Methods')}
+        Choosing a sector here or tapping one in any chart loads it everywhere. The sliders
+        below drive only the hands-on lens at the bottom of the page ("Build one industry's
+        outcome by hand"); the charts above it are fixed model results at full AI progress.
+        Cardinal ticks mark the sector's measured values; gray ticks mark scenario defaults.{' '}
+        {methodsBtn('Methods')}
       </div>
 
       <GroupHead>What the sector sells</GroupHead>
@@ -803,60 +666,110 @@ export default function DemandCeilingsTool() {
         mainScroll
       >
         <div style={{ maxWidth: 880, margin: '0 auto', padding: 'clamp(16px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 26 }}>
-          <section aria-label="Sector outlook" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div>
-              <p style={{ ...mono11, margin: 0 }}>
-                General equilibrium · 84 US industries · 1,944 scenarios · {methodsBtn('methods')}
-              </p>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(24px, 3.4vw, 32px)', fontWeight: 600, lineHeight: 1.12, letterSpacing: '-0.01em', margin: '4px 0 6px', color: 'var(--ink)' }}>
-                Which industries' jobs AI shrinks, and which it grows
-              </h2>
-              <p style={{ margin: 0, fontSize: 14.5, color: 'var(--ink-2)', maxWidth: '72ch', lineHeight: 1.5 }}>
-                Analytic and creative services (insurance, legal, software, finance) lose jobs under
-                almost any assumption; care, schooling and in-person services gain. AI capability
-                decides how far the losers fall. Demand decides the survivors: as people grow richer
-                they buy more human attention per unit in care and education, while demand for many
-                other services saturates.
-              </p>
-            </div>
-            <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <OutlookChart outlook={OUTLOOK} sectors={SECTORS} selCode={selCode} onPick={pickSector} />
-              <figcaption style={caption}>
-                Each dot is an industry, sized by employment, at its median change in jobs at full AI
-                progress across 1,944 combinations of AI reach, income growth, capital supply,
-                demand estimates and capital ownership; the workforce is held fixed, so these are
-                shifts in each industry's share of jobs. Click a dot to load that industry below;
-                the bar marks its 5–95% range.
-              </figcaption>
-            </figure>
-            {ol && sel && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, border: '1px solid var(--rule)', borderRadius: 4, padding: '12px 14px', background: 'var(--paper-2)' }}>
-                <p style={{ ...mono11, margin: 0 }}>{sel.name} · across all scenarios</p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-                  <Tile accent v={pcj(ol.med)} l="median change in jobs at full AI progress" />
-                  <Tile v={`${pcj(ol.p05)} to ${pcj(ol.p95)}`} l="5–95% range across scenarios" />
-                  <Tile v={`${pcj(ol.wc)} / ${pcj(ol.wb)}`} l="median if capital ownership stays concentrated / becomes broad" />
-                </div>
-                <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-2)' }}>
-                  This industry {VERDICT[ol.v]}. What decides where in that range it lands:
-                </p>
-                <DecidesBar o={ol} />
-              </div>
-            )}
+          <div>
+            <p style={{ ...mono11, margin: 0 }}>
+              General equilibrium · 84 US industries · full AI progress · {methodsBtn('methods')}
+            </p>
+            <h2 style={{ ...h2, fontSize: 'clamp(24px, 3.4vw, 32px)' }}>How AI changes jobs and pay across industries</h2>
+            <p style={lede}>
+              Analytic and creative services (insurance, legal, software, finance) lose jobs under
+              almost any assumption; care, schooling and in-person services gain. AI capability
+              decides how far the losers fall. Demand decides the survivors: as people grow richer
+              they buy more human attention per unit in care and education. Pay is a separate
+              story: unless AI also multiplies output, average real wages fall in every industry.
+            </p>
+          </div>
+
+          <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--paper)', padding: '8px 0', borderBottom: '1px solid var(--rule)', display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Chips label="Show" value={metric} onChange={setMetric}
+              options={[['jobs', 'Jobs'], ['wage', 'Average wage']]} />
+            <Chips label="Growth" value={growth} onChange={setGrowth}
+              options={[['none', 'No extra growth'], ['growth', 'Output ×3.5']]} />
+          </div>
+
+          <section aria-label="The range of impacts" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <p style={{ ...mono11, margin: 0 }}>The range of impacts</p>
+            <h3 style={figTitle}>
+              {metric === 'jobs' ? 'Some industries shed jobs and others absorb them' : (growth === 'none' ? 'Without new growth, pay falls everywhere' : 'With growth, pay rises everywhere')}
+            </h3>
+            <OutlookChart sectors={TOOL.sectors} metric={metric} growth={growth} selCode={selCode} onPick={pickSector} />
+            <p style={caption}>
+              Each dot is an industry, sized by employment, at its median change in {what} at full
+              AI progress across the model's scenarios for this growth case; lanes group industries
+              by whether they lose or gain jobs across all scenarios. Tap a dot to select it (the bar
+              shows its 5–95% range). Jobs are shares of a fixed workforce; wages differ by industry
+              because workers move between industries imperfectly.
+            </p>
           </section>
+
+          <section aria-label="Why industries differ" style={sectionRule}>
+            <p style={{ ...mono11, margin: 0 }}>Why industries differ</p>
+            <h3 style={figTitle}>Exposure to AI and demand for human attention explain most of it</h3>
+            <DriversGrid sectors={TOOL.sectors} metric={metric} growth={growth} span={span}
+              selCode={selCode} onPick={pickSector} />
+            <ChangeLegend span={span} label={`Change in ${what}, central assumptions`} />
+            <p style={caption}>
+              Each panel places every industry by two of its measured characteristics, coloured by
+              its change in {what} at full AI progress under central assumptions. Industries most
+              exposed to AI and least shielded by demand for human attention lose most. With extra
+              growth, the income elasticity of demand matters far more: switch the growth chip and
+              watch the middle panels. The shield is measured for 21 industries and assigned by
+              demand class elsewhere, hence its bands.
+            </p>
+          </section>
+
+          <section aria-label="All industries at once" style={sectionRule}>
+            <p style={{ ...mono11, margin: 0 }}>All industries at once</p>
+            <h3 style={figTitle}>What drives each industry's change in jobs</h3>
+            <ForceMix sectors={TOOL.sectors} growth={growth} selCode={selCode} onPick={pickSector} />
+            <p style={caption}>
+              Each column is an industry, width proportional to its wage bill, ordered by its net
+              change in jobs (central assumptions). AI taking over physical, analytic or creative
+              tasks pushes jobs down; the human-attention shield, cheaper output, a shift toward
+              labor as it gets cheaper, and spending shifts push them up. The parts add up exactly
+              to the net change (the line). Tap a column to select the industry.
+            </p>
+          </section>
+
+          {tsel && (
+            <section aria-label="One industry in detail" style={sectionRule}>
+              <p style={{ ...mono11, margin: 0 }}>One industry in detail</p>
+              <h2 style={{ ...h2, margin: '2px 0 0' }}>{tsel.name}{sel ? ` — ${sel.emp}M jobs` : ''}</h2>
+              <Scorecard s={tsel} />
+              <DecidesBar s={tsel} />
+              <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <h3 style={{ ...figTitle, fontSize: 16 }}>What moves this industry's {what} most</h3>
+                <Tornado s={tsel} metric={metric} />
+                <figcaption style={caption}>
+                  Median {what} at full AI progress when each model parameter sits at its lowest
+                  (open circle) or highest (filled) value, across all other scenarios; longest bars
+                  first. {metric === 'wage' ? 'Ownership is not shown for wages: the wage ensemble holds it at today-like levels.' : ''}
+                </figcaption>
+              </figure>
+              <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <h3 style={{ ...figTitle, fontSize: 16 }}>A bet on capability or on growth</h3>
+                <GEContour s={tsel} />
+                <figcaption style={caption}>
+                  Change in this industry's jobs across productivity growth and AI reach, other
+                  parameters at central values. Bands running sideways mean AI capability decides
+                  the outcome; bands running up and down mean growth does.
+                </figcaption>
+              </figure>
+            </section>
+          )}
 
           <div style={{ borderTop: '2px solid var(--ink)', paddingTop: 14 }}>
             <p style={{ ...mono11, margin: 0 }}>
-              Inside one industry · the forces, partial view · {methodsBtn('methods')}
+              Build one industry's outcome by hand · partial view · {methodsBtn('methods')}
             </p>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(24px, 3.4vw, 32px)', fontWeight: 600, lineHeight: 1.12, letterSpacing: '-0.01em', margin: '4px 0 0', color: 'var(--ink)' }}>
+            <h2 style={{ ...h2, margin: '4px 0 0' }}>
               {secName}{sel ? ` — ${sel.emp}M jobs` : ''}
             </h2>
             <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--ink-3)', maxWidth: '72ch', lineHeight: 1.5 }}>
-              The levers below rebuild one industry's outcome by hand, holding its wage fixed and
-              taking income growth from the general equilibrium. Use it to see how displacement,
-              cheaper output, demand and the provenance premium combine; the outlook above is the
-              economy-wide answer.
+              The sliders in the side panel rebuild one industry's jobs by hand along the path to
+              full AI progress, holding its wage fixed and taking income growth from the general
+              equilibrium. Use it to see how displacement, cheaper output, demand and the
+              provenance premium combine.
             </p>
           </div>
 
@@ -900,35 +813,6 @@ export default function DemandCeilingsTool() {
             </figcaption>
           </figure>
 
-          <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <p style={{ ...mono11, margin: 0 }}>Two-lever sweep · surface = jobs vs today at {pct(astar)} frontier progress</p>
-            <ContourChart sd={sd} astar={astar} />
-            <figcaption style={caption}>
-              The surface sweeps two levers at once, holding the rest at their slider values;
-              colors indicate the change in jobs. Dashed crosshair: the current slider values,
-              movable from the rail. When a swept axis is not frontier progress, the surface is
-              evaluated at the marked point ({pct(astar)}).
-            </figcaption>
-          </figure>
-
-          <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <p style={{ ...mono11, margin: 0 }}>Force mix · every industry at {pct(astar)} frontier progress</p>
-            <h3 style={figTitle}>Which force matters where — sectors sized by their wage bill</h3>
-            <ForcesChart sd={sd} astar={astar} selCode={selCode} onPickSector={pickSector} />
-            <figcaption style={caption}>
-              Each column is an industry, width proportional to its wage bill (employment ×
-              average wages); click a column to load that sector. The stack splits 100% by each
-              force's share of the sector's total log jobs change in absolute value, at the
-              current levers. Displacement (the three reds, physical darkest) is the direct
-              substitution: AI performs a share of the sector's tasks, so human work per unit of
-              output falls one-for-one, split by the type of task AI takes over. Hover a column
-              to see the shares. It dominates most columns at high frontier progress
-              because it is the one unbounded force: as the automated share nears 100% the
-              remaining human work heads to zero, while income growth, the price effect, and the
-              provenance shield all level off. Wide blue columns ride income growth instead.
-            </figcaption>
-          </figure>
-
           <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 18 }}>
             <div>
               <h3 style={{ ...mono11, fontWeight: 500, margin: '0 0 6px' }}>The mechanism</h3>
@@ -946,12 +830,11 @@ export default function DemandCeilingsTool() {
             <div>
               <h3 style={{ ...mono11, fontWeight: 500, margin: '0 0 6px' }}>What to try</h3>
               <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: 0, lineHeight: 1.55 }}>
-                Click legal services in the outlook, then raise AI reach into creative tasks and
-                watch its jobs fall further. Load hospitals and lower the provenance premium to zero
-                to see what the human-attention margin protects. Load full-service restaurants
-                (saturated demand) and move the income elasticity. Drag workers' share of capital
-                income across its range: it changes how well off workers are far more than where
-                they work.
+                Switch between jobs and average wage, then turn on growth: pay falls everywhere
+                without it and rises everywhere with it. Tap legal services and look at its tornado:
+                AI reach into creative work decides it. Tap full-service restaurants: growth
+                decides it, through saturated food demand. Tap hospitals and see robotics raise its
+                jobs, as displaced physical workers move into care.
               </p>
             </div>
             <div>

@@ -1,5 +1,5 @@
 /**
- * Why industries differ: four small scatters placing every industry by the
+ * Why industries differ: three small scatters placing every industry by the
  * characteristics that drive its outcome, coloured by its central-case change
  * in jobs or average real wage at full AI progress (general equilibrium,
  * central assumptions, chosen growth case). AI exposure and the human-
@@ -13,7 +13,6 @@ const PANELS = [
   { x: 'expo', y: 'shield', xl: 'AI exposure (share of tasks automated)', yl: 'Human-attention shield', xr: [0.2, 0.9], yr: [0, 0.85] },
   { x: 'expo', y: 'eps', xl: 'AI exposure (share of tasks automated)', yl: 'Income elasticity of demand', xr: [0.2, 0.9], yr: [-0.6, 2.6] },
   { x: 'shield', y: 'eps', xl: 'Human-attention shield', yl: 'Income elasticity of demand', xr: [-0.05, 0.85], yr: [-0.6, 2.6] },
-  { x: 'lint', y: 'expo', xl: 'Labor cost share of output', yl: 'AI exposure', xr: [0, 0.85], yr: [0.2, 0.9] },
 ];
 const fmt = (k, v) => (k === 'eps' ? v.toFixed(2) : `${Math.round(100 * v)}%`);
 
@@ -50,7 +49,7 @@ function Panel({ p, sectors, metric, growth, span, selCode, onPick }) {
           if (q) tip.show(ev, `${q.s.name}: ${pctChange(q.j)}`); else tip.hide();
         }}
         onPointerLeave={tip.hide}
-        onPointerUp={(ev) => { const q = nearest(ev); if (q) { onPick(q.s.code); tip.hide(); } }}>
+        onClick={(ev) => { const q = nearest(ev); if (q) { onPick(q.s.code); tip.hide(); } }}>
         <rect x={M.l} y={M.t} width={W - M.l - M.r} height={H - M.t - M.b} fill="none" stroke="var(--rule)" />
         {ticks(p.xr).map((t) => (
           <text key={`x${t}`} x={sx(t)} y={H - M.b + 13} textAnchor="middle" style={{ ...svgText, fontSize: 10 }}>{fmt(p.x, t)}</text>
@@ -66,12 +65,17 @@ function Panel({ p, sectors, metric, growth, span, selCode, onPick }) {
             stroke={q.s.code === selCode ? 'var(--ink)' : 'rgba(24,24,56,0.35)'}
             strokeWidth={q.s.code === selCode ? 1.8 : 0.5} />
         ))}
-        {sel && (
-          <text x={Math.min(Math.max(sel.x, M.l + 55), W - M.r - 55)} y={Math.max(sel.y - sel.r - 4, M.t + 10)} textAnchor="middle"
+        {sel && (() => {
+          const nm = shortName(sel.s.name);
+          const lab = nm.length > 24 ? `${nm.slice(0, 23)}…` : nm;
+          const half = (lab.length * 6.2) / 2;
+          return (
+          <text x={Math.min(Math.max(sel.x, M.l + half), W - M.r - half)} y={Math.max(sel.y - sel.r - 4, M.t + 10)} textAnchor="middle"
             style={{ ...svgText, fontSize: 10.5, fill: 'var(--ink)', fontWeight: 600, paintOrder: 'stroke', stroke: 'var(--paper)', strokeWidth: 3 }}>
-            {shortName(sel.s.name)}
+            {lab}
           </text>
-        )}
+          );
+        })()}
       </svg>
       {tip.node}
     </div>
@@ -80,7 +84,7 @@ function Panel({ p, sectors, metric, growth, span, selCode, onPick }) {
 
 export default function DriversGrid(props) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 14 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 14 }}>
       {PANELS.map((p) => <Panel key={`${p.x}-${p.y}`} p={p} {...props} />)}
     </div>
   );

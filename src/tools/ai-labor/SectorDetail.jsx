@@ -81,7 +81,7 @@ export function DecidesBar({ s }) {
         {parts.map((p) => {
           const w = 640 * Math.max(0, s.shares[p.k] ?? 0);
           const r = <rect key={p.k} x={x} y="0" width={w} height="18" fill={p.color}
-            onPointerEnter={(ev) => ev.pointerType !== 'touch' && show(ev, p.k)} onClick={(ev) => show(ev, p.k)} />;
+            onPointerEnter={(ev) => ev.pointerType !== 'touch' && show(ev, p.k)} onClick={(ev) => tip.tap(ev, info[p.k])} />;
           x += w;
           return r;
         })}
@@ -89,7 +89,7 @@ export function DecidesBar({ s }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 12.5, color: 'var(--ink-2)' }}>
         {parts.map((p) => (
           <span key={p.k} role="button" tabIndex={0} aria-label={`${p.lab}: ${info[p.k]}`}
-            onPointerEnter={(ev) => ev.pointerType !== 'touch' && show(ev, p.k)} onClick={(ev) => show(ev, p.k)}
+            onPointerEnter={(ev) => ev.pointerType !== 'touch' && show(ev, p.k)} onClick={(ev) => tip.tap(ev, info[p.k])}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'help', borderBottom: '1px dotted var(--ink-4)' }}>
             <span style={{ width: 10, height: 10, background: p.color, display: 'inline-block' }} />
             {p.lab} {Math.round(100 * (s.shares[p.k] ?? 0))}%
@@ -132,7 +132,7 @@ export function ForceBars({ s, growth }) {
             {net && <line x1={x0} x2={x1 + 40} y1={y - pad / 2} y2={y - pad / 2} stroke="var(--rule)" />}
             <text x={x0 - 10} y={y + rh / 2 + 4} textAnchor="end"
               onPointerEnter={(ev) => ev.pointerType !== 'touch' && tip.show(ev, FORCE_INFO[key])}
-              onClick={(ev) => tip.show(ev, FORCE_INFO[key])}
+              onClick={(ev) => tip.tap(ev, FORCE_INFO[key])}
               style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--ink-2)', fontWeight: net ? 600 : 400, cursor: 'help', textDecoration: 'underline dotted', textDecorationColor: 'var(--ink-4)' }}>{lab}</text>
             {net
               ? <circle cx={bx(v)} cy={y + rh / 2} r="6" fill={v >= 0 ? 'var(--positive)' : 'var(--negative)'} stroke="var(--paper)" />

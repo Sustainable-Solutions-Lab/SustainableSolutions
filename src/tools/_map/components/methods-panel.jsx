@@ -442,11 +442,10 @@ function FoodEmissionsMethods() {
         functions and random-forest ensemble of{' '}
 <a href="https://doi.org/10.1126/science.adz4320" target="_blank" rel="noopener noreferrer" style={linkStyle}><strong>Powell et al., <em>Assessing the net-climate benefits of
         improved grazing intensity in global rangelands</em>, Science
-        (2026)</strong></a>. Both find a net source, roughly 0.8 to 2.1 Gt
-        CO₂e cumulative, concentrated in the Sahel, Brazil and
-        Mongolia. It is not yet in the map while the choice of response
-        model and the livestock statistics behind the largest sinks are
-        checked.
+        (2026)</strong></a>. These first estimates are under review and not
+        yet in the map: the result is sensitive to the present-day level
+        of grazing intensity, which two independent global products place
+        quite differently, more than to how herds changed over time.
       </p>
 
       <h2 style={h2Style}>Drivers of change</h2>

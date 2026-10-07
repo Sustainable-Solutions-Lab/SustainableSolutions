@@ -6,8 +6,8 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { contours } from 'd3-contour';
-import { Pct, VERDICT, mono11, pctChange, svgText, useTip } from './ui.jsx';
-import { FORCES, FORCE_INFO } from './ForceMix';
+import { Pct, TIERS, WORLD_LAB, caseOf, mono11, pctChange, svgText, tierOf, useTip } from './ui.jsx';
+import { FORCE_INFO, forceView } from './ForceMix';
 
 function Kpi({ v, l }) {
   return (
@@ -20,13 +20,13 @@ function Kpi({ v, l }) {
 
 const range = (q) => `${pctChange(q[0])} to ${pctChange(q[2])}`;
 
-export function Scorecard({ s, nOutcomes }) {
-  const g0 = s.by_growth.none, g1 = s.by_growth.growth;
+export function Scorecard({ s, nOutcomes, world }) {
+  const g0 = caseOf(s, 'none', world), g1 = caseOf(s, 'growth', world);
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
       <Kpi v={<Pct j={s.jobs_all[1]} />} l={`jobs, median of all ${nOutcomes.toLocaleString()} outcomes (5–95%: ${range(s.jobs_all)})`} />
-      <Kpi v={<><Pct j={g0.jobs[1]} /> / <Pct j={g1.jobs[1]} /></>} l="jobs without / with extra growth (medians)" />
-      <Kpi v={<><Pct j={g0.wage[1]} /> / <Pct j={g1.wage[1]} /></>} l="average real wage without / with extra growth (medians)" />
+      <Kpi v={<><Pct j={g0.jobs[1]} /> / <Pct j={g1.jobs[1]} /></>} l={`jobs without / with extra growth (medians, ${WORLD_LAB[world]} ownership)`} />
+      <Kpi v={<><Pct j={g0.wage[1]} /> / <Pct j={g1.wage[1]} /></>} l={`average real wage without / with extra growth (medians, ${WORLD_LAB[world]} ownership)`} />
       <Kpi v={<><Pct j={s.worlds.concentrated} /> / <Pct j={s.worlds.broad} /></>} l="jobs if capital ownership stays concentrated / becomes broad" />
     </div>
   );
@@ -73,7 +73,7 @@ export function DecidesBar({ s }) {
   return (
     <div ref={tip.ref} style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6 }} onPointerLeave={tip.hide}>
       <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-2)' }}>
-        This industry {VERDICT[s.verdict].lab.toLowerCase().replace('≥', 'at least ')}. What decides where in its range it lands:
+        This industry {TIERS[tierOf(s)].text}. What decides where in its range it lands:
       </p>
       <svg viewBox="0 0 640 18" style={{ display: 'block', width: '100%', height: 'auto', cursor: 'help' }} role="img"
         aria-label="Shares of this industry's outcome uncertainty explained by capability, demand and ownership">
@@ -111,10 +111,11 @@ function fmtMult(lnv) {
 
 /** The selected industry's exact GE force decomposition (same forces and
  *  colours as the skyline), bars adding in logs to the net change. */
-export function ForceBars({ s, growth }) {
+export function ForceBars({ s, growth, world, metric }) {
   const tip = useTip();
-  const f = s.by_growth[growth].forces;
-  const rows = [...FORCES.map(([k, lab, color]) => [lab, f[k], color, k]), ['Net change in jobs', f.lnJ, null, 'net']];
+  const { f, net, forces, netKey } = forceView(s, growth, world, metric);
+  const rows = [...forces.map(([k, lab, color]) => [lab, f[k], color, k]),
+    [metric === 'wage' ? 'Net change in real wage' : 'Net change in jobs', net, null, netKey]];
   const W = 640, rh = 26, pad = 8, top = 10, x0 = 210, x1 = W - 70;
   const H = top + rows.length * (rh + pad) + 6;
   const span = Math.max(0.4, ...rows.map((r) => Math.abs(r[1])));
@@ -122,7 +123,7 @@ export function ForceBars({ s, growth }) {
   return (
     <div ref={tip.ref} style={{ position: 'relative' }} onPointerLeave={tip.hide}>
     <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', height: 'auto' }}
-      aria-label="This industry's change in jobs split into the forces behind it">
+      aria-label={`This industry's change in ${metric === 'wage' ? 'real wage' : 'jobs'} split into the forces behind it`}>
       <line x1={bx(0)} y1={top - 4} x2={bx(0)} y2={H - 4} stroke="var(--rule-strong)" />
       {rows.map(([lab, v, color, key], i) => {
         const y = top + i * (rh + pad);

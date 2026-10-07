@@ -18,6 +18,27 @@ export const VERDICT = {
   gains: { lab: 'Gains jobs in ≥90% of scenarios', color: 'var(--positive)' },
 };
 
+/** One ownership world and growth case of an industry's results. */
+export const caseOf = (s, growth, world) => s.cases[world][growth];
+
+export const WORLD_LAB = { concentrated: 'concentrated', today: 'today-like', broad: 'broad' };
+
+/** Five jobs tiers from the share of all scenarios in which an industry
+ *  loses jobs; the outer two are the ≥90% verdicts. */
+export const TIERS = {
+  loses: { lab: 'Loses jobs in ≥90% of scenarios', text: 'loses jobs in at least 90% of scenarios', color: 'var(--negative)' },
+  loses75: { lab: 'Loses in 75–90%', text: 'loses jobs in 75–90% of scenarios', color: '#FDAE61' },
+  contested: { lab: 'Contested', text: 'is contested: it loses jobs in 25–75% of scenarios', color: 'var(--ink-3)' },
+  gains75: { lab: 'Gains in 75–90%', text: 'gains jobs in 75–90% of scenarios', color: '#ABDDA4' },
+  gains: { lab: 'Gains jobs in ≥90% of scenarios', text: 'gains jobs in at least 90% of scenarios', color: 'var(--positive)' },
+};
+export function tierOf(s) {
+  if (s.verdict === 'loses' || s.verdict === 'gains') return s.verdict;
+  if (s.share_losing >= 0.75) return 'loses75';
+  if (s.share_losing <= 0.25) return 'gains75';
+  return 'contested';
+}
+
 const SHORT = {
   'Monetary authorities and depository credit intermediation': 'Banking',
   'Securities and commodity contracts intermediation and brokerage': 'Securities brokerage',

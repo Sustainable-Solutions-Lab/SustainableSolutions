@@ -322,7 +322,7 @@ export default function DemandCeilingsTool() {
             </p>
           </div>
 
-          <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--paper)', padding: '8px 0', borderBottom: '1px solid var(--rule)', display: 'flex', gap: '8px 18px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ padding: '8px 0', borderBottom: '1px solid var(--rule)', display: 'flex', gap: '8px 18px', flexWrap: 'wrap', alignItems: 'center' }}>
             <Chips label="Show" value={metric} onChange={setMetric} options={[['jobs', 'Jobs'], ['wage', 'Average real wage']]} />
             <Chips label="Growth" value={growth} onChange={setGrowth} options={[['none', 'No extra growth'], ['growth', 'Output ×3.5']]} />
             {tsel && (

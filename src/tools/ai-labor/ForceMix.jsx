@@ -124,7 +124,7 @@ export default function ForceMix({ sectors, growth, selCode, onPick }) {
         {[...FORCES, ['net', 'Net change', null]].map(([k, lab, color]) => (
           <span key={k} role="button" tabIndex={0} aria-label={`${lab}: ${FORCE_INFO[k]}`}
             onPointerEnter={(ev) => ev.pointerType !== 'touch' && ltip.show(ev, FORCE_INFO[k])}
-            onClick={(ev) => ltip.show(ev, FORCE_INFO[k])}
+            onClick={(ev) => ltip.tap(ev, FORCE_INFO[k])}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'help', borderBottom: '1px dotted var(--ink-4)' }}>
             {color
               ? <span style={{ width: 10, height: 10, background: color, display: 'inline-block' }} />

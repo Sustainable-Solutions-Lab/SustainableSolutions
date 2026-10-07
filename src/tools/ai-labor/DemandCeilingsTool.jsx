@@ -15,7 +15,7 @@ import MethodsPane from './MethodsPane';
 import OutlookChart from './OutlookChart';
 import ForceMix from './ForceMix';
 import { Scorecard, DecidesBar, ForceBars, GEContour } from './SectorDetail';
-import { Chips, shortName } from './ui.jsx';
+import { Chips, WORLD_LAB, shortName } from './ui.jsx';
 import * as km from './km.js';
 import SECTORS from './data/sectors.json';
 import TOOL from './data/tool.json';
@@ -281,6 +281,7 @@ export default function DemandCeilingsTool() {
   const [selCode, setSelCode] = useState(DEFAULT);
   const [metric, setMetric] = useState('jobs');
   const [growth, setGrowth] = useState('none');
+  const [world, setWorld] = useState('today');
   const [methodsOpen, setMethodsOpen] = useState(false);
   const detailRef = useRef(null);
 
@@ -288,7 +289,7 @@ export default function DemandCeilingsTool() {
   const emp = Object.fromEntries(SECTORS.map((x) => [x.code, x.emp]));
   const nAll = TOOL.meta.n_outcomes;
   const what = metric === 'jobs' ? 'jobs' : 'average real wage';
-  const nCase = metric === 'jobs' ? nAll / 2 : nAll / 6;
+  const nCase = TOOL.meta.n_case;
   const groups = useMemo(() => {
     const g = {};
     for (const s of SECTORS) (g[s.ct] = g[s.ct] || []).push(s);
@@ -322,9 +323,10 @@ export default function DemandCeilingsTool() {
             </p>
           </div>
 
-          <div style={{ padding: '8px 0', borderBottom: '1px solid var(--rule)', display: 'flex', gap: '8px 18px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--paper)', padding: '8px 0', borderBottom: '1px solid var(--rule)', display: 'flex', gap: '8px 18px', flexWrap: 'wrap', alignItems: 'center' }}>
             <Chips label="Show" value={metric} onChange={setMetric} options={[['jobs', 'Jobs'], ['wage', 'Average real wage']]} />
             <Chips label="Growth" value={growth} onChange={setGrowth} options={[['none', 'No extra growth'], ['growth', 'Output ×3.5']]} />
+            <Chips label="Ownership" value={world} onChange={setWorld} options={[['concentrated', 'Concentrated'], ['today', 'Today-like'], ['broad', 'Broad']]} />
             {tsel && (
               <button type="button" onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                 style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, padding: '3px 10px', borderRadius: 999, border: '1px solid var(--accent-brand)', background: 'var(--paper)', color: 'var(--accent-brand)', cursor: 'pointer' }}>
@@ -338,10 +340,11 @@ export default function DemandCeilingsTool() {
             <h3 style={figTitle}>
               {metric === 'jobs' ? 'Some industries shed jobs and others absorb them' : (growth === 'none' ? 'Without new growth, pay falls everywhere' : 'With growth, pay rises everywhere')}
             </h3>
-            <OutlookChart sectors={TOOL.sectors} metric={metric} growth={growth} selCode={selCode} onPick={setSelCode} />
+            <OutlookChart sectors={TOOL.sectors} metric={metric} growth={growth} world={world} selCode={selCode} onPick={setSelCode} />
             <p style={caption}>
               Each circle is an industry, sized by employment, at its median change in {what} at
-              full AI progress, coloured by whether it loses or gains jobs across all scenarios.
+              full AI progress, coloured by the share of all scenarios (every growth and ownership
+              case) in which it loses or gains jobs.
               Lanes group industries by what drives them: care, where income-elastic demand for
               human attention outruns AI; saturated in-person services, little touched by AI and
               little helped by income; education and civic work, highly exposed but shielded by a
@@ -349,25 +352,25 @@ export default function DemandCeilingsTool() {
               shield; and a mixed group of goods and utilities. Tap a circle to select it. The bar on the selected circle spans the middle
               90% (5–95%) of outcomes across a full grid of the model's other assumptions, every
               combination of AI reach into physical, analytic and creative tasks, capital supply,
-              the human share of attention spending, the demand estimate
-              {metric === 'jobs' ? ' and capital ownership' : ''}: {nCase.toLocaleString()} outcomes
-              for this growth case. Jobs are shares of a fixed workforce. Real wages are buying
+              the human share of attention spending and the demand estimate: {nCase.toLocaleString()} outcomes
+              for the chosen growth and ownership case. Ownership is the share of capital income that
+              reaches workers: none (concentrated), about 30% (today-like) or all of it (broad). Jobs are shares of a fixed workforce. Real wages are buying
               power, wages deflated by consumer prices that AI lowers; they differ by industry
-              because workers move between industries imperfectly
-              {metric === 'wage' ? ', and wage outcomes hold ownership at today-like levels' : ''}.
+              because workers move between industries imperfectly.
             </p>
           </section>
 
           <section aria-label="What drives each industry" style={sectionRule}>
             <p style={{ ...mono11, margin: 0 }}>What drives each industry</p>
-            <h3 style={figTitle}>The forces behind every industry's change in jobs</h3>
-            <ForceMix sectors={TOOL.sectors} growth={growth} selCode={selCode} onPick={setSelCode} />
+            <h3 style={figTitle}>The forces behind every industry's change in {metric === 'wage' ? 'pay' : 'jobs'}</h3>
+            <ForceMix sectors={TOOL.sectors} growth={growth} world={world} metric={metric} selCode={selCode} onPick={setSelCode} />
             <p style={caption}>
               Each column is an industry, width proportional to its wage bill, ordered by its net
-              change in jobs (central assumptions). AI taking over physical, analytic or creative
+              change in {metric === 'wage' ? 'average real wage' : 'jobs'} (central assumptions). AI taking over physical, analytic or creative
               tasks pushes jobs down; the human-attention shield, cheaper output, a shift toward
-              labor as it gets cheaper, and spending shifts push them up. The parts add up exactly
-              to the net change (the line). Tap a column to select the industry.
+              labor as it gets cheaper, and spending shifts push them up.
+              {metric === 'wage' ? ' Because workers move between industries imperfectly, the same forces move pay too, at half their effect on jobs (a mobility elasticity of 2); on top sits the economy-wide pay level, the same for every industry.' : ''}
+              {' '}The parts add up exactly to the net change (the line). Tap a column to select the industry.
             </p>
           </section>
 
@@ -390,14 +393,14 @@ export default function DemandCeilingsTool() {
                   )}
                 </select>
               </label>
-              <Scorecard s={tsel} nOutcomes={nAll} />
+              <Scorecard s={tsel} nOutcomes={nAll} world={world} />
               <DecidesBar s={tsel} />
               <figure style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <h3 style={{ ...figTitle, fontSize: 16 }}>The forces behind this industry's change in jobs</h3>
-                <ForceBars s={tsel} growth={growth} />
+                <h3 style={{ ...figTitle, fontSize: 16 }}>The forces behind this industry's change in {metric === 'wage' ? 'pay' : 'jobs'}</h3>
+                <ForceBars s={tsel} growth={growth} world={world} metric={metric} />
                 <figcaption style={caption}>
                   The same decomposition as the columns above, for this industry alone (central
-                  assumptions, {growth === 'none' ? 'no extra growth' : 'output ×3.5'}). Bars add up,
+                  assumptions, {growth === 'none' ? 'no extra growth' : 'output ×3.5'}, {WORLD_LAB[world]} ownership). Bars add up,
                   in logs, to the net change.
                 </figcaption>
               </figure>

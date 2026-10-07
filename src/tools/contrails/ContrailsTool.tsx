@@ -956,6 +956,12 @@ export default function ContrailsTool() {
             identify the most-warming flights when booking” (submitted) — preprint
             link coming soon.
           </p>
+          <p className="mt-1 font-mono text-[11px]">
+            <a href="https://github.com/Sustainable-Solutions-Lab/predicting-contrails" target="_blank" rel="noopener noreferrer" className="underline decoration-rule underline-offset-2 hover:decoration-ink">Code (GitHub) ↗</a>
+            <span className="mx-2 opacity-40">·</span>
+            <a href="https://doi.org/10.5281/zenodo.23194382" target="_blank" rel="noopener noreferrer" className="underline decoration-rule underline-offset-2 hover:decoration-ink">Data (Zenodo) ↗</a>
+            <span className="ml-1 opacity-60">files open on publication</span>
+          </p>
         </div>
 
         <div className="mt-3 border-t border-rule pt-3">

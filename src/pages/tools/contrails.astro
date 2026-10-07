@@ -1,11 +1,15 @@
 ---
 import ToolFrame from '../../layouts/ToolFrame.astro';
 import ContrailsTool from '../../tools/contrails/ContrailsTool';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+
+const tool = (tools as Tool[]).find((t) => t.slug === 'contrails') ?? null;
 ---
 
 <ToolFrame
   title="Predicting contrails at booking"
   description="Predict a flight's contrail climate impact from schedule information alone — months before departure."
 >
-  <ContrailsTool client:only="react" />
+  <ContrailsTool client:only="react" eyebrow={tool?.eyebrow} title={tool?.title} />
 </ToolFrame>

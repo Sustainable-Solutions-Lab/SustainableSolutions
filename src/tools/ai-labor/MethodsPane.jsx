@@ -106,7 +106,11 @@ export default function MethodsPane({ onClose }) {
           today's at full progress) or growth that raises it about 3.5-fold. Ranges are the 5th to
           95th percentile of an industry's outcomes in the chosen case (972 for jobs; 324 for wages,
           which hold ownership at today-like levels). An industry "loses" or "gains" if it does so in
-          at least 90% of all 1,944 outcomes. The decision bar splits an industry's uncertainty
+          at least 90% of all 1,944 outcomes. The five lanes of the first chart are sector types
+          from a Ward clustering of each industry's central-case force mix (the five forces below,
+          standardized). Care, desk work and the attention-shielded group hold across k-means, the
+          growth case and a clustering on industry traits; saturated services mostly do; the mixed
+          group of goods and utilities is a residual. The decision bar splits an industry's uncertainty
           among capability, demand and ownership by a first-order variance decomposition over the
           grid. Scatter colours, the forces and the contour use the central assumptions.
         </p>

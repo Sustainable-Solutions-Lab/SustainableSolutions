@@ -79,9 +79,8 @@ const SV = 'sv=7';
 const QS = typeof window !== 'undefined'
   ? new URLSearchParams(window.location.search)
   : new URLSearchParams();
-// aircraft families with newer, lower-soot engines (mirrors the API's set)
-const CLEAN_TYPES = new Set(['B788', 'B789', 'B78X', 'A359', 'A35K', 'A20N', 'A21N',
-  'B38M', 'B39M', 'A339', 'A338', 'BCS1', 'BCS3', 'E290', 'E295']);
+// aircraft types with low-soot engines (mirrors the API's _CLEAN_TYPES)
+const CLEAN_TYPES = new Set(['B788', 'B789', 'B78X', 'B748', 'B38M', 'B39M', 'A20N', 'A21N']);
 // Chrome Web Store listing (live as of 24 Aug 26)
 const CWS_URL: string | null =
   'https://chromewebstore.google.com/detail/contrail-check-for-google/jgoiipmnojcdecidalejcadljdcjacgl';
@@ -1165,9 +1164,10 @@ export default function ContrailsTool() {
                 {result.aircraft_comparison[result.aircraft_comparison.length - 1].percentile -
                   result.aircraft_comparison[0].percentile >= 30 && (
                   <p className="mt-2 max-w-[640px] text-sm opacity-80">
-                    Aircraft choice matters a lot on this route: newer types have
-                    cleaner-burning engines that emit far less soot and typically
-                    seed much weaker contrails at the same time and place.
+                    Aircraft choice matters a lot on this route: some engines emit
+                    far less soot than others (it depends on engine design, not the
+                    aircraft’s age) and typically seed much weaker contrails at the
+                    same time and place.
                   </p>
                 )}
               </div>
@@ -1356,7 +1356,7 @@ export default function ContrailsTool() {
                           if (altNight !== null && altNight <= yourNight - 8) {
                             parts.push(`it flies more in daylight (${altNight}% night vs your ${yourNight}%)`);
                           }
-                          if (acUpgrade) parts.push('its newer engines seed fewer contrails');
+                          if (acUpgrade) parts.push('its lower-soot engines seed fewer contrails');
                           const note = parts.length
                             ? `Cooler because ${parts.join(', and ')}.`
                             : 'Cooler thanks to schedule differences that avoid contrail-prone conditions.';

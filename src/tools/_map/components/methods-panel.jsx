@@ -435,16 +435,18 @@ function FoodEmissionsMethods() {
         crediting soil-carbon removals requires multi-year field
         measurement under the GHG Protocol's land standard.
         The layer currently covers cropland; a companion rangeland layer
-        has a first historical estimate built on the grazing-intensity
-        response functions, random-forest ensemble, and stocking-density
-        grids of{' '}
+        has first historical estimates from two grazing-response models
+        evaluated along the observed 2000–2022 grazing-intensity
+        trajectory: a meta-analysis model refit from Ren et al.,{' '}
+        <em>Nature Climate Change</em> (2024), and the response
+        functions and random-forest ensemble of{' '}
 <a href="https://doi.org/10.1126/science.adz4320" target="_blank" rel="noopener noreferrer" style={linkStyle}><strong>Powell et al., <em>Assessing the net-climate benefits of
         improved grazing intensity in global rangelands</em>, Science
-        (2026)</strong></a>, evaluated along the observed 2000–2022
-        intensity trajectory (net source, roughly 0.7 Gt CO₂e
-        cumulative). It is not yet in the map: the loss-direction
-        responses sit outside the authors' validated application domain,
-        and that caveat is being resolved before the layer ships.
+        (2026)</strong></a>. Both find a net source, roughly 0.8 to 2.1 Gt
+        CO₂e cumulative, concentrated in the Sahel, Brazil and
+        Mongolia. It is not yet in the map while the choice of response
+        model and the livestock statistics behind the largest sinks are
+        checked.
       </p>
 
       <h2 style={h2Style}>Drivers of change</h2>

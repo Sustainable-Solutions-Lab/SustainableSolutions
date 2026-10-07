@@ -111,13 +111,21 @@ export default function OutlookChart({ sectors, metric, growth, selCode, onPick 
             stroke={p.s.code === selCode ? 'var(--ink)' : 'var(--paper)'}
             strokeWidth={p.s.code === selCode ? 1.6 : 0.8} />
         ))}
-        {sel && (
-          <text x={Math.min(Math.max(sel.x, M.l + 70), W - M.r - 70)}
-            y={(sel.y - M.t) % laneH < 26 ? sel.y + sel.r + 12 : sel.y - sel.r - 5} textAnchor="middle"
-            style={{ ...svgLabel, fontSize: 11, fontWeight: 600, paintOrder: 'stroke', stroke: 'var(--paper)', strokeWidth: 3 }}>
-            {shortName(sel.s.name)} {pctChange(sel.v[1])}
-          </text>
-        )}
+        {sel && (() => {
+          // Left-anchored and clamped inside the plot so the start of the name
+          // always shows; a name too long for the width ends in an ellipsis.
+          const CH = 6.4, pct = ` ${pctChange(sel.v[1])}`, room = W - M.l - M.r;
+          let name = shortName(sel.s.name);
+          if ((name.length + pct.length) * CH > room) name = `${name.slice(0, Math.max(4, Math.floor(room / CH) - pct.length - 1))}…`;
+          const w = (name.length + pct.length) * CH;
+          const x = Math.min(Math.max(sel.x - w / 2, M.l), W - M.r - w);
+          return (
+            <text x={x} y={(sel.y - M.t) % laneH < 26 ? sel.y + sel.r + 12 : sel.y - sel.r - 5} textAnchor="start"
+              style={{ ...svgLabel, fontSize: 11, fontWeight: 600, paintOrder: 'stroke', stroke: 'var(--paper)', strokeWidth: 3 }}>
+              {name}{pct}
+            </text>
+          );
+        })()}
       </svg>
       {tip.node}
     </div>

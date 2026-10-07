@@ -953,9 +953,16 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
         <div className="mt-3 border-t border-rule pt-3">
           <p className="font-mono text-[11px] uppercase tracking-wider opacity-60">Companion paper</p>
           <p className="mt-1 text-xs italic leading-snug opacity-70">
-            Davis, Whiteson, Bonnemaizon, Caldeira, Teoh &amp; Shapiro, “Flyers can
-            identify the most-warming flights when booking” (submitted) — preprint
-            link coming soon.
+            Davis, Whiteson, Bonnemaizon, Caldeira, Teoh &amp; Shapiro,{' '}
+            <a
+              href="https://www.researchsquare.com/article/rs-11285103/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline decoration-rule underline-offset-2 hover:decoration-ink"
+            >
+              “Flyers can identify the most-warming flights when booking”
+            </a>{' '}
+            (in review).
           </p>
           <div className="mt-2 flex flex-col gap-2">
             <a

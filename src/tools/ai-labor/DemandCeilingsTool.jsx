@@ -341,8 +341,12 @@ export default function DemandCeilingsTool() {
             <OutlookChart sectors={TOOL.sectors} metric={metric} growth={growth} selCode={selCode} onPick={setSelCode} />
             <p style={caption}>
               Each circle is an industry, sized by employment, at its median change in {what} at
-              full AI progress; lanes group industries by whether they lose or gain jobs across all
-              scenarios. Tap a circle to select it. The bar on the selected circle spans the middle
+              full AI progress, coloured by whether it loses or gains jobs across all scenarios.
+              Lanes group industries by what drives them: care, where income-elastic demand for
+              human attention outruns AI; saturated in-person services, little touched by AI and
+              little helped by income; education and civic work, highly exposed but shielded by a
+              preference for people; desk work in finance, law and software, exposed with no such
+              shield; and a mixed group of goods and utilities. Tap a circle to select it. The bar on the selected circle spans the middle
               90% (5–95%) of outcomes across a full grid of the model's other assumptions, every
               combination of AI reach into physical, analytic and creative tasks, capital supply,
               the human share of attention spending, the demand estimate

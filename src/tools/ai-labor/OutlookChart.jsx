@@ -1,8 +1,9 @@
 /**
  * The range of impacts: every industry at full AI progress, in general
  * equilibrium. Each dot is an industry at its median change across the
- * scenario ensemble for the chosen growth case, in one of three lanes by
- * its all-scenario jobs verdict, sized by employment. The metric is the
+ * scenario ensemble for the chosen growth case, in one of five lanes by
+ * sector type (clusters of the GE force mix, ai-labor analysis/ws4-clusters),
+ * coloured by its all-scenario jobs verdict and sized by employment. The metric is the
  * change in jobs or in the industry's average real wage. Tap or click a dot
  * to select the industry (its name and range appear); the selection drives
  * the rest of the tool. Data: ./data/tool.json (ai-labor web/build_tool_data.py).
@@ -10,7 +11,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { VERDICT, pctChange, shortName, svgLabel, svgText, useTip } from './ui.jsx';
 
-const LANES = ['gains', 'contested', 'loses'];
+// Sector types, top to bottom from the best to the worst typical jobs outcome.
+export const LANES = [
+  ['Income-elastic care', 'Income-elastic care'],
+  ['Saturated in-person services', 'Saturated in-person services'],
+  ['Exposed but attention-shielded', 'Exposed, attention-shielded'],
+  ['Mixed goods and utilities', 'Mixed goods and utilities'],
+  ['Exposed desk work', 'Exposed desk work'],
+];
+const LANE_OF = Object.fromEntries(LANES.map(([t], i) => [t, i]));
 
 function jitter(code) {
   let h = 0;
@@ -36,7 +45,7 @@ export default function OutlookChart({ sectors, metric, growth, selCode, onPick 
     return () => ro.disconnect();
   }, [tip.ref]);
   const svgRef = useRef(null);
-  const W = narrow ? 380 : 640, H = narrow ? 300 : 260, M = { l: 8, r: 8, t: 22, b: 40 };
+  const W = narrow ? 380 : 640, H = narrow ? 372 : 322, M = { l: 8, r: 8, t: 22, b: 40 };
   const laneH = (H - M.t - M.b) / LANES.length;
 
   const val = (s) => s.by_growth[growth][metric];
@@ -50,7 +59,7 @@ export default function OutlookChart({ sectors, metric, growth, selCode, onPick 
   const sx = (j) => M.l + ((j - 1 - xmin) / (xmax - xmin)) * (W - M.l - M.r);
 
   const pts = sectors.map((s) => {
-    const lane = LANES.indexOf(s.verdict);
+    const lane = LANE_OF[s.type];
     const v = val(s);
     return { s, v, x: sx(v[1]), y: M.t + laneH * (lane + 0.5) + jitter(s.code) * laneH * 0.3,
              r: 2.5 + 2.2 * Math.sqrt(s.emp ?? 0.1), color: VERDICT[s.verdict].color };
@@ -82,10 +91,10 @@ export default function OutlookChart({ sectors, metric, growth, selCode, onPick 
         }}
         onPointerLeave={tip.hide}
         onClick={(ev) => { const p = nearest(ev); if (p) { onPick(p.s.code); tip.hide(); } }}>
-        {LANES.map((v, i) => (
-          <g key={v}>
+        {LANES.map(([t, short], i) => (
+          <g key={t}>
             {i > 0 && <line x1={M.l} x2={W - M.r} y1={M.t + laneH * i} y2={M.t + laneH * i} stroke="var(--rule)" />}
-            <text x={M.l} y={M.t + laneH * i + 12} style={{ ...svgText, fill: VERDICT[v].color }}>{VERDICT[v].lab}</text>
+            <text x={M.l} y={M.t + laneH * i + 12} style={{ ...svgText, fill: 'var(--ink-2)', paintOrder: 'stroke', stroke: 'var(--paper)', strokeWidth: 3 }}>{narrow ? short : t}</text>
           </g>
         ))}
         {ticks.map((t) => (
@@ -128,6 +137,14 @@ export default function OutlookChart({ sectors, metric, growth, selCode, onPick 
         })()}
       </svg>
       {tip.node}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', marginTop: 4, fontSize: 12, color: 'var(--ink-2)' }}>
+        {['loses', 'contested', 'gains'].map((v) => (
+          <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 9, height: 9, borderRadius: '50%', background: VERDICT[v].color, opacity: 0.75, display: 'inline-block' }} />
+            {VERDICT[v].lab}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

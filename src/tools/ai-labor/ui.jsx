@@ -2,7 +2,7 @@
  * Shared bits for the ai-labor tool: a small tooltip that stays inside its
  * chart (phones included), segmented chips, and colour helpers.
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export const mono11 = { fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--ink-3)' };
 export const svgText = { fontFamily: 'var(--font-mono)', fontSize: 11, fill: 'var(--ink-3)' };
@@ -46,7 +46,9 @@ export function Pct({ j }) {
 }
 
 /** Hover / tap tooltip clamped to its container. Wrap a chart's container
- *  and call show(ev, text) / hide(). */
+ *  and call show(ev, text) / hide(). tap(ev, text) is for click handlers: a
+ *  touch tap on the same item closes it again, and on any device a tap
+ *  outside the container closes it (touch has no pointerleave to do so). */
 export function useTip() {
   const ref = useRef(null);
   const [tip, setTip] = useState(null);
@@ -59,12 +61,22 @@ export function useTip() {
     const y = Math.max(0, ev.clientY - box.top - 36);
     setTip({ x, y, w, text });
   };
+  const tap = (ev, text) => {
+    if (ev.pointerType !== 'mouse' && tip?.text === text) setTip(null);
+    else show(ev, text);
+  };
+  useEffect(() => {
+    if (!tip) return undefined;
+    const away = (ev) => { if (!ref.current?.contains(ev.target)) setTip(null); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [tip]);
   const node = tip && (
     <div style={{ position: 'absolute', left: tip.x, top: tip.y, maxWidth: tip.w, pointerEvents: 'none', background: 'var(--ink)', color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.4, padding: '4px 7px', borderRadius: 2, zIndex: 4, whiteSpace: 'normal' }}>
       {tip.text}
     </div>
   );
-  return { ref, show, hide: () => setTip(null), node };
+  return { ref, show, tap, hide: () => setTip(null), node };
 }
 
 export function Chips({ label, value, options, onChange }) {

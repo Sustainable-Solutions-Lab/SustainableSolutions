@@ -516,7 +516,9 @@ function FlightMap({
   );
 }
 
-export default function ContrailsTool() {
+// eyebrow and title come from the Tools sheet row (via contrails.astro) so
+// sheet edits reach the tool page; the literals are fallbacks
+export default function ContrailsTool({ eyebrow = 'Interactive model', title = 'Predicting contrails at booking' }: { eyebrow?: string | null; title?: string | null } = {}) {
   const [mode, setMode] = useState<'route' | 'flightno'>(
     QS.get('o') && !QS.get('fn') ? 'route' : 'flightno');
   const [flightNo, setFlightNo] = useState(QS.get('fn') ?? 'UA 901');
@@ -824,8 +826,8 @@ export default function ContrailsTool() {
 
   return (
     <ToolShell
-      eyebrow="Prototype · schedule-only model"
-      title="Predicting contrails at booking"
+      eyebrow={eyebrow ?? 'Interactive model'}
+      title={title ?? 'Predicting contrails at booking'}
       summary="Predicts a flight's contrail climate impact from schedule information alone, and finds lower-warming bookable alternatives."
       mainScroll
       drawerOpen={panelOpen}

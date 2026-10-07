@@ -72,7 +72,7 @@ type AirportRow = [string, string, string, string];
 
 const API = '/api/contrails';
 // bump when the API response schema changes: busts stale CDN-cached responses
-const SV = 'sv=7';
+const SV = 'sv=8';
 
 // Shareable links: the assessment is encoded in the query string, so a
 // copied URL reproduces the exact flight for the recipient.
@@ -1165,10 +1165,9 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
                 {result.aircraft_comparison[result.aircraft_comparison.length - 1].percentile -
                   result.aircraft_comparison[0].percentile >= 30 && (
                   <p className="mt-2 max-w-[640px] text-sm opacity-80">
-                    Aircraft choice matters a lot on this route: some engines emit
-                    far less soot than others (it depends on engine design, not the
-                    aircraft’s age) and typically seed much weaker contrails at the
-                    same time and place.
+                    Aircraft choice matters a lot on this route: some engine designs
+                    emit far less soot than others and typically seed much weaker
+                    contrails at the same time and place.
                   </p>
                 )}
               </div>

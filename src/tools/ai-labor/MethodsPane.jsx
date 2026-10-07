@@ -103,10 +103,13 @@ export default function MethodsPane({ onClose }) {
           attention spending (2), productivity growth (2) and the demand estimate (2), 648
           economies, each in three ownership worlds, 1,944 outcomes per industry. The growth chip
           splits them in half: no additional productivity growth (real output about 1.2 times
-          today's at full progress) or growth that raises it about 3.5-fold. Ranges are the 5th to
-          95th percentile of an industry's outcomes in the chosen case (972 for jobs; 324 for wages,
-          which hold ownership at today-like levels). An industry "loses" or "gains" if it does so in
-          at least 90% of all 1,944 outcomes. The five lanes of the first chart are sector types
+          today's at full progress) or growth that raises it about 3.5-fold, and the ownership chip
+          picks one of the three worlds. Ranges are the 5th to 95th percentile of an industry's 324
+          outcomes in the chosen growth and ownership case. An industry "loses" or "gains" if it
+          does so in at least 90% of all 1,944 outcomes, and loses or gains "in 75–90%" if it does so
+          in that share of them. In the wage view of the forces, an industry's real wage change is
+          its jobs forces divided by the mobility elasticity (2) plus an economy-wide term common to
+          all industries, exactly. The five lanes of the first chart are sector types
           from a Ward clustering of each industry's central-case force mix (the five forces below,
           standardized). Care, desk work and the attention-shielded group hold across k-means, the
           growth case and a clustering on industry traits; saturated services mostly do; the mixed

@@ -230,16 +230,19 @@ def route_info(origin, dest):
             "aircraft": [{"icao": k, "share": v} for k, v in r["ac"].items()]}
 
 
-# Newer engine generations emit far less soot (nvPM), seeding fewer and
-# weaker contrails — the second-largest lever after day/night timing.
-_CLEAN_TYPES = {"B788", "B789", "B78X", "A359", "A35K", "A20N", "A21N",
-                "B38M", "B39M", "A339", "A338", "BCS1", "BCS3", "E290", "E295"}
+# Types whose engines emit far less soot (nvPM), seeding fewer and weaker
+# contrails. What matters is combustor technology, not aircraft age: GE's
+# lean-burn engines (GEnx on the 787 and 747-8, LEAP on the 737 MAX and many
+# A320neos) are low-soot, while the new A350 performs like a 777. The set
+# follows the paper's Supplementary Fig. 1 (types re-predicted on fixed
+# schedules); types without enough training data there are left out.
+_CLEAN_TYPES = {"B788", "B789", "B78X", "B748", "B38M", "B39M", "A20N", "A21N"}
 
 
 def _reasons(feats, aircraft, dep_utc, o_ap, d_ap, pct):
     """Short, feature-grounded explanations of why a flight scores where it
-    does, ordered by importance in the model (route darkness, engine
-    generation, season, distance). Each factor pushes toward warming (+)
+    does, ordered by importance in the model (route darkness, aircraft
+    type, season, distance). Each factor pushes toward warming (+)
     or away from it (-); only factors aligned with the verdict are shown,
     so a low prediction never lists amplifiers and vice versa."""
     tagged = []
@@ -256,11 +259,12 @@ def _reasons(feats, aircraft, dep_utc, o_ap, d_ap, pct):
                        "when contrails' reflection of sunlight offsets much "
                        "of their warming"))
     if aircraft in _CLEAN_TYPES:
-        tagged.append(("-", f"The {aircraft}'s newer-generation engines emit "
-                       "far less soot, seeding fewer and weaker contrails"))
+        tagged.append(("-", f"The {aircraft}'s engines emit far less soot "
+                       "than most, seeding fewer and weaker contrails"))
     else:
-        tagged.append(("+", f"The {aircraft}'s older engine generation emits "
-                       "more soot, seeding more and thicker contrails"))
+        tagged.append(("+", f"The {aircraft}'s engines emit more soot than "
+                       "low-soot designs like the 787's or 737 MAX's, seeding "
+                       "more and longer-lived contrails"))
     mid_lat = abs((o_ap["lat"] + d_ap["lat"]) / 2)
     month = dep_utc.month
     nh = (o_ap["lat"] + d_ap["lat"]) / 2 >= 0
@@ -334,7 +338,7 @@ def score(origin, dest, date_s, time_s, aircraft, tz_mode, want_curve):
         "reasons": _reasons(feats, aircraft, dep_utc, o_ap, d_ap, pct),
     }
     # Score every aircraft flown on this route at the same departure —
-    # engine generation can move a flight across most of the percentile
+    # aircraft type can move a flight across most of the percentile
     # range, so the UI surfaces the comparison.
     rkey = _routes.get(f"{origin}>{dest}")
     if rkey:

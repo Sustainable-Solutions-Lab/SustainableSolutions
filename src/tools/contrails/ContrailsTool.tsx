@@ -981,7 +981,6 @@ export default function ContrailsTool() {
                 <path d="M3 12a9 3 0 0 0 18 0" />
               </svg>
               <span className="font-mono">10.5281/zenodo.23194382 ↗</span>
-              <span className="opacity-60">(files open on publication)</span>
             </a>
           </div>
         </div>

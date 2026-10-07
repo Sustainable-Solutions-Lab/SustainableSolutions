@@ -47,7 +47,7 @@ const cat2: Array<{ n: string; d: string; s: Status }> = [
   { n: 'Peatland', s: 'built', d: 'Cornerstone steady-state occupation floor, 37.3 t CO₂e/ha/yr, perpetual while drained' },
   { n: 'Peat split by land use', s: 'aspire', d: 'IPCC rates span 13× within tropical peat — acacia 20.0, oil palm 11.0, forest 5.3 t CO₂-C/ha/yr. The single rate is, to 8%, the oil-palm value.' },
   { n: 'Peat as an exhaustible stock', s: 'aspire', d: 'A 0.5 m profile is gone in about 23 years at the current rate. Needs gridded depth, which we lack globally.' },
-  { n: 'Rangeland soil carbon', s: 'built', d: 'First historical flux from two grazing-response models along the observed 2000–2022 intensity trajectory: a refit of Ren et al. (2024), valid for both more and less grazing, and Powell et al. (2026). Net source, about 2.1 Gt CO₂e cumulative under Ren and 0.8 under Powell, same leading countries. Not yet mapped.' },
+  { n: 'Rangeland soil carbon', s: 'wait', d: 'First historical estimates from two grazing-response models (Ren et al. 2024; Powell et al. 2026) are under review. The answer depends mostly on present-day grazing intensity, which two global maps place quite differently; reconciling them and rebuilding the Ren model inputs comes first. Not yet mapped.' },
   { n: 'Drained forest organic soil', s: 'gap', d: 'Falls between the peat layer, which carries cropland rates only, and the forest layer, which assumes mineral steady state. Counted nowhere, and likely larger than mineral forest soil.' },
 ];
 
@@ -158,7 +158,7 @@ const cat3 = ['Fertilizer', 'Manure applied', 'Manure mgmt', 'Pasture N₂O', 'R
             <p class="mb-2 text-[12.5px] text-ink-3">Land-management net biogenic CO₂.</p>
             <div class="chips">
               <span class="chip">Peatland</span><span class="chip">Soil carbon — cropland</span>
-              <span class="chip">Soil carbon — rangeland</span>
+              <span class="chip off">Soil carbon — rangeland</span>
               <span class="chip off">Soil carbon — forest</span>
               <span class="chip off">Forest carbon (pilot)</span>
             </div>
@@ -222,7 +222,7 @@ const cat3 = ['Fertilizer', 'Manure applied', 'Manure mgmt', 'Pasture N₂O', 'R
 
     <p class="mt-11 border-t border-rule pt-4 text-[12px] text-ink-3">
       Companion to the <a href="/tools/food-emissions">food-emissions explorer</a> and to
-      DeAngelo et al., in preparation. <strong>Status as of 6 October 2026.</strong>
+      DeAngelo et al., in preparation. <strong>Status as of 7 October 2026.</strong>
       This page and the explorer's Methods describe a model under active development;
       both are maintained to reflect its current state, and the date above moves when
       they do. If the date looks stale against a published result, say so —

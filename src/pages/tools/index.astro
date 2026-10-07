@@ -364,25 +364,16 @@ const { light: cornerstoneLogo, dark: cornerstoneLogoDark } =
 <style>
   /* Cornerstone hero: the supplied wordmark is near-black, so light and dark
      variants are swapped rather than filtered (a filter would also invert the
-     blue mark). Mirrors the nav logo pattern. */
+     blue mark). Mirrors the nav logo pattern: key off data-theme="dark" only.
+     The site resolves the OS preference in BaseLayout and marks dark mode
+     alone (light mode has no data-theme), so an OS media query here would
+     show the cream wordmark on a light page for dark-OS visitors who chose
+     light. */
   .cs-logo-dark { display: none; }
   .cs-scrim { background: color-mix(in oklab, var(--paper) 35%, transparent); }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme='light']) .cs-logo-light { display: none; }
-    :root:not([data-theme='light']) .cs-logo-dark { display: block; }
-    :root:not([data-theme='light']) .cs-scrim {
-      background: color-mix(in oklab, var(--paper) 62%, transparent);
-    }
-  }
   :root[data-theme='dark'] .cs-logo-light { display: none; }
   :root[data-theme='dark'] .cs-logo-dark { display: block; }
   :root[data-theme='dark'] .cs-scrim {
     background: color-mix(in oklab, var(--paper) 62%, transparent);
-  }
-  :root[data-theme='light'] .cs-logo-light { display: block; }
-  :root[data-theme='light'] .cs-logo-dark { display: none; }
-  :root[data-theme='light'] .cs-scrim {
-    background: color-mix(in oklab, var(--paper) 35%, transparent);
   }
 </style>

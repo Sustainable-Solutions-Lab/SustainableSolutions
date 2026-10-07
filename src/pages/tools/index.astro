@@ -29,6 +29,12 @@ for (const p of publications as Publication[]) {
 // specific URL (e.g. a preprint page rather than the doi.org redirect).
 // Shape matches the Publication fields the card template reads.
 const COMPANION_OVERRIDES: Record<string, { title: string; journal: string | null; year: number | null; url: string }> = {
+  contrails: {
+    title: 'Flyers can identify the most-warming flights when booking',
+    journal: 'in review',
+    year: 2026,
+    url: 'https://www.researchsquare.com/article/rs-11285103/',
+  },
   firefuels: {
     title: 'Prioritizing wildfire fuel management in California',
     journal: 'in review',

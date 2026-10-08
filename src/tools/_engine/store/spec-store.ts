@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChartType, ExplorerConfig, MeasureName, Spec } from '../types';
+import type { ChartType, DriverName, ExplorerConfig, MeasureName, ScenarioName, Spec } from '../types';
 import { readSpecFromHash, writeSpecToHash } from './url-codec';
 
 // Single source of truth for the explorer's current view. Hydrates from
@@ -11,6 +11,8 @@ type SpecStore = {
   spec: Spec;
   setSpec: (updater: Spec | ((prev: Spec) => Spec)) => void;
   setChart: (chart: ChartType) => void;
+  setDriver: (driver: DriverName | undefined) => void;
+  setScenario: (scenario: ScenarioName) => void;
   setMeasure: (measure: MeasureName) => void;
   setScatterX: (measure: MeasureName) => void;
   setSingleYear: (year: number) => void;
@@ -51,6 +53,20 @@ export function createSpecStore(config: ExplorerConfig) {
     },
 
     setChart: (chart) => get().setSpec((s) => ({ ...s, chart, preset: undefined })),
+    // Drivers only make sense as lines through time, and they run past the
+    // historical record — so switching to one also fixes the chart type and
+    // opens the year range up to the projection horizon.
+    setDriver: (driver) =>
+      get().setSpec((s) => ({
+        ...s,
+        driver,
+        chart: driver ? 'line' : s.chart,
+        yearRange: driver
+          ? [s.yearRange[0], Math.max(s.yearRange[1], config.projectionEnd ?? s.yearRange[1])]
+          : [s.yearRange[0], Math.min(s.yearRange[1], config.yearRange[1])],
+        preset: undefined,
+      })),
+    setScenario: (scenario) => get().setSpec((s) => ({ ...s, scenario, preset: undefined })),
     setMeasure: (measure) => get().setSpec((s) => ({ ...s, measure, preset: undefined })),
     setScatterX: (scatterX) => get().setSpec((s) => ({ ...s, scatterX, preset: undefined })),
     setSingleYear: (singleYear) => get().setSpec((s) => ({ ...s, singleYear, preset: undefined })),

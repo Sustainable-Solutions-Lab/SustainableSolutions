@@ -16,17 +16,27 @@ import { homedir } from 'node:os';
 import * as XLSX from 'xlsx';
 
 // ── Sources ─────────────────────────────────────────────────────────────────
-// PROCESSED: Pablo's "Processed data (results)" — DMC + GDP + historical pop.
-// PARAMETERS: cloned repo's Parameters/ — in-use stocks snapshot.
+// REPO: a clone of github.com/pmbusch/material-intensity. Everything the
+// explorer needs now lives in its Parameters/ (DMC, GDP, population, in-use
+// stocks) and Inputs/ (dictionaries, raw UNEP/UN/World Bank files).
+// PROCESSED: Pablo's "Processed data (results)" folder in the shared paper
+// Dropbox — a fallback for files the public repo does not ship (currently
+// only population_region_historical.csv).
+const REPO_DIR =
+  process.env.MATERIALS_REPO_DIR ??
+  resolve(
+    homedir(),
+    'Library/CloudStorage/Dropbox/Papers/Active Prep/Material intensity/material-intensity',
+  );
+const PARAMETERS_DIR = process.env.MATERIALS_PARAMETERS_DIR ?? resolve(REPO_DIR, 'Parameters');
+const INPUTS_DIR = process.env.MATERIALS_INPUTS_DIR ?? resolve(REPO_DIR, 'Inputs');
 const PROCESSED_DIR =
   process.env.MATERIALS_PROCESSED_DIR ??
-  resolve(homedir(), 'Claude Projects/material-intensity/Processed data (results)');
-const PARAMETERS_DIR =
-  process.env.MATERIALS_PARAMETERS_DIR ??
-  resolve(homedir(), 'Claude Projects/material-intensity/Parameters');
-const INPUTS_DIR =
-  process.env.MATERIALS_INPUTS_DIR ??
-  resolve(homedir(), 'Claude Projects/material-intensity/Inputs');
+  resolve(
+    homedir(),
+    'Library/CloudStorage/Dropbox/Papers/Active Prep/Material intensity',
+    'Material use (w Pablo)/Processed data (results)',
+  );
 
 const OUT_DIR = resolve('public/tools/materials');
 // Lazy layer (country-level) is too big for the eager bundle. Goes to R2,
@@ -80,6 +90,34 @@ const MATERIAL_GROUPS = {
     label: 'Waste',
     members: ['Waste for final treatment and disposal'],
   },
+};
+
+// ── In-use stock dimensions (Parameters/stock_2024_total.csv) ───────────────
+// The stock-flow model tracks three materials across four end-use categories,
+// each split into two sub-uses. Upstream ids are snake_case; these are the
+// labels the explorer shows, matching the panel labels in the paper figures.
+const STOCK_MATERIAL_LABELS = {
+  Metal_Fe: 'Ferrous ores',
+  Metal_NonFe: 'Non-ferrous ores',
+  'Non-metallic minerals': 'Non-metallic minerals',
+};
+
+const STOCK_END_USE_LABELS = {
+  buildings: 'Buildings',
+  civil_infrastructure: 'Civil infrastructure',
+  machinery: 'Machinery',
+  short_lived: 'Short-lived products',
+};
+
+const STOCK_SUB_USE_LABELS = {
+  residential: 'Residential buildings',
+  non_residential: 'Non-residential buildings',
+  roads: 'Roads',
+  civil_engineering: 'Civil engineering',
+  machinery_group: 'Machinery',
+  vehicles_group: 'Vehicles',
+  durables: 'Durables',
+  packaging: 'Packaging',
 };
 
 const MATERIAL_TO_GROUP = Object.fromEntries(
@@ -141,6 +179,13 @@ async function readCsv(path) {
   return rowsToObjects(parseCsv(text));
 }
 
+// Parameters/ is the canonical home for every aggregated CSV; anything the
+// public repo omits is picked up from the Dropbox processed folder instead.
+function sourceCsv(name) {
+  const inRepo = resolve(PARAMETERS_DIR, name);
+  return existsSync(inRepo) ? inRepo : resolve(PROCESSED_DIR, name);
+}
+
 // ── Builders ────────────────────────────────────────────────────────────────
 
 // Build a {regionOrMaterial: [value-per-year, ...]} layout from long-format
@@ -166,13 +211,13 @@ function uniqueSorted(rows, col, coerce = (x) => x) {
 }
 
 async function buildWorldFlows(years) {
-  const rows = await readCsv(resolve(PROCESSED_DIR, 'materials_world_DMC.csv'));
+  const rows = await readCsv(sourceCsv('materials_world_DMC.csv'));
   const materials = pivotToTimeseries(rows, 'material_category', 'DMC_Mt', years);
   return { years, materials };
 }
 
 async function buildRegionFlows(years) {
-  const rows = await readCsv(resolve(PROCESSED_DIR, 'materials_region_DMC.csv'));
+  const rows = await readCsv(sourceCsv('materials_region_DMC.csv'));
   const regions = {};
   for (const r of rows) {
     const region = r.Region;
@@ -189,10 +234,10 @@ async function buildRegionFlows(years) {
 }
 
 async function buildGdpPop(years) {
-  const gdpWorld = await readCsv(resolve(PROCESSED_DIR, 'gdp_world.csv'));
-  const gdpRegion = await readCsv(resolve(PROCESSED_DIR, 'gdp_region.csv'));
-  const popWorld = await readCsv(resolve(PROCESSED_DIR, 'population_world_historical.csv'));
-  const popRegion = await readCsv(resolve(PROCESSED_DIR, 'population_region_historical.csv'));
+  const gdpWorld = await readCsv(sourceCsv('gdp_world.csv'));
+  const gdpRegion = await readCsv(sourceCsv('gdp_region.csv'));
+  const popWorld = await readCsv(sourceCsv('population_world_historical.csv'));
+  const popRegion = await readCsv(sourceCsv('population_region_historical.csv'));
 
   const gdp = { World: new Array(years.length).fill(null) };
   for (const r of gdpWorld) {
@@ -479,20 +524,131 @@ async function buildWorldBoundaries() {
 }
 
 async function buildStocks2024() {
-  const totalRows = await readCsv(resolve(PARAMETERS_DIR, 'stock_2024_total.csv'));
+  const rows = await readCsv(sourceCsv('stock_2024_total.csv'));
 
+  // totals[region][material][superCategory][subUse] = Mt in use at end-2024.
   const totals = {};
-  for (const r of totalRows) {
-    if (!totals[r.Region]) totals[r.Region] = {};
-    if (!totals[r.Region][r.material]) totals[r.Region][r.material] = {};
-    totals[r.Region][r.material][r.end_use] = Number(r.stock_Mt);
+  for (const r of rows) {
+    const v = Number(r.stock_Mt);
+    if (!Number.isFinite(v)) continue;
+    const byMaterial = (totals[r.Region] ??= {});
+    const byCategory = (byMaterial[r.material] ??= {});
+    const bySubUse = (byCategory[r.super_category] ??= {});
+    bySubUse[r.sub_use] = (bySubUse[r.sub_use] ?? 0) + v;
   }
 
-  // Age-profile data (stock_2024_age_profile.csv, ~4.5k rows / ~225 KB JSON)
-  // is intentionally excluded from the eager bundle — no v1 preset uses it.
-  // If a future "where the stock came from" view ships, it becomes its own
-  // lazy layer in R2 under ssl-data/materials/derived/.
-  return { snapshotYear: 2024, totals };
+  // Age-profile data (stock_2024_age_profile.csv, ~13k rows) is intentionally
+  // excluded from the eager bundle — no v1 preset uses it. If an age-pyramid
+  // view ships, it becomes its own lazy layer in R2 under
+  // ssl-data/materials/derived/.
+  return {
+    snapshotYear: 2024,
+    materialLabels: STOCK_MATERIAL_LABELS,
+    endUseLabels: STOCK_END_USE_LABELS,
+    subUseLabels: STOCK_SUB_USE_LABELS,
+    totals,
+  };
+}
+
+// ── SSP driver projections (Parameters/IIASA/ssp_drivers.csv) ───────────────
+//
+// IIASA's SSP database ships population and GDP per capita per region per
+// scenario, plus an index normalised to 1 in the base year. Levels differ
+// from the UN/World Bank history the rest of the tool uses, so projections
+// are anchored the way Busch et al. anchor them: the 2024 historical value
+// times the scenario index. Regional GDP follows the identity used upstream,
+// GDP_index = Population_index x GDP-per-capita_index, and world totals are
+// summed over regions (world GDP per capita is the ratio of the two sums).
+
+const PROJECTION_START = 2024;
+const PROJECTION_END = 2060;
+
+async function buildSspDrivers(historyYears, gdpPop) {
+  const rows = await readCsv(resolve(PARAMETERS_DIR, 'IIASA/ssp_drivers.csv'));
+
+  const years = [];
+  for (let y = PROJECTION_START; y <= PROJECTION_END; y++) years.push(y);
+  const scenarios = uniqueSorted(rows, 'scenario');
+
+  // index[variable][scenario][region][year]
+  const index = {};
+  for (const r of rows) {
+    const y = Number(r.year);
+    const idx = Number(r.index);
+    if (!Number.isFinite(y) || !Number.isFinite(idx)) continue;
+    if (y < PROJECTION_START || y > PROJECTION_END) continue;
+    ((index[r.variable] ??= {})[r.scenario] ??= {})[r.region] ??= {};
+    index[r.variable][r.scenario][r.region][y] = idx;
+  }
+
+  const popIdx = index.Population ?? {};
+  const gdppcIdx = index['GDP|PPP [per capita]'] ?? {};
+
+  const base = (series, region) => {
+    const arr = series[region];
+    const i = historyYears.indexOf(PROJECTION_START);
+    return arr && i >= 0 ? arr[i] : null;
+  };
+
+  const regions = {};
+  const worldPop = {};
+  const worldGdp = {};
+
+  for (const scenario of scenarios) {
+    for (const region of Object.keys(popIdx[scenario] ?? {})) {
+      const pop2024 = base(gdpPop.population, region);
+      const gdp2024 = base(gdpPop.gdp, region);
+      if (pop2024 == null || gdp2024 == null) continue;
+
+      const bucket = (regions[region] ??= { population: {}, gdp: {}, gdpPerCapita: {} });
+      const pop = [];
+      const gdp = [];
+      const gdppc = [];
+      for (const y of years) {
+        const pi = popIdx[scenario]?.[region]?.[y];
+        const gi = gdppcIdx[scenario]?.[region]?.[y];
+        if (!Number.isFinite(pi) || !Number.isFinite(gi)) {
+          pop.push(null);
+          gdp.push(null);
+          gdppc.push(null);
+          continue;
+        }
+        const p = pop2024 * pi;
+        const g = gdp2024 * pi * gi;
+        pop.push(p);
+        gdp.push(g);
+        gdppc.push(g / p);
+        (worldPop[scenario] ??= {})[y] = (worldPop[scenario][y] ?? 0) + p;
+        (worldGdp[scenario] ??= {})[y] = (worldGdp[scenario][y] ?? 0) + g;
+      }
+      bucket.population[scenario] = pop;
+      bucket.gdp[scenario] = gdp;
+      bucket.gdpPerCapita[scenario] = gdppc;
+    }
+  }
+
+  const world = { population: {}, gdp: {}, gdpPerCapita: {} };
+  for (const scenario of scenarios) {
+    world.population[scenario] = years.map((y) => worldPop[scenario]?.[y] ?? null);
+    world.gdp[scenario] = years.map((y) => worldGdp[scenario]?.[y] ?? null);
+    world.gdpPerCapita[scenario] = years.map((y) => {
+      const p = worldPop[scenario]?.[y];
+      const g = worldGdp[scenario]?.[y];
+      return p ? g / p : null;
+    });
+  }
+
+  return {
+    years,
+    scenarios,
+    anchorYear: PROJECTION_START,
+    world,
+    regions,
+    source: {
+      drivers: 'IIASA SSP database (basic drivers), indexed to 2024 = 1',
+      anchors: 'UN WPP 2024 population and World Bank GDP (2015 US$)',
+    },
+  };
 }
 
 async function buildMeta(worldRows, regionRows) {
@@ -530,12 +686,12 @@ async function buildMeta(worldRows, regionRows) {
 
 async function run() {
   console.log('[build-materials] reading from:');
-  console.log(`  processed: ${PROCESSED_DIR}`);
   console.log(`  parameters: ${PARAMETERS_DIR}`);
+  console.log(`  processed (fallback): ${PROCESSED_DIR}`);
 
   // Read the world flows first so we can derive the canonical year axis from it.
-  const worldRows = await readCsv(resolve(PROCESSED_DIR, 'materials_world_DMC.csv'));
-  const regionRows = await readCsv(resolve(PROCESSED_DIR, 'materials_region_DMC.csv'));
+  const worldRows = await readCsv(sourceCsv('materials_world_DMC.csv'));
+  const regionRows = await readCsv(sourceCsv('materials_region_DMC.csv'));
 
   const meta = await buildMeta(worldRows, regionRows);
   const years = meta.years;
@@ -544,6 +700,7 @@ async function run() {
   const regionFlows = await buildRegionFlows(years);
   const gdpPop = await buildGdpPop(years);
   const stocks2024 = await buildStocks2024();
+  const sspDrivers = await buildSspDrivers(years, gdpPop);
 
   await mkdir(OUT_DIR, { recursive: true });
 
@@ -553,6 +710,7 @@ async function run() {
     ['flows-regions.json', regionFlows],
     ['gdp-pop.json', gdpPop],
     ['stocks-2024.json', stocks2024],
+    ['ssp-drivers.json', sspDrivers],
   ];
   for (const [name, data] of outputs) {
     const path = resolve(OUT_DIR, name);

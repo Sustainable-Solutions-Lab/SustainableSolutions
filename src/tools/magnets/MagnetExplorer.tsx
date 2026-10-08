@@ -447,6 +447,9 @@ export default function MagnetExplorer() {
   // on the page; `flowsTick` re-reads the grid when a batch lands. Everything
   // that is not a diagram is complete without them.
   const [flowsTick, setFlowsTick] = useState(0);
+  // A fetch that fails must not leave the loading veil up for good.
+  const [flowsFailed, setFlowsFailed] = useState(false);
+  const [probesFailed, setProbesFailed] = useState(false);
 
   // ── THE PLANNER'S DEPLOYMENTS ────────────────────────────────────────────
   // Three decisions, in the order they depend on each other. Collection is a
@@ -485,7 +488,9 @@ export default function MagnetExplorer() {
     const at = { pfloor, abunlock, atariff, light };
     if (flowsReadyFor(at)) { if (!flowsReady) setFlowsTick((t) => t + 1); return; }
     let live = true;
-    ensureFlowsFor(at).then(() => { if (live) setFlowsTick((t) => t + 1); }).catch(() => undefined);
+    setFlowsFailed(false);
+    ensureFlowsFor(at).then(() => { if (live) setFlowsTick((t) => t + 1); })
+      .catch(() => { if (live) setFlowsFailed(true); });
     return () => { live = false; };
   }, [pfloor, abunlock, atariff, light, pfReady, ceilingReady, atReady, flowsReady]);
   // Step two of the loading: what the ledger probes, at the ceiling now chosen.
@@ -498,8 +503,10 @@ export default function MagnetExplorer() {
     ];
     if (coreReadyFor(probes)) { setProbesReady(true); return; }
     setProbesReady(false);
+    setProbesFailed(false);
     let live = true;
-    void ensureCoreFor(probes).then(() => { if (live) setProbesReady(true); });
+    void ensureCoreFor(probes).then(() => { if (live) setProbesReady(true); })
+      .catch(() => { if (live) setProbesFailed(true); });
     return () => { live = false; };
   }, [pfloor, atariff, light, abunlock, ceilingReady, ceilingFailed]);
   // THE HEADLINE NUMBERS WAIT for the research decision. Whether the thrifting
@@ -508,6 +515,12 @@ export default function MagnetExplorer() {
   // more after first paint. Before this the page opened at $10.5B and dropped
   // to $10.2B by itself. A figure that is about to change is not shown.
   const settled = !HAS_ABATEMENT_CEILING || ceilingReady || ceilingFailed;
+  // THE LOADING VEIL (the lab mark from _shell, as on the map tools) covers any
+  // wait for grid slices: the first load, and any switch, guided or by hand,
+  // that moves the settings onto slices not yet fetched.
+  // One label for the whole wait: one switch passes through all three steps,
+  // and a label that changed at each read as flicker.
+  const busy = !settled || (!probesReady && !probesFailed) || (!flowsReady && !flowsFailed);
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sectorsOpen, setSectorsOpen] = useState(false);   // demand by sector
@@ -1405,7 +1418,11 @@ export default function MagnetExplorer() {
   return (
     <div style={{ position: 'relative', maxWidth: isMobile ? 'var(--content-max)' : PAGE_MAX, margin: '0 auto',
                   padding: isMobile ? '20px 16px 112px' : '14px 20px 0', color: 'var(--ink)' }}>
-      <BusyOverlay busy={pfloor > 0 && !pfReady} label="Loading price-floor scenarios" />
+      {/* Pinned to the viewport: on this long page a veil centred on the whole
+          container put the mark below the fold. */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 40, pointerEvents: 'none' }}>
+        <BusyOverlay busy={busy} label="Loading scenarios" />
+      </div>
       {/* THE HEADER: what this is on the left, where the scenario lands on the
           right. On a phone the six cards are at the end of the page instead, and
           the bottom bar carries the headline figures. */}

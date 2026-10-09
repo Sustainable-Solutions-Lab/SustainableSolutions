@@ -27,6 +27,7 @@ const META = (data as any).meta?.project_finance;
 const FB = {
   prices: { concentrate: 6, oxide_NdPr: 80, oxide_DyTb: 350, oxide_other: 3, alloy: 50, magnet: 75 },
   basket: { NdPr: 0.22, DyTb: 0.01, other: 0.77 },
+  payability: { mineral: 0.34, mrec: 0.70 },
   grade: 'H',
   grade_ladder: { N: [0.31, 0], M: [0.30, 0.01], H: [0.29, 0.02], SH: [0.275, 0.035], UH: [0.255, 0.055], EH: [0.225, 0.085] },
   oxide_factor: 1.16,
@@ -66,6 +67,8 @@ export type Prices = Record<string, number>;
 export type Buildout = {
   f: string; s: string; r: string; kt: number; u: number; v: number; fx: number; n: number;
   basket?: Record<string, number>;
+  /** Mines only: share of contained oxide value the concentrate sells for. */
+  pay?: number;
   /** utilisation in each operating year, first first; the last is held. */
   up?: number[];
   /** the planner's lead time, years. */
@@ -179,14 +182,24 @@ const crf = (r: number, n: number) => (r <= 0 ? 1 / n : (r * (1 + r) ** n) / ((1
 
 /** (revenue, purchased input) per kg of throughput. Both sides of the balance —
  *  the omission that made the old tolling breakevens understate by a feedstock bill. */
-function stageFlows(stage: string, p: Prices, basket: Record<string, number>): [number, number] {
+/** Concentrate sells for a share (payability) of the oxide value it contains,
+ *  as the model's `concentrate_price`: ~34% for mineral concentrate, 70% for
+ *  ion-clay carbonate. A refinery buys mineral concentrate. Rows written
+ *  before 2026-10-08 carry no `pay`
+ *  and are priced as mineral concentrate. */
+function concentratePrice(p: Prices, basket: Record<string, number>, payability?: number): number {
+  const pay = payability ?? (C as any).payability?.mineral ?? 0.34;
+  return pay * (basket.NdPr * p.oxide_NdPr + basket.DyTb * p.oxide_DyTb + (basket.other ?? 0) * p.oxide_other);
+}
+
+function stageFlows(stage: string, p: Prices, basket: Record<string, number>, pay?: number): [number, number] {
   const [nm, dm] = C.grade_ladder[C.grade];
-  if (stage === 'mining') return [p.concentrate, 0];
+  if (stage === 'mining') return [concentratePrice(p, basket, pay), 0];
   if (stage === 'separation') {
     const rev = basket.NdPr * C.separation_recovery.NdPr * p.oxide_NdPr
       + basket.DyTb * C.separation_recovery.DyTb * p.oxide_DyTb
       + (basket.other ?? 0) * 0.9 * p.oxide_other;
-    return [rev, p.concentrate];
+    return [rev, concentratePrice(p, basket)];
   }
   if (stage === 'alloy') return [p.alloy, C.oxide_factor * (nm * p.oxide_NdPr + dm * p.oxide_DyTb)];
   if (stage === 'magnet') return [p.magnet, C.alloy_per_magnet * p.alloy];
@@ -284,8 +297,8 @@ export function evaluate(b: Buildout, prices: Prices, opts: {
   // An owned chain buys its first stage's input and sells its last stage's
   // output; the intermediates are internal transfers.
   const chain = b.own?.length ? b.own : [b.s];
-  const [revMarket] = stageFlows(chain[chain.length - 1], prices, basket);
-  const [, inPerKg] = stageFlows(chain[0], prices, basket);
+  const [revMarket] = stageFlows(chain[chain.length - 1], prices, basket, b.pay);
+  const [, inPerKg] = stageFlows(chain[0], prices, basket, b.pay);
   const provenance = b.r === 'China' ? 0 : (opts.provenancePremium ?? 0);
   const revPerKg = revMarket + provenance;
 

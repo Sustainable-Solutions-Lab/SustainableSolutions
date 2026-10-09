@@ -160,7 +160,11 @@ function FoodEmissionsMethods() {
         steady-state model</strong> — a persistent occupation emission per
         hectare of cultivated drained peat, grounded in process-model decay
         curves — in place of flat climate-zone factors, whose calibration
-        mixes sites of very different drainage ages. The associated
+        mixes sites of very different drainage ages. The upstream
+        drained-peat map carries no peat at all in Malaysia; we fill it
+        from PEATMAP peat extent overlaid on our crop maps (1.5 Mha of
+        crops on peat, 1.05 Mha of it oil palm), which adds roughly 56 Mt
+        CO₂e a year to Malaysia. The associated
         land-use-change pulse at drainage joins the dataset with the
         Cornerstone integration. We also extend the boundary with CO₂ from
         agricultural liming — a source outside the original model — using
@@ -256,9 +260,18 @@ function FoodEmissionsMethods() {
         Partnership</a> (2026a release, CC-BY): mean 10 m model
         probability is read as fractional cover at 1 km, with a
         per-crop probability floor calibrated so global expected area
-        matches FAOSTAT harvested area. These are model-derived rather
-        than directly observed maps, which is why they live on the
-        enhanced track; a rubber layer follows.
+        matches FAOSTAT harvested area (a threshold-then-aggregate
+        re-export that keeps partial-cover cells is in progress). These
+        are model-derived rather than directly observed maps, which is
+        why they live on the enhanced track; a rubber layer follows.
+        For Ghana and Côte d'Ivoire a further toggle constrains cocoa to
+        the district totals that Trase derives from the peer-reviewed
+        10 m map of Kalischek et al. (<em>Nature Food</em>, 2023), using
+        the FDaP layer only as the within-district weight. That toggle
+        also sets Ghana's national cocoa area to Kalischek's 2.71 Mha in
+        place of FAOSTAT's 1.49 Mha, the one place where a mask changes
+        a national total rather than only placement; production stays at
+        FAOSTAT, so per-tonne intensities rise accordingly.
       </p>
 
       <h2 style={h2Style}>Download the emission factors</h2>
@@ -442,10 +455,16 @@ function FoodEmissionsMethods() {
         functions and random-forest ensemble of{' '}
 <a href="https://doi.org/10.1126/science.adz4320" target="_blank" rel="noopener noreferrer" style={linkStyle}><strong>Powell et al., <em>Assessing the net-climate benefits of
         improved grazing intensity in global rangelands</em>, Science
-        (2026)</strong></a>. These first estimates are under review and not
-        yet in the map: the result is sensitive to the present-day level
-        of grazing intensity, which two independent global products place
-        quite differently, more than to how herds changed over time.
+        (2026)</strong></a>. The Ren response, refit on public covariates,
+        is the primary model for the paper and the Powell ensemble a
+        cross-check on cells where its response is well conditioned. The
+        estimates are not yet in the map: the result is sensitive to the
+        present-day level of grazing intensity, which two independent
+        global products place quite differently, more than to how herds
+        changed over time, and that reconciliation comes first. Herd
+        trends now follow FAOSTAT national stocks rather than the gridded
+        livestock products, whose 2010 release assigned the whole
+        former-Sudan herd to both successor states.
       </p>
 
       <h2 style={h2Style}>Drivers of change</h2>

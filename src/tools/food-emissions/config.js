@@ -414,6 +414,12 @@ const config = {
       note: 'Places Southeast Asian rubber, about nine tenths of world production, where 10 m imagery maps it. The mapped extent reproduces the published 14.2 Mha. National totals unchanged.',
     },
     {
+      id: 'trase-cocoa',
+      label: 'Cocoa \u2014 Ghana & C\u00f4te d\u2019Ivoire district totals (Kalischek et al. 2023 via Trase)',
+      suffix: '__trs',
+      note: 'Constrains cocoa to the district totals Trase derives from the Kalischek 10 m map, with the FDaP layer as the within-district weight. Ghana\u2019s national cocoa area follows Kalischek (2.71 Mha) rather than FAOSTAT (1.49 Mha); production is unchanged, so per-tonne intensities rise. C\u00f4te d\u2019Ivoire totals unchanged.',
+    },
+    {
       id: 'fdap',
       label: 'Cocoa & coffee — AI-mapped at 10 m (Forest Data Partnership 2026)',
       suffix: '__fdp',

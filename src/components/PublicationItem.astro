@@ -9,6 +9,7 @@ import { roleColor } from '../lib/roles';
 import { SYSTEMS } from '../lib/systems';
 import { citationsArray, totalCitations } from '../lib/citations';
 import CitationChart from './CitationChart.astro';
+import HighlyCitedBadge from './HighlyCitedBadge.astro';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -297,6 +298,7 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
               </div>
             </div>
           )}
+          <HighlyCitedBadge pub={pub} />
           <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono uppercase tracking-wider ml-auto">
             {pub.pdf_url && (<a href={pub.pdf_url} class="text-ink-2 hover:text-ink border-b-0" data-external>PDF</a>)}
             {pub.code_url && (<a href={pub.code_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Code</a>)}
@@ -427,6 +429,7 @@ const heroAccent = spectralColors[heroHash % spectralColors.length];
             </div>
           </div>
         )}
+        <HighlyCitedBadge pub={pub} />
         <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono uppercase tracking-wider ml-auto">
           {pub.pdf_url && (<a href={pub.pdf_url} class="text-ink-2 hover:text-ink border-b-0" data-external>PDF</a>)}
           {pub.code_url && (<a href={pub.code_url} class="text-ink-2 hover:text-ink border-b-0" data-external>Code</a>)}

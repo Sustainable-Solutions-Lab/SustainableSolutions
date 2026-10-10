@@ -8,6 +8,7 @@
 
 import scholarDetails from '../../templates/scholar-details.json';
 import scholarMaster from '../../templates/scholar-master.json';
+import journalRanks from '../../templates/journal-ranks.json';
 import type { Publication } from './types';
 
 export interface ScholarDetail {
@@ -88,4 +89,29 @@ export function recentCitations(pub: Publication, windowYrs = 3): number {
   if (!cs) return 0;
   const cutoff = new Date().getFullYear() - windowYrs + 1;
   return cs.filter((c) => c.year >= cutoff).reduce((s, c) => s + (c.count || 0), 0);
+}
+
+// Within-journal citation rank (templates/journal-ranks.json, refreshed by
+// scripts/fetch-journal-ranks.js): the paper's rank by citations among all
+// research papers in the same journal and year, per OpenAlex.
+export interface JournalRank {
+  journal: string;
+  year: number;
+  cites: number;
+  rank: number;
+  n: number;
+  pct: number;
+}
+
+const ranksData = journalRanks as {
+  meta: { as_of: string; top_pct: number };
+  ranks: Record<string, JournalRank>;
+};
+export const journalRanksAsOf = ranksData.meta.as_of;
+
+// Returns the rank only when the paper clears the "Highly cited" bar.
+export function highlyCitedRank(pub: Publication): JournalRank | null {
+  if (!pub.doi) return null;
+  const r = ranksData.ranks[pub.doi.trim().toLowerCase()];
+  return r && r.pct <= ranksData.meta.top_pct ? r : null;
 }

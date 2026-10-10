@@ -9,6 +9,7 @@
 //   templates/scholar-details.json   (per-paper citation counts + year chart)
 //   templates/scholar-master.json    (master list of Scholar IDs)
 //   templates/external-pubs.json     (citations for externally-authored pubs)
+//   templates/journal-ranks.json     (within-journal citation ranks, OpenAlex)
 //
 // The generated paste-into-Sheet artifacts (publications-from-scholar.csv /
 // .json) are deliberately NOT committed — they're noisy and the Publications
@@ -20,6 +21,7 @@ const FILES = [
   'templates/scholar-details.json',
   'templates/scholar-master.json',
   'templates/external-pubs.json',
+  'templates/journal-ranks.json',
 ]
 
 function run(cmd, args, opts = {}) {

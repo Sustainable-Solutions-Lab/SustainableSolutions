@@ -14,7 +14,8 @@
     "prebuild": "node scripts/fetch-sheets.js && node scripts/fetch-external-pubs.js && node scripts/fetch-github.js && node scripts/fetch-magnet-grid.js",
     "predev": "node scripts/fetch-magnet-grid.js",
     "fetch:magnet-grid": "node scripts/fetch-magnet-grid.js",
-    "refresh-scholar": "node scripts/scrape-scholar.js && node scripts/scholar-to-csv.js && node scripts/commit-scholar-refresh.js",
+    "refresh-scholar": "node scripts/scrape-scholar.js && node scripts/scholar-to-csv.js && node scripts/fetch-journal-ranks.js && node scripts/commit-scholar-refresh.js",
+    "fetch:journal-ranks": "node scripts/fetch-journal-ranks.js",
     "fetch:github": "node scripts/fetch-github.js"
   },
   "dependencies": {

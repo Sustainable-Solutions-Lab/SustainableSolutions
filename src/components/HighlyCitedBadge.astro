@@ -20,7 +20,7 @@ const topPct = r ? (r.pct < 1 ? 'Top 1%' : `Top ${Math.ceil(r.pct)}%`) : '';
 ---
 
 {r && (
-  <span class="hc-badge" tabindex="0" aria-label={`Highly cited: ${tip}`}>
+  <span class="hc-badge" tabindex="0" role="button" aria-expanded="false" aria-label={`Highly cited: ${tip}`}>
     <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" />
       <circle cx="12" cy="8" r="6" />
@@ -80,7 +80,7 @@ const topPct = r ? (r.pct < 1 ? 'Top 1%' : `Top ${Math.ceil(r.pct)}%`) : '';
     pointer-events: none;
   }
   .hc-badge:hover .hc-tip,
-  .hc-badge:focus .hc-tip {
+  .hc-badge.open .hc-tip {
     opacity: 1;
     visibility: visible;
   }
@@ -100,3 +100,31 @@ const topPct = r ? (r.pct < 1 ? 'Top 1%' : `Top ${Math.ceil(r.pct)}%`) : '';
     color: var(--ink-3);
   }
 </style>
+
+<script>
+  // Click/tap toggles the popover; a click anywhere else or Escape closes it.
+  // Hover still previews it on desktop.
+  function closeAll(except?: Element) {
+    document.querySelectorAll('.hc-badge.open').forEach((b) => {
+      if (b === except) return;
+      b.classList.remove('open');
+      b.setAttribute('aria-expanded', 'false');
+    });
+  }
+  document.addEventListener('click', (e) => {
+    const badge = (e.target as Element | null)?.closest?.('.hc-badge');
+    closeAll(badge ?? undefined);
+    if (badge) {
+      const open = badge.classList.toggle('open');
+      badge.setAttribute('aria-expanded', String(open));
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    const badge = (e.target as Element | null)?.closest?.('.hc-badge');
+    if (e.key === 'Escape') closeAll();
+    else if (badge && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      (badge as HTMLElement).click();
+    }
+  });
+</script>

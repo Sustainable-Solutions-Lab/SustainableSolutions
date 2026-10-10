@@ -1,6 +1,6 @@
 ---
-// Small "Highly cited" badge for publication cards: the paper ranks in the
-// top 5% by citations among research papers from the same journal and year
+// Small "Top X% in journal-year" badge for publication cards: the paper ranks
+// in the top 5% by citations among research papers from the same journal and year
 // (see scripts/fetch-journal-ranks.js). Hover or focus shows the rank.
 import type { Publication } from '../lib/types';
 import { highlyCitedRank, journalRanksAsOf } from '../lib/citations';
@@ -20,14 +20,14 @@ const topPct = r ? (r.pct < 1 ? 'Top 1%' : `Top ${Math.ceil(r.pct)}%`) : '';
 ---
 
 {r && (
-  <span class="hc-badge" tabindex="0" role="button" aria-expanded="false" aria-label={`Highly cited: ${tip}`}>
+  <span class="hc-badge" tabindex="0" role="button" aria-expanded="false" aria-label={`${topPct} in journal-year: ${tip}`}>
     <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" />
       <circle cx="12" cy="8" r="6" />
     </svg>
-    Highly cited
+    {topPct} in journal-year
     <span class="hc-tip" role="tooltip">
-      <span class="hc-tip-head">{topPct} in journal</span>
+      <span class="hc-tip-head">Citation rank</span>
       {tip}
       <span class="hc-tip-src">OpenAlex, {asOf}</span>
     </span>

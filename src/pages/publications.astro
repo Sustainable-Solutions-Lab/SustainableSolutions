@@ -392,6 +392,52 @@ const famPaths: string[] = [];
 <script async src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script>
 <script async src="https://badge.dimensions.ai/badge.js" charset="utf-8"></script>
 
+{/* Badge links open in a new tab, and Altmetric's hover popover gets the same
+    dismissal as the Highly cited badge. Altmetric shows its popover on hover,
+    which on touch screens means the first tap opens it and nothing closes it.
+    Capture phase so we act before Altmetric's own handlers. */}
+<script is:inline>
+  (function () {
+    function hidePopovers() {
+      document.querySelectorAll('.altmetric-popover').forEach(function (el) {
+        el.style.display = 'none';
+      });
+    }
+    function onActivate(e) {
+      var t = e.target;
+      var link = t && t.closest ? t.closest('a') : null;
+      var inPopover = t && t.closest ? t.closest('.altmetric-popover') : null;
+      if (link && (inPopover || link.closest('.altmetric-embed, .__dimensions_badge_embed__'))) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        window.open(link.href, '_blank', 'noopener');
+        hidePopovers();
+        setTimeout(hidePopovers, 400); // Altmetric re-shows it after a tap
+        return;
+      }
+      if (!inPopover) hidePopovers();
+    }
+    document.addEventListener('click', onActivate, true);
+    // Altmetric swallows taps (no click event follows), so handle touchend
+    // too. Only a tap, not the end of a scroll.
+    var touchStart = null;
+    document.addEventListener('touchstart', function (e) {
+      var p = e.touches[0];
+      touchStart = p ? { x: p.clientX, y: p.clientY } : null;
+    }, { capture: true, passive: true });
+    document.addEventListener('touchend', function (e) {
+      var p = e.changedTouches[0];
+      if (!touchStart || !p || Math.abs(p.clientX - touchStart.x) > 10 || Math.abs(p.clientY - touchStart.y) > 10) return;
+      onActivate(e);
+    }, { capture: true, passive: false });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') hidePopovers();
+    });
+    // Coming back from the new tab: don't leave a popover hanging.
+    document.addEventListener('visibilitychange', hidePopovers);
+  })();
+</script>
+
 <script is:inline>
   (function () {
     const search = document.getElementById('pub-search');

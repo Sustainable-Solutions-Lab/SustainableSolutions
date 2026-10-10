@@ -1,0 +1,1418 @@
+{
+  "meta": {
+    "as_of": "2026-10-10",
+    "min_refs": 10,
+    "min_cohort": 20,
+    "top_pct": 5
+  },
+  "ranks": {
+    "10.1016/j.epsl.2008.08.009": {
+      "journal": "Earth and Planetary Science Letters",
+      "year": 2008,
+      "cites": 50,
+      "rank": 327,
+      "n": 502,
+      "pct": 65.14
+    },
+    "10.2475/07.2009.02": {
+      "journal": "American Journal of Science",
+      "year": 2009,
+      "cites": 37,
+      "rank": 19,
+      "n": 30,
+      "pct": 63.33
+    },
+    "10.1130/b26308.1": {
+      "journal": "Geological Society of America Bulletin",
+      "year": 2006,
+      "cites": 79,
+      "rank": 58,
+      "n": 123,
+      "pct": 47.15
+    },
+    "10.1073/pnas.0914216107": {
+      "journal": "Proceedings of the National Academy of Sciences",
+      "year": 2010,
+      "cites": 1130,
+      "rank": 40,
+      "n": 3916,
+      "pct": 1.02
+    },
+    "10.1073/pnas.0906974107": {
+      "journal": "Proceedings of the National Academy of Sciences",
+      "year": 2010,
+      "cites": 1766,
+      "rank": 16,
+      "n": 3916,
+      "pct": 0.41
+    },
+    "10.1126/science.1188566": {
+      "journal": "Science",
+      "year": 2010,
+      "cites": 1397,
+      "rank": 76,
+      "n": 1080,
+      "pct": 7.04
+    },
+    "10.1130/g31250.1": {
+      "journal": "Geology",
+      "year": 2010,
+      "cites": 69,
+      "rank": 153,
+      "n": 326,
+      "pct": 46.93
+    },
+    "10.1073/pnas.1106517108": {
+      "journal": "Proceedings of the National Academy of Sciences",
+      "year": 2011,
+      "cites": 43,
+      "rank": 3203,
+      "n": 3780,
+      "pct": 84.74
+    },
+    "10.1073/pnas.1107409108": {
+      "journal": "Proceedings of the National Academy of Sciences",
+      "year": 2011,
+      "cites": 489,
+      "rank": 209,
+      "n": 3780,
+      "pct": 5.53
+    },
+    "10.5194/bg-9-1845-2012": {
+      "journal": "Biogeosciences",
+      "year": 2012,
+      "cites": 387,
+      "rank": 8,
+      "n": 355,
+      "pct": 2.25
+    },
+    "10.5194/bg-10-851-2013": {
+      "journal": "Biogeosciences",
+      "year": 2013,
+      "cites": 138,
+      "rank": 74,
+      "n": 530,
+      "pct": 13.96
+    },
+    "10.2475/02.2012.05": {
+      "journal": "American Journal of Science",
+      "year": 2012,
+      "cites": 198,
+      "rank": 2,
+      "n": 27,
+      "pct": 7.41
+    },
+    "10.5194/bg-9-3247-2012": {
+      "journal": "Biogeosciences",
+      "year": 2012,
+      "cites": 379,
+      "rank": 9,
+      "n": 355,
+      "pct": 2.54
+    },
+    "10.1088/1748-9326/8/3/034011": {
+      "journal": "Environmental Research Letters",
+      "year": 2013,
+      "cites": 62,
+      "rank": 163,
+      "n": 360,
+      "pct": 45.28
+    },
+    "10.1088/1748-9326/8/1/011001": {
+      "journal": "Environmental Research Letters",
+      "year": 2013,
+      "cites": 50,
+      "rank": 194,
+      "n": 360,
+      "pct": 53.89
+    },
+    "10.1073/pnas.1219918110": {
+      "journal": "Proceedings of the National Academy of Sciences",
+      "year": 2013,
+      "cites": 634,
+      "rank": 113,
+      "n": 4078,
+      "pct": 2.77
+    },
+    "10.1007/s10584-014-1197-x": {
+      "journal": "Climatic Change",
+      "year": 2014,
+      "cites": 230,
+      "rank": 19,
+      "n": 271,
+      "pct": 7.01
+    },
+    "10.1088/1748-9326/9/11/114005": {
+      "journal": "Environmental Research Letters",
+      "year": 2014,
+      "cites": 86,
+      "rank": 114,
+      "n": 325,
+      "pct": 35.08
+    },
+    "10.1080/17583004.2014.913867": {
+      "journal": "Carbon Management",
+      "year": 2014,
+      "cites": 45,
+      "rank": 14,
+      "n": 43,
+      "pct": 32.56
+    },
+    "10.1038/nature13927": {
+      "journal": "Nature",
+      "year": 2014,
+      "cites": 44,
+      "rank": 913,
+      "n": 1139,
+      "pct": 80.16
+    },
+    "10.1088/1748-9326/9/8/084018": {
+      "journal": "Environmental Research Letters",
+      "year": 2014,
+      "cites": 186,
+      "rank": 40,
+      "n": 325,
+      "pct": 12.31
+    },
+    "10.1073/pnas.1312860111": {
+      "journal": "Proceedings of the National Academy of Sciences",
+      "year": 2014,
+      "cites": 486,
+      "rank": 150,
+      "n": 3754,
+      "pct": 4
+    },
+    "10.1088/1748-9326/9/9/094008": {
+      "journal": "Environmental Research Letters",
+      "year": 2014,
+      "cites": 96,
+      "rank": 95,
+      "n": 325,
+      "pct": 29.23
+    },
+    "10.1038/ncomms8714": {
+      "journal": "Nature Communications",
+      "year": 2015,
+      "cites": 426,
+      "rank": 271,
+      "n": 3199,
+      "pct": 8.47
+    },
+    "10.1038/nclimate2731": {
+      "journal": "Nature Climate Change",
+      "year": 2015,
+      "cites": 40,
+      "rank": 206,
+      "n": 253,
+      "pct": 81.42
+    },
+    "10.1002/2014gb004997": {
+      "journal": "Global Biogeochemical Cycles",
+      "year": 2015,
+      "cites": 361,
+      "rank": 5,
+      "n": 124,
+      "pct": 4.03
+    },
+    "10.1111/rec.12261": {
+      "journal": "Restoration Ecology",
+      "year": 2015,
+      "cites": 199,
+      "rank": 3,
+      "n": 121,
+      "pct": 2.48
+    },
+    "10.1126/science.1258832": {
+      "journal": "Science",
+      "year": 2015,
+      "cites": 1307,
+      "rank": 78,
+      "n": 1073,
+      "pct": 7.27
+    },
+    "10.1038/nclimate2800": {
+      "journal": "Nature Climate Change",
+      "year": 2015,
+      "cites": 289,
+      "rank": 66,
+      "n": 253,
+      "pct": 26.09
+    },
+    "10.1038/nature14677": {
+      "journal": "Nature",
+      "year": 2015,
+      "cites": 1661,
+      "rank": 63,
+      "n": 1088,
+      "pct": 5.79
+    },
+    "10.1088/1748-9326/10/9/095001": {
+      "journal": "Environmental Research Letters",
+      "year": 2015,
+      "cites": 35,
+      "rank": 238,
+      "n": 361,
+      "pct": 65.93
+    },
+    "10.1088/1748-9326/10/9/095006": {
+      "journal": "Environmental Research Letters",
+      "year": 2015,
+      "cites": 50,
+      "rank": 193,
+      "n": 361,
+      "pct": 53.46
+    },
+    "10.1038/nclimate2870": {
+      "journal": "Nature Climate Change",
+      "year": 2015,
+      "cites": 1441,
+      "rank": 4,
+      "n": 253,
+      "pct": 1.58
+    },
+    "10.5194/acp-15-5443-2015": {
+      "journal": "Atmospheric chemistry and physics",
+      "year": 2015,
+      "cites": 165,
+      "rank": 76,
+      "n": 755,
+      "pct": 10.07
+    },
+    "10.1088/1748-9326/11/9/095012": {
+      "journal": "Environmental Research Letters",
+      "year": 2016,
+      "cites": 179,
+      "rank": 48,
+      "n": 400,
+      "pct": 12
+    },
+    "10.1088/1748-9326/11/6/061001": {
+      "journal": "Environmental Research Letters",
+      "year": 2016,
+      "cites": 12,
+      "rank": 371,
+      "n": 400,
+      "pct": 92.75
+    },
+    "10.1038/ngeo2798": {
+      "journal": "Nature Geoscience",
+      "year": 2016,
+      "cites": 96,
+      "rank": 108,
+      "n": 173,
+      "pct": 62.43
+    },
+    "10.1016/j.apenergy.2016.10.110": {
+      "journal": "Applied Energy",
+      "year": 2016,
+      "cites": 27,
+      "rank": 1538,
+      "n": 1723,
+      "pct": 89.26
+    },
+    "10.1146/annurev-environ-110615-085934": {
+      "journal": "Annual Review of Environment and Resources",
+      "year": 2016,
+      "cites": 1322,
+      "rank": 1,
+      "n": 22,
+      "pct": 4.55
+    },
+    "10.1088/1748-9326/11/8/084011": {
+      "journal": "Environmental Research Letters",
+      "year": 2016,
+      "cites": 27,
+      "rank": 314,
+      "n": 400,
+      "pct": 78.5
+    },
+    "10.1038/ngeo2840": {
+      "journal": "Nature Geoscience",
+      "year": 2016,
+      "cites": 675,
+      "rank": 7,
+      "n": 173,
+      "pct": 4.05
+    },
+    "10.1073/pnas.1610381114": {
+      "journal": "Proceedings of the National Academy of Sciences",
+      "year": 2017,
+      "cites": 348,
+      "rank": 155,
+      "n": 3549,
+      "pct": 4.37
+    },
+    "10.1002/2017gl073606": {
+      "journal": "Geophysical Research Letters",
+      "year": 2017,
+      "cites": 244,
+      "rank": 29,
+      "n": 1388,
+      "pct": 2.09
+    },
+    "10.1126/sciadv.1700066": {
+      "journal": "Science Advances",
+      "year": 2017,
+      "cites": 429,
+      "rank": 55,
+      "n": 749,
+      "pct": 7.34
+    },
+    "10.1002/2017ef000542": {
+      "journal": "Earth s Future",
+      "year": 2017,
+      "cites": 130,
+      "rank": 15,
+      "n": 78,
+      "pct": 19.23
+    },
+    "10.1038/nature21712": {
+      "journal": "Nature",
+      "year": 2017,
+      "cites": 1065,
+      "rank": 99,
+      "n": 1095,
+      "pct": 9.04
+    },
+    "10.5194/acp-17-10367-2017": {
+      "journal": "Atmospheric chemistry and physics",
+      "year": 2017,
+      "cites": 87,
+      "rank": 190,
+      "n": 822,
+      "pct": 23.11
+    },
+    "10.1038/s41560-018-0127-y": {
+      "journal": "Nature Energy",
+      "year": 2018,
+      "cites": 7,
+      "rank": 121,
+      "n": 125,
+      "pct": 96.8
+    },
+    "10.1126/science.aas9793": {
+      "journal": "Science",
+      "year": 2018,
+      "cites": 2385,
+      "rank": 19,
+      "n": 1044,
+      "pct": 1.82
+    },
+    "10.1038/s41893-018-0158-1": {
+      "journal": "Nature Sustainability",
+      "year": 2018,
+      "cites": 2,
+      "rank": 110,
+      "n": 112,
+      "pct": 98.21
+    },
+    "10.1038/s41561-018-0161-1": {
+      "journal": "Nature Geoscience",
+      "year": 2018,
+      "cites": 530,
+      "rank": 8,
+      "n": 161,
+      "pct": 4.97
+    },
+    "10.1038/s41467-018-04337-y": {
+      "journal": "Nature Communications",
+      "year": 2018,
+      "cites": 479,
+      "rank": 216,
+      "n": 5107,
+      "pct": 4.23
+    },
+    "10.1126/sciadv.aaq0390": {
+      "journal": "Science Advances",
+      "year": 2018,
+      "cites": 473,
+      "rank": 41,
+      "n": 894,
+      "pct": 4.59
+    },
+    "10.1039/c7ee03029k": {
+      "journal": "Energy & Environmental Science",
+      "year": 2018,
+      "cites": 328,
+      "rank": 90,
+      "n": 324,
+      "pct": 27.78
+    },
+    "10.1029/2018gl078969": {
+      "journal": "Geophysical Research Letters",
+      "year": 2018,
+      "cites": 65,
+      "rank": 324,
+      "n": 1501,
+      "pct": 21.59
+    },
+    "10.1038/s41893-017-0003-y": {
+      "journal": "Nature Sustainability",
+      "year": 2018,
+      "cites": 328,
+      "rank": 28,
+      "n": 112,
+      "pct": 25
+    },
+    "10.1038/s41558-018-0103-3": {
+      "journal": "Nature Climate Change",
+      "year": 2018,
+      "cites": 14,
+      "rank": 173,
+      "n": 185,
+      "pct": 93.51
+    },
+    "10.1073/pnas.1805187115": {
+      "journal": "Proceedings of the National Academy of Sciences",
+      "year": 2018,
+      "cites": 80,
+      "rank": 1481,
+      "n": 3563,
+      "pct": 41.57
+    },
+    "10.1038/s41477-018-0263-1": {
+      "journal": "Nature Plants",
+      "year": 2018,
+      "cites": 225,
+      "rank": 25,
+      "n": 143,
+      "pct": 17.48
+    },
+    "10.1021/acs.est.7b05654": {
+      "journal": "Environmental Science & Technology",
+      "year": 2018,
+      "cites": 57,
+      "rank": 803,
+      "n": 1516,
+      "pct": 52.97
+    },
+    "10.1073/pnas.1812881116": {
+      "journal": "Proceedings of the National Academy of Sciences",
+      "year": 2019,
+      "cites": 406,
+      "rank": 86,
+      "n": 3597,
+      "pct": 2.39
+    },
+    "10.1038/s41467-019-13462-1": {
+      "journal": "Nature Communications",
+      "year": 2019,
+      "cites": 389,
+      "rank": 308,
+      "n": 5436,
+      "pct": 5.67
+    },
+    "10.1038/s41893-019-0294-2": {
+      "journal": "Nature Sustainability",
+      "year": 2019,
+      "cites": 193,
+      "rank": 52,
+      "n": 153,
+      "pct": 33.99
+    },
+    "10.1038/s41558-019-0399-7": {
+      "journal": "Nature Climate Change",
+      "year": 2019,
+      "cites": 1,
+      "rank": 170,
+      "n": 169,
+      "pct": 100.59
+    },
+    "10.1038/s41586-019-1364-3": {
+      "journal": "Nature",
+      "year": 2019,
+      "cites": 824,
+      "rank": 129,
+      "n": 1187,
+      "pct": 10.87
+    },
+    "10.1038/s41467-019-12254-x": {
+      "journal": "Nature Communications",
+      "year": 2019,
+      "cites": 206,
+      "rank": 923,
+      "n": 5436,
+      "pct": 16.98
+    },
+    "10.1088/1748-9326/abc64f": {
+      "journal": "Environmental Research Letters",
+      "year": 2020,
+      "cites": 123,
+      "rank": 82,
+      "n": 939,
+      "pct": 8.73
+    },
+    "10.1029/2020gl090244": {
+      "journal": "Geophysical Research Letters",
+      "year": 2020,
+      "cites": 78,
+      "rank": 204,
+      "n": 1751,
+      "pct": 11.65
+    },
+    "10.1038/s43017-020-0079-1": {
+      "journal": "Nature Reviews Earth & Environment",
+      "year": 2020,
+      "cites": 214,
+      "rank": 28,
+      "n": 43,
+      "pct": 65.12
+    },
+    "10.1016/j.joule.2020.07.007": {
+      "journal": "Joule",
+      "year": 2020,
+      "cites": 618,
+      "rank": 12,
+      "n": 194,
+      "pct": 6.19
+    },
+    "10.1088/1748-9326/ab96d3": {
+      "journal": "Environmental Research Letters",
+      "year": 2020,
+      "cites": 73,
+      "rank": 192,
+      "n": 939,
+      "pct": 20.45
+    },
+    "10.1038/s41562-020-0896-8": {
+      "journal": "Nature Human Behaviour",
+      "year": 2020,
+      "cites": 849,
+      "rank": 3,
+      "n": 141,
+      "pct": 2.13
+    },
+    "10.1038/s43016-020-0043-8": {
+      "journal": "Nature Food",
+      "year": 2020,
+      "cites": 114,
+      "rank": 40,
+      "n": 99,
+      "pct": 40.4
+    },
+    "10.1038/s41558-020-0840-y": {
+      "journal": "Nature Climate Change",
+      "year": 2020,
+      "cites": 80,
+      "rank": 118,
+      "n": 190,
+      "pct": 62.11
+    },
+    "10.1093/nsr/nwaa137": {
+      "journal": "National Science Review",
+      "year": 2020,
+      "cites": 968,
+      "rank": 3,
+      "n": 247,
+      "pct": 1.21
+    },
+    "10.1038/s41467-020-18922-7": {
+      "journal": "Nature Communications",
+      "year": 2020,
+      "cites": 799,
+      "rank": 62,
+      "n": 6043,
+      "pct": 1.03
+    },
+    "10.1038/s41558-020-0746-8": {
+      "journal": "Nature Climate Change",
+      "year": 2020,
+      "cites": 416,
+      "rank": 16,
+      "n": 190,
+      "pct": 8.42
+    },
+    "10.1016/j.scs.2020.102281": {
+      "journal": "Sustainable Cities and Society",
+      "year": 2020,
+      "cites": 35,
+      "rank": 450,
+      "n": 660,
+      "pct": 68.18
+    },
+    "10.1021/acs.est.9b06936": {
+      "journal": "Environmental Science & Technology",
+      "year": 2020,
+      "cites": 85,
+      "rank": 445,
+      "n": 1548,
+      "pct": 28.75
+    },
+    "10.1088/1748-9326/abb429": {
+      "journal": "Environmental Research Letters",
+      "year": 2020,
+      "cites": 24,
+      "rank": 620,
+      "n": 939,
+      "pct": 66.03
+    },
+    "10.1029/2020av000162": {
+      "journal": "AGU Advances",
+      "year": 2020,
+      "cites": 22,
+      "rank": 20,
+      "n": 27,
+      "pct": 74.07
+    },
+    "10.1038/s41467-020-15076-4": {
+      "journal": "Nature Communications",
+      "year": 2020,
+      "cites": 322,
+      "rank": 465,
+      "n": 6043,
+      "pct": 7.69
+    },
+    "10.1016/j.isci.2020.101484": {
+      "journal": "iScience",
+      "year": 2020,
+      "cites": 66,
+      "rank": 175,
+      "n": 1142,
+      "pct": 15.32
+    },
+    "10.1038/s41893-020-00646-7": {
+      "journal": "Nature Sustainability",
+      "year": 2020,
+      "cites": 339,
+      "rank": 27,
+      "n": 165,
+      "pct": 16.36
+    },
+    "10.1016/j.apenergy.2020.115789": {
+      "journal": "Applied Energy",
+      "year": 2020,
+      "cites": 24,
+      "rank": 1337,
+      "n": 1599,
+      "pct": 83.61
+    },
+    "10.1038/s41558-020-0699-y": {
+      "journal": "Nature Climate Change",
+      "year": 2020,
+      "cites": 28,
+      "rank": 161,
+      "n": 190,
+      "pct": 84.74
+    },
+    "10.1088/1748-9326/ab9e21": {
+      "journal": "Environmental Research Letters",
+      "year": 2020,
+      "cites": 40,
+      "rank": 393,
+      "n": 939,
+      "pct": 41.85
+    },
+    "10.1088/1748-9326/abde5b": {
+      "journal": "Environmental Research Letters",
+      "year": 2021,
+      "cites": 24,
+      "rank": 551,
+      "n": 995,
+      "pct": 55.38
+    },
+    "10.1016/j.egycc.2021.100049": {
+      "journal": "Energy and Climate Change",
+      "year": 2021,
+      "cites": 112,
+      "rank": 2,
+      "n": 44,
+      "pct": 4.55
+    },
+    "10.1088/1748-9326/ac0661": {
+      "journal": "Environmental Research Letters",
+      "year": 2021,
+      "cites": 37,
+      "rank": 359,
+      "n": 995,
+      "pct": 36.08
+    },
+    "10.1038/s41893-021-00736-0": {
+      "journal": "Nature Sustainability",
+      "year": 2021,
+      "cites": 139,
+      "rank": 52,
+      "n": 122,
+      "pct": 42.62
+    },
+    "10.1093/nsr/nwab078": {
+      "journal": "National Science Review",
+      "year": 2021,
+      "cites": 423,
+      "rank": 2,
+      "n": 170,
+      "pct": 1.18
+    },
+    "10.1029/2021ef002250": {
+      "journal": "Earth s Future",
+      "year": 2021,
+      "cites": 31,
+      "rank": 94,
+      "n": 160,
+      "pct": 58.75
+    },
+    "10.1038/s41467-021-26356-y": {
+      "journal": "Nature Communications",
+      "year": 2021,
+      "cites": 287,
+      "rank": 381,
+      "n": 6955,
+      "pct": 5.48
+    },
+    "10.1016/j.xinn.2021.100182": {
+      "journal": "The Innovation",
+      "year": 2021,
+      "cites": 78,
+      "rank": 21,
+      "n": 76,
+      "pct": 27.63
+    },
+    "10.1016/j.joule.2021.04.011": {
+      "journal": "Joule",
+      "year": 2021,
+      "cites": 239,
+      "rank": 55,
+      "n": 197,
+      "pct": 27.92
+    },
+    "10.1038/s41561-021-00792-3": {
+      "journal": "Nature Geoscience",
+      "year": 2021,
+      "cites": 482,
+      "rank": 5,
+      "n": 165,
+      "pct": 3.03
+    },
+    "10.1038/s41586-020-03138-y": {
+      "journal": "Nature",
+      "year": 2021,
+      "cites": 579,
+      "rank": 127,
+      "n": 1301,
+      "pct": 9.76
+    },
+    "10.1098/rsta.2020.0454": {
+      "journal": "Philosophical Transactions of the Royal Society A Mathematical Physical and Engineering Sciences",
+      "year": 2021,
+      "cites": 123,
+      "rank": 21,
+      "n": 304,
+      "pct": 6.91
+    },
+    "10.1088/1748-9326/abee4e": {
+      "journal": "Environmental Research Letters",
+      "year": 2021,
+      "cites": 1192,
+      "rank": 1,
+      "n": 995,
+      "pct": 0.1
+    },
+    "10.1038/s41558-021-01001-0": {
+      "journal": "Nature Climate Change",
+      "year": 2021,
+      "cites": 339,
+      "rank": 27,
+      "n": 167,
+      "pct": 16.17
+    },
+    "10.1016/j.apenergy.2021.117354": {
+      "journal": "Applied Energy",
+      "year": 2021,
+      "cites": 22,
+      "rank": 1201,
+      "n": 1449,
+      "pct": 82.88
+    },
+    "10.1038/s41467-021-26355-z": {
+      "journal": "Nature Communications",
+      "year": 2021,
+      "cites": 331,
+      "rank": 260,
+      "n": 6955,
+      "pct": 3.74
+    },
+    "10.1038/s41558-021-01216-1": {
+      "journal": "Nature Climate Change",
+      "year": 2021,
+      "cites": 127,
+      "rank": 81,
+      "n": 167,
+      "pct": 48.5
+    },
+    "10.1126/sciadv.abf9415": {
+      "journal": "Science Advances",
+      "year": 2021,
+      "cites": 83,
+      "rank": 586,
+      "n": 1994,
+      "pct": 29.39
+    },
+    "10.1557/s43577-021-00244-8": {
+      "journal": "MRS Bulletin",
+      "year": 2021,
+      "cites": 9,
+      "rank": 77,
+      "n": 107,
+      "pct": 71.96
+    },
+    "10.1093/nsr/nwac223": {
+      "journal": "National Science Review",
+      "year": 2022,
+      "cites": 16,
+      "rank": 173,
+      "n": 231,
+      "pct": 74.89
+    },
+    "10.1038/s41558-022-01332-6": {
+      "journal": "Nature Climate Change",
+      "year": 2022,
+      "cites": 94,
+      "rank": 65,
+      "n": 169,
+      "pct": 38.46
+    },
+    "10.1038/s41477-022-01305-9": {
+      "journal": "Nature Plants",
+      "year": 2022,
+      "cites": 93,
+      "rank": 27,
+      "n": 141,
+      "pct": 19.15
+    },
+    "10.5194/essd-14-1639-2022": {
+      "journal": "Earth system science data",
+      "year": 2022,
+      "cites": 230,
+      "rank": 11,
+      "n": 269,
+      "pct": 4.09
+    },
+    "10.1038/d41586-022-00758-4": {
+      "journal": "Nature",
+      "year": 2022,
+      "cites": 237,
+      "rank": 321,
+      "n": 1389,
+      "pct": 23.11
+    },
+    "10.1126/science.abj1572": {
+      "journal": "Science",
+      "year": 2022,
+      "cites": 203,
+      "rank": 242,
+      "n": 964,
+      "pct": 25.1
+    },
+    "10.1088/1748-9326/ac55b6": {
+      "journal": "Environmental Research Letters",
+      "year": 2022,
+      "cites": 105,
+      "rank": 20,
+      "n": 823,
+      "pct": 2.43
+    },
+    "10.1016/s2542-5196(21)00326-0": {
+      "journal": "The Lancet Planetary Health",
+      "year": 2022,
+      "cites": 132,
+      "rank": 20,
+      "n": 93,
+      "pct": 21.51
+    },
+    "10.1038/s43017-022-00285-w": {
+      "journal": "Nature Reviews Earth & Environment",
+      "year": 2022,
+      "cites": 521,
+      "rank": 14,
+      "n": 52,
+      "pct": 26.92
+    },
+    "10.1038/s41561-022-00965-8": {
+      "journal": "Nature Geoscience",
+      "year": 2022,
+      "cites": 127,
+      "rank": 24,
+      "n": 166,
+      "pct": 14.46
+    },
+    "10.1038/s41558-022-01509-z": {
+      "journal": "Nature Climate Change",
+      "year": 2022,
+      "cites": 63,
+      "rank": 91,
+      "n": 169,
+      "pct": 53.85
+    },
+    "10.1016/j.oneear.2022.07.003": {
+      "journal": "One Earth",
+      "year": 2022,
+      "cites": 93,
+      "rank": 24,
+      "n": 125,
+      "pct": 19.2
+    },
+    "10.1038/s41467-022-33295-9": {
+      "journal": "Nature Communications",
+      "year": 2022,
+      "cites": 79,
+      "rank": 2177,
+      "n": 7529,
+      "pct": 28.91
+    },
+    "10.1038/s43017-023-00457-2": {
+      "journal": "Nature Reviews Earth & Environment",
+      "year": 2023,
+      "cites": 105,
+      "rank": 28,
+      "n": 53,
+      "pct": 52.83
+    },
+    "10.1038/s43247-023-00833-2": {
+      "journal": "Communications Earth & Environment",
+      "year": 2023,
+      "cites": 41,
+      "rank": 104,
+      "n": 468,
+      "pct": 22.22
+    },
+    "10.1038/s41893-022-01046-9": {
+      "journal": "Nature Sustainability",
+      "year": 2023,
+      "cites": 424,
+      "rank": 2,
+      "n": 163,
+      "pct": 1.23
+    },
+    "10.1038/s41586-023-06444-3": {
+      "journal": "Nature",
+      "year": 2023,
+      "cites": 231,
+      "rank": 246,
+      "n": 1447,
+      "pct": 17
+    },
+    "10.1016/j.jeem.2023.102810": {
+      "journal": "Journal of Environmental Economics and Management",
+      "year": 2023,
+      "cites": 26,
+      "rank": 24,
+      "n": 99,
+      "pct": 24.24
+    },
+    "10.1016/j.oneear.2023.07.007": {
+      "journal": "One Earth",
+      "year": 2023,
+      "cites": 156,
+      "rank": 4,
+      "n": 147,
+      "pct": 2.72
+    },
+    "10.1038/s41893-023-01241-2": {
+      "journal": "Nature Sustainability",
+      "year": 2023,
+      "cites": 31,
+      "rank": 119,
+      "n": 163,
+      "pct": 73.01
+    },
+    "10.1038/s43016-023-00792-z": {
+      "journal": "Nature Food",
+      "year": 2023,
+      "cites": 40,
+      "rank": 54,
+      "n": 105,
+      "pct": 51.43
+    },
+    "10.1126/science.add9843": {
+      "journal": "Science",
+      "year": 2023,
+      "cites": 172,
+      "rank": 167,
+      "n": 892,
+      "pct": 18.72
+    },
+    "10.1016/j.scib.2023.01.022": {
+      "journal": "中国科学通报：英文版",
+      "year": 2023,
+      "cites": 56,
+      "rank": 67,
+      "n": 531,
+      "pct": 12.62
+    },
+    "10.1038/s43017-023-00406-z": {
+      "journal": "Nature Reviews Earth & Environment",
+      "year": 2023,
+      "cites": 521,
+      "rank": 10,
+      "n": 53,
+      "pct": 18.87
+    },
+    "10.1038/s41893-022-00977-7": {
+      "journal": "Nature Sustainability",
+      "year": 2022,
+      "cites": 139,
+      "rank": 30,
+      "n": 119,
+      "pct": 25.21
+    },
+    "10.1016/j.envsci.2023.05.003": {
+      "journal": "Environmental Science & Policy",
+      "year": 2023,
+      "cites": 27,
+      "rank": 66,
+      "n": 237,
+      "pct": 27.85
+    },
+    "10.1016/j.joule.2023.01.001": {
+      "journal": "Joule",
+      "year": 2023,
+      "cites": 163,
+      "rank": 25,
+      "n": 198,
+      "pct": 12.63
+    },
+    "10.1038/s41558-023-01808-z": {
+      "journal": "Nature Climate Change",
+      "year": 2023,
+      "cites": 124,
+      "rank": 29,
+      "n": 183,
+      "pct": 15.85
+    },
+    "10.1093/nsr/nwad254": {
+      "journal": "National Science Review",
+      "year": 2023,
+      "cites": 33,
+      "rank": 108,
+      "n": 266,
+      "pct": 40.6
+    },
+    "10.1038/s43247-023-01147-z": {
+      "journal": "Communications Earth & Environment",
+      "year": 2023,
+      "cites": 40,
+      "rank": 107,
+      "n": 468,
+      "pct": 22.86
+    },
+    "10.1126/science.ade0805": {
+      "journal": "Science",
+      "year": 2023,
+      "cites": 323,
+      "rank": 62,
+      "n": 892,
+      "pct": 6.95
+    },
+    "10.1016/j.joule.2024.09.005": {
+      "journal": "Joule",
+      "year": 2024,
+      "cites": 9,
+      "rank": 209,
+      "n": 225,
+      "pct": 92.89
+    },
+    "10.1088/2753-3751/ad58e5": {
+      "journal": "Environmental Research Energy",
+      "year": 2024,
+      "cites": 10,
+      "rank": 6,
+      "n": 46,
+      "pct": 13.04
+    },
+    "10.1088/1748-9326/ad6463": {
+      "journal": "Environmental Research Letters",
+      "year": 2024,
+      "cites": 85,
+      "rank": 1,
+      "n": 986,
+      "pct": 0.1
+    },
+    "10.1038/s43017-024-00532-2": {
+      "journal": "Nature Reviews Earth & Environment",
+      "year": 2024,
+      "cites": 454,
+      "rank": 1,
+      "n": 60,
+      "pct": 1.67
+    },
+    "10.1126/sciadv.adh5543": {
+      "journal": "Science Advances",
+      "year": 2024,
+      "cites": 12,
+      "rank": 1585,
+      "n": 2268,
+      "pct": 69.89
+    },
+    "10.1016/j.adapen.2024.100185": {
+      "journal": "Advances in Applied Energy",
+      "year": 2024,
+      "cites": 57,
+      "rank": 7,
+      "n": 43,
+      "pct": 16.28
+    },
+    "10.1021/acs.est.4c03995": {
+      "journal": "Environmental Science & Technology",
+      "year": 2024,
+      "cites": 21,
+      "rank": 856,
+      "n": 2006,
+      "pct": 42.67
+    },
+    "10.1038/s43247-024-01661-8": {
+      "journal": "Communications Earth & Environment",
+      "year": 2024,
+      "cites": 15,
+      "rank": 333,
+      "n": 759,
+      "pct": 43.87
+    },
+    "10.1038/s41467-024-48966-y": {
+      "journal": "Nature Communications",
+      "year": 2024,
+      "cites": 94,
+      "rank": 823,
+      "n": 10391,
+      "pct": 7.92
+    },
+    "10.1016/j.egycc.2025.100203": {
+      "journal": "Energy and Climate Change",
+      "year": 2025,
+      "cites": 8,
+      "rank": 9,
+      "n": 59,
+      "pct": 15.25
+    },
+    "10.1016/j.adapen.2025.100252": {
+      "journal": "Advances in Applied Energy",
+      "year": 2025,
+      "cites": 2,
+      "rank": 49,
+      "n": 52,
+      "pct": 94.23
+    },
+    "10.1038/s41558-025-02305-1": {
+      "journal": "Nature Climate Change",
+      "year": 2025,
+      "cites": 27,
+      "rank": 40,
+      "n": 184,
+      "pct": 21.74
+    },
+    "10.1038/s41467-025-67759-5": {
+      "journal": "Nature Communications",
+      "year": 2025,
+      "cites": 7,
+      "rank": 7440,
+      "n": 12218,
+      "pct": 60.89
+    },
+    "10.1038/s43017-025-00658-x": {
+      "journal": "Nature Reviews Earth & Environment",
+      "year": 2025,
+      "cites": 258,
+      "rank": 1,
+      "n": 55,
+      "pct": 1.82
+    },
+    "10.1038/s41893-025-01707-5": {
+      "journal": "Nature Sustainability",
+      "year": 2025,
+      "cites": 5,
+      "rank": 132,
+      "n": 163,
+      "pct": 80.98
+    },
+    "10.1038/s41467-025-59879-9": {
+      "journal": "Nature Communications",
+      "year": 2025,
+      "cites": 86,
+      "rank": 189,
+      "n": 12218,
+      "pct": 1.55
+    },
+    "10.1088/2976-601x/adacec": {
+      "journal": "Environmental Research Food Systems",
+      "year": 2025,
+      "cites": 3,
+      "rank": 11,
+      "n": 45,
+      "pct": 24.44
+    },
+    "10.1038/s41893-025-01711-9": {
+      "journal": "Nature Sustainability",
+      "year": 2025,
+      "cites": 3,
+      "rank": 146,
+      "n": 163,
+      "pct": 89.57
+    },
+    "10.1038/s41893-025-01692-9": {
+      "journal": "Nature Sustainability",
+      "year": 2025,
+      "cites": 4,
+      "rank": 141,
+      "n": 163,
+      "pct": 86.5
+    },
+    "10.1016/j.oneear.2024.12.002": {
+      "journal": "One Earth",
+      "year": 2024,
+      "cites": 27,
+      "rank": 48,
+      "n": 188,
+      "pct": 25.53
+    },
+    "10.1038/s41561-025-01731-2": {
+      "journal": "Nature Geoscience",
+      "year": 2025,
+      "cites": 8,
+      "rank": 88,
+      "n": 178,
+      "pct": 49.44
+    },
+    "10.1038/s41586-025-09806-1": {
+      "journal": "Nature",
+      "year": 2025,
+      "cites": 48,
+      "rank": 430,
+      "n": 1587,
+      "pct": 27.1
+    },
+    "10.1126/science.adq8594": {
+      "journal": "Science",
+      "year": 2025,
+      "cites": 105,
+      "rank": 49,
+      "n": 997,
+      "pct": 4.91
+    },
+    "10.1126/science.adt7820": {
+      "journal": "Science",
+      "year": 2025,
+      "cites": 1,
+      "rank": 915,
+      "n": 997,
+      "pct": 91.78
+    },
+    "10.1093/nsr/nwae424": {
+      "journal": "National Science Review",
+      "year": 2024,
+      "cites": 28,
+      "rank": 113,
+      "n": 375,
+      "pct": 30.13
+    },
+    "10.1088/1748-9326/ae1f2a": {
+      "journal": "Environmental Research Letters",
+      "year": 2025,
+      "cites": 0,
+      "rank": 750,
+      "n": 902,
+      "pct": 83.15
+    },
+    "10.1016/j.oneear.2025.101378": {
+      "journal": "One Earth",
+      "year": 2025,
+      "cites": 8,
+      "rank": 57,
+      "n": 135,
+      "pct": 42.22
+    },
+    "10.1038/s41586-025-09482-1": {
+      "journal": "Nature",
+      "year": 2025,
+      "cites": 93,
+      "rank": 157,
+      "n": 1587,
+      "pct": 9.89
+    },
+    "10.1038/s41586-025-09266-7": {
+      "journal": "Nature",
+      "year": 2025,
+      "cites": 93,
+      "rank": 157,
+      "n": 1587,
+      "pct": 9.89
+    },
+    "10.5194/essd-17-3431-2025": {
+      "journal": "Earth system science data",
+      "year": 2025,
+      "cites": 12,
+      "rank": 67,
+      "n": 329,
+      "pct": 20.36
+    },
+    "10.1073/pnas.2512930123": {
+      "journal": "Proceedings of the National Academy of Sciences",
+      "year": 2026,
+      "cites": 3,
+      "rank": 328,
+      "n": 3322,
+      "pct": 9.87
+    },
+    "10.1088/2753-3751/ae4eea": {
+      "journal": "Environmental Research Energy",
+      "year": 2026,
+      "cites": 0,
+      "rank": 16,
+      "n": 58,
+      "pct": 27.59
+    },
+    "10.1038/s41586-026-10571-y": {
+      "journal": "Nature",
+      "year": 2026,
+      "cites": 8,
+      "rank": 272,
+      "n": 1151,
+      "pct": 23.63
+    },
+    "10.1038/s43017-026-00791-1": {
+      "journal": "Nature Reviews Earth & Environment",
+      "year": 2026,
+      "cites": 0,
+      "rank": 25,
+      "n": 42,
+      "pct": 59.52
+    },
+    "10.1126/science.adz4320": {
+      "journal": "Science",
+      "year": 2026,
+      "cites": 2,
+      "rank": 369,
+      "n": 786,
+      "pct": 46.95
+    },
+    "10.1038/s41558-026-02675-0": {
+      "journal": "Nature Climate Change",
+      "year": 2026,
+      "cites": 0,
+      "rank": 84,
+      "n": 144,
+      "pct": 58.33
+    },
+    "10.1038/s41587-026-03288-w": {
+      "journal": "Nature Biotechnology",
+      "year": 2026,
+      "cites": 0,
+      "rank": 116,
+      "n": 175,
+      "pct": 66.29
+    },
+    "10.1021/acs.est.6c01630": {
+      "journal": "Environmental Science & Technology",
+      "year": 2026,
+      "cites": 0,
+      "rank": 1028,
+      "n": 2252,
+      "pct": 45.65
+    },
+    "10.1038/s41558-026-02753-3": {
+      "journal": "Nature Climate Change",
+      "year": 2026,
+      "cites": 2,
+      "rank": 40,
+      "n": 144,
+      "pct": 27.78
+    }
+  }
+}

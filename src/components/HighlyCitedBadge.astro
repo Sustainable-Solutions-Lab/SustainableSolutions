@@ -1,0 +1,102 @@
+---
+// Small "Highly cited" badge for publication cards: the paper ranks in the
+// top 5% by citations among research papers from the same journal and year
+// (see scripts/fetch-journal-ranks.js). Hover or focus shows the rank.
+import type { Publication } from '../lib/types';
+import { highlyCitedRank, journalRanksAsOf } from '../lib/citations';
+
+interface Props {
+  pub: Publication;
+}
+const r = highlyCitedRank(Astro.props.pub);
+const asOf = new Date(`${journalRanksAsOf}T00:00:00`).toLocaleDateString('en-US', {
+  month: 'short',
+  year: 'numeric',
+});
+const tip = r
+  ? `#${r.rank.toLocaleString('en-US')} of ${r.n.toLocaleString('en-US')} research papers in ${r.journal} (${r.year}) by citations`
+  : '';
+const topPct = r ? (r.pct < 1 ? 'Top 1%' : `Top ${Math.ceil(r.pct)}%`) : '';
+---
+
+{r && (
+  <span class="hc-badge" tabindex="0" aria-label={`Highly cited: ${tip}`}>
+    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" />
+      <circle cx="12" cy="8" r="6" />
+    </svg>
+    Highly cited
+    <span class="hc-tip" role="tooltip">
+      <span class="hc-tip-head">{topPct} in journal</span>
+      {tip}
+      <span class="hc-tip-src">OpenAlex, {asOf}</span>
+    </span>
+  </span>
+)}
+
+<style>
+  .hc-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cardinal);
+    border: 1px solid currentColor;
+    border-radius: var(--radius-sm, 2px);
+    cursor: default;
+    white-space: nowrap;
+  }
+  .hc-badge:focus-visible {
+    outline: 2px solid var(--cardinal);
+    outline-offset: 2px;
+  }
+  .hc-tip {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 6px);
+    z-index: 20;
+    width: max-content;
+    max-width: min(280px, 80vw);
+    padding: 8px 10px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.4;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: normal;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-md, 4px);
+    box-shadow: var(--shadow-pop);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 120ms ease;
+    pointer-events: none;
+  }
+  .hc-badge:hover .hc-tip,
+  .hc-badge:focus .hc-tip {
+    opacity: 1;
+    visibility: visible;
+  }
+  .hc-tip-head {
+    display: block;
+    margin-bottom: 2px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cardinal);
+  }
+  .hc-tip-src {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+</style>

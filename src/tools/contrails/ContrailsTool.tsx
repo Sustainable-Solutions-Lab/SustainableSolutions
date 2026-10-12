@@ -955,7 +955,7 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
           <p className="mt-1 text-xs italic leading-snug opacity-70">
             Davis, Whiteson, Bonnemaizon, Caldeira, Teoh &amp; Shapiro,{' '}
             <a
-              href="https://www.researchsquare.com/article/rs-11285103/"
+              href="https://www.researchsquare.com/article/rs-11285103/v1"
               target="_blank"
               rel="noopener noreferrer"
               className="underline decoration-rule underline-offset-2 hover:decoration-ink"

@@ -12,7 +12,7 @@
  */
 import { useMemo, useRef, useState } from 'react';
 import MethodsPane from './MethodsPane';
-import OutlookChart from './OutlookChart';
+import OutlookChart, { LANES } from './OutlookChart';
 import ForceMix from './ForceMix';
 import { Scorecard, DecidesBar, ForceBars, GEContour } from './SectorDetail';
 import { Chips, WORLD_LAB, shortName } from './ui.jsx';
@@ -103,7 +103,6 @@ function HoverFig({ children, width, xToData, format }) {
 const svgText = { fontFamily: 'var(--font-mono)', fontSize: 11, fill: 'var(--ink-3)' };
 const svgLabel = { fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--ink-2)' };
 
-const CT_NAMES = { physical: 'Physical ceiling', time_budget: 'Time-budget ceiling', open_ended: 'Open-ended', provenance: 'Provenance' };
 
 /* ---------------- K&M aggregate panel (hidden behind SHOW_KM) ---------------- */
 
@@ -290,11 +289,6 @@ export default function DemandCeilingsTool() {
   const nAll = TOOL.meta.n_outcomes;
   const what = metric === 'jobs' ? 'jobs' : 'average real wage';
   const nCase = TOOL.meta.n_case;
-  const groups = useMemo(() => {
-    const g = {};
-    for (const s of SECTORS) (g[s.ct] = g[s.ct] || []).push(s);
-    return g;
-  }, []);
 
   const h2 = { fontFamily: 'var(--font-serif)', fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 600, lineHeight: 1.15, letterSpacing: '-0.01em', margin: '4px 0 6px', color: 'var(--ink)' };
   const lede = { margin: 0, fontSize: 14.5, color: 'var(--ink-2)', maxWidth: '72ch', lineHeight: 1.5 };
@@ -378,19 +372,20 @@ export default function DemandCeilingsTool() {
             <section ref={detailRef} aria-label="One industry in detail"
               style={{ borderTop: '2px solid var(--ink)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12, scrollMarginTop: 60 }}>
               <p style={{ ...mono11, margin: 0 }}>One industry in detail</p>
-              <label htmlFor="dc-sector" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>Industry (or tap any circle or column above)</span>
+              <h3 style={{ font: '600 clamp(20px, 2.8vw, 26px)/1.2 var(--font-serif)', color: 'var(--ink)', margin: 0 }}>
+                {tsel.name} <span style={{ fontWeight: 400, fontSize: '0.7em', color: 'var(--ink-3)' }}>{emp[tsel.code]}M jobs · {tsel.type}</span>
+              </h3>
+              <label htmlFor="dc-sector" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px' }}>
+                <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>Change industry (or tap any circle or column above)</span>
                 <select id="dc-sector" value={selCode} onChange={(e) => setSelCode(e.target.value)}
-                  style={{ font: '600 clamp(18px, 2.6vw, 24px)/1.25 var(--font-serif)', color: 'var(--ink)', background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 2, padding: '6px 8px', maxWidth: '100%' }}>
-                  {['physical', 'time_budget', 'open_ended', 'provenance'].map((ct) =>
-                    groups[ct] ? (
-                      <optgroup key={ct} label={CT_NAMES[ct]}>
-                        {groups[ct].map((x) => (
-                          <option key={x.code} value={x.code}>{x.name} ({x.emp}M jobs)</option>
-                        ))}
-                      </optgroup>
-                    ) : null
-                  )}
+                  style={{ font: '400 14px/1.3 var(--font-sans)', color: 'var(--ink)', background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 2, padding: '4px 6px', maxWidth: '100%' }}>
+                  {LANES.map(([t]) => (
+                    <optgroup key={t} label={t}>
+                      {TOOL.sectors.filter((x) => x.type === t).sort((a, b) => b.emp - a.emp).map((x) => (
+                        <option key={x.code} value={x.code}>{x.name} ({x.emp}M)</option>
+                      ))}
+                    </optgroup>
+                  ))}
                 </select>
               </label>
               <Scorecard s={tsel} nOutcomes={nAll} world={world} />

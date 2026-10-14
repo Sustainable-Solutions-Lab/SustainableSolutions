@@ -78,7 +78,7 @@ export function Changed({ label, base, r }: { label: string | null; base: Result
   return (
     <div aria-live="polite" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 12px', fontSize: 12, color: 'var(--ink-2)', margin: '6px 0 0' }}>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-        <ArrowRight size={13} strokeWidth={1.5} /> Since you changed <b style={{ color: 'var(--ink)' }}>{label}</b>:
+        <ArrowRight size={13} strokeWidth={1.5} /><span>Since you changed <b style={{ color: 'var(--ink)' }}>{label}</b>:</span>
       </span>
       {quiet ? <span>no change</span> : (
         <>

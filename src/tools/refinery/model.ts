@@ -14,7 +14,7 @@
  * on is drawn from its sources in proportion, which is what the Sankey shows.
  */
 import {
-  ALKY, AROM, CCS_COST, COKER, COKE_CO2, COPROC, CUTS, CUT_YIELD, FCC_MODES, FG_EF, FG_LHV,
+  ALKY, AROM, CCS_COST, LUBE, COKER, COKE_CO2, COPROC, CUTS, CUT_YIELD, FCC_MODES, FG_EF, FG_LHV,
   GASOLINE_MIN_RON, GJ_PER_MMBTU, GRADES, GRADE_BBL_PER_T, H2_LHV, H2_SOURCES, HCK_MODES, HT_H2,
   ISOM, NG_EF, OCTANE_DISCOUNT, OFFSITES_GJ_PER_T, PRESETS, PRICES_2023, PRODUCTS, PRODUCT_BBL_PER_T,
   RON, SCR_YIELD, SWING_MAX_C, SWING_SHARE, UNITS, UNIT_IDS, reformer,
@@ -51,7 +51,7 @@ export const unitsFromPreset = (id: PresetId): State['units'] =>
   Object.fromEntries(UNIT_IDS.map((u) => [u, { on: PRESETS[id].caps[u] > 0, cap: PRESETS[id].caps[u] || defaultCap(u) }])) as State['units'];
 
 /** Capacity a unit gets when it is switched on from nothing. */
-const defaultCap = (u: UnitId) => ({ cdu: 260, coker: 40, hck: 40, fcc: 60, ref: 45, isom: 20, alky: 12, kht: 35, dht: 80, scr: 60, arom: 25 })[u];
+const defaultCap = (u: UnitId) => ({ cdu: 260, coker: 40, hck: 40, lube: 20, fcc: 60, ref: 45, isom: 20, alky: 12, kht: 35, dht: 80, scr: 60, arom: 25 })[u];
 
 export const DEFAULT_STATE: State = {
   throughput: 250,
@@ -65,8 +65,9 @@ export const DEFAULT_STATE: State = {
 };
 
 // ── Streams and Sankey bookkeeping ──────────────────────────────────────────
-/** The product family a stream belongs to: sets its ribbon colour. */
-export type Family = ProductId;
+/** The product family a stream belongs to: sets its ribbon colour. Crude
+ *  into the crude unit has none yet. */
+export type Family = ProductId | 'crude';
 export type Link = { from: string; to: string; t: number; family: Family };
 export type Spill = { unit: UnitId; text: string };
 
@@ -169,8 +170,9 @@ export function compute(s: State): Result {
     for (const c of CUTS) {
       const t = gradeT[g] * y[c];
       cutT[c] += t;
-      book.add(`crude_${g}`, `cut_${c}`, t, cutFamily[c]);
+      book.add('cdu', `cut_${c}`, t, cutFamily[c]);
     }
+    book.add(`crude_${g}`, 'cdu', gradeT[g], 'crude');
   }
   const pool = (fam: Family) => new Pool(book, fam);
   const LPG = pool('lpg'), LN = pool('gasoline'), HN = pool('gasoline'), KER = pool('jet');
@@ -202,8 +204,16 @@ export function compute(s: State): Result {
     VR.rest('p_fuelOil');
   }
 
-  // ── Hydrocracker, then FCC, on vacuum gas oil ─────────────────────────────
+  // ── Base oil plant, hydrocracker, then FCC, on vacuum gas oil ────────────
   const fccLPG = pool('lpg'), LCO = pool('diesel');
+  {
+    const f = VGO.take('lube', capT('lube'));
+    feed.lube = f;
+    h2Used += f * LUBE.h2;
+    book.add('lube', 'p_baseOil', f * LUBE.baseOil, 'baseOil');
+    GO.add('lube', f * LUBE.diesel); HN.add('lube', f * LUBE.hn); LPG.add('lube', f * LUBE.lpg);
+    toFG('lube', f * (LUBE.fg + LUBE.h2));
+  }
   {
     const m = HCK_MODES[s.hckMode];
     const f = VGO.take('hck', capT('hck'));

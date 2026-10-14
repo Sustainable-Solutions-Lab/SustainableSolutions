@@ -32,14 +32,15 @@ const chem = (r: Result) => CHEMICALS.reduce((a, p) => a + r.products[p], 0);
 const MAXJET = { nkShift: -20, kdShift: 20, hckMode: 'jet' as const };
 const NZ_GULF: State = { ...GULF, prices: PRICES_NZ };
 
-/** A stylized Bay Area-style refinery, not any real site: heavier crude
- *  (California heavy, Alaska North Slope, imports), a big hydrocracker run for
- *  jet, and California prices: product premiums from an isolated market with
- *  its own gasoline spec, dearer gas and power, and a cap-and-trade carbon
- *  price near $30/t. */
-const WC_CAPS = { cdu: 260, coker: 60, hck: 65, fcc: 60, ref: 45, isom: 36, alky: 15, kht: 50, dht: 80, scr: 0, arom: 0 };
+/** A stylized Bay Area-style refinery, not a model of any real site: like
+ *  Chevron Richmond it has no coker and runs a base oil plant, so it buys
+ *  lighter crude (Alaska North Slope, imports); a big hydrocracker runs for
+ *  jet; California prices: product premiums from an isolated market with its
+ *  own gasoline spec, dearer gas and power, and a cap-and-trade carbon price
+ *  near $30/t. */
+const WC_CAPS = { cdu: 260, coker: 0, hck: 30, lube: 22, fcc: 18, ref: 45, isom: 36, alky: 6, kht: 45, dht: 70, scr: 0, arom: 0 };
 const WEST: State = {
-  ...GULF, throughput: 245, slate: { ls: 0.15, ms: 0.45, hs: 0.40 }, hckMode: 'jet',
+  ...GULF, throughput: 245, slate: { ls: 0.30, ms: 0.55, hs: 0.15 }, hckMode: 'jet',
   units: Object.fromEntries(Object.entries(WC_CAPS).map(([u, c]) => [u, { on: c > 0, cap: c || GULF.units[u as keyof State['units']].cap }])) as State['units'],
   prices: { ...PRICES_2023, gasoline: 118, jet: 110, diesel: 120, gas: 5.5, power: 110, carbon: 30, grid: 0.2 },
 };
@@ -58,7 +59,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'west', name: 'West Coast refinery',
-    setup: 'A stylized Bay Area-style refinery: 245 kb/d of heavier crude, a large hydrocracker run for jet, and California prices with a $30/t cap-and-trade carbon price.',
+    setup: 'A stylized Bay Area-style refinery: 245 kb/d, no coker but a base oil plant for lubricants (as at Chevron Richmond), a hydrocracker run for jet, and California prices with a $30/t cap-and-trade carbon price.',
     apply: () => WEST,
     response: {
       label: 'Co-process 10% plant oil', undo: 'Back to all crude',
@@ -73,10 +74,11 @@ export const SCENARIOS: Scenario[] = [
           {' '}(Rodeo and Martinez) went further and converted entirely to renewable diesel.</>
       ) : (
         <>Jet is {f0(share(r, r.products.jet))}% of the crude, against {f0(share(base, base.products.jet))}% at the Gulf Coast refinery,
-          {' '}because the hydrocracker serves the region’s airports. California’s isolated market and its own gasoline spec keep product
-          {' '}prices high, so cash margin is {$(m(r))}/bbl against {$(m(base))}, even after dearer gas and a carbon cost of
-          {' '}{$(perBbl(r, r.econ.carbon))}/bbl. Emissions are {f1(kg(r))} kg CO₂/bbl. The risk is gasoline demand, which California policy
-          {' '}is pushing down; try setting gasoline to $85/bbl under “Prices and policy”.</>
+          {' '}because the hydrocracker serves the region’s airports, and {f1(share(r, r.products.baseOil))}% becomes lubricant base oil.
+          {' '}With no coker, {f0(share(r, r.products.fuelOil))}% leaves as fuel oil and asphalt, which is why such a refinery buys lighter crude.
+          {' '}California’s isolated market and its own gasoline spec keep product prices high, so cash margin is {$(m(r))}/bbl against
+          {' '}{$(m(base))}, even after dearer gas and a carbon cost of {$(perBbl(r, r.econ.carbon))}/bbl. Emissions are {f1(kg(r))} kg CO₂/bbl.
+          {' '}The risk is gasoline demand, which California policy is pushing down; try setting gasoline to $85/bbl under “Prices and policy”.</>
       );
     },
   },

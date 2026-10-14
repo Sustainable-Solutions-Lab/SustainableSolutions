@@ -1,6 +1,6 @@
 /**
- * The refinery as a Sankey: crude grades, the crude unit's cuts, conversion
- * and upgrading units, product pools. Link widths are t/day.
+ * The refinery as a Sankey: crude grades, the crude unit, its cuts,
+ * conversion and upgrading units, product pools. Link widths are t/day.
  *
  * Columns are fixed by role rather than computed, so the cuts always stand
  * together and every unit sits in the same place from one configuration to the
@@ -13,10 +13,10 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  CUT_LABEL, GRADE_BBL_PER_T, GRADE_LABEL, PRODUCT_BBL_PER_T, PRODUCT_COLOR, PRODUCT_LABEL, UNITS,
+  CUT_LABEL, END_USE, GRADE_BBL_PER_T, GRADE_LABEL, PRODUCT_BBL_PER_T, PRODUCT_COLOR, PRODUCT_LABEL, UNITS,
   type Cut, type Grade, type ProductId, type UnitId,
 } from './data.ts';
-import type { Result } from './model.ts';
+import type { Family, Result } from './model.ts';
 import { UNIT_INFO } from './info.ts';
 
 type Meta = { label: string; col: number; order: number; color: string; kind: 'crude' | 'cut' | 'unit' | 'product' };
@@ -27,11 +27,14 @@ const CUT_COLOR: Record<Cut, string> = {
   go: PRODUCT_COLOR.diesel, vgo: PRODUCT_COLOR.fuelOil, vr: PRODUCT_COLOR.fuelOil,
 };
 const UNIT_COL: Record<UnitId, [number, number]> = {
-  cdu: [1, 0], coker: [2, 0], fcc: [3, 0], hck: [3, 1],
-  scr: [4, 0], isom: [4, 1], ref: [4, 2], alky: [4, 3], kht: [4, 4], dht: [4, 5], arom: [5, 0],
+  cdu: [1, 0], coker: [3, 0], fcc: [4, 0], hck: [4, 1], lube: [4, 2],
+  scr: [5, 0], isom: [5, 1], ref: [5, 2], alky: [5, 3], kht: [5, 4], dht: [5, 5], arom: [6, 0],
 };
-const PRODUCT_ORDER: ProductId[] = ['fuelGas', 'lpg', 'ethylene', 'propylene', 'butadiene', 'gasoline', 'naphtha', 'btx', 'jet', 'diesel', 'fuelOil', 'coke'];
-const COL_HEAD: Record<number, string> = { 0: 'Crude', 1: 'Cuts', 2: 'Coking', 3: 'Cracking', 4: 'Upgrading', 5: 'Aromatics', 6: 'Products' };
+const CUT_COL = 2, PRODUCT_COL = 7;
+/** Chemicals stand together at the top, then fuels light to heavy. */
+const PRODUCT_ORDER: ProductId[] = ['fuelGas', 'ethylene', 'propylene', 'butadiene', 'btx', 'lpg', 'gasoline', 'naphtha', 'jet', 'diesel', 'baseOil', 'fuelOil', 'coke'];
+const COL_HEAD: Record<number, string> = { 0: 'Crude', 1: 'Distillation', 2: 'Cuts', 3: 'Coking', 4: 'Cracking', 5: 'Upgrading', 6: 'Aromatics', 7: 'Products' };
+const linkColor = (f: Family) => (f === 'crude' ? 'var(--ink-3)' : PRODUCT_COLOR[f]);
 
 export function nodeMeta(id: string): Meta {
   if (id.startsWith('crude_')) {
@@ -41,11 +44,11 @@ export function nodeMeta(id: string): Meta {
   if (id === 'poil') return { label: 'Plant oil', col: 0, order: 9, color: 'var(--spectral-8)', kind: 'crude' };
   if (id.startsWith('cut_')) {
     const c = id.slice(4) as Cut;
-    return { label: CUT_LABEL[c], col: 1, order: CUT_ORDER.indexOf(c), color: CUT_COLOR[c], kind: 'cut' };
+    return { label: CUT_LABEL[c], col: CUT_COL, order: CUT_ORDER.indexOf(c), color: CUT_COLOR[c], kind: 'cut' };
   }
   if (id.startsWith('p_')) {
     const p = id.slice(2) as ProductId;
-    return { label: PRODUCT_LABEL[p], col: 6, order: PRODUCT_ORDER.indexOf(p), color: PRODUCT_COLOR[p], kind: 'product' };
+    return { label: PRODUCT_LABEL[p], col: PRODUCT_COL, order: PRODUCT_ORDER.indexOf(p), color: PRODUCT_COLOR[p], kind: 'product' };
   }
   const u = id as UnitId;
   return { label: UNITS[u].short, col: UNIT_COL[u][0], order: UNIT_COL[u][1], color: 'var(--ink)', kind: 'unit' };
@@ -70,7 +73,9 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
   }, []);
   const W = Math.max(mobile ? 780 : 700, boxW);
   const H = mobile ? 540 : Math.round(Math.min(560, Math.max(430, W * 0.5)));
-  const padR = 150;
+  // Room for product labels, and for end uses when chemicals or base oil are made.
+  const showUse = r.links.some((l) => l.to.startsWith('p_') && END_USE[l.to.slice(2) as ProductId] && l.t > 1e-6);
+  const padR = showUse && !mobile ? 300 : showUse ? 290 : 150;
 
   const layout = useMemo(() => {
     const links = r.links.filter((l) => l.t > 1e-6);
@@ -134,7 +139,7 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
       return { ...p, d, span: p.t.meta.col - p.s.meta.col };
     }).sort((a, b) => b.span - a.span);
     return { nodes: [...nodes.values()], links: drawn, cols, colX: cols.map((_, ci) => 2 + (cols.length > 1 ? (ci * usable) / (cols.length - 1) : 0)) };
-  }, [r, W, H]);
+  }, [r, W, H, padR]);
 
   const crudeT = r.crudeT || 1;
   const pct = (t: number) => {
@@ -150,14 +155,14 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
           aria-label="Sankey diagram of the refinery's mass flows" style={{ display: 'block', maxWidth: 'none' }}
           onClick={() => onSelect(null)}>
           {layout.cols.map((c, ci) => (
-            <text key={c} x={layout.colX[ci] + (c === 6 ? 0 : NW / 2)} y={11} textAnchor={c === 6 || c === 0 ? 'start' : 'middle'}
+            <text key={c} x={layout.colX[ci] + (c === PRODUCT_COL ? 0 : NW / 2)} y={11} textAnchor={c === PRODUCT_COL || c === 0 ? 'start' : 'middle'}
               style={{ font: '600 10px var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', fill: 'var(--ink-3)' }}>
               {COL_HEAD[c]}
             </text>
           ))}
           <g>
             {layout.links.map(({ l, d }) => (
-              <path key={`${l.from}>${l.to}>${l.family}`} d={d} fill={PRODUCT_COLOR[l.family]}
+              <path key={`${l.from}>${l.to}>${l.family}`} d={d} fill={linkColor(l.family)} stroke="var(--paper)" strokeWidth={0.6} strokeOpacity={0.6}
                 fillOpacity={selected ? (lit(l.from, l.to) ? 0.75 : 0.1) : 0.42}
                 style={{ transition: 'fill-opacity 0.15s' }}>
                 <title>{`${nodeMeta(l.from).label} → ${nodeMeta(l.to).label}: ${Math.round(l.t).toLocaleString()} t/d`}</title>
@@ -168,7 +173,8 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
             const isSel = selected === n.id;
             const u = n.meta.kind === 'unit' ? r.units[n.id as UnitId] : null;
             const full = u && u.util >= 0.995;
-            const last = n.meta.col === 6;
+            const last = n.meta.col === PRODUCT_COL;
+            const use = last ? END_USE[n.id.slice(2) as ProductId] : undefined;
             const labelX = n.x + NW + 4;
             const cy = n.y + n.h / 2;
             return (
@@ -183,6 +189,7 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
                   {n.meta.label}
                   {u && <tspan style={{ fontFamily: 'var(--font-mono)', fontWeight: 500, fill: full ? 'var(--accent)' : 'var(--ink-3)' }}>{` ${full ? 'full' : `${Math.round(u.util * 100)}%`}`}</tspan>}
                   {(last || n.meta.kind === 'crude') && <tspan style={{ fontFamily: 'var(--font-mono)', fontWeight: 500, fill: 'var(--ink-3)' }}>{` ${pct(n.v)}%`}</tspan>}
+                  {use && <tspan style={{ fontWeight: 400, fontStyle: 'italic', fill: 'var(--ink-2)' }}>{` → ${use}`}</tspan>}
                 </text>
                 <title>{`${n.meta.label}: ${Math.round(n.v).toLocaleString()} t/d${u ? `, ${Math.round(u.util * 100)}% of capacity` : ''}. Tap for details.`}</title>
               </g>
@@ -193,6 +200,11 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
       {mobile && (
         <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--ink-3)' }}>Scroll sideways to see the whole refinery. Tap any bar for details.</p>
       )}
+      <p style={{ margin: '4px 0 0', fontSize: 11, lineHeight: 1.4, color: 'var(--ink-3)' }}>
+        Fuel gas and losses collects small streams from almost every unit; tap its bar to see them. Fertilizer (ammonia) and
+        methanol do not appear because they are made mostly from natural gas, or coal in China, not from crude. Their link to a
+        refinery is hydrogen, made the same way as in its hydrogen plant.
+      </p>
     </div>
   );
 }

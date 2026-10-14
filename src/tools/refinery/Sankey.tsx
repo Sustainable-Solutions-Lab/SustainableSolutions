@@ -27,13 +27,13 @@ const CUT_COLOR: Record<Cut, string> = {
   go: PRODUCT_COLOR.diesel, vgo: PRODUCT_COLOR.fuelOil, vr: PRODUCT_COLOR.fuelOil,
 };
 const UNIT_COL: Record<UnitId, [number, number]> = {
-  cdu: [1, 0], coker: [3, 0], fcc: [4, 0], hck: [4, 1], lube: [4, 2],
+  cdu: [1, 0], coker: [3, 0], sda: [3, 1], fcc: [4, 0], hck: [4, 1], lube: [4, 2],
   scr: [5, 0], isom: [5, 1], ref: [5, 2], alky: [5, 3], kht: [5, 4], dht: [5, 5], arom: [6, 0],
 };
 const CUT_COL = 2, PRODUCT_COL = 7;
 /** Chemicals stand together at the top, then fuels light to heavy. */
-const PRODUCT_ORDER: ProductId[] = ['fuelGas', 'ethylene', 'propylene', 'butadiene', 'btx', 'lpg', 'gasoline', 'naphtha', 'jet', 'diesel', 'baseOil', 'fuelOil', 'coke'];
-const COL_HEAD: Record<number, string> = { 0: 'Crude', 1: 'Distillation', 2: 'Cuts', 3: 'Coking', 4: 'Cracking', 5: 'Upgrading', 6: 'Aromatics', 7: 'Products' };
+const PRODUCT_ORDER: ProductId[] = ['fuelGas', 'ethylene', 'propylene', 'butadiene', 'btx', 'lpg', 'gasoline', 'naphtha', 'jet', 'diesel', 'baseOil', 'fuelOil', 'asphalt', 'coke'];
+const COL_HEAD: Record<number, string> = { 0: 'Crude', 1: 'Distillation', 2: 'Cuts', 3: 'Residue', 4: 'Cracking', 5: 'Upgrading', 6: 'Aromatics', 7: 'Products' };
 const linkColor = (f: Family) => (f === 'crude' ? 'var(--ink-3)' : PRODUCT_COLOR[f]);
 
 export function nodeMeta(id: string): Meta {

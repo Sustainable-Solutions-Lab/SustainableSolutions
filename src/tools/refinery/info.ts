@@ -4,6 +4,7 @@ import type { UnitId } from './data.ts';
 export const UNIT_INFO: Record<UnitId, string> = {
   cdu: 'Heats crude to about 370 °C and separates it by boiling point into gases, naphtha, kerosene, gasoil and a heavy residue. The vacuum unit re-distills that residue at low pressure into vacuum gas oil, the main cracker feed, and vacuum residue.',
   coker: 'Cracks vacuum residue with heat alone. Lighter liquids distill off and solid petroleum coke is left. A coker is what lets a refinery buy cheaper heavy crude.',
+  sda: 'Mixes vacuum residue with a light solvent such as propane or butane, which dissolves the lighter oil and leaves the asphaltenes behind. The deasphalted oil (about 60%) joins the vacuum gas oil as feed for the crackers or the base oil plant; the hard pitch is sold for asphalt. A cheaper, lower-energy alternative to a coker that makes no coke.',
   hck: 'Cracks vacuum gas oil with hydrogen at 100 to 200 bar into clean jet, diesel and naphtha. More flexible than an FCC, but it uses a lot of hydrogen.',
   lube: 'Turns the best vacuum gas oil into lubricant base oil: hydrocracking to clean it up, then catalytic dewaxing so the oil stays fluid in the cold. Base oil sells well above fuels and lubricant demand lasts longer than fuel demand. Takes gas oil ahead of the hydrocracker and FCC.',
   fcc: 'Cracks vacuum gas oil over hot powdered catalyst in a few seconds. Makes mostly gasoline, plus light cycle oil, propylene and LPG. Coke left on the catalyst is burned off in the regenerator, one of a refinery’s largest CO₂ sources.',

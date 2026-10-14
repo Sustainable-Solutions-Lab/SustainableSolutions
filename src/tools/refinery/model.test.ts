@@ -45,3 +45,10 @@ test('mass closes with the base oil plant on and no coker', () => {
   assert.ok(r.products.baseOil > 0);
   assert.ok(r.mass.err < 0.005, `mass error ${r.mass.err}`);
 });
+
+test('mass closes with a deasphalter and no coker', () => {
+  const units = { ...unitsFromPreset('deep'), coker: { on: false, cap: 40 }, sda: { on: true, cap: 50 } };
+  const r = compute({ ...DEFAULT_STATE, units });
+  assert.ok(r.products.asphalt > 0);
+  assert.ok(r.mass.err < 0.005, `mass error ${r.mass.err}`);
+});

@@ -45,6 +45,8 @@ export default function RefineryTool() {
   const [scenario, setScenario] = useState<string | null>('gulf');
   const [responding, setResponding] = useState(false);
   const [chg, setChg] = useState<{ key: string; label: string; base: Result } | null>(null);
+  /** The KPI cards compare with the start of the last story picked. */
+  const [baseline, setBaseline] = useState<{ name: string; r: Result }>(() => ({ name: 'Gulf Coast refinery', r: compute(DEFAULT_STATE) }));
   const [selected, setSelected] = useState<string | null>(null);
   const r = useMemo(() => compute(s), [s]);
 
@@ -66,6 +68,7 @@ export default function RefineryTool() {
     const next = respond && sc.response ? sc.response.apply(base) : base;
     const label = respond && sc.response ? sc.response.label.toLowerCase() : `the story to “${sc.name}”`;
     setChg({ key: `sc:${id}:${respond}`, label, base: r });
+    setBaseline({ name: sc.name, r: compute(base) });
     setS(next);
     setScenario(id);
     setResponding(respond);
@@ -201,6 +204,9 @@ export default function RefineryTool() {
           <Slider label="Lube base oil" value={s.prices.baseOil} min={50} max={300} step={5} fmt={(v) => `$${v}/bbl`}
             onChange={(v) => setPrice('baseOil', 'base oil price', v)}
             note={!has('lube') ? 'Only a base oil plant makes it.' : undefined} />
+          <Slider label="Asphalt and pitch" value={s.prices.asphalt} min={50} max={900} step={10} fmt={(v) => `$${v}/t`}
+            onChange={(v) => setPrice('asphalt', 'asphalt price', v)}
+            note={!has('sda') ? 'Only a deasphalter makes it.' : undefined} />
           <Slider label="Petroleum coke" value={s.prices.coke} min={0} max={200} step={5} fmt={(v) => `$${v}/t`}
             onChange={(v) => setPrice('coke', 'coke price', v)} />
         </Sub>
@@ -245,7 +251,7 @@ export default function RefineryTool() {
         <div style={{ padding: mobile ? '10px 10px 40px' : '14px 18px 40px', display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 1400 }}>
           <Guided active={scenario} responding={responding} onPick={pick} r={r} s={s} mobile={mobile} />
           <div>
-            <Kpis r={r} s={s} />
+            <Kpis r={r} s={s} base={baseline.r} baseName={baseline.name} />
             <Changed label={chg?.label ?? null} base={chg?.base ?? null} r={r} />
             <Warnings r={r} />
           </div>

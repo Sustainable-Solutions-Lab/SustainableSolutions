@@ -14,7 +14,7 @@
  * on is drawn from its sources in proportion, which is what the Sankey shows.
  */
 import {
-  ALKY, AROM, CCS_COST, LUBE, COKER, COKE_CO2, COPROC, CUTS, CUT_YIELD, FCC_MODES, FG_EF, FG_LHV,
+  ALKY, AROM, CCS_COST, LUBE, SDA, COKER, COKE_CO2, COPROC, CUTS, CUT_YIELD, FCC_MODES, FG_EF, FG_LHV,
   GASOLINE_MIN_RON, GJ_PER_MMBTU, GRADES, GRADE_BBL_PER_T, H2_LHV, H2_SOURCES, HCK_MODES, HT_H2,
   ISOM, NG_EF, OCTANE_DISCOUNT, OFFSITES_GJ_PER_T, PRESETS, PRICES_2023, PRODUCTS, PRODUCT_BBL_PER_T,
   RON, SCR_YIELD, SWING_MAX_C, SWING_SHARE, UNITS, UNIT_IDS, reformer,
@@ -51,7 +51,7 @@ export const unitsFromPreset = (id: PresetId): State['units'] =>
   Object.fromEntries(UNIT_IDS.map((u) => [u, { on: PRESETS[id].caps[u] > 0, cap: PRESETS[id].caps[u] || defaultCap(u) }])) as State['units'];
 
 /** Capacity a unit gets when it is switched on from nothing. */
-const defaultCap = (u: UnitId) => ({ cdu: 260, coker: 40, hck: 40, lube: 20, fcc: 60, ref: 45, isom: 20, alky: 12, kht: 35, dht: 80, scr: 60, arom: 25 })[u];
+const defaultCap = (u: UnitId) => ({ cdu: 260, coker: 40, sda: 30, hck: 40, lube: 20, fcc: 60, ref: 45, isom: 20, alky: 12, kht: 35, dht: 80, scr: 60, arom: 25 })[u];
 
 export const DEFAULT_STATE: State = {
   throughput: 250,
@@ -200,7 +200,16 @@ export function compute(s: State): Result {
     book.add('coker', 'p_coke', f * COKER.coke, 'coke');
     LPG.add('coker', f * COKER.lpg); LN.add('coker', f * COKER.ln);
     GO.add('coker', f * COKER.go); VGO.add('coker', f * COKER.vgo);
-    if (present('coker')) spill('coker', VR.left, 'vacuum residue', 'fuel oil');
+  }
+
+  // ── Solvent deasphalter on what the coker leaves ──────────────────────────
+  {
+    const f = VR.take('sda', capT('sda'));
+    feed.sda = f;
+    VGO.add('sda', f * SDA.dao);
+    book.add('sda', 'p_asphalt', f * SDA.pitch, 'asphalt');
+    const last = present('sda') ? 'sda' : present('coker') ? 'coker' : null;
+    if (last) spill(last, VR.left, 'vacuum residue', 'fuel oil');
     VR.rest('p_fuelOil');
   }
 
@@ -402,7 +411,7 @@ export function compute(s: State): Result {
     const bbl = PRODUCT_BBL_PER_T[p];
     switch (p) {
       case 'fuelGas': return 0;
-      case 'coke': case 'ethylene': case 'propylene': case 'butadiene': return P[p];
+      case 'coke': case 'asphalt': case 'ethylene': case 'propylene': case 'butadiene': return P[p];
       case 'btx': return P.btx;
       default: {
         const perBbl = p === 'gasoline' ? P.gasoline - OCTANE_DISCOUNT * ronShort : P[p];
@@ -434,7 +443,7 @@ export function compute(s: State): Result {
   })) as Record<UnitId, UnitResult>;
 
   if (!present('fcc') && !present('hck') && cutT.vgo > 0) notes.push('No cracking unit: all vacuum gas oil is sold as fuel oil.');
-  if (!present('coker') && cutT.vr > 0) notes.push('No coker: vacuum residue is sold as fuel oil.');
+  if (!present('coker') && !present('sda') && cutT.vr > 0) notes.push('No coker or deasphalter: vacuum residue is sold as fuel oil.');
   if (s.naphToCracker > 0 && !present('scr')) notes.push('No steam cracker in this configuration, so naphtha routing has no effect.');
   if (s.refToArom > 0 && !present('arom')) notes.push('No aromatics complex, so reformate routing has no effect.');
 

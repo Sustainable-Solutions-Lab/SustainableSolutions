@@ -198,6 +198,9 @@ export default function RefineryTool() {
             <Slider key={k} label={l} value={s.prices[k]} min={10} max={180} step={1} fmt={(v) => `$${v}/bbl`}
               onChange={(v) => setPrice(k, `${l.toLowerCase()} price`, v)} />
           ))}
+          <Slider label="Lube base oil" value={s.prices.baseOil} min={50} max={300} step={5} fmt={(v) => `$${v}/bbl`}
+            onChange={(v) => setPrice('baseOil', 'base oil price', v)}
+            note={!has('lube') ? 'Only a base oil plant makes it.' : undefined} />
           <Slider label="Petroleum coke" value={s.prices.coke} min={0} max={200} step={5} fmt={(v) => `$${v}/t`}
             onChange={(v) => setPrice('coke', 'coke price', v)} />
         </Sub>

@@ -38,3 +38,10 @@ test('every node in the Sankey balances: what enters a cut leaves it', () => {
     assert.ok(Math.abs(inn - out) < 1e-6 * Math.max(1, inn), `cut ${c}: in ${inn} out ${out}`);
   }
 });
+
+test('mass closes with the base oil plant on and no coker', () => {
+  const units = { ...unitsFromPreset('deep'), coker: { on: false, cap: 40 }, lube: { on: true, cap: 22 } };
+  const r = compute({ ...DEFAULT_STATE, units });
+  assert.ok(r.products.baseOil > 0);
+  assert.ok(r.mass.err < 0.005, `mass error ${r.mass.err}`);
+});

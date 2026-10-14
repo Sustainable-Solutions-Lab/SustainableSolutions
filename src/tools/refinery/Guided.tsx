@@ -33,14 +33,15 @@ const MAXJET = { nkShift: -20, kdShift: 20, hckMode: 'jet' as const };
 const NZ_GULF: State = { ...GULF, prices: PRICES_NZ };
 
 /** A stylized Bay Area-style refinery, not a model of any real site: like
- *  Chevron Richmond it has no coker but a solvent deasphalter and a base oil
- *  plant, and buys lighter crude (Alaska North Slope, imports); a big hydrocracker runs for
+ *  Chevron Richmond it has no coker but a solvent deasphalter (56 kb/d, the
+ *  size EIA reports for Richmond) and a base oil plant, running mostly
+ *  medium and heavy sour crude (Alaska North Slope, imports); a big hydrocracker runs for
  *  jet; California prices: product premiums from an isolated market with its
  *  own gasoline spec, dearer gas and power, and a cap-and-trade carbon price
  *  near $30/t. */
-const WC_CAPS = { cdu: 260, coker: 0, sda: 50, hck: 45, lube: 22, fcc: 40, ref: 45, isom: 36, alky: 10, kht: 45, dht: 75, scr: 0, arom: 0 };
+const WC_CAPS = { cdu: 260, coker: 0, sda: 56, hck: 45, lube: 22, fcc: 40, ref: 45, isom: 36, alky: 10, kht: 45, dht: 75, scr: 0, arom: 0 };
 const WEST: State = {
-  ...GULF, throughput: 245, slate: { ls: 0.30, ms: 0.55, hs: 0.15 }, hckMode: 'jet',
+  ...GULF, throughput: 245, slate: { ls: 0.10, ms: 0.50, hs: 0.40 }, hckMode: 'jet',
   units: Object.fromEntries(Object.entries(WC_CAPS).map(([u, c]) => [u, { on: c > 0, cap: c || GULF.units[u as keyof State['units']].cap }])) as State['units'],
   prices: { ...PRICES_2023, gasoline: 118, jet: 110, diesel: 120, gas: 5.5, power: 110, carbon: 30, grid: 0.2 },
 };
@@ -75,8 +76,8 @@ export const SCENARIOS: Scenario[] = [
       ) : (
         <>Jet is {f0(share(r, r.products.jet))}% of the crude, against {f0(share(base, base.products.jet))}% at the Gulf Coast refinery,
           {' '}because the hydrocracker serves the region’s airports, and {f1(share(r, r.products.baseOil))}% becomes lubricant base oil.
-          {' '}With no coker, the deasphalter turns most of the residue into more cracker feed plus {f1(share(r, r.products.asphalt))}% asphalt and pitch;
-          {' '}a deasphalter cannot upgrade as deeply as a coker, which is one reason such a refinery buys lighter crude.
+          {' '}With no coker, the deasphalter turns most of the residue into more cracker feed plus {f1(share(r, r.products.asphalt))}% asphalt and pitch,
+          {' '}and the sulfur plant recovers {f0(r.products.sulfur)} t of sulfur a day from the sour crude.
           {' '}California’s isolated market and its own gasoline spec keep product prices high, so cash margin is {$(m(r))}/bbl against
           {' '}{$(m(base))}, even after dearer gas and a carbon cost of {$(perBbl(r, r.econ.carbon))}/bbl. Emissions are {f1(kg(r))} kg CO₂/bbl.
           {' '}The risk is gasoline demand, which California policy is pushing down; try setting gasoline to $85/bbl under “Prices and policy”.</>

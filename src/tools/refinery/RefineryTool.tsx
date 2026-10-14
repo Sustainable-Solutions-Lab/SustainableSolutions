@@ -207,6 +207,8 @@ export default function RefineryTool() {
           <Slider label="Asphalt and pitch" value={s.prices.asphalt} min={50} max={900} step={10} fmt={(v) => `$${v}/t`}
             onChange={(v) => setPrice('asphalt', 'asphalt price', v)}
             note={!has('sda') ? 'Only a deasphalter makes it.' : undefined} />
+          <Slider label="Sulfur" value={s.prices.sulfur} min={0} max={400} step={5} fmt={(v) => `$${v}/t`}
+            onChange={(v) => setPrice('sulfur', 'sulfur price', v)} />
           <Slider label="Petroleum coke" value={s.prices.coke} min={0} max={200} step={5} fmt={(v) => `$${v}/t`}
             onChange={(v) => setPrice('coke', 'coke price', v)} />
         </Sub>

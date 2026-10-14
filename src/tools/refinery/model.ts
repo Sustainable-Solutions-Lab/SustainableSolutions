@@ -14,7 +14,7 @@
  * on is drawn from its sources in proportion, which is what the Sankey shows.
  */
 import {
-  ALKY, AROM, CCS_COST, LUBE, SDA, COKER, COKE_CO2, COPROC, CUTS, CUT_YIELD, FCC_MODES, FG_EF, FG_LHV,
+  ALKY, AROM, CCS_COST, CUT_S_FACTOR, GRADE_S, LUBE, S_TO_H2S, SDA, COKER, COKE_CO2, COPROC, CUTS, CUT_YIELD, FCC_MODES, FG_EF, FG_LHV,
   GASOLINE_MIN_RON, GJ_PER_MMBTU, GRADES, GRADE_BBL_PER_T, H2_LHV, H2_SOURCES, HCK_MODES, HT_H2,
   ISOM, NG_EF, OCTANE_DISCOUNT, OFFSITES_GJ_PER_T, PRESETS, PRICES_2023, PRODUCTS, PRODUCT_BBL_PER_T,
   RON, SCR_YIELD, SWING_MAX_C, SWING_SHARE, UNITS, UNIT_IDS, reformer,
@@ -174,6 +174,16 @@ export function compute(s: State): Result {
     }
     book.add(`crude_${g}`, 'cdu', gradeT[g], 'crude');
   }
+  // Sulfur concentration in each cut (t S per t), from the crude mix.
+  const cutS = Object.fromEntries(CUTS.map((c) => [c, 0])) as Record<Cut, number>;
+  for (const g of GRADES) {
+    const norm = CUTS.reduce((a, c) => a + CUT_YIELD[g][c] * CUT_S_FACTOR[c], 0);
+    for (const c of CUTS) cutS[c] += gradeT[g] * CUT_YIELD[g][c] * CUT_S_FACTOR[c] * GRADE_S[g] / norm;
+  }
+  const sConc = (c: Cut) => (cutT[c] > 0 ? cutS[c] / cutT[c] : 0);
+  /** Sulfur released as H2S by a unit, sent to the sulfur plant. */
+  const toSulfur = (from: string, t: number) => book.add(from, 'sru', t, 'sulfur');
+
   const pool = (fam: Family) => new Pool(book, fam);
   const LPG = pool('lpg'), LN = pool('gasoline'), HN = pool('gasoline'), KER = pool('jet');
   const GO = pool('diesel'), VGO = pool('fuelOil'), VR = pool('fuelOil');
@@ -196,7 +206,9 @@ export function compute(s: State): Result {
   {
     const f = VR.take('coker', capT('coker'));
     feed.coker = f;
-    toFG('coker', f * COKER.fg);
+    const sCok = f * sConc('vr') * S_TO_H2S.coker;
+    toFG('coker', f * COKER.fg - sCok);
+    toSulfur('coker', sCok);
     book.add('coker', 'p_coke', f * COKER.coke, 'coke');
     LPG.add('coker', f * COKER.lpg); LN.add('coker', f * COKER.ln);
     GO.add('coker', f * COKER.go); VGO.add('coker', f * COKER.vgo);
@@ -220,7 +232,9 @@ export function compute(s: State): Result {
     feed.lube = f;
     h2Used += f * LUBE.h2;
     book.add('lube', 'p_baseOil', f * LUBE.baseOil, 'baseOil');
-    GO.add('lube', f * LUBE.diesel); HN.add('lube', f * LUBE.hn); LPG.add('lube', f * LUBE.lpg);
+    const sLube = f * sConc('vgo') * S_TO_H2S.hydro;
+    toSulfur('lube', sLube);
+    GO.add('lube', f * LUBE.diesel - sLube); HN.add('lube', f * LUBE.hn); LPG.add('lube', f * LUBE.lpg);
     toFG('lube', f * (LUBE.fg + LUBE.h2));
   }
   {
@@ -230,7 +244,9 @@ export function compute(s: State): Result {
     h2Used += f * m.h2;
     LPG.add('hck', f * m.lpg); LN.add('hck', f * m.ln); HN.add('hck', f * m.hn);
     book.add('hck', 'p_jet', f * m.jet, 'jet');
-    book.add('hck', 'p_diesel', f * m.diesel, 'diesel');
+    const sHck = f * sConc('vgo') * S_TO_H2S.hydro;
+    toSulfur('hck', sHck);
+    book.add('hck', 'p_diesel', f * m.diesel - sHck, 'diesel');
   }
   let fccCoke = 0;
   {
@@ -243,7 +259,9 @@ export function compute(s: State): Result {
     book.add('fcc', 'p_propylene', f * m.c3, 'propylene');
     fccLPG.add('fcc', f * m.lpg);
     book.add('fcc', 'p_fuelOil', f * m.slurry, 'fuelOil');
-    toFG('fcc', f * m.fg);
+    const sFcc = f * sConc('vgo') * S_TO_H2S.fcc;
+    toSulfur('fcc', sFcc);
+    toFG('fcc', f * m.fg - sFcc);
     fccCoke = f * (1 - m.fccg - m.lco - m.c3 - m.lpg - m.slurry - m.fg);
     toFG('fcc', fccCoke, false);
     const where = present('hck') && !present('fcc') ? 'hck' : 'fcc';
@@ -332,7 +350,9 @@ export function compute(s: State): Result {
     feed.kht = f;
     const h = f * HT_H2.ker;
     h2Used += h;
-    book.add('kht', 'p_jet', f, 'jet');
+    const sKht = f * sConc('ker') * S_TO_H2S.hydro;
+    toSulfur('kht', sKht);
+    book.add('kht', 'p_jet', f - sKht, 'jet');
     toFG('kht', h);
     if (present('kht')) spill('kht', KER.left, 'kerosene', 'the diesel pool');
   }
@@ -351,13 +371,21 @@ export function compute(s: State): Result {
     const hFossil = go * HT_H2.go + ker * HT_H2.kerInDht + lco * HT_H2.lco;
     const hOil = plantOil * HT_H2.plantOil;
     h2Used += hFossil + hOil;
-    book.add('dht', 'p_diesel', fossil + plantOil * COPROC.diesel, 'diesel');
+    const sDht = (go * sConc('go') + ker * sConc('ker') + lco * sConc('vgo')) * S_TO_H2S.hydro;
+    toSulfur('dht', sDht);
+    book.add('dht', 'p_diesel', fossil - sDht + plantOil * COPROC.diesel, 'diesel');
     book.add('dht', 'p_lpg', plantOil * COPROC.lpg, 'lpg');
     toFG('dht', hFossil);
     toFG('dht', plantOil * (1 + HT_H2.plantOil - COPROC.diesel - COPROC.lpg), false);
     const leftover = GO.left + KER.left + LCO.left;
     if (present('dht')) spill('dht', leftover, 'untreated distillate', 'fuel oil');
     GO.rest('p_fuelOil', 'fuelOil'); KER.rest('p_fuelOil', 'fuelOil'); LCO.rest('p_fuelOil', 'fuelOil');
+  }
+
+  // ── Sulfur plant: H2S from every unit becomes elemental sulfur ────────────
+  {
+    const t = [...book.links.values()].filter((l) => l.to === 'sru').reduce((x, l) => x + l.t, 0);
+    book.add('sru', 'p_sulfur', t, 'sulfur');
   }
 
   // ── Hydrogen balance ───────────────────────────────────────────────────────
@@ -411,7 +439,7 @@ export function compute(s: State): Result {
     const bbl = PRODUCT_BBL_PER_T[p];
     switch (p) {
       case 'fuelGas': return 0;
-      case 'coke': case 'asphalt': case 'ethylene': case 'propylene': case 'butadiene': return P[p];
+      case 'coke': case 'asphalt': case 'sulfur': case 'ethylene': case 'propylene': case 'butadiene': return P[p];
       case 'btx': return P.btx;
       default: {
         const perBbl = p === 'gasoline' ? P.gasoline - OCTANE_DISCOUNT * ronShort : P[p];

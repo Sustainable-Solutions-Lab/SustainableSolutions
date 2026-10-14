@@ -17,9 +17,9 @@ import {
   type Cut, type Grade, type ProductId, type UnitId,
 } from './data.ts';
 import type { Family, Result } from './model.ts';
-import { UNIT_INFO } from './info.ts';
+import { SULFUR_PLANT_INFO, UNIT_INFO } from './info.ts';
 
-type Meta = { label: string; col: number; order: number; color: string; kind: 'crude' | 'cut' | 'unit' | 'product' };
+type Meta = { label: string; col: number; order: number; color: string; kind: 'crude' | 'cut' | 'unit' | 'aux' | 'product' };
 
 const CUT_ORDER: Cut[] = ['lpg', 'ln', 'hn', 'ker', 'go', 'vgo', 'vr'];
 const CUT_COLOR: Record<Cut, string> = {
@@ -32,8 +32,8 @@ const UNIT_COL: Record<UnitId, [number, number]> = {
 };
 const CUT_COL = 2, PRODUCT_COL = 7;
 /** Chemicals stand together at the top, then fuels light to heavy. */
-const PRODUCT_ORDER: ProductId[] = ['fuelGas', 'ethylene', 'propylene', 'butadiene', 'btx', 'lpg', 'gasoline', 'naphtha', 'jet', 'diesel', 'baseOil', 'fuelOil', 'asphalt', 'coke'];
-const COL_HEAD: Record<number, string> = { 0: 'Crude', 1: 'Distillation', 2: 'Cuts', 3: 'Residue', 4: 'Cracking', 5: 'Upgrading', 6: 'Aromatics', 7: 'Products' };
+const PRODUCT_ORDER: ProductId[] = ['fuelGas', 'ethylene', 'propylene', 'butadiene', 'btx', 'lpg', 'gasoline', 'naphtha', 'jet', 'diesel', 'baseOil', 'fuelOil', 'asphalt', 'coke', 'sulfur'];
+const COL_HEAD: Record<number, string> = { 0: 'Crude', 1: 'Distillation', 2: 'Cuts', 3: 'Residue', 4: 'Cracking', 5: 'Upgrading', 6: 'Aromatics, sulfur', 7: 'Products' };
 const linkColor = (f: Family) => (f === 'crude' ? 'var(--ink-3)' : PRODUCT_COLOR[f]);
 
 export function nodeMeta(id: string): Meta {
@@ -41,6 +41,7 @@ export function nodeMeta(id: string): Meta {
     const g = id.slice(6) as Grade;
     return { label: GRADE_LABEL[g], col: 0, order: ['ls', 'ms', 'hs'].indexOf(g), color: 'var(--ink-2)', kind: 'crude' };
   }
+  if (id === 'sru') return { label: 'Sulfur plant', col: 6, order: 1, color: 'var(--ink)', kind: 'aux' };
   if (id === 'poil') return { label: 'Plant oil', col: 0, order: 9, color: 'var(--spectral-8)', kind: 'crude' };
   if (id.startsWith('cut_')) {
     const c = id.slice(4) as Cut;
@@ -55,6 +56,9 @@ export function nodeMeta(id: string): Meta {
 }
 
 const NW = 11, PAD_T = 24, PAD_B = 6, GAP = 7, MIN_SLOT = 12;
+/** Products with an end use print it on a second, indented line. */
+const endUse = (id: string) => (id.startsWith('p_') ? END_USE[id.slice(2) as ProductId] : undefined);
+const minSlot = (id: string) => (endUse(id) ? 26 : MIN_SLOT);
 
 type LNode = { id: string; meta: Meta; vin: number; vout: number; v: number; x: number; y: number; h: number };
 
@@ -73,9 +77,8 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
   }, []);
   const W = Math.max(mobile ? 780 : 700, boxW);
   const H = mobile ? 540 : Math.round(Math.min(560, Math.max(430, W * 0.5)));
-  // Room for product labels, and for end uses when chemicals or base oil are made.
-  const showUse = r.links.some((l) => l.to.startsWith('p_') && END_USE[l.to.slice(2) as ProductId] && l.t > 1e-6);
-  const padR = showUse && !mobile ? 300 : showUse ? 290 : 150;
+  // Room for product labels; end uses wrap onto a second line.
+  const padR = 172;
 
   const layout = useMemo(() => {
     const links = r.links.filter((l) => l.t > 1e-6);
@@ -96,9 +99,9 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
     for (let i = 0; i < 6; i++) {
       let worst = 1;
       for (const ns of byCol) {
-        const small = ns.filter((n) => n.v * k < MIN_SLOT);
-        const big = ns.filter((n) => n.v * k >= MIN_SLOT).reduce((a, n) => a + n.v * k, 0);
-        const room = innerH - GAP * (ns.length - 1) - small.length * MIN_SLOT;
+        const small = ns.filter((n) => n.v * k < minSlot(n.id));
+        const big = ns.filter((n) => n.v * k >= minSlot(n.id)).reduce((a, n) => a + n.v * k, 0);
+        const room = innerH - GAP * (ns.length - 1) - small.reduce((a, n) => a + minSlot(n.id), 0);
         if (big > room && big > 0) worst = Math.min(worst, room / big);
       }
       if (worst >= 0.999) break;
@@ -108,7 +111,7 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
     cols.forEach((c, ci) => {
       const ns = byCol[ci];
       const x = 2 + (cols.length > 1 ? (ci * usable) / (cols.length - 1) : 0);
-      const slots = ns.map((n) => Math.max(n.v * k, MIN_SLOT));
+      const slots = ns.map((n) => Math.max(n.v * k, minSlot(n.id)));
       const colH = slots.reduce((a, s) => a + s, 0) + GAP * (ns.length - 1);
       let y = PAD_T + Math.max(0, (innerH - colH) / 2);
       ns.forEach((n, i) => {
@@ -139,7 +142,7 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
       return { ...p, d, span: p.t.meta.col - p.s.meta.col };
     }).sort((a, b) => b.span - a.span);
     return { nodes: [...nodes.values()], links: drawn, cols, colX: cols.map((_, ci) => 2 + (cols.length > 1 ? (ci * usable) / (cols.length - 1) : 0)) };
-  }, [r, W, H, padR]);
+  }, [r, W, H]);
 
   const crudeT = r.crudeT || 1;
   const pct = (t: number) => {
@@ -174,7 +177,7 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
             const u = n.meta.kind === 'unit' ? r.units[n.id as UnitId] : null;
             const full = u && u.util >= 0.995;
             const last = n.meta.col === PRODUCT_COL;
-            const use = last ? END_USE[n.id.slice(2) as ProductId] : undefined;
+            const use = endUse(n.id);
             const labelX = n.x + NW + 4;
             const cy = n.y + n.h / 2;
             return (
@@ -183,13 +186,13 @@ export default function Sankey({ r, selected, onSelect, mobile }: {
                 <rect x={n.x - 3} y={n.y - 2} width={NW + 6} height={n.h + 4} fill="transparent" />
                 <rect x={n.x} y={n.y} width={NW} height={n.h} fill={n.meta.color}
                   stroke={isSel || full ? 'var(--accent)' : 'none'} strokeWidth={isSel ? 2 : 1.5} />
-                <text x={labelX} y={cy} dominantBaseline="central"
-                  style={{ font: `${n.meta.kind === 'unit' || last ? 600 : 500} 10.5px var(--font-sans)`, fill: 'var(--ink)',
+                <text x={labelX} y={use ? cy - 6 : cy} dominantBaseline="central"
+                  style={{ font: `${n.meta.kind === 'unit' || n.meta.kind === 'aux' || last ? 600 : 500} 10.5px var(--font-sans)`, fill: 'var(--ink)',
                            paintOrder: 'stroke', stroke: 'var(--paper)', strokeWidth: 3, strokeLinejoin: 'round' }}>
                   {n.meta.label}
                   {u && <tspan style={{ fontFamily: 'var(--font-mono)', fontWeight: 500, fill: full ? 'var(--accent)' : 'var(--ink-3)' }}>{` ${full ? 'full' : `${Math.round(u.util * 100)}%`}`}</tspan>}
                   {(last || n.meta.kind === 'crude') && <tspan style={{ fontFamily: 'var(--font-mono)', fontWeight: 500, fill: 'var(--ink-3)' }}>{` ${pct(n.v)}%`}</tspan>}
-                  {use && <tspan style={{ fontWeight: 400, fontStyle: 'italic', fill: 'var(--ink-2)' }}>{` → ${use}`}</tspan>}
+                  {use && <tspan x={labelX + 10} dy={12.5} style={{ fontWeight: 400, fontStyle: 'italic', fontSize: 10, fill: 'var(--ink-2)' }}>{`→ ${use}`}</tspan>}
                 </text>
                 <title>{`${n.meta.label}: ${Math.round(n.v).toLocaleString()} t/d${u ? `, ${Math.round(u.util * 100)}% of capacity` : ''}. Tap for details.`}</title>
               </g>
@@ -231,6 +234,9 @@ export function NodeCard({ id, r, onClose }: { id: string; r: Result; onClose: (
     stats = [`Feed ${fmtT(u.feed)} t/d (${kbd(u.feed, bpt)} kb/d)`, `Capacity ${kbd(u.capT, bpt)} kb/d`];
     util = u.util;
     desc = UNIT_INFO[id as UnitId];
+  } else if (id === 'sru') {
+    stats = [`${fmtT(tout)} t/d of sulfur`];
+    desc = SULFUR_PLANT_INFO;
   } else if (meta.kind === 'product') {
     const p = id.slice(2) as ProductId;
     const bpt = PRODUCT_BBL_PER_T[p];

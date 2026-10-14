@@ -230,6 +230,6 @@ export const PRESETS: Record<PresetId, { label: string; desc: string; caps: Reco
   },
   petchem: {
     label: 'Integrated petrochemicals', desc: 'Deep conversion plus a naphtha steam cracker and an aromatics complex.',
-    caps: { cdu: 260, coker: 55, hck: 35, fcc: 55, ref: 45, isom: 33, alky: 12, kht: 35, dht: 85, scr: 70, arom: 30 },
+    caps: { cdu: 260, coker: 55, hck: 35, fcc: 55, ref: 45, isom: 33, alky: 12, kht: 35, dht: 85, scr: 75, arom: 30 },
   },
 };

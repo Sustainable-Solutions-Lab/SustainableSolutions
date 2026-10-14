@@ -1,0 +1,73 @@
+---
+import ToolFrame from '../../layouts/ToolFrame.astro';
+import RefineryTool from '../../tools/refinery/RefineryTool';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+
+const tool = (tools as Tool[]).find((t) => t.slug === 'refinery') ?? null;
+---
+
+<ToolFrame
+  title={tool?.title ?? 'Interactive refinery'}
+  description={tool?.summary ??
+    'Pull a refinery’s operating levers and see its product slate, margin and emissions change.'}
+  noindex={tool?.unlisted ?? true}
+  background="var(--paper-2)"
+>
+  <RefineryTool client:only="react" />
+</ToolFrame>
+
+<style is:global>
+  /* Sliders: a cardinal, grabbable thumb that renders the same on desktop and
+     mobile, as in the magnet explorer. --rf-thumb is read by followTouches. */
+  .refinery-tool { --rf-thumb: 17px; --rf-hit: 22px; }
+  .refinery-tool p { max-width: none; }
+  @media (pointer: fine) and (min-width: 1000px) {
+    .refinery-tool { --rf-thumb: 14px; --rf-hit: 18px; }
+  }
+  @media (pointer: coarse) {
+    .refinery-tool { --rf-thumb: 26px; --rf-hit: 40px; }
+    /* A finger is followed by Controls.tsx's followTouches, not by the input. */
+    .refinery-tool input[type='range'] { pointer-events: none; }
+    .refinery-tool :has(> input[type='range']) { touch-action: pan-y; }
+  }
+  .refinery-tool input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: var(--rf-hit);
+    background: transparent;
+    cursor: pointer;
+    margin: 0;
+    touch-action: pan-y;
+    display: block;
+  }
+  .refinery-tool input[type='range']::-webkit-slider-runnable-track {
+    height: 5px; border-radius: 3px; background: var(--rule-strong);
+  }
+  .refinery-tool input[type='range']::-moz-range-track {
+    height: 5px; border-radius: 3px; background: var(--rule-strong);
+  }
+  .refinery-tool input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    box-sizing: border-box;
+    width: var(--rf-thumb); height: var(--rf-thumb);
+    margin-top: calc((5px - var(--rf-thumb)) / 2);
+    border-radius: 50%;
+    background: var(--cardinal);
+    border: 2px solid var(--paper);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  .refinery-tool input[type='range']::-moz-range-thumb {
+    width: var(--rf-thumb); height: var(--rf-thumb);
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: var(--cardinal);
+    border: 2px solid var(--paper);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  .refinery-tool input[type='range']:focus-visible { outline: none; }
+  .refinery-tool input[type='range']:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cardinal) 35%, transparent);
+  }
+</style>

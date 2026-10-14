@@ -17,6 +17,8 @@ export const UNIT_INFO: Record<UnitId, string> = {
   arom: 'Extracts benzene, toluene and xylenes (BTX) from reformate and pyrolysis gasoline. The leftover raffinate is sold as naphtha.',
 };
 
+export const SULFUR_PLANT_INFO = 'Hydrotreaters and the hydrocracker strip sulfur from their feeds as hydrogen sulfide (H₂S); the FCC and coker release part of theirs. Amine units collect the H₂S and a Claus plant burns part of it to make elemental sulfur, the yellow piles at refineries. Most of it becomes sulfuric acid, much of that for phosphate fertilizer. The sulfur left in fuel oil, coke and asphalt leaves with them.';
+
 export const LEVER_INFO = {
   throughput: 'How much crude the refinery runs. It cannot exceed the crude unit’s capacity. Running less is costly, because fixed costs are spread over fewer barrels.',
   slate: 'Light sweet crude yields more naphtha and distillate; heavy sour crude yields more residue but costs less. Heavy crude pays only with conversion hardware (a coker, a hydrocracker) to upgrade the residue.',

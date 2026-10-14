@@ -38,6 +38,16 @@ export const CUT_YIELD: Record<Grade, Record<Cut, number>> = {
   ms: { lpg: 0.015, ln: 0.065, hn: 0.115, ker: 0.115, go: 0.18, vgo: 0.275, vr: 0.235 },
   hs: { lpg: 0.01, ln: 0.05, hn: 0.09, ker: 0.10, go: 0.16, vgo: 0.27, vr: 0.32 },
 };
+/** Sulfur in each crude, mass share, and how it concentrates in the heavier
+ *  cuts (relative factors, normalized per grade so the cuts add back to the
+ *  crude's sulfur). */
+export const GRADE_S: Record<Grade, number> = { ls: 0.004, ms: 0.015, hs: 0.028 };
+export const CUT_S_FACTOR: Record<Cut, number> = { lpg: 0, ln: 0.03, hn: 0.08, ker: 0.3, go: 0.75, vgo: 1.3, vr: 2.0 };
+/** Share of a unit's feed sulfur released as H2S, which the sulfur (Claus)
+ *  plant turns into elemental sulfur. Hydroprocessing removes nearly all; the
+ *  FCC and coker release part of it, and the rest stays in their products. */
+export const S_TO_H2S = { hydro: 0.97, fcc: 0.45, coker: 0.35 };
+
 /** Moving a cut point by its full ±20 °C range shifts this share of the crude
  *  between the two neighbouring cuts (the swing cut). */
 export const SWING_SHARE = 0.03;
@@ -160,32 +170,32 @@ export const NG_EF = 0.0561;       // t CO2 per GJ of natural gas
 export const GJ_PER_MMBTU = 1.055;
 
 // ── Products ────────────────────────────────────────────────────────────────
-export type ProductId = 'lpg' | 'gasoline' | 'naphtha' | 'jet' | 'diesel' | 'baseOil' | 'fuelOil' | 'asphalt' | 'coke'
+export type ProductId = 'lpg' | 'gasoline' | 'naphtha' | 'jet' | 'diesel' | 'baseOil' | 'fuelOil' | 'asphalt' | 'coke' | 'sulfur'
   | 'ethylene' | 'propylene' | 'butadiene' | 'btx' | 'fuelGas';
-export const PRODUCTS: ProductId[] = ['lpg', 'gasoline', 'naphtha', 'jet', 'diesel', 'baseOil', 'fuelOil', 'asphalt', 'coke',
+export const PRODUCTS: ProductId[] = ['lpg', 'gasoline', 'naphtha', 'jet', 'diesel', 'baseOil', 'fuelOil', 'asphalt', 'coke', 'sulfur',
   'ethylene', 'propylene', 'butadiene', 'btx', 'fuelGas'];
 export const PRODUCT_LABEL: Record<ProductId, string> = {
   lpg: 'LPG', gasoline: 'Gasoline', naphtha: 'Naphtha', jet: 'Jet fuel', diesel: 'Diesel', baseOil: 'Lube base oil',
-  fuelOil: 'Fuel oil', asphalt: 'Asphalt and pitch', coke: 'Petroleum coke', ethylene: 'Ethylene', propylene: 'Propylene',
+  fuelOil: 'Fuel oil', asphalt: 'Asphalt and pitch', sulfur: 'Sulfur', coke: 'Petroleum coke', ethylene: 'Ethylene', propylene: 'Propylene',
   butadiene: 'Butadiene', btx: 'Aromatics (BTX)', fuelGas: 'Fuel gas and losses',
 };
 /** Barrels per tonne for liquid products; null where barrels are not used. */
 export const PRODUCT_BBL_PER_T: Record<ProductId, number | null> = {
-  lpg: 11.6, gasoline: 8.45, naphtha: 8.9, jet: 7.9, diesel: 7.45, baseOil: 7.3, fuelOil: 6.4, asphalt: null, coke: null,
+  lpg: 11.6, gasoline: 8.45, naphtha: 8.9, jet: 7.9, diesel: 7.45, baseOil: 7.3, fuelOil: 6.4, asphalt: null, sulfur: null, coke: null,
   ethylene: null, propylene: null, butadiene: null, btx: 7.2, fuelGas: null,
 };
 /** Spectral, by product: fuels warm to cool by weight, chemicals at the red end. */
 export const PRODUCT_COLOR: Record<ProductId, string> = {
   lpg: 'var(--spectral-5)', gasoline: 'var(--spectral-3)', naphtha: 'var(--spectral-4)',
-  jet: 'var(--spectral-10)', diesel: 'var(--spectral-9)', baseOil: 'var(--spectral-6)', fuelOil: 'var(--spectral-11)',
-  asphalt: 'var(--ink-2)', coke: 'var(--ink-3)', ethylene: 'var(--spectral-1)', propylene: 'var(--spectral-2)',
+  jet: 'var(--spectral-10)', diesel: 'var(--spectral-9)', baseOil: 'var(--brand-teal)', fuelOil: 'var(--spectral-11)',
+  asphalt: 'var(--ink-2)', sulfur: 'var(--spectral-6)', coke: 'var(--ink-3)', ethylene: 'var(--spectral-1)', propylene: 'var(--spectral-2)',
   butadiene: 'var(--spectral-8)', btx: 'var(--spectral-7)', fuelGas: 'var(--ink-3)',
 };
 export const CHEMICALS: ProductId[] = ['ethylene', 'propylene', 'butadiene', 'btx'];
 /** What the chemicals and base oil mostly become, for the Sankey labels. */
 export const END_USE: Partial<Record<ProductId, string>> = {
   ethylene: 'polyethylene, PVC, polyester', propylene: 'polypropylene, acrylics', butadiene: 'synthetic rubber',
-  btx: 'polyester, nylon, polystyrene', baseOil: 'motor oil, lubricants', asphalt: 'roads, roofing',
+  btx: 'polyester, nylon, polystyrene', baseOil: 'motor oil, lubricants', asphalt: 'roads, roofing', sulfur: 'sulfuric acid, fertilizer',
 };
 
 // ── Gasoline octane ─────────────────────────────────────────────────────────
@@ -199,7 +209,7 @@ export const OCTANE_DISCOUNT = 1.5;   // $ per bbl per RON
 export type Prices = {
   crude: Record<Grade, number>;          // $/bbl
   lpg: number; gasoline: number; naphtha: number; jet: number; diesel: number; baseOil: number; fuelOil: number; // $/bbl
-  coke: number; asphalt: number; ethylene: number; propylene: number; butadiene: number; btx: number;          // $/t
+  coke: number; asphalt: number; sulfur: number; ethylene: number; propylene: number; butadiene: number; btx: number;          // $/t
   plantOil: number;   // $/t
   gas: number;        // $/MMBtu
   power: number;      // $/MWh
@@ -209,7 +219,7 @@ export type Prices = {
 export const PRICES_2023: Prices = {
   crude: { ls: 78, ms: 74, hs: 65 },
   lpg: 33, gasoline: 100, naphtha: 64, jet: 105, diesel: 110, baseOil: 150, fuelOil: 64,
-  coke: 80, asphalt: 450, ethylene: 850, propylene: 900, butadiene: 1000, btx: 950,
+  coke: 80, asphalt: 450, sulfur: 100, ethylene: 850, propylene: 900, butadiene: 1000, btx: 950,
   plantOil: 1200, gas: 2.7, power: 70, carbon: 0, grid: 0.4,
 };
 /** A made-up net-zero world: road fuels in steep decline, so crack spreads
@@ -217,7 +227,7 @@ export const PRICES_2023: Prices = {
 export const PRICES_NZ: Prices = {
   crude: { ls: 52, ms: 49, hs: 42 },
   lpg: 26, gasoline: 56, naphtha: 52, jet: 76, diesel: 62, baseOil: 140, fuelOil: 40,
-  coke: 30, asphalt: 380, ethylene: 950, propylene: 1000, butadiene: 1050, btx: 1000,
+  coke: 30, asphalt: 380, sulfur: 100, ethylene: 950, propylene: 1000, butadiene: 1050, btx: 1000,
   plantOil: 1100, gas: 4, power: 50, carbon: 150, grid: 0.1,
 };
 

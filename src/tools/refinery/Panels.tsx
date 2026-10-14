@@ -31,7 +31,25 @@ export function PanelBox({ title, info, children, aside }: { title: string; info
 }
 
 // ── Headline numbers ────────────────────────────────────────────────────────
-function Kpi({ label, value, sub, warn, info }: { label: string; value: string; sub: string; warn?: boolean; info?: ReactNode }) {
+/** Change against the baseline. `good` is the sign that counts as better
+ *  (+1 higher is better, −1 lower is better, 0 neutral). */
+type Delta = { d: number; base: number; unit: string; digits: number; good: 1 | -1 | 0; prefix?: string };
+function DeltaLine({ x }: { x: Delta }) {
+  const tiny = Math.abs(x.d) < 0.5 * 10 ** -x.digits;
+  if (tiny) return <div style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: 'var(--font-mono)' }}>no change vs start</div>;
+  const better = x.good === 0 ? null : Math.sign(x.d) === x.good;
+  const pct = Math.abs(x.base) > 1e-9 ? (100 * x.d) / Math.abs(x.base) : null;
+  const color = better === null ? 'var(--ink-2)' : better ? 'var(--positive)' : 'var(--negative)';
+  return (
+    <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color }}>
+      {x.d > 0 ? '▲' : '▼'} {x.d > 0 ? '+' : '−'}{x.prefix ?? ''}{Math.abs(x.d).toFixed(x.digits)}{x.unit}
+      {pct !== null && Math.abs(pct) < 1000 && ` (${pct > 0 ? '+' : '−'}${Math.abs(pct).toFixed(0)}%)`}
+      <span style={{ color: 'var(--ink-3)' }}> vs start</span>
+    </div>
+  );
+}
+
+function Kpi({ label, value, sub, warn, info, delta }: { label: string; value: string; sub: string; warn?: boolean; info?: ReactNode; delta?: Delta | null }) {
   return (
     <div style={{ border: '1px solid var(--rule)', borderRadius: 6, padding: '6px 10px', background: 'var(--paper)', minWidth: 0,
                   borderLeft: warn ? '2px solid var(--accent)' : '1px solid var(--rule)' }}>
@@ -40,23 +58,44 @@ function Kpi({ label, value, sub, warn, info }: { label: string; value: string; 
       </div>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 19, fontWeight: 600, color: warn ? 'var(--accent)' : 'var(--ink)', lineHeight: 1.25 }}>{value}</div>
       <div style={{ fontSize: 11, color: 'var(--ink-2)' }}>{sub}</div>
+      {delta && <DeltaLine x={delta} />}
     </div>
   );
 }
 
-export function Kpis({ r, s }: { r: Result; s: State }) {
-  const cash = perBbl(r, r.econ.cash), net = perBbl(r, r.econ.net);
-  const co2 = (1000 * r.scope1) / (r.crudeBbl || 1);
+const kpiValues = (r: Result) => ({
+  cash: perBbl(r, r.econ.cash), net: perBbl(r, r.econ.net),
+  co2: (1000 * r.scope1) / (r.crudeBbl || 1), ron: r.gasolineT > 0 ? r.ron : 0, h2: r.h2.imported,
+});
+
+/** Headline numbers. With `base` (the start of the last story picked), each
+ *  card also shows its change since then, green when better, red when worse. */
+export function Kpis({ r, s, base, baseName }: { r: Result; s: State; base?: Result | null; baseName?: string | null }) {
+  const v = kpiValues(r), b = base ? kpiValues(base) : null;
+  const dl = (k: keyof typeof v, unit: string, digits: number, good: 1 | -1 | 0, prefix?: string): Delta | null =>
+    b ? { d: v[k] - b[k], base: b[k], unit, digits, good, prefix } : null;
+  const moved = b && (Object.keys(v) as (keyof typeof v)[]).some((k) => Math.abs(v[k] - b[k]) > 1e-6);
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
-      <Kpi label="Cash margin" value={`${money(cash, 2)}/bbl`} sub={`${money((r.econ.cash * DAYS) / 1e6, 0)}M a year`} warn={cash < 0} />
-      <Kpi label="Net margin" value={`${money(net, 2)}/bbl`} sub={`after ${money(perBbl(r, r.econ.fixed), 2)}/bbl fixed costs`} warn={net < 0} />
-      <Kpi label="Direct CO₂" value={`${co2.toFixed(1)} kg/bbl`} sub={`${((r.scope1 * DAYS) / 1e6).toFixed(2)} Mt a year`} />
-      <Kpi label="Gasoline octane" value={r.gasolineT > 0 ? `RON ${r.ron.toFixed(1)}` : 'None made'}
-        sub={r.ronShort > 0 ? `${r.ronShort.toFixed(1)} below the ${GASOLINE_MIN_RON} spec` : `spec ${GASOLINE_MIN_RON}`}
-        warn={r.ronShort > 0} info={LEVER_INFO.octane} />
-      <Kpi label="Hydrogen bought" value={`${Math.round(r.h2.imported)} t/d`}
-        sub={r.h2.imported > 0 ? H2_SOURCES[s.h2Source].label : `${Math.round(r.h2.surplus)} t/d spare, burned as fuel`} />
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+        <Kpi label="Cash margin" value={`${money(v.cash, 2)}/bbl`} sub={`${money((r.econ.cash * DAYS) / 1e6, 0)}M a year`} warn={v.cash < 0}
+          delta={moved ? dl('cash', '/bbl', 2, 1, '$') : null} />
+        <Kpi label="Net margin" value={`${money(v.net, 2)}/bbl`} sub={`after ${money(perBbl(r, r.econ.fixed), 2)}/bbl fixed costs`} warn={v.net < 0}
+          delta={moved ? dl('net', '/bbl', 2, 1, '$') : null} />
+        <Kpi label="Direct CO₂" value={`${v.co2.toFixed(1)} kg/bbl`} sub={`${((r.scope1 * DAYS) / 1e6).toFixed(2)} Mt a year`}
+          delta={moved ? dl('co2', ' kg/bbl', 1, -1) : null} />
+        <Kpi label="Gasoline octane" value={r.gasolineT > 0 ? `RON ${r.ron.toFixed(1)}` : 'None made'}
+          sub={r.ronShort > 0 ? `${r.ronShort.toFixed(1)} below the ${GASOLINE_MIN_RON} spec` : `spec ${GASOLINE_MIN_RON}`}
+          warn={r.ronShort > 0} info={LEVER_INFO.octane} delta={moved && r.gasolineT > 0 && base!.gasolineT > 0 ? dl('ron', '', 1, 1) : null} />
+        <Kpi label="Hydrogen bought" value={`${Math.round(r.h2.imported)} t/d`}
+          sub={r.h2.imported > 0 ? H2_SOURCES[s.h2Source].label : `${Math.round(r.h2.surplus)} t/d spare, burned as fuel`}
+          delta={moved ? dl('h2', ' t/d', 0, 0) : null} />
+      </div>
+      {moved && baseName && (
+        <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--ink-3)' }}>
+          Coloured figures compare with the start of the “{baseName}” story: green is better, red is worse.
+        </p>
+      )}
     </div>
   );
 }

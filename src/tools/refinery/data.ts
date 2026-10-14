@@ -44,8 +44,8 @@ export const SWING_SHARE = 0.03;
 export const SWING_MAX_C = 20;
 
 // ── Process units ───────────────────────────────────────────────────────────
-export type UnitId = 'cdu' | 'coker' | 'hck' | 'lube' | 'fcc' | 'ref' | 'isom' | 'alky' | 'kht' | 'dht' | 'scr' | 'arom';
-export const UNIT_IDS: UnitId[] = ['cdu', 'coker', 'hck', 'lube', 'fcc', 'ref', 'isom', 'alky', 'kht', 'dht', 'scr', 'arom'];
+export type UnitId = 'cdu' | 'coker' | 'sda' | 'hck' | 'lube' | 'fcc' | 'ref' | 'isom' | 'alky' | 'kht' | 'dht' | 'scr' | 'arom';
+export const UNIT_IDS: UnitId[] = ['cdu', 'coker', 'sda', 'hck', 'lube', 'fcc', 'ref', 'isom', 'alky', 'kht', 'dht', 'scr', 'arom'];
 export type UnitInfo = {
   label: string; short: string;
   /** Barrels per tonne of the unit's feed, to turn kb/d capacity into t/day. */
@@ -64,6 +64,7 @@ export type UnitInfo = {
 export const UNITS: Record<UnitId, UnitInfo> = {
   cdu:   { label: 'Crude unit (CDU/VDU)', short: 'CDU/VDU', feedBblPerT: 7.2, energy: 1.0, kwh: 15, vom: 2, fom: 12, maxCap: 450 },
   coker: { label: 'Coker', short: 'Coker', feedBblPerT: 6.4, energy: 1.5, kwh: 35, vom: 8, fom: 18, maxCap: 120 },
+  sda:   { label: 'Solvent deasphalter', short: 'Deasphalter', feedBblPerT: 6.3, energy: 0.7, kwh: 20, vom: 4, fom: 10, maxCap: 80 },
   hck:   { label: 'Hydrocracker', short: 'Hydrocracker', feedBblPerT: 6.85, energy: 1.4, kwh: 70, vom: 10, fom: 22, maxCap: 150 },
   lube:  { label: 'Base oil plant (lubricants)', short: 'Base oil', feedBblPerT: 6.85, energy: 1.6, kwh: 80, vom: 14, fom: 26, maxCap: 60 },
   fcc:   { label: 'Fluid catalytic cracker (FCC)', short: 'FCC', feedBblPerT: 6.85, energy: 0.6, kwh: 50, vom: 8, fom: 18, maxCap: 150 },
@@ -101,6 +102,11 @@ export const HCK_MODES: Record<HckMode, { label: string; h2: number; lpg: number
  *  gas oil. Products sum to 1 + hydrogen used; the hydrogen leaves with the
  *  fuel gas. */
 export const LUBE = { h2: 0.02, baseOil: 0.70, diesel: 0.15, hn: 0.07, lpg: 0.03, fg: 0.05 };
+
+/** Solvent deasphalter, per t of vacuum residue: a light solvent (propane or
+ *  butane) dissolves the lighter oil and leaves the asphaltenes behind. The
+ *  deasphalted oil joins the vacuum gas oil; the pitch is sold for asphalt. */
+export const SDA = { dao: 0.6, pitch: 0.4 };
 
 /** Delayed coker, per t of vacuum residue. */
 export const COKER = { fg: 0.08, lpg: 0.04, ln: 0.10, go: 0.20, vgo: 0.28, coke: 0.30 };
@@ -154,32 +160,32 @@ export const NG_EF = 0.0561;       // t CO2 per GJ of natural gas
 export const GJ_PER_MMBTU = 1.055;
 
 // ── Products ────────────────────────────────────────────────────────────────
-export type ProductId = 'lpg' | 'gasoline' | 'naphtha' | 'jet' | 'diesel' | 'baseOil' | 'fuelOil' | 'coke'
+export type ProductId = 'lpg' | 'gasoline' | 'naphtha' | 'jet' | 'diesel' | 'baseOil' | 'fuelOil' | 'asphalt' | 'coke'
   | 'ethylene' | 'propylene' | 'butadiene' | 'btx' | 'fuelGas';
-export const PRODUCTS: ProductId[] = ['lpg', 'gasoline', 'naphtha', 'jet', 'diesel', 'baseOil', 'fuelOil', 'coke',
+export const PRODUCTS: ProductId[] = ['lpg', 'gasoline', 'naphtha', 'jet', 'diesel', 'baseOil', 'fuelOil', 'asphalt', 'coke',
   'ethylene', 'propylene', 'butadiene', 'btx', 'fuelGas'];
 export const PRODUCT_LABEL: Record<ProductId, string> = {
   lpg: 'LPG', gasoline: 'Gasoline', naphtha: 'Naphtha', jet: 'Jet fuel', diesel: 'Diesel', baseOil: 'Lube base oil',
-  fuelOil: 'Fuel oil', coke: 'Petroleum coke', ethylene: 'Ethylene', propylene: 'Propylene',
+  fuelOil: 'Fuel oil', asphalt: 'Asphalt and pitch', coke: 'Petroleum coke', ethylene: 'Ethylene', propylene: 'Propylene',
   butadiene: 'Butadiene', btx: 'Aromatics (BTX)', fuelGas: 'Fuel gas and losses',
 };
 /** Barrels per tonne for liquid products; null where barrels are not used. */
 export const PRODUCT_BBL_PER_T: Record<ProductId, number | null> = {
-  lpg: 11.6, gasoline: 8.45, naphtha: 8.9, jet: 7.9, diesel: 7.45, baseOil: 7.3, fuelOil: 6.4, coke: null,
+  lpg: 11.6, gasoline: 8.45, naphtha: 8.9, jet: 7.9, diesel: 7.45, baseOil: 7.3, fuelOil: 6.4, asphalt: null, coke: null,
   ethylene: null, propylene: null, butadiene: null, btx: 7.2, fuelGas: null,
 };
 /** Spectral, by product: fuels warm to cool by weight, chemicals at the red end. */
 export const PRODUCT_COLOR: Record<ProductId, string> = {
   lpg: 'var(--spectral-5)', gasoline: 'var(--spectral-3)', naphtha: 'var(--spectral-4)',
   jet: 'var(--spectral-10)', diesel: 'var(--spectral-9)', baseOil: 'var(--spectral-6)', fuelOil: 'var(--spectral-11)',
-  coke: 'var(--ink-3)', ethylene: 'var(--spectral-1)', propylene: 'var(--spectral-2)',
+  asphalt: 'var(--ink-2)', coke: 'var(--ink-3)', ethylene: 'var(--spectral-1)', propylene: 'var(--spectral-2)',
   butadiene: 'var(--spectral-8)', btx: 'var(--spectral-7)', fuelGas: 'var(--ink-3)',
 };
 export const CHEMICALS: ProductId[] = ['ethylene', 'propylene', 'butadiene', 'btx'];
 /** What the chemicals and base oil mostly become, for the Sankey labels. */
 export const END_USE: Partial<Record<ProductId, string>> = {
   ethylene: 'polyethylene, PVC, polyester', propylene: 'polypropylene, acrylics', butadiene: 'synthetic rubber',
-  btx: 'polyester, nylon, polystyrene', baseOil: 'motor oil, lubricants',
+  btx: 'polyester, nylon, polystyrene', baseOil: 'motor oil, lubricants', asphalt: 'roads, roofing',
 };
 
 // ── Gasoline octane ─────────────────────────────────────────────────────────
@@ -193,7 +199,7 @@ export const OCTANE_DISCOUNT = 1.5;   // $ per bbl per RON
 export type Prices = {
   crude: Record<Grade, number>;          // $/bbl
   lpg: number; gasoline: number; naphtha: number; jet: number; diesel: number; baseOil: number; fuelOil: number; // $/bbl
-  coke: number; ethylene: number; propylene: number; butadiene: number; btx: number;          // $/t
+  coke: number; asphalt: number; ethylene: number; propylene: number; butadiene: number; btx: number;          // $/t
   plantOil: number;   // $/t
   gas: number;        // $/MMBtu
   power: number;      // $/MWh
@@ -203,7 +209,7 @@ export type Prices = {
 export const PRICES_2023: Prices = {
   crude: { ls: 78, ms: 74, hs: 65 },
   lpg: 33, gasoline: 100, naphtha: 64, jet: 105, diesel: 110, baseOil: 150, fuelOil: 64,
-  coke: 80, ethylene: 850, propylene: 900, butadiene: 1000, btx: 950,
+  coke: 80, asphalt: 450, ethylene: 850, propylene: 900, butadiene: 1000, btx: 950,
   plantOil: 1200, gas: 2.7, power: 70, carbon: 0, grid: 0.4,
 };
 /** A made-up net-zero world: road fuels in steep decline, so crack spreads
@@ -211,7 +217,7 @@ export const PRICES_2023: Prices = {
 export const PRICES_NZ: Prices = {
   crude: { ls: 52, ms: 49, hs: 42 },
   lpg: 26, gasoline: 56, naphtha: 52, jet: 76, diesel: 62, baseOil: 140, fuelOil: 40,
-  coke: 30, ethylene: 950, propylene: 1000, butadiene: 1050, btx: 1000,
+  coke: 30, asphalt: 380, ethylene: 950, propylene: 1000, butadiene: 1050, btx: 1000,
   plantOil: 1100, gas: 4, power: 50, carbon: 150, grid: 0.1,
 };
 
@@ -221,26 +227,26 @@ export type PresetId = 'hydroskimming' | 'cracking' | 'coking' | 'hydrocracking'
 export const PRESETS: Record<PresetId, { label: string; desc: string; caps: Record<UnitId, number> }> = {
   hydroskimming: {
     label: 'Hydroskimming', desc: 'Distillation, reforming and hydrotreating only. Everything heavier than diesel leaves as fuel oil.',
-    caps: { cdu: 260, coker: 0, hck: 0, lube: 0, fcc: 0, ref: 45, isom: 25, alky: 0, kht: 35, dht: 60, scr: 0, arom: 0 },
+    caps: { cdu: 260, coker: 0, sda: 0, hck: 0, lube: 0, fcc: 0, ref: 45, isom: 25, alky: 0, kht: 35, dht: 60, scr: 0, arom: 0 },
   },
   cracking: {
     label: 'Cracking (FCC)', desc: 'Adds an FCC to crack vacuum gas oil into gasoline, and alkylation for octane.',
-    caps: { cdu: 260, coker: 0, hck: 0, lube: 0, fcc: 75, ref: 45, isom: 33, alky: 12, kht: 35, dht: 80, scr: 0, arom: 0 },
+    caps: { cdu: 260, coker: 0, sda: 0, hck: 0, lube: 0, fcc: 75, ref: 45, isom: 33, alky: 12, kht: 35, dht: 80, scr: 0, arom: 0 },
   },
   coking: {
     label: 'Coking (FCC + coker)', desc: 'Adds a coker so the residue becomes lighter products and coke, which lets the refinery buy cheaper heavy crude.',
-    caps: { cdu: 260, coker: 55, hck: 0, lube: 0, fcc: 85, ref: 45, isom: 33, alky: 12, kht: 35, dht: 90, scr: 0, arom: 0 },
+    caps: { cdu: 260, coker: 55, sda: 0, hck: 0, lube: 0, fcc: 85, ref: 45, isom: 33, alky: 12, kht: 35, dht: 90, scr: 0, arom: 0 },
   },
   hydrocracking: {
     label: 'Hydrocracking', desc: 'A hydrocracker instead of an FCC: cracks gas oil with hydrogen into jet and diesel.',
-    caps: { cdu: 260, coker: 0, hck: 75, lube: 0, fcc: 0, ref: 50, isom: 33, alky: 0, kht: 35, dht: 65, scr: 0, arom: 0 },
+    caps: { cdu: 260, coker: 0, sda: 0, hck: 75, lube: 0, fcc: 0, ref: 50, isom: 33, alky: 0, kht: 35, dht: 65, scr: 0, arom: 0 },
   },
   deep: {
     label: 'Deep conversion', desc: 'FCC, hydrocracker and coker together: almost no fuel oil, and the most flexibility.',
-    caps: { cdu: 260, coker: 55, hck: 35, lube: 0, fcc: 55, ref: 45, isom: 33, alky: 12, kht: 35, dht: 85, scr: 0, arom: 0 },
+    caps: { cdu: 260, coker: 55, sda: 0, hck: 35, lube: 0, fcc: 55, ref: 45, isom: 33, alky: 12, kht: 35, dht: 85, scr: 0, arom: 0 },
   },
   petchem: {
     label: 'Integrated petrochemicals', desc: 'Deep conversion plus a naphtha steam cracker and an aromatics complex.',
-    caps: { cdu: 260, coker: 55, hck: 35, lube: 0, fcc: 55, ref: 45, isom: 33, alky: 12, kht: 35, dht: 85, scr: 75, arom: 30 },
+    caps: { cdu: 260, coker: 55, sda: 0, hck: 35, lube: 0, fcc: 55, ref: 45, isom: 33, alky: 12, kht: 35, dht: 85, scr: 75, arom: 30 },
   },
 };

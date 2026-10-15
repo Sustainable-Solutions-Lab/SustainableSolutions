@@ -373,7 +373,8 @@ function FoodEmissionsMethods() {
         manure, and the non-biogenic CO₂ from urea and liming;
         <em> land management net biogenic CO₂ emissions</em> — carbon
         stock changes on managed land, which here means drained peatland
-        CO₂ and soil-carbon losses on stable cropland; <em>land use
+        CO₂ and soil-carbon losses on stable cropland and grazed
+        rangeland; <em>land use
         change emissions</em> are not part of this dataset; we are
         co-developing a next-generation jurisdictional land-use-change
         product with our partner AdAstra to supply them. The LSRS category selector in the sidebar renders each
@@ -390,8 +391,8 @@ function FoodEmissionsMethods() {
         structurally they belong inside categories 1 and 2, not in a
         category of their own, so that is where they will surface here:
         the specific-sources list differentiates soil carbon by land
-        use, with rangeland and forest entries shown as pending under
-        category 2. We are piloting the forest methods now: two
+        use, with a forest entry shown as pending under category 2. We
+        are piloting the forest methods now: two
         research-preview layers under category 2 show forest biomass
         carbon flux for 44 US states, France, and Spain from ~334,000
         paired national forest inventory re-measurements (USDA FIA;
@@ -447,10 +448,11 @@ function FoodEmissionsMethods() {
         change accounting). No claim of removals is made or supported:
         crediting soil-carbon removals requires multi-year field
         measurement under the GHG Protocol's land standard.
-        The layer currently covers cropland; a companion rangeland layer
-        has first historical estimates from two grazing-response models
-        evaluated along the observed 2000–2022 grazing-intensity
-        trajectory: a meta-analysis model refit from Ren et al.,{' '}
+        A separate, preliminary rangeland layer (Soil carbon CO₂ —
+        rangeland) gives first historical estimates of soil-carbon change
+        from changing grazing intensity, evaluated along the observed
+        2000–2022 grazing-intensity trajectory with two grazing-response
+        models: a meta-analysis model refit from Ren et al.,{' '}
         <em>Nature Climate Change</em> (2024), and the response
         functions and random-forest ensemble of{' '}
 <a href="https://doi.org/10.1126/science.adz4320" target="_blank" rel="noopener noreferrer" style={linkStyle}><strong>Powell et al., <em>Assessing the net-climate benefits of
@@ -458,13 +460,24 @@ function FoodEmissionsMethods() {
         (2026)</strong></a>. The Ren response, refit on public covariates,
         is the primary model for the paper and the Powell ensemble a
         cross-check on cells where its response is well conditioned. The
-        estimates are not yet in the map: the result is sensitive to the
-        present-day level of grazing intensity, which two independent
-        global products place quite differently, more than to how herds
-        changed over time, and that reconciliation comes first. Herd
-        trends now follow FAOSTAT national stocks rather than the gridded
-        livestock products, whose 2010 release assigned the whole
-        former-Sudan herd to both successor states.
+        map shows the Ren response refit on 61 of its 84 covariates, nine
+        of them from the authors&rsquo; own gridded layers, as a 100-member
+        bootstrap ensemble scaled to its median: about 2.2 Gt CO₂e
+        cumulative over 2000–2022 (range 1.6–3.1), or roughly 0.2 Gt per
+        year of gross loss by 2020. It follows the cropland rule: losing
+        cells count in the totals, gaining cells are shown but not
+        credited. The year slider shows period-mean rates (2001–05,
+        2006–10, 2011–15, 2016–22) for the signed view, and national
+        gross-loss trajectories for the totals. The estimate is
+        preliminary: it is sensitive to the present-day level of grazing
+        intensity, which two independent global products place quite
+        differently (on the other product the cumulative total is about
+        2.7 Gt), more than to how herds changed over time. Herd trends
+        follow FAOSTAT national stocks rather than the gridded livestock
+        products, whose 2010 release assigned the whole former-Sudan herd
+        to both successor states. Rangeland losses are not yet attributed
+        to livestock commodities, so they appear in all-commodity views
+        only.
       </p>
 
       <h2 style={h2Style}>Drivers of change</h2>

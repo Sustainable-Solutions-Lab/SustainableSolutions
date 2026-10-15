@@ -31,6 +31,9 @@
  * @type {import('../_map/contracts/project-config').ProjectConfig}
  */
 
+// Rangeland colour cap, t CO2e/yr per 0.25° cell (set from the p95 of |rsoc|).
+const RSOC_COLOR_MAX = 15000
+
 const YEARS = Array.from({ length: 25 }, (_, i) => 2000 + i)
 
 // Sources: [id, label, 2020 domain max kt/cell]. The id is the tile prop.
@@ -56,6 +59,11 @@ const SOURCES = [
   // Standard treats them inside categories 1/2, not as a category of
   // their own, so the differentiation lives here in Specific sources.
   ['soil', 'Soil carbon CO₂ — cropland', 20],
+  // Rangeland SOC (Ren et al. 2024 response refit on 61 of his 84
+  // covariates, Gridded LM v5). 2020 LOSSES count, gains display only, as
+  // for cropland soil. Varies by year through national gross-loss series.
+  // Not attributed to livestock commodities yet.
+  ['rsoil', 'Soil carbon CO₂ — rangeland', 60],
 ]
 const SOURCE_IDS = SOURCES.map(([id]) => id)
 
@@ -70,7 +78,7 @@ const SOURCE_IDS = SOURCES.map(([id]) => id)
 // Category 4-style removals are out of scope: the LSRS requires
 // field-measured evidence. Requirement 32 obliges factor providers to
 // keep subcategories separable - which these groupings implement.
-const LSRS_CAT2_IDS = ['peat', 'soil']
+const LSRS_CAT2_IDS = ['peat', 'soil', 'rsoil']
 const LSRS_CAT3_IDS = ['fer', 'man', 'res', 'rice', 'urea', 'lime', 'burn', 'ent', 'mms', 'prp']
 // Cropland sources only — these carry per-crop props (`<src>_<crop>`).
 const CROPLAND_SOURCE_IDS = ['fer', 'man', 'res', 'rice', 'peat', 'urea', 'burn', 'soil']
@@ -235,6 +243,28 @@ function makeVariable({ source, crop }) {
       description: 'Net annual change in mineral-soil carbon on stable cropland, 2000–2023 mean.',
     }
   }
+  // Rangeland soil carbon, all commodities: the signed net view, mirroring
+  // cropland soil. Tiles carry the 2001-22 mean (rsoc) and four period
+  // rates (rsoc1..4), positive = gain.
+  if (source === 'rsoil' && crop === 'all') {
+    return {
+      ...shared,
+      id: 'rsoc',
+      label: 'Rangeland soil carbon Δ',
+      unit: 't CO₂e/yr',
+      colormap: 'RdBu',
+      diverging: true,
+      domain: { min: -60000, max: 60000, zero: 0 },
+      colorMax: RSOC_COLOR_MAX,
+      colorMin: -RSOC_COLOR_MAX,
+      alphaFloor: 0.05,
+      alphaPower: 0.3,
+      yearTerms: [{ prop: 'rsoc', src: 'rsoil' }],
+      segments: { knots: [2000, 2005, 2010, 2015, 2022], props: ['rsoc1', 'rsoc2', 'rsoc3', 'rsoc4'] },
+      note: 'Preliminary. Annual rate for the selected year (period means 2001–05, 2006–10, 2011–15, 2016–22), from the Ren et al. (2024) grazing–soil-carbon response driven by a 2000–2022 grazing-intensity history. Red cells (soil carbon loss) count in the emissions total; blue cells (gain) are shown for context but are not credited against it. Compare shows the cumulative change between the selected years.',
+      description: 'Net annual change in rangeland soil carbon (0–30 cm) from changing grazing intensity, 2001–2022.',
+    }
+  }
   return {
     ...shared,
     id: `${source}${cropSuffix}`,
@@ -256,7 +286,7 @@ const config = {
   summary:
     'Commodity- and source-specific maps of greenhouse-gas emissions from land, compliant with the GHG Protocol Land Sector and Removals Standard (LSRS).',
   description:
-    'Where do food-system greenhouse-gas emissions come from, and how is that changing? This tool works toward a complete, spatially explicit, commodity-specific accounting of emissions from land use and land management — mapped where they happen, traced to what is grown, and followed through time. Today it covers the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid, for any year 2000–2024, plus direct livestock emissions (enteric CH₄, manure-management CH₄ and N₂O, manure deposited on pasture) and CO₂ from agricultural liming. Cropland emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model; livestock currently distributes FAO national series across gridded animal densities, to be upgraded with forthcoming spatially explicit livestock data. Land-use-change emissions join next, through the Cornerstone jurisdictional framework.',
+    'Where do food-system greenhouse-gas emissions come from, and how is that changing? This tool works toward a complete, spatially explicit, commodity-specific accounting of emissions from land use and land management — mapped where they happen, traced to what is grown, and followed through time. Today it covers the management of the world’s croplands — synthetic fertilizer and applied manure N₂O, rice paddy CH₄, cultivated drained peatland, crop residues, and residue burning — for 46 crops on a quarter-degree grid, for any year 2000–2024, plus direct livestock emissions (enteric CH₄, manure-management CH₄ and N₂O, manure deposited on pasture), CO₂ from agricultural liming, and a preliminary estimate of soil-carbon loss on grazed rangeland. Cropland emissions follow our updated implementation of Cao et al. (2026), developed in coordination with the original authors, with drained-peatland emissions from the Cornerstone steady-state model; livestock currently distributes FAO national series across gridded animal densities, to be upgraded with forthcoming spatially explicit livestock data. Land-use-change emissions join next, through the Cornerstone jurisdictional framework.',
 
   region: {
     // Default load centered on the mid-Atlantic: Americas on the left,
@@ -312,9 +342,8 @@ const config = {
         // selectable signed views (research preview, not in totals).
         { id: 'fmlp', label: 'Forest carbon — net stock change (opt. 1 · pilot)', cat: 'cat2' },
         { id: 'fab', label: 'Forest carbon — management-attributable (opt. 2 · pilot)', cat: 'cat2' },
-        // Pending soil-carbon land uses: listed (disabled) under cat. 2 so
+        // Pending soil-carbon land use: listed (disabled) under cat. 2 so
         // the coverage roadmap is visible where it will eventually live.
-        { id: 'soil_range', label: 'Soil carbon CO₂ — rangeland (coming)', cat: 'cat2', disabled: true },
         { id: 'soil_forest', label: 'Soil carbon CO₂ — forest (pending standard)', cat: 'cat2', disabled: true },
       ],
     },
@@ -496,7 +525,7 @@ const config = {
     pale: true,
     defaultRadiusKm: 250,
     maxRadiusKm: 1500,
-    aggregateVariableIds: ['tot', 'ent', 'rice', 'prp', 'fer', 'peat', 'mms', 'man', 'res', 'urea', 'lime', 'burn'],
+    aggregateVariableIds: ['tot', 'ent', 'rice', 'prp', 'fer', 'peat', 'rsoil', 'mms', 'man', 'res', 'urea', 'lime', 'burn'],
     // Region emission factors: per-crop production props (p_<crop>) and
     // cropland-source props summed inside the circle -> kg CO2e per kg.
     ef: {
@@ -518,6 +547,7 @@ const config = {
         { id: 'prp',  prop: 'prp',  label: 'Pasture N₂O',  color: '#FEE08B' },
         { id: 'fer',  prop: 'fer',  label: 'Fertilizer',   color: '#3288BD' },
         { id: 'peat', prop: 'peat', label: 'Peat',         color: '#5E4FA2' },
+        { id: 'rsoil', prop: 'rsoil', label: 'Rangeland soil C', color: '#C4A57B' },
         { id: 'mms',  prop: 'mms',  label: 'Manure mgmt',  color: '#E6F598' },
         { id: 'man',  prop: 'man',  label: 'Manure appl.', color: '#FDAE61' },
         { id: 'res',  prop: 'res',  label: 'Residues',     color: '#66C2A5' },
@@ -594,6 +624,7 @@ const config = {
     taxonomy: {
       sources: [
         { id: 'soil', label: 'Soil carbon loss', color: '#8C6D4F' },
+        { id: 'rsoil', label: 'Rangeland soil carbon loss', color: '#C4A57B' },
         { id: 'ent',  label: 'Enteric CH₄',    color: '#F46D43' },
         { id: 'rice', label: 'Rice CH₄',       color: '#D53E4F' },
         { id: 'prp',  label: 'Pasture N₂O',    color: '#FEE08B' },

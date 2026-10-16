@@ -1,5 +1,15 @@
-import type { ChoroplethData, ContourData, DerivedData, ScatterData, TreemapData } from '../data/derive';
+import type {
+  ChoroplethData,
+  ContourData,
+  DerivedData,
+  ImportanceData,
+  LeversData,
+  RunsData,
+  ScatterData,
+  TreemapData,
+} from '../data/derive';
 import type { Spec } from '../types';
+import { isEnsembleChart } from '../types';
 
 // Format the current derived data as CSV. Shape depends on the chart
 // type — time series get a wide layout (year + one column per series),
@@ -89,6 +99,80 @@ export function contourCsv(data: ContourData, spec: Spec): string {
   return prepend(toCsv(rows), commentLines(spec, `${data.xUnits} × ${data.yUnits}`));
 }
 
+// The ensemble exports are one row per run / per lever / per bin-and-lever,
+// and they carry the window in the comment header rather than a year column.
+
+export function runsCsv(data: RunsData, spec: Spec): string {
+  // Groups are a colour encoding, not an ordering — flatten back to run order
+  // so the export matches the source table.
+  const body = data.groups
+    .flatMap((g) => g.runs)
+    .sort((a, b) => a.id - b.id)
+    .map((p) => [
+      String(p.id),
+      p.ssp,
+      formatCell(p.x),
+      formatCell(p.y),
+      p.bin,
+      p.decouple ? 'TRUE' : 'FALSE',
+      p.selected ? 'TRUE' : 'FALSE',
+      formatCell(p.t2060),
+      formatCell(p.fossilIndex),
+    ]);
+  const rows: string[][] = [
+    [
+      'run_id',
+      'ssp',
+      'gdp_cagr_pct_yr',
+      'material_cagr_pct_yr',
+      'growth_bin',
+      'absolute_decoupling',
+      'below_trend_1sigma',
+      'warming_2060_C',
+      'fossil_index_vs_2024',
+    ],
+    ...body,
+  ];
+  const extras = [`Window: ${data.window[0]}-${data.window[1]}`];
+  if (data.fit) {
+    extras.push(
+      `Fit: material_cagr = ${data.fit.slope} x gdp_cagr ${data.fit.intercept < 0 ? '-' : '+'} ${Math.abs(data.fit.intercept)} (%/yr), residual sigma ${data.fit.residSigma}`,
+    );
+  }
+  extras.push(data.note);
+  return prepend(toCsv(rows), commentLines(spec, data.units, ...extras));
+}
+
+export function leversCsv(data: LeversData, spec: Spec): string {
+  const rows: string[][] = [
+    ['lever', 'group', 'family', 'change_applied', 'effect_pp_yr', 'ci_lo', 'ci_hi', 'significant'],
+    ...data.bars.map((b) => [
+      b.label,
+      b.group,
+      b.family,
+      b.delta,
+      formatCell(b.effect),
+      formatCell(b.lo),
+      formatCell(b.hi),
+      b.significant ? 'TRUE' : 'FALSE',
+    ]),
+  ];
+  return prepend(
+    toCsv(rows),
+    commentLines(spec, data.units, `Window: ${data.window[0]}-${data.window[1]}`, data.note),
+  );
+}
+
+export function importanceCsv(data: ImportanceData, spec: Spec): string {
+  const rows: string[][] = [['growth_bin', 'runs_in_bin', 'lever', 'share_pct']];
+  for (const bin of data.bins) {
+    for (const c of bin.cells) {
+      rows.push([bin.bin, String(bin.n), c.label, formatCell(c.pct)]);
+    }
+  }
+  return prepend(toCsv(rows), commentLines(spec, '% of attributed importance', data.note));
+}
+
 // ── helpers ────────────────────────────────────────────────────────────────
 
 function formatCell(v: number | null | undefined): string {
@@ -110,9 +194,15 @@ function commentLines(spec: Spec, units: string, ...extras: string[]): string {
   const lines = [
     `# Sustainable Solutions Lab — Materials explorer`,
     `# Chart: ${spec.chart}`,
-    `# Measure: ${spec.measure} (${units})`,
-    `# Year range: ${spec.yearRange[0]}–${spec.yearRange[1]}`,
-    ...extras.map((e) => `# ${e}`),
+    // Ensemble exports are not a measure over a year range; they state their
+    // own window in the extras instead.
+    ...(isEnsembleChart(spec.chart)
+      ? [`# Units: ${units}`]
+      : [
+          `# Measure: ${spec.measure} (${units})`,
+          `# Year range: ${spec.yearRange[0]}–${spec.yearRange[1]}`,
+        ]),
+    ...extras.filter(Boolean).map((e) => `# ${e}`),
     `# Generated: ${new Date().toISOString().slice(0, 10)}`,
   ];
   return lines.join('\n') + '\n';

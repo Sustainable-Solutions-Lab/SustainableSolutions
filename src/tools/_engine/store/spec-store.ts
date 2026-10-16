@@ -1,5 +1,14 @@
 import { create } from 'zustand';
-import type { ChartType, DriverName, ExplorerConfig, MeasureName, ScenarioName, Spec } from '../types';
+import type {
+  ChartType,
+  DriverName,
+  ExplorerConfig,
+  MeasureName,
+  RunColorName,
+  ScenarioName,
+  Spec,
+} from '../types';
+import { isEnsembleChart } from '../types';
 import { readSpecFromHash, writeSpecToHash } from './url-codec';
 
 // Single source of truth for the explorer's current view. Hydrates from
@@ -13,6 +22,7 @@ type SpecStore = {
   setChart: (chart: ChartType) => void;
   setDriver: (driver: DriverName | undefined) => void;
   setScenario: (scenario: ScenarioName) => void;
+  setRunColor: (color: RunColorName) => void;
   setMeasure: (measure: MeasureName) => void;
   setScatterX: (measure: MeasureName) => void;
   setSingleYear: (year: number) => void;
@@ -52,7 +62,15 @@ export function createSpecStore(config: ExplorerConfig) {
       scheduleHashWrite(next);
     },
 
-    setChart: (chart) => get().setSpec((s) => ({ ...s, chart, preset: undefined })),
+    // Ensemble charts read the Monte Carlo layer, which has no notion of a
+    // driver series — so stepping into one leaves driver mode behind.
+    setChart: (chart) =>
+      get().setSpec((s) => ({
+        ...s,
+        chart,
+        driver: isEnsembleChart(chart) ? undefined : s.driver,
+        preset: undefined,
+      })),
     // Drivers only make sense as lines through time, and they run past the
     // historical record — so switching to one also fixes the chart type and
     // opens the year range up to the projection horizon.
@@ -67,6 +85,7 @@ export function createSpecStore(config: ExplorerConfig) {
         preset: undefined,
       })),
     setScenario: (scenario) => get().setSpec((s) => ({ ...s, scenario, preset: undefined })),
+    setRunColor: (runColor) => get().setSpec((s) => ({ ...s, runColor, preset: undefined })),
     setMeasure: (measure) => get().setSpec((s) => ({ ...s, measure, preset: undefined })),
     setScatterX: (scatterX) => get().setSpec((s) => ({ ...s, scatterX, preset: undefined })),
     setSingleYear: (singleYear) => get().setSpec((s) => ({ ...s, singleYear, preset: undefined })),

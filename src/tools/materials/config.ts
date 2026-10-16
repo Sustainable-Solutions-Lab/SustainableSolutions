@@ -15,13 +15,14 @@ const eagerLayers = {
   stocks2024: '/tools/materials/stocks-2024.json',
   sspDrivers: '/tools/materials/ssp-drivers.json',
   projections: '/tools/materials/projections.json',
+  sensitivity: '/tools/materials/sensitivity.json',
 };
 
 export const materialsConfig: ExplorerConfig = {
   slug: 'materials',
   title: 'Material flows explorer',
   description:
-    'Historical (1970–2024) global use of 22 material categories across 8 world regions, with flexible chart types and shareable views. Population and GDP also run forward to 2060 on the SSP trajectories; projected material flows arrive with the paper\'s Monte Carlo results.',
+    'Historical (1970–2024) global use of 22 material categories across 8 world regions, with flexible chart types and shareable views. Population, GDP and the four modelled material groups run forward to 2060 on the SSP trajectories, and the paper\'s 1,000-run Monte Carlo ensemble is explorable run by run.',
   citation: {
     authors: 'Busch et al.',
     title: 'Global material consumption persists despite optimal efficiency and circularity',
@@ -31,8 +32,8 @@ export const materialsConfig: ExplorerConfig = {
   },
 
   yearRange: [1970, 2024],
-  // Drivers carry SSP trajectories past the observed record; the material
-  // series still stop at 2024 until the paper's Monte Carlo runs land.
+  // Drivers and the four modelled material groups carry SSP trajectories past
+  // the observed record, to the model's 2060 horizon.
   projectionEnd: 2060,
 
   // Dimensions are seeded from meta.json at runtime; this declares only the
@@ -51,12 +52,60 @@ export const materialsConfig: ExplorerConfig = {
     { name: 'cumulative', label: 'Cumulative', units: 'Gt' },
   ],
 
-  chartTypes: ['line', 'area', 'bar', 'treemap', 'choropleth', 'scatter', 'contour'],
+  chartTypes: [
+    'line',
+    'area',
+    'bar',
+    'treemap',
+    'choropleth',
+    'scatter',
+    'contour',
+    'runs',
+    'levers',
+    'importance',
+  ],
 
   // A few placeholder presets to exercise the URL-load path. The full
   // preset library (8+ entries from EXPLORER_TOOLS_PLAN.md §5) fills in
   // as charts arrive in milestones 5+.
   presets: [
+    {
+      id: 'decoupling-runs',
+      title: 'Does growth have to mean materials?',
+      blurb:
+        'All 1,000 Monte Carlo runs: the GDP growth each was drawn with against the material growth it produced. Six runs in a thousand get consumption below zero.',
+      spec: {
+        chart: 'runs',
+        runColor: 'decouple',
+        measure: 'absolute',
+        yearRange: [2025, 2060],
+        filters: { geo: [], material: [], flow: [] },
+      },
+    },
+    {
+      id: 'lever-effects',
+      title: 'What each lever is worth',
+      blurb:
+        'Effect on 2025–2060 material growth of a fixed, physically meaningful change in each lever, with 95% confidence intervals. Read row by row — the changes differ.',
+      spec: {
+        chart: 'levers',
+        measure: 'absolute',
+        yearRange: [2025, 2060],
+        filters: { geo: [], material: [], flow: [] },
+      },
+    },
+    {
+      id: 'lever-importance',
+      title: 'What explains the spread',
+      blurb:
+        'Attributed importance within each band of material growth. GDP per capita dominates the fastest-growing runs; the efficiency and recovery levers matter most where growth is slowest.',
+      spec: {
+        chart: 'importance',
+        measure: 'absolute',
+        yearRange: [2025, 2060],
+        filters: { geo: [], material: [], flow: [] },
+      },
+    },
     {
       id: 'population-2060',
       title: 'Population, 1970–2060',

@@ -5,10 +5,11 @@ import type {
   ExplorerConfig,
   MeasureName,
   PresetSpec,
+  RunColorName,
   ScenarioName,
   Spec,
 } from '../types';
-import { DRIVER_LABELS } from '../types';
+import { DRIVER_LABELS, RUN_COLOR_LABELS, isEnsembleChart } from '../types';
 import { useSpecStoreHook } from '../store/context';
 import { useLazyLayer } from '../data/lazy-context';
 
@@ -35,6 +36,12 @@ export default function Sidebar({ config, meta, countries }: Props) {
   const useStore = useSpecStoreHook();
   const spec = useStore((s: { spec: Spec }) => s.spec);
   const geoLevel = spec.geoLevel ?? 'world';
+  // A Monte Carlo run is a whole world over the whole window, so geography,
+  // material, measure, account and year range have nothing to act on. Rather
+  // than show controls that do nothing, the ensemble views drop them and say
+  // what they are showing instead.
+  const ensemble = isEnsembleChart(spec.chart);
+  const sliceable = !spec.driver && !ensemble;
 
   return (
     <div className="explorer-sidebar-inner">
@@ -44,13 +51,13 @@ export default function Sidebar({ config, meta, countries }: Props) {
         </Section>
       )}
 
-      {config.projectionEnd != null && (
+      {config.projectionEnd != null && !ensemble && (
         <Section title="Series">
           <SeriesPicker active={spec.driver} />
         </Section>
       )}
 
-      {(spec.driver || projectsMaterials(spec, config)) && (
+      {!ensemble && (spec.driver || projectsMaterials(spec, config)) && (
         <Section title="Scenario">
           <ScenarioPicker active={spec.scenario ?? 'range'} />
         </Section>
@@ -62,13 +69,29 @@ export default function Sidebar({ config, meta, countries }: Props) {
         </Section>
       )}
 
-      {!spec.driver && (meta.flows?.length ?? 0) > 1 && (
+      {spec.chart === 'runs' && (
+        <Section title="Colour runs by">
+          <RunColorPicker active={spec.runColor ?? 'ssp'} />
+        </Section>
+      )}
+
+      {ensemble && (
+        <Section title="Ensemble">
+          <p className="explorer-hint">
+            {spec.chart === 'runs'
+              ? 'Every point is one of 1,000 Monte Carlo runs: a whole world, 2025–2060. Geography, material and year controls do not apply.'
+              : 'Fitted across all 1,000 Monte Carlo runs over 2025–2060. Geography, material and year controls do not apply.'}
+          </p>
+        </Section>
+      )}
+
+      {sliceable && (meta.flows?.length ?? 0) > 1 && (
         <Section title="Flow account">
           <FlowPicker flows={meta.flows ?? []} active={spec.filters.flow?.[0] ?? 'DMC'} />
         </Section>
       )}
 
-      {!spec.driver && (
+      {sliceable && (
         <Section
           title={spec.chart === 'scatter' || spec.chart === 'contour' ? 'Y measure' : 'Measure'}
         >
@@ -76,7 +99,7 @@ export default function Sidebar({ config, meta, countries }: Props) {
         </Section>
       )}
 
-      {!spec.driver && (spec.chart === 'scatter' || spec.chart === 'contour') && (
+      {sliceable && (spec.chart === 'scatter' || spec.chart === 'contour') && (
         <Section title="X measure">
           <MeasurePicker
             config={config}
@@ -88,7 +111,7 @@ export default function Sidebar({ config, meta, countries }: Props) {
       )}
 
 
-      {!spec.driver && (spec.chart === 'treemap' || spec.chart === 'choropleth') && (
+      {sliceable && (spec.chart === 'treemap' || spec.chart === 'choropleth') && (
         <Section title="Year">
           <SingleYearPicker
             min={meta.years[0]}
@@ -98,6 +121,7 @@ export default function Sidebar({ config, meta, countries }: Props) {
         </Section>
       )}
 
+      {!ensemble && (
       <Collapsible
         title="Geography"
         summary={geographySummary(geoLevel, spec.filters.geo ?? [])}
@@ -112,8 +136,9 @@ export default function Sidebar({ config, meta, countries }: Props) {
           <CountryPicker countries={countries} selected={spec.filters.geo ?? []} />
         )}
       </Collapsible>
+      )}
 
-      {!spec.driver && (
+      {sliceable && (
       <Collapsible
         title="Material"
         summary={materialSummary(
@@ -131,6 +156,7 @@ export default function Sidebar({ config, meta, countries }: Props) {
       </Collapsible>
       )}
 
+      {!ensemble && (
       <Section title="Year range">
         <YearRangeSlider
           min={meta.years[0]}
@@ -142,6 +168,7 @@ export default function Sidebar({ config, meta, countries }: Props) {
           value={spec.yearRange}
         />
       </Section>
+      )}
     </div>
   );
 }
@@ -248,6 +275,9 @@ const CHART_LABELS: Record<ChartType, string> = {
   choropleth: 'Map',
   scatter: 'Scatter',
   contour: 'Contour',
+  runs: 'Monte Carlo runs',
+  levers: 'Lever effects',
+  importance: 'Lever importance',
 };
 
 function ChartTypeToggle({ chartTypes, active }: { chartTypes: ChartType[]; active: ChartType }) {
@@ -345,6 +375,28 @@ function ScenarioPicker({ active }: { active: ScenarioName }) {
         </option>
       ))}
     </select>
+  );
+}
+
+// Four readings of the same cloud. Each one answers a different question of
+// the ensemble, so this is a view switch rather than a filter.
+function RunColorPicker({ active }: { active: RunColorName }) {
+  const useStore = useSpecStoreHook();
+  const setRunColor = useStore((s: { setRunColor: (c: RunColorName) => void }) => s.setRunColor);
+  const options: RunColorName[] = ['ssp', 'decouple', 'selected', 't2060'];
+  return (
+    <div className="explorer-chip-group">
+      {options.map((o) => (
+        <button
+          key={o}
+          type="button"
+          className={`explorer-chip ${active === o ? 'is-active' : ''}`}
+          onClick={() => setRunColor(o)}
+        >
+          {RUN_COLOR_LABELS[o]}
+        </button>
+      ))}
+    </div>
   );
 }
 

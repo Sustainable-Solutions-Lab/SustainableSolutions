@@ -4,12 +4,18 @@ import {
   derive,
   deriveChoropleth,
   deriveContour,
+  deriveImportance,
+  deriveLevers,
+  deriveRuns,
   deriveScatter,
   deriveTreemap,
 } from '../data/derive';
 import {
   choroplethCsv,
   contourCsv,
+  importanceCsv,
+  leversCsv,
+  runsCsv,
   scatterCsv,
   timeSeriesCsv,
   treemapCsv,
@@ -77,6 +83,12 @@ function buildCsv(spec: Spec, data: DataBundle): string | null {
       return scatterCsv(deriveScatter(data, spec), spec);
     case 'contour':
       return contourCsv(deriveContour(data, spec), spec);
+    case 'runs':
+      return runsCsv(deriveRuns(data, spec), spec);
+    case 'levers':
+      return leversCsv(deriveLevers(data, spec), spec);
+    case 'importance':
+      return importanceCsv(deriveImportance(data, spec), spec);
     default:
       return null;
   }

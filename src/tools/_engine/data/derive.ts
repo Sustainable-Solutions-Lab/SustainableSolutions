@@ -1,5 +1,5 @@
-import type { DataBundle, DriverName, ScenarioName, Spec } from '../types';
-import { DRIVER_LABELS } from '../types';
+import type { DataBundle, DriverName, RunColorName, ScenarioName, Spec } from '../types';
+import { DRIVER_LABELS, RUN_COLOR_LABELS } from '../types';
 
 // Spec + loaded data layers → normalized chart data. Pure function; no
 // React, no DOM. The chart components take the result and render.
@@ -1023,4 +1023,304 @@ export function deriveChoropleth(data: DataBundle, spec: Spec): ChoroplethData {
     max,
     matched: Object.keys(byCountry).length,
   };
+}
+
+// ── Monte Carlo ensemble output ─────────────────────────────────────────────
+//
+// These three views read the sensitivity layer, which is keyed by run rather
+// than by year/place/material. None of the dimension filters apply: a run is
+// an entire world, not a slice of one.
+
+export type RunPoint = {
+  id: number;
+  /** GDP CAGR 2025–2060, %/yr. */
+  x: number;
+  /** Material consumption CAGR over the same window, %/yr. */
+  y: number;
+  ssp: string;
+  t2060: number | null;
+  fossilIndex: number | null;
+  decouple: boolean;
+  selected: boolean;
+  bin: string;
+};
+
+export type RunGroup = {
+  key: string;
+  label: string;
+  color: string;
+  /** Drawn on top of the others, for the small, interesting groups. */
+  emphasis: boolean;
+  runs: RunPoint[];
+};
+
+export type RunsFit = {
+  slope: number;
+  intercept: number;
+  residSigma: number;
+  seMult: number;
+};
+
+export type RunsData = {
+  groups: RunGroup[];
+  count: number;
+  fit: RunsFit | null;
+  /** Continuous colour ramp, when colouring by a number rather than a class. */
+  ramp: { min: number; max: number; label: string; stops: string[] } | null;
+  colorBy: RunColorName;
+  colorLabel: string;
+  xLabel: string;
+  yLabel: string;
+  units: string;
+  window: [number, number];
+  stats: {
+    decouple: number;
+    selected: number;
+    relative: number;
+    medianMat: number;
+    medianGdp: number;
+  };
+  note: string;
+};
+
+export type LeverBar = {
+  order: number;
+  label: string;
+  group: string;
+  family: string;
+  delta: string;
+  effect: number;
+  lo: number;
+  hi: number;
+  significant: boolean;
+  color: string;
+};
+
+export type LeversData = {
+  bars: LeverBar[];
+  families: { label: string; color: string }[];
+  units: string;
+  window: [number, number];
+  note: string;
+};
+
+export type ImportanceBin = {
+  bin: string;
+  n: number;
+  cells: { label: string; pct: number; color: string }[];
+};
+
+export type ImportanceData = {
+  bins: ImportanceBin[];
+  legend: { label: string; color: string }[];
+  note: string;
+};
+
+type SensitivityLayer = {
+  nRuns: number;
+  window: [number, number];
+  sspLevels: string[];
+  bins: string[];
+  binCounts: Record<string, number>;
+  runs: {
+    id: number[];
+    matCagr: number[];
+    gdpCagr: number[];
+    ssp: number[];
+    t2060: (number | null)[];
+    fossilIndex: (number | null)[];
+    decouple: number[];
+    selected: number[];
+    bin: number[];
+  };
+  fit: RunsFit | null;
+  levers: LeverBar[];
+  importance: Record<string, { label: string; pct: number; order: number; color: string }[]>;
+  notes: Record<string, string>;
+};
+
+// SSPs get their own palette: the narrative colours readers expect, and
+// distinct from both the region and material ramps.
+const SSP_COLOR: Record<string, string> = {
+  SSP1: '#48A848',
+  SSP2: '#3288BD',
+  SSP3: '#D53E4F',
+  SSP4: '#FDAE61',
+  SSP5: '#8C510A',
+};
+
+const RUN_NEUTRAL = '#9A9AB0';
+
+// Cool-to-warm for the warming ramp; Spectral reversed so hotter reads redder.
+const WARMING_STOPS = ['#3288BD', '#ABDDA4', '#FEE08B', '#F46D43', '#9E0142'];
+
+const EMPTY_RUNS: RunsData = {
+  groups: [],
+  count: 0,
+  fit: null,
+  ramp: null,
+  colorBy: 'ssp',
+  colorLabel: '',
+  xLabel: 'GDP growth',
+  yLabel: 'Material consumption growth',
+  units: '%/yr',
+  window: [2025, 2060],
+  stats: { decouple: 0, selected: 0, relative: 0, medianMat: 0, medianGdp: 0 },
+  note: '',
+};
+
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+export function deriveRuns(data: DataBundle, spec: Spec): RunsData {
+  const layer = data.sensitivity as SensitivityLayer | undefined;
+  if (!layer?.runs) return EMPTY_RUNS;
+
+  const r = layer.runs;
+  const points: RunPoint[] = [];
+  for (let i = 0; i < r.id.length; i++) {
+    const x = r.gdpCagr[i];
+    const y = r.matCagr[i];
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    points.push({
+      id: r.id[i],
+      x,
+      y,
+      ssp: layer.sspLevels[r.ssp[i]] ?? 'n/a',
+      t2060: r.t2060[i],
+      fossilIndex: r.fossilIndex[i],
+      decouple: r.decouple[i] === 1,
+      selected: r.selected[i] === 1,
+      bin: layer.bins[r.bin[i]] ?? 'n/a',
+    });
+  }
+
+  const colorBy: RunColorName = spec.runColor ?? 'ssp';
+  let groups: RunGroup[] = [];
+  let ramp: RunsData['ramp'] = null;
+
+  if (colorBy === 't2060') {
+    const warming = points.map((p) => p.t2060).filter((v): v is number => v != null);
+    groups = [{ key: 'all', label: 'All runs', color: RUN_NEUTRAL, emphasis: false, runs: points }];
+    ramp = warming.length
+      ? {
+          min: Math.min(...warming),
+          max: Math.max(...warming),
+          label: 'Warming in 2060 (°C)',
+          stops: WARMING_STOPS,
+        }
+      : null;
+  } else if (colorBy === 'decouple') {
+    // Six runs in a thousand: they have to draw last or they vanish.
+    groups = [
+      {
+        key: 'no',
+        label: 'Still growing',
+        color: RUN_NEUTRAL,
+        emphasis: false,
+        runs: points.filter((p) => !p.decouple),
+      },
+      {
+        key: 'yes',
+        label: 'Falls outright',
+        color: '#48A848',
+        emphasis: true,
+        runs: points.filter((p) => p.decouple),
+      },
+    ];
+  } else if (colorBy === 'selected') {
+    groups = [
+      {
+        key: 'no',
+        label: 'On or above trend',
+        color: RUN_NEUTRAL,
+        emphasis: false,
+        runs: points.filter((p) => !p.selected),
+      },
+      {
+        key: 'yes',
+        label: 'More than 1σ below trend',
+        color: '#3288BD',
+        emphasis: true,
+        runs: points.filter((p) => p.selected),
+      },
+    ];
+  } else {
+    groups = layer.sspLevels.map((ssp) => ({
+      key: ssp,
+      label: ssp,
+      color: SSP_COLOR[ssp] ?? RUN_NEUTRAL,
+      emphasis: false,
+      runs: points.filter((p) => p.ssp === ssp),
+    }));
+  }
+
+  groups = groups.filter((g) => g.runs.length > 0);
+
+  return {
+    groups,
+    count: points.length,
+    fit: layer.fit ?? null,
+    ramp,
+    colorBy,
+    colorLabel: RUN_COLOR_LABELS[colorBy] ?? '',
+    xLabel: 'GDP growth',
+    yLabel: 'Material consumption growth',
+    units: '%/yr',
+    window: layer.window ?? [2025, 2060],
+    stats: {
+      decouple: points.filter((p) => p.decouple).length,
+      selected: points.filter((p) => p.selected).length,
+      relative: points.filter((p) => p.y < p.x).length,
+      medianMat: median(points.map((p) => p.y)),
+      medianGdp: median(points.map((p) => p.x)),
+    },
+    note: layer.notes?.outcome ?? '',
+  };
+}
+
+export function deriveLevers(data: DataBundle, spec: Spec): LeversData {
+  const layer = data.sensitivity as SensitivityLayer | undefined;
+  const bars = layer?.levers ?? [];
+  // One legend entry per family, in the order the families first appear.
+  const families: { label: string; color: string }[] = [];
+  for (const b of bars) {
+    if (!families.some((f) => f.label === b.family)) {
+      families.push({ label: b.family, color: b.color });
+    }
+  }
+  return {
+    bars,
+    families,
+    units: 'pp/yr',
+    window: layer?.window ?? [2025, 2060],
+    note: layer?.notes?.levers ?? '',
+  };
+}
+
+export function deriveImportance(data: DataBundle, spec: Spec): ImportanceData {
+  const layer = data.sensitivity as SensitivityLayer | undefined;
+  if (!layer?.importance) return { bins: [], legend: [], note: '' };
+
+  const bins: ImportanceBin[] = (layer.bins ?? []).flatMap((bin) => {
+    const cells = layer.importance[bin];
+    if (!cells?.length) return [];
+    return [
+      {
+        bin,
+        n: layer.binCounts?.[bin] ?? 0,
+        cells: cells.map(({ label, pct, color }) => ({ label, pct, color })),
+      },
+    ];
+  });
+
+  // Every bin stacks the same levers in the same order, so the first bin's
+  // stack is the legend.
+  const legend = (bins[0]?.cells ?? []).map(({ label, color }) => ({ label, color }));
+
+  return { bins, legend, note: layer.notes?.importance ?? '' };
 }

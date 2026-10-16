@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { DataBundle, ExplorerConfig, Spec } from '../types';
-import { DRIVER_LABELS } from '../types';
+import { DRIVER_LABELS, isEnsembleChart } from '../types';
 import { useSpecStoreHook } from '../store/context';
 import { useLazyLayer } from '../data/lazy-context';
 import {
@@ -9,6 +9,9 @@ import {
   deriveScatter,
   deriveChoropleth,
   deriveContour,
+  deriveImportance,
+  deriveLevers,
+  deriveRuns,
 } from '../data/derive';
 import LineChart from '../charts/LineChart';
 import AreaChart from '../charts/AreaChart';
@@ -17,6 +20,9 @@ import TreemapChart from '../charts/TreemapChart';
 import ScatterChart from '../charts/ScatterChart';
 import Choropleth from '../charts/Choropleth';
 import ContourChart from '../charts/ContourChart';
+import RunCloudChart from '../charts/RunCloudChart';
+import TornadoChart from '../charts/TornadoChart';
+import ImportanceChart from '../charts/ImportanceChart';
 import Legend from '../charts/Legend';
 import ChartToolbar from './ChartToolbar';
 
@@ -56,7 +62,7 @@ export default function ChartArea({ config, data, meta }: Props) {
   return (
     <div className="explorer-chart-pane">
       <div className="explorer-chart-headerbar">
-        <ChartHeader spec={spec} config={config} meta={meta} />
+        <ChartHeader spec={spec} config={config} meta={meta} data={data} />
         <ChartToolbar spec={spec} data={data} containerRef={bodyRef} />
       </div>
       <div className="explorer-chart-body" ref={bodyRef}>
@@ -85,7 +91,12 @@ function ChartSwitch({
   countriesLoading: boolean;
 }) {
   const geoLevel = spec.geoLevel ?? 'world';
-  if (geoLevel === 'country' && (spec.filters.geo ?? []).length === 0 && spec.chart !== 'choropleth') {
+  if (
+    geoLevel === 'country' &&
+    (spec.filters.geo ?? []).length === 0 &&
+    spec.chart !== 'choropleth' &&
+    !isEnsembleChart(spec.chart)
+  ) {
     return <EmptyState>Pick one or more countries from the sidebar to draw the chart.</EmptyState>;
   }
 
@@ -117,6 +128,21 @@ function ChartSwitch({
       if (derived.series.length === 0)
         return <EmptyState>No data for the current selection.</EmptyState>;
       return <ContourChart data={derived} />;
+    }
+    case 'runs': {
+      const derived = deriveRuns(data, spec);
+      if (derived.count === 0) return <EmptyState>Monte Carlo runs not available.</EmptyState>;
+      return <RunCloudChart data={derived} />;
+    }
+    case 'levers': {
+      const derived = deriveLevers(data, spec);
+      if (derived.bars.length === 0) return <EmptyState>Lever effects not available.</EmptyState>;
+      return <TornadoChart data={derived} />;
+    }
+    case 'importance': {
+      const derived = deriveImportance(data, spec);
+      if (derived.bins.length === 0) return <EmptyState>Lever importance not available.</EmptyState>;
+      return <ImportanceChart data={derived} />;
     }
     case 'choropleth': {
       if (!data.flowsCountries) {
@@ -158,12 +184,15 @@ function ChartHeader({
   spec,
   config,
   meta,
+  data,
 }: {
   spec: Spec;
   config: ExplorerConfig;
   meta: Meta;
+  data: DataBundle;
 }) {
   const measure = config.measures.find((m) => m.name === spec.measure);
+  if (isEnsembleChart(spec.chart)) return <EnsembleHeader spec={spec} data={data} />;
   if (spec.driver) {
     const geoPart = geographyTitlePart(spec);
     const scenario = spec.scenario ?? 'range';
@@ -209,6 +238,75 @@ function ChartHeader({
   );
 }
 
+// The ensemble views are not a slice of the time series, so they get their
+// own titles rather than the material/geography construction.
+function EnsembleHeader({ spec, data }: { spec: Spec; data: DataBundle }) {
+  let title = '';
+  let subtitle = '';
+  if (spec.chart === 'runs') {
+    const derived = deriveRuns(data, spec);
+    title = 'Material growth against the growth that drives it';
+    subtitle = `${derived.count.toLocaleString()} Monte Carlo runs · ${derived.window[0]}–${derived.window[1]} · coloured by ${derived.colorLabel}`;
+  } else if (spec.chart === 'levers') {
+    const derived = deriveLevers(data, spec);
+    title = 'What each lever is worth';
+    subtitle = `${derived.bars.length} levers · effect on material growth ${derived.window[0]}–${derived.window[1]}, with 95% confidence intervals`;
+  } else {
+    const derived = deriveImportance(data, spec);
+    title = 'What explains the spread';
+    subtitle = `Attributed importance within each material growth bin · ${derived.bins.length} bins`;
+  }
+  return (
+    <div className="explorer-chart-header">
+      <h2 className="explorer-chart-title">{title}</h2>
+      <p className="explorer-chart-subtitle">{subtitle}</p>
+    </div>
+  );
+}
+
+function EnsembleFooter({ spec, data }: { spec: Spec; data: DataBundle }) {
+  if (spec.chart === 'runs') {
+    const d = deriveRuns(data, spec);
+    if (d.count === 0) return null;
+    // "All of them" is the finding here, and it reads as a finding only if
+    // the sentence says so rather than printing 100%.
+    const relative =
+      d.stats.relative === d.count
+        ? 'Every run grows material use more slowly than GDP'
+        : `${d.stats.relative.toLocaleString()} of ${d.count.toLocaleString()} runs grow material use more slowly than GDP`;
+    return (
+      <p className="explorer-chart-note">
+        {`Median run grows material use ${d.stats.medianMat.toFixed(2)}%/yr on GDP growth of ${d.stats.medianGdp.toFixed(2)}%/yr. `}
+        {`${relative}, but only ${d.stats.decouple} of ${d.count.toLocaleString()} get below zero. `}
+        {d.note}
+      </p>
+    );
+  }
+  if (spec.chart === 'levers') {
+    const d = deriveLevers(data, spec);
+    if (d.bars.length === 0) return null;
+    return (
+      <>
+        <div className="explorer-family-key">
+          {d.families.map((f) => (
+            <span key={f.label} className="explorer-family-item">
+              <span className="explorer-family-swatch" style={{ background: f.color }} />
+              {f.label}
+            </span>
+          ))}
+        </div>
+        <p className="explorer-chart-note">
+          Each bar is the effect of the change printed beside it, so bars are read row by row and
+          not ranked against each other. Faded bars are not distinguishable from zero. {d.note}
+        </p>
+      </>
+    );
+  }
+  const d = deriveImportance(data, spec);
+  if (d.bins.length === 0) return null;
+  return <p className="explorer-chart-note">{d.note}</p>;
+}
+
 function buildChartTitle(spec: Spec, meta: Meta): string {
   const matPart = materialTitlePart(spec, meta);
   const geoPart = geographyTitlePart(spec);
@@ -237,6 +335,7 @@ function geographyTitlePart(spec: Spec): string | null {
 }
 
 function ChartFooter({ spec, data }: { spec: Spec; data: DataBundle }) {
+  if (isEnsembleChart(spec.chart)) return <EnsembleFooter spec={spec} data={data} />;
   // Treemap legend is the rects themselves; scatter labels each series on
   // the chart already; choropleth has its own color-bar legend in-chart.
   if (
@@ -301,6 +400,27 @@ const styles = `
     letter-spacing: 0.03em;
     color: var(--ink-3);
     margin: 2px 0 0 0;
+  }
+  .explorer-family-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-top: 4px;
+  }
+  .explorer-family-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    color: var(--ink-2);
+  }
+  .explorer-family-swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 1px;
+    display: inline-block;
   }
   .explorer-chart-empty {
     flex: 1;

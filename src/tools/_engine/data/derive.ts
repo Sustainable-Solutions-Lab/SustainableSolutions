@@ -40,6 +40,8 @@ export type DerivedData = {
   historicalEnd?: number;
   /** What the shaded band around a projected series means, for the caption. */
   bandLabel?: string;
+  /** True when a non-default flow account is selected but its layer is still loading. */
+  pending?: boolean;
 };
 
 // ── Treemap-shaped output ───────────────────────────────────────────────────
@@ -167,6 +169,7 @@ type Meta = {
   regions: string[];
   materials: { id: string; label: string; group: string | null }[];
   groups: { id: string; label: string; members: string[] }[];
+  flows?: { id: string; label: string; eager: boolean }[];
 };
 type FlowsWorld = { years: number[]; materials: Record<string, number[]> };
 type FlowsRegions = { years: number[]; regions: Record<string, Record<string, number[]>> };
@@ -180,6 +183,14 @@ type SspDrivers = {
   anchorYear: number;
   world: DriverBundle;
   regions: Record<string, DriverBundle>;
+};
+
+type ExtraFlows = {
+  years: number[];
+  /** flow id → material → value per year (world totals). */
+  world: Record<string, Record<string, number[]>>;
+  /** flow id → region → material → value per year. */
+  regions: Record<string, Record<string, Record<string, number[]>>>;
 };
 
 type FlowsCountries = {
@@ -217,15 +228,49 @@ function countriesToRegionalShape(
   return out;
 }
 
+
+// ── Flow accounts ───────────────────────────────────────────────────────────
+//
+// UNEP publishes six accounts (DMC, DE, DMI, imports, exports, physical trade
+// balance). DMC rides the eager bundle; the other five sit in a lazy layer
+// with the same inner shape, so every derivation resolves its source layers
+// through here and is otherwise flow-agnostic. `pending` means a non-DMC
+// account is selected but its layer hasn't arrived yet — the caller renders a
+// loading state rather than silently falling back to DMC.
+
+export const DEFAULT_FLOW = 'DMC';
+
+type ResolvedFlows = {
+  flow: string;
+  world: Record<string, number[]>;
+  regions: Record<string, Record<string, number[]>>;
+  pending: boolean;
+};
+
+function resolveFlows(data: DataBundle, spec: Spec): ResolvedFlows {
+  const flowsWorld = data.flowsWorld as FlowsWorld;
+  const flowsRegions = data.flowsRegions as FlowsRegions;
+  const flow = spec.filters.flow?.[0] ?? DEFAULT_FLOW;
+
+  if (flow === DEFAULT_FLOW) {
+    return { flow, world: flowsWorld.materials, regions: flowsRegions.regions, pending: false };
+  }
+
+  const extra = data.flowsExtra as ExtraFlows | undefined;
+  if (!extra?.world[flow]) {
+    return { flow, world: {}, regions: {}, pending: true };
+  }
+  return { flow, world: extra.world[flow], regions: extra.regions[flow] ?? {}, pending: false };
+}
+
 // ── Derivation ──────────────────────────────────────────────────────────────
 
 export function derive(data: DataBundle, spec: Spec): DerivedData {
   if (spec.driver) return deriveDrivers(data, spec);
   const meta = data.meta as Meta;
-  const flowsWorld = data.flowsWorld as FlowsWorld;
-  const flowsRegions = data.flowsRegions as FlowsRegions;
   const gdpPop = data.gdpPop as GdpPop;
   const flowsCountries = data.flowsCountries as FlowsCountries | undefined;
+  const flows = resolveFlows(data, spec);
 
   const [yStart, yEnd] = spec.yearRange;
   const years = meta.years.filter((y) => y >= yStart && y <= yEnd);
@@ -240,9 +285,9 @@ export function derive(data: DataBundle, spec: Spec): DerivedData {
   // file (filtered to the user's selections + the DMC flow).
   let effectiveRegions: Record<string, Record<string, number[]>>;
   if (geoLevel === 'country' && flowsCountries) {
-    effectiveRegions = countriesToRegionalShape(flowsCountries, geoFilter, 'DMC');
+    effectiveRegions = countriesToRegionalShape(flowsCountries, geoFilter, flows.flow);
   } else {
-    effectiveRegions = flowsRegions.regions;
+    effectiveRegions = flows.regions;
   }
 
   // Decide what each series represents.
@@ -273,11 +318,7 @@ export function derive(data: DataBundle, spec: Spec): DerivedData {
   } else {
     // One series per material/group; values are the world total (or single
     // selected geography's total).
-    const sourceByMaterial = singleGeoMaterialSeries(
-      geoFilter[0],
-      flowsWorld,
-      { years: meta.years, regions: effectiveRegions },
-    );
+    const sourceByMaterial = singleGeoMaterialSeries(geoFilter[0], flows.world, effectiveRegions);
     const seriesKey = geoFilter[0] ?? 'World';
 
     matSelections.forEach((sel, i) => {
@@ -293,7 +334,7 @@ export function derive(data: DataBundle, spec: Spec): DerivedData {
     });
   }
 
-  return { series, units: unitsFor(spec.measure), years };
+  return { series, units: unitsFor(spec.measure), years, pending: flows.pending };
 }
 
 
@@ -464,11 +505,11 @@ function resolveMaterialSelections(
 
 function singleGeoMaterialSeries(
   geo: string | undefined,
-  flowsWorld: FlowsWorld,
-  flowsRegions: FlowsRegions,
+  worldMaterials: Record<string, number[]>,
+  regions: Record<string, Record<string, number[]>>,
 ): Record<string, number[]> {
-  if (!geo || geo === 'World') return flowsWorld.materials;
-  return flowsRegions.regions[geo] ?? {};
+  if (!geo || geo === 'World') return worldMaterials;
+  return regions[geo] ?? {};
 }
 
 // Sum a multi-material breakdown into a single year-aligned array, with
@@ -568,9 +609,8 @@ function unitsFor(measure: string): string {
 
 export function deriveTreemap(data: DataBundle, spec: Spec): TreemapData {
   const meta = data.meta as Meta;
-  const flowsWorld = data.flowsWorld as FlowsWorld;
-  const flowsRegions = data.flowsRegions as FlowsRegions;
   const flowsCountries = data.flowsCountries as FlowsCountries | undefined;
+  const flows = resolveFlows(data, spec);
 
   const year = spec.singleYear ?? spec.yearRange[1];
   const yearIdx = meta.years.indexOf(year);
@@ -583,13 +623,13 @@ export function deriveTreemap(data: DataBundle, spec: Spec): TreemapData {
 
   const effectiveRegions =
     geoLevel === 'country' && flowsCountries
-      ? countriesToRegionalShape(flowsCountries, geoFilter, 'DMC')
-      : flowsRegions.regions;
+      ? countriesToRegionalShape(flowsCountries, geoFilter, flows.flow)
+      : flows.regions;
 
   // Sum the selected geographies' contribution for each material/group.
   const matByYear: Record<string, number[]> =
     geoFilter.length === 0
-      ? flowsWorld.materials
+      ? flows.world
       : geoFilter.reduce<Record<string, number[]>>((acc, geo) => {
           const geoMats = effectiveRegions[geo] ?? {};
           for (const [m, arr] of Object.entries(geoMats)) {
@@ -626,10 +666,9 @@ export function deriveTreemap(data: DataBundle, spec: Spec): TreemapData {
 
 export function deriveScatter(data: DataBundle, spec: Spec): ScatterData {
   const meta = data.meta as Meta;
-  const flowsWorld = data.flowsWorld as FlowsWorld;
-  const flowsRegions = data.flowsRegions as FlowsRegions;
   const gdpPop = data.gdpPop as GdpPop;
   const flowsCountries = data.flowsCountries as FlowsCountries | undefined;
+  const flows = resolveFlows(data, spec);
 
   const xMeasure = spec.scatterX ?? 'per_gdp';
   const yMeasure = spec.measure;
@@ -651,13 +690,13 @@ export function deriveScatter(data: DataBundle, spec: Spec): ScatterData {
   // At country level, source from the lazy country layer (filtered to DMC).
   const countryRegional =
     geoLevel === 'country' && flowsCountries
-      ? countriesToRegionalShape(flowsCountries, geos, 'DMC')
+      ? countriesToRegionalShape(flowsCountries, geos, flows.flow)
       : null;
 
   const series: ScatterSeries[] = geos.map((geo, i) => {
     const matByYear =
       countryRegional?.[geo] ??
-      (geo === 'World' ? flowsWorld.materials : flowsRegions.regions[geo] ?? {});
+      (geo === 'World' ? flows.world : flows.regions[geo] ?? {});
     const summed = sumMaterials(matByYear, matSelections, meta.years);
     const xValues = applyMeasure(summed, geo, xMeasure, gdpPop, meta.years);
     const yValues = applyMeasure(summed, geo, yMeasure, gdpPop, meta.years);
@@ -703,10 +742,9 @@ function labelForMeasure(measure: string): string {
 
 export function deriveContour(data: DataBundle, spec: Spec): ContourData {
   const meta = data.meta as Meta;
-  const flowsWorld = data.flowsWorld as FlowsWorld;
-  const flowsRegions = data.flowsRegions as FlowsRegions;
   const gdpPop = data.gdpPop as GdpPop;
   const flowsCountries = data.flowsCountries as FlowsCountries | undefined;
+  const flows = resolveFlows(data, spec);
 
   const xMeasure = spec.scatterX ?? 'per_gdp';
   const yMeasure = spec.measure;
@@ -728,13 +766,13 @@ export function deriveContour(data: DataBundle, spec: Spec): ContourData {
 
   const countryRegional =
     geoLevel === 'country' && flowsCountries
-      ? countriesToRegionalShape(flowsCountries, geos, 'DMC')
+      ? countriesToRegionalShape(flowsCountries, geos, flows.flow)
       : null;
 
   const series: ContourSeries[] = geos.map((geo, i) => {
     const matByYear =
       countryRegional?.[geo] ??
-      (geo === 'World' ? flowsWorld.materials : flowsRegions.regions[geo] ?? {});
+      (geo === 'World' ? flows.world : flows.regions[geo] ?? {});
     const summed = sumMaterials(matByYear, matSelections, meta.years);
     const xValues = applyMeasure(summed, geo, xMeasure, gdpPop, meta.years);
     const yValues = applyMeasure(summed, geo, yMeasure, gdpPop, meta.years);
@@ -805,7 +843,7 @@ export function deriveChoropleth(data: DataBundle, spec: Spec): ChoroplethData {
   const regionalShape = countriesToRegionalShape(
     flowsCountries,
     flowsCountries.countries,
-    'DMC',
+    spec.filters.flow?.[0] ?? DEFAULT_FLOW,
   );
 
   const byCountry: Record<string, number> = {};

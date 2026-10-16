@@ -101,6 +101,7 @@ function ReadyView({ config, data }: { config: ExplorerConfig; data: DataBundle 
     regions: string[];
     materials: { id: string; label: string; group: string | null }[];
     groups: { id: string; label: string; members: string[] }[];
+  flows?: { id: string; label: string; eager: boolean }[];
   } | null;
 
   if (!meta) {

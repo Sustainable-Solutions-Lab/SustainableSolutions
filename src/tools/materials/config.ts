@@ -231,6 +231,9 @@ export const materialsConfig: ExplorerConfig = {
   data: {
     eagerLayers,
     lazyLayers: {
+      // The five non-DMC UNEP accounts. Served from public/ rather than R2 —
+      // 543 KB, fetched the first time a view asks for one.
+      flowsExtra: '/tools/materials/flows-extra.json',
       flowsCountries:
         'https://pub-4152429430274d988725593fd52db3ae.r2.dev/materials/derived/flows-countries.json',
     },

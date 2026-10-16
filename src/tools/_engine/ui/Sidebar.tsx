@@ -22,6 +22,7 @@ type Meta = {
   regions: string[];
   materials: { id: string; label: string; group: string | null }[];
   groups: { id: string; label: string; members: string[] }[];
+  flows?: { id: string; label: string; eager: boolean }[];
 };
 
 type Props = {
@@ -58,6 +59,12 @@ export default function Sidebar({ config, meta, countries }: Props) {
       {!spec.driver && (
         <Section title="Chart">
           <ChartTypeToggle chartTypes={config.chartTypes} active={spec.chart} />
+        </Section>
+      )}
+
+      {!spec.driver && (meta.flows?.length ?? 0) > 1 && (
+        <Section title="Flow account">
+          <FlowPicker flows={meta.flows ?? []} active={spec.filters.flow?.[0] ?? 'DMC'} />
         </Section>
       )}
 
@@ -273,6 +280,32 @@ function SeriesPicker({ active }: { active?: DriverName }) {
       {(Object.keys(DRIVER_LABELS) as DriverName[]).map((d) => (
         <option key={d} value={d}>
           {DRIVER_LABELS[d]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+// UNEP's six accounts. One at a time: they are alternative measurements of the
+// same materials, not series to overlay.
+function FlowPicker({
+  flows,
+  active,
+}: {
+  flows: { id: string; label: string; eager: boolean }[];
+  active: string;
+}) {
+  const useStore = useSpecStoreHook();
+  const setFilter = useStore((s: { setFilter: (d: string, v: string[]) => void }) => s.setFilter);
+  return (
+    <select
+      className="explorer-preset-select"
+      value={active}
+      onChange={(e) => setFilter('flow', [e.target.value])}
+    >
+      {flows.map((f) => (
+        <option key={f.id} value={f.id}>
+          {f.label}
         </option>
       ))}
     </select>

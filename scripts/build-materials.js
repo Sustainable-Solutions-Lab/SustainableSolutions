@@ -10,7 +10,7 @@
 // (flows-countries.json) is built separately and uploaded to R2.
 
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { homedir } from 'node:os';
 import * as XLSX from 'xlsx';
@@ -91,6 +91,21 @@ const MATERIAL_GROUPS = {
     members: ['Waste for final treatment and disposal'],
   },
 };
+
+// ── Flow types (Parameters/UNEP-Materials/) ─────────────────────────────────
+// UNEP IRP publishes six accounts. DMC is what the explorer opens on and the
+// only one in the eager bundle; the rest ride a lazy layer, since most views
+// never ask for them.
+const FLOWS = [
+  { id: 'DMC', label: 'Domestic material consumption', eager: true },
+  { id: 'DE', label: 'Domestic extraction' },
+  { id: 'DMI', label: 'Direct material input' },
+  { id: 'IMP', label: 'Imports' },
+  { id: 'EXP', label: 'Exports' },
+  { id: 'PTB', label: 'Physical trade balance' },
+];
+
+const LAZY_FLOWS = FLOWS.filter((f) => !f.eager);
 
 // ── In-use stock dimensions (Parameters/stock_2024_total.csv) ───────────────
 // The stock-flow model tracks three materials across four end-use categories,
@@ -179,11 +194,31 @@ async function readCsv(path) {
   return rowsToObjects(parseCsv(text));
 }
 
-// Parameters/ is the canonical home for every aggregated CSV; anything the
-// public repo omits is picked up from the Dropbox processed folder instead.
+// Parameters/ is the canonical home for every aggregated CSV, but upstream
+// reshuffles its folders periodically — twice in 2026 — so rather than
+// hard-coding subfolders we index the tree once by filename and look CSVs up
+// by basename. Anything upstream omits falls back to the Dropbox processed
+// folder.
+function indexParameters(dir) {
+  const index = new Map();
+  if (!existsSync(dir)) return index;
+  const walk = (d) => {
+    for (const entry of readdirSync(d).sort()) {
+      const full = resolve(d, entry);
+      if (statSync(full).isDirectory()) walk(full);
+      // First match wins, and entries are walked in sorted order, so a
+      // duplicate basename resolves the same way on every machine.
+      else if (!index.has(entry)) index.set(entry, full);
+    }
+  };
+  walk(dir);
+  return index;
+}
+
+const PARAMETER_FILES = indexParameters(PARAMETERS_DIR);
+
 function sourceCsv(name) {
-  const inRepo = resolve(PARAMETERS_DIR, name);
-  return existsSync(inRepo) ? inRepo : resolve(PROCESSED_DIR, name);
+  return PARAMETER_FILES.get(name) ?? resolve(PROCESSED_DIR, name);
 }
 
 // ── Builders ────────────────────────────────────────────────────────────────
@@ -210,21 +245,21 @@ function uniqueSorted(rows, col, coerce = (x) => x) {
   );
 }
 
-async function buildWorldFlows(years) {
-  const rows = await readCsv(sourceCsv('materials_world_DMC.csv'));
-  const materials = pivotToTimeseries(rows, 'material_category', 'DMC_Mt', years);
+async function buildWorldFlows(years, flow = 'DMC') {
+  const rows = await readCsv(sourceCsv(`materials_world_${flow}.csv`));
+  const materials = pivotToTimeseries(rows, 'material_category', `${flow}_Mt`, years);
   return { years, materials };
 }
 
-async function buildRegionFlows(years) {
-  const rows = await readCsv(sourceCsv('materials_region_DMC.csv'));
+async function buildRegionFlows(years, flow = 'DMC') {
+  const rows = await readCsv(sourceCsv(`materials_region_${flow}.csv`));
   const regions = {};
   for (const r of rows) {
     const region = r.Region;
     if (!regions[region]) regions[region] = {};
     const mat = r.material_category;
     const y = Number(r.year);
-    const v = Number(r.DMC_Mt);
+    const v = Number(r[`${flow}_Mt`]);
     if (!Number.isFinite(y) || !Number.isFinite(v)) continue;
     if (!regions[region][mat]) regions[region][mat] = new Array(years.length).fill(null);
     const idx = years.indexOf(y);
@@ -523,6 +558,18 @@ async function buildWorldBoundaries() {
   return topo;
 }
 
+// The five non-DMC accounts, world and region, in one lazily-fetched file.
+// Same inner shape as the eager layers so derive() can swap one for the other.
+async function buildExtraFlows(years) {
+  const world = {};
+  const regions = {};
+  for (const { id } of LAZY_FLOWS) {
+    world[id] = (await buildWorldFlows(years, id)).materials;
+    regions[id] = (await buildRegionFlows(years, id)).regions;
+  }
+  return { years, world, regions };
+}
+
 async function buildStocks2024() {
   const rows = await readCsv(sourceCsv('stock_2024_total.csv'));
 
@@ -564,7 +611,7 @@ const PROJECTION_START = 2024;
 const PROJECTION_END = 2060;
 
 async function buildSspDrivers(historyYears, gdpPop) {
-  const rows = await readCsv(resolve(PARAMETERS_DIR, 'IIASA/ssp_drivers.csv'));
+  const rows = await readCsv(sourceCsv('ssp_drivers.csv'));
 
   const years = [];
   for (let y = PROJECTION_START; y <= PROJECTION_END; y++) years.push(y);
@@ -673,7 +720,7 @@ async function buildMeta(worldRows, regionRows) {
       label,
       members,
     })),
-    flows: ['DMC'], // Pablo's processed data ships DMC only; raw mfa13 has DE/DMC/DMI/Imports/Exports/PTB.
+    flows: FLOWS.map(({ id, label, eager }) => ({ id, label, eager: eager === true })),
     source: {
       paper: 'Busch et al. — Global material consumption persists despite optimal efficiency and circularity',
       repo: 'https://github.com/pmbusch/material-intensity',
@@ -701,6 +748,7 @@ async function run() {
   const gdpPop = await buildGdpPop(years);
   const stocks2024 = await buildStocks2024();
   const sspDrivers = await buildSspDrivers(years, gdpPop);
+  const extraFlows = await buildExtraFlows(years);
 
   await mkdir(OUT_DIR, { recursive: true });
 
@@ -720,6 +768,17 @@ async function run() {
     console.log(`[build-materials] wrote ${name}  (${kb} KB)`);
   }
   console.log(`[build-materials] done. ${outputs.length} eager files in ${OUT_DIR}`);
+
+  // Lazy, but served from public/ rather than R2 — 5 accounts is a few hundred
+  // KB, nothing like the 7 MB country layer.
+  {
+    const path = resolve(OUT_DIR, 'flows-extra.json');
+    const json = JSON.stringify(extraFlows);
+    await writeFile(path, json, 'utf8');
+    console.log(
+      `[build-materials] wrote flows-extra.json (${(json.length / 1024).toFixed(0)} KB, lazy) — ${LAZY_FLOWS.map((f) => f.id).join(', ')}`,
+    );
+  }
 
   // World boundary TopoJSON for the choropleth — bake in UNEP_name on each
   // country geometry so the chart can look up values without a runtime alias

@@ -26,6 +26,7 @@ type Meta = {
   regions: string[];
   materials: { id: string; label: string; group: string | null }[];
   groups: { id: string; label: string; members: string[] }[];
+  flows?: { id: string; label: string; eager: boolean }[];
 };
 
 type Props = {
@@ -45,6 +46,13 @@ export default function ChartArea({ config, data, meta }: Props) {
     if (spec.chart === 'choropleth') countriesLayer.request();
   }, [spec.chart, countriesLayer]);
 
+  // Likewise the five non-DMC accounts, which ride their own layer.
+  const extraFlowsLayer = useLazyLayer('flowsExtra');
+  const flow = spec.filters.flow?.[0] ?? 'DMC';
+  useEffect(() => {
+    if (flow !== 'DMC') extraFlowsLayer.request();
+  }, [flow, extraFlowsLayer]);
+
   return (
     <div className="explorer-chart-pane">
       <div className="explorer-chart-headerbar">
@@ -52,7 +60,12 @@ export default function ChartArea({ config, data, meta }: Props) {
         <ChartToolbar spec={spec} data={data} containerRef={bodyRef} />
       </div>
       <div className="explorer-chart-body" ref={bodyRef}>
-        <ChartSwitch spec={spec} data={data} countriesLoading={countriesLayer.loading} />
+        <ChartSwitch
+          spec={spec}
+          data={data}
+          meta={meta}
+          countriesLoading={countriesLayer.loading}
+        />
       </div>
       <ChartFooter spec={spec} data={data} />
       <style>{styles}</style>
@@ -63,10 +76,12 @@ export default function ChartArea({ config, data, meta }: Props) {
 function ChartSwitch({
   spec,
   data,
+  meta,
   countriesLoading,
 }: {
   spec: Spec;
   data: DataBundle;
+  meta: Meta;
   countriesLoading: boolean;
 }) {
   const geoLevel = spec.geoLevel ?? 'world';
@@ -79,6 +94,7 @@ function ChartSwitch({
     case 'area':
     case 'bar': {
       const derived = derive(data, spec);
+      if (derived.pending) return <EmptyState>Loading {flowLabel(spec, meta)}…</EmptyState>;
       if (derived.series.length === 0) return <EmptyState>No data for the current selection.</EmptyState>;
       if (spec.chart === 'line') return <LineChart data={derived} />;
       if (spec.chart === 'area') return <AreaChart data={derived} />;
@@ -122,6 +138,12 @@ function ChartSwitch({
         </EmptyState>
       );
   }
+}
+
+// The selected account's own name, for loading and title copy.
+function flowLabel(spec: Spec, meta: Meta): string {
+  const id = spec.filters.flow?.[0] ?? 'DMC';
+  return meta.flows?.find((f) => f.id === id)?.label ?? id;
 }
 
 function EmptyState({ children }: { children: React.ReactNode }) {
@@ -177,6 +199,8 @@ function ChartHeader({
   } else {
     subtitle = `${spec.yearRange[0]}–${spec.yearRange[1]} · ${measure?.label ?? spec.measure}`;
   }
+  const flowId = spec.filters.flow?.[0] ?? 'DMC';
+  if (flowId !== 'DMC') subtitle += ` · ${flowLabel(spec, meta)}`;
   return (
     <div className="explorer-chart-header">
       <h2 className="explorer-chart-title">{title}</h2>

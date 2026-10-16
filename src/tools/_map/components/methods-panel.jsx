@@ -391,7 +391,14 @@ function FoodEmissionsMethods() {
         structurally they belong inside categories 1 and 2, not in a
         category of their own, so that is where they will surface here:
         the specific-sources list differentiates soil carbon by land
-        use, with a forest entry shown as pending under category 2. We
+        use. Forest soil is on the map under category 2 but in no total:
+        mineral forest soil follows the IPCC default of steady state, which
+        Annex I inventories support (a net gain of +0.03 t C/ha/yr across
+        1,665 Mha), so the layer is drained forest organic soil, CO₂, CH₄
+        and N₂O as 22 Annex I parties report it (about 38 Mt CO₂e/yr in
+        2020), placed on forest over PEATMAP peat. Non-Annex I parties
+        report no drained forest area, so tropical drained peat-swamp
+        forest is not yet included. We
         are piloting the forest methods now: two
         research-preview layers under category 2 show forest biomass
         carbon flux for 44 US states, France, and Spain from ~334,000

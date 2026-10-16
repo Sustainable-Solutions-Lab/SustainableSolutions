@@ -33,6 +33,8 @@
 
 // Rangeland colour cap, t CO2e/yr per 0.25° cell (set from the p95 of |rsoc|).
 const RSOC_COLOR_MAX = 15000
+// Forest soil colour cap, t CO2e/yr per 0.25° cell (p95 of fsoil).
+const FSOIL_COLOR_MAX = 12000
 
 const YEARS = Array.from({ length: 25 }, (_, i) => 2000 + i)
 
@@ -54,8 +56,8 @@ const SOURCES = [
   ['burn', 'Residue burning', 2],
   // Tier 2 SOC losses on stable cropland (gains are view-only, never
   // netted). No annual trend series: year scaling holds it constant.
-  // Labeled by land use: rangeland and forest soil-carbon layers are in
-  // the pipeline and appear as pending entries under LSRS cat. 2 - the
+  // Labeled by land use: the forest soil-carbon layer sits under LSRS
+  // cat. 2 as a map-only view (not a SOURCES entry, so no total) - the
   // Standard treats them inside categories 1/2, not as a category of
   // their own, so the differentiation lives here in Specific sources.
   ['soil', 'Soil carbon CO₂ — cropland', 20],
@@ -184,6 +186,24 @@ function makeVariable({ source, crop }) {
         ? 'Pilot (44 US states, France, Spain): net live-aboveground carbon change on forestland from ~334,000 paired national-inventory re-measurements (USDA FIA, French IGN, Spanish IFN) — the managed-land-proxy accounting option. Red = net loss, blue = net removal. Research preview pending the LSRS forestry standard; not counted in any total.'
         : 'Pilot (44 US states, France, Spain): carbon flux attributable to forest management — the activity-based accounting option: observed flux on managed stands minus a matched counterfactual with no management, so ambient regrowth and CO₂ fertilization drop out. Management is identified from each inventory\u2019s own records of felling and stand treatment. Red = attributable emissions, blue = attributable gain. Research preview pending the LSRS forestry standard; not counted in any total.',
       description: 'Inventory-measured forest carbon flux (US FIA, French IGN, Spanish IFN), mean of recent re-measurement periods.',
+    }
+  }
+  // Forest soil (Gridded LM cat2 plan steps 1-2): forest remaining forest.
+  // Mineral soil follows the IPCC default (steady state, zero absent a
+  // management change), so the layer is drained forest organic soil only,
+  // as Annex I parties report it (CRF 4.A.1 + table 4(II)). Map only, not
+  // in any total: forest land is not a food commodity's land.
+  if (source === 'fsoil') {
+    return {
+      ...shared,
+      id: 'fsoil',
+      label: 'Soil carbon — forest (drained organic soil)',
+      unit: 't CO₂e/yr',
+      domain: { min: 0, max: FSOIL_COLOR_MAX },
+      yearTerms: [{ prop: 'fsoil', src: 'fsoil' }],
+      constantInTime: true,
+      note: 'Forest remaining forest. Mineral forest soil is held at the IPCC default of steady state (no flux absent a management change), which national inventories support: Annex I parties report a net mineral-soil gain of +0.03 t C/ha/yr across 1,665 Mha. What remains is drained organic (peat) soil under forest: CO₂, CH₄ and N₂O as 22 Annex I parties report it, 2020 (38 Mt CO₂e/yr), placed on forest over PEATMAP peat. Non-Annex I countries report no drained forest area, so tropical drained peat-swamp forest is not yet shown. Does not vary with the year slider; not counted in any total.',
+      description: 'Drained forest organic-soil emissions from national inventories, 2020.',
     }
   }
   if (source === 'all' || source === 'cat2' || source === 'cat3') {
@@ -342,9 +362,9 @@ const config = {
         // selectable signed views (research preview, not in totals).
         { id: 'fmlp', label: 'Forest carbon — net stock change (opt. 1 · pilot)', cat: 'cat2' },
         { id: 'fab', label: 'Forest carbon — management-attributable (opt. 2 · pilot)', cat: 'cat2' },
-        // Pending soil-carbon land use: listed (disabled) under cat. 2 so
-        // the coverage roadmap is visible where it will eventually live.
-        { id: 'soil_forest', label: 'Soil carbon CO₂ — forest (pending standard)', cat: 'cat2', disabled: true },
+        // Forest soil: drained organic soil from national inventories
+        // (mineral = 0, IPCC default). Map only, not in totals.
+        { id: 'fsoil', label: 'Soil carbon CO₂ — forest (drained organic · map only)', cat: 'cat2' },
       ],
     },
     {
@@ -498,10 +518,10 @@ const config = {
       ...CROPS.map(([crop]) => makeVariable({ source, crop })),
       ...LIVESTOCK_COMMODITIES.map(([crop]) => makeVariable({ source, crop })),
     ]),
-    // Forest pilot views ignore the commodity dropdown: alias every crop
+    // Forest pilot and forest soil views ignore the commodity dropdown: alias every crop
     // selection to the same signed layer so no source x crop combination
     // is left without a variable.
-    ...['fmlp', 'fab'].flatMap((source) => [
+    ...['fmlp', 'fab', 'fsoil'].flatMap((source) => [
       makeVariable({ source, crop: 'all' }),
       ...[...CROPS, ...LIVESTOCK_COMMODITIES, ['feed']].map(([crop]) => ({
         ...makeVariable({ source, crop: 'all' }),

@@ -230,12 +230,15 @@ def route_info(origin, dest):
             "aircraft": [{"icao": k, "share": v} for k, v in r["ac"].items()]}
 
 
-# Types whose engines emit far less soot (nvPM), seeding fewer and weaker
-# contrails. What matters is combustor technology, not aircraft age: GE's
-# lean-burn engines (GEnx on the 787 and 747-8, LEAP on the 737 MAX and many
-# A320neos) are low-soot, while the new A350 performs like a 777. The set
-# follows the paper's Supplementary Fig. 1 (types re-predicted on fixed
-# schedules); types without enough training data there are left out.
+# Types the model predicts far lower contrail forcing for (paper's
+# Supplementary Fig. 1, types re-predicted on fixed schedules). The gap comes
+# from the training labels' contrail model, which seeds ice only on soot
+# (no volatile-particle activation), so fleets dominated by lean-burn,
+# low-soot engines (GEnx, LEAP) score far lower. Each type averages over the
+# engines it flies: about half of A320neos fly PW1100Gs and a third of 787s
+# fly Trent 1000s. In-flight measurements (Voigt et al. 2026) and vPM-enabled
+# CoCiP runs suggest the gap is overstated, so the explanations below
+# describe the model's prediction rather than asserting an engine effect.
 _CLEAN_TYPES = {"B788", "B789", "B78X", "B748", "B38M", "B39M", "A20N", "A21N"}
 
 
@@ -259,12 +262,16 @@ def _reasons(feats, aircraft, dep_utc, o_ap, d_ap, pct):
                        "when contrails' reflection of sunlight offsets much "
                        "of their warming"))
     if aircraft in _CLEAN_TYPES:
-        tagged.append(("-", f"The {aircraft}'s engines emit far less soot "
-                       "than most, seeding fewer and weaker contrails"))
+        tagged.append(("-", f"The model predicts less contrail warming "
+                       f"for the {aircraft} than for most aircraft, mainly "
+                       "because many of its engines emit little soot (an "
+                       "advantage recent measurements suggest may be smaller "
+                       "than modeled)"))
     else:
-        tagged.append(("+", f"The {aircraft}'s engines emit more soot than "
-                       "low-soot designs like the 787's or 737 MAX's, seeding "
-                       "more and longer-lived contrails"))
+        tagged.append(("+", f"The model predicts more contrail warming for "
+                       f"the {aircraft} than for aircraft whose engines emit "
+                       "little soot (a gap recent measurements suggest may be "
+                       "smaller than modeled)"))
     mid_lat = abs((o_ap["lat"] + d_ap["lat"]) / 2)
     month = dep_utc.month
     nh = (o_ap["lat"] + d_ap["lat"]) / 2 >= 0

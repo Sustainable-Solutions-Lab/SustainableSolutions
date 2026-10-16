@@ -794,6 +794,187 @@ async function buildProjections() {
   };
 }
 
+// ── Sensitivity: the Monte Carlo ensemble behind Figure 5 ───────────────────
+//
+// Three tables, all keyed to the same 1000 runs and the same outcome: total
+// (population-inclusive) world material consumption CAGR 2025–2060, against
+// the GDP CAGR each run was drawn with.
+//
+//   runs        per-run outcome, plus the regression that defines which runs
+//               beat their own growth (Pablo's panel b)
+//   levers      multivariate lm over every lever in real units, each
+//               coefficient × a fixed, physically meaningful change (panel c)
+//   importance  LightGBM/TreeSHAP attribution, averaged within material
+//               growth bins and renormalised to 100% per bin (panel a)
+//
+// "Absolute decoupling" here is simply mat_cagr < 0 — the simple definition
+// this figure uses, not the four-class scheme 04-Decoupling.R also produces.
+
+// Family colours as the paper assigns them, so bars match print.
+const LEVER_FAMILY_COLORS = {
+  'Driver SSP': '#1f78b4',
+  'Regional divergence': '#6a3d9a',
+  Intensity: '#e31a1c',
+  'Material recovery': '#33a02c',
+  Mining: '#8c510a',
+  Lifetime: '#ff7f00',
+  Other: '#999999',
+};
+
+const GROWTH_BINS = ['<0%', '0-1%', '1-2%', '>2%'];
+
+// Least squares through (x, fitted y) recovers the line Pablo fitted: the
+// cached fit_mat_cagr column is that line already evaluated at each run's x.
+function recoverFit(xs, yFits) {
+  const n = xs.length;
+  if (n < 2) return null;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = yFits.reduce((a, b) => a + b, 0) / n;
+  let sxy = 0;
+  let sxx = 0;
+  for (let i = 0; i < n; i++) {
+    sxy += (xs[i] - mx) * (yFits[i] - my);
+    sxx += (xs[i] - mx) ** 2;
+  }
+  if (sxx === 0) return null;
+  const slope = sxy / sxx;
+  return { slope, intercept: my - slope * mx };
+}
+
+// Growth rates are percent-per-year everywhere downstream; the source holds
+// them as fractions.
+const pct = (v) => (Number.isFinite(v) ? Number((v * 100).toPrecision(6)) : null);
+const num = (v, digits = 6) => (Number.isFinite(v) ? Number(v.toPrecision(digits)) : null);
+
+async function buildSensitivity() {
+  const scatterRows = await readCsv(sourceCsv('Figure5_Scatter.csv'));
+  if (scatterRows.length === 0) return null;
+  const leverRows = await readCsv(sourceCsv('Figure5_LeverEffects.csv'));
+  const importanceRows = await readCsv(sourceCsv('Figure5_GrowthImportance.csv'));
+
+  const sspLevels = uniqueSorted(scatterRows, 'ssp');
+  const bins = GROWTH_BINS.filter((b) => scatterRows.some((r) => r.growth_bin === b));
+
+  // Columns rather than records: a third of the bytes, and every consumer
+  // wants whole columns anyway.
+  const runs = {
+    id: [],
+    matCagr: [],
+    gdpCagr: [],
+    ssp: [],
+    t2060: [],
+    fossilIndex: [],
+    decouple: [],
+    selected: [],
+    bin: [],
+  };
+  const xs = [];
+  const yFits = [];
+  for (const r of scatterRows) {
+    const mat = Number(r.mat_cagr);
+    const gdp = Number(r.gdp_cagr);
+    if (!Number.isFinite(mat) || !Number.isFinite(gdp)) continue;
+    runs.id.push(Number(r.run_id));
+    runs.matCagr.push(pct(mat));
+    runs.gdpCagr.push(pct(gdp));
+    runs.ssp.push(sspLevels.indexOf(r.ssp));
+    runs.t2060.push(num(Number(r.t_2060), 4));
+    runs.fossilIndex.push(num(Number(r.fossil_index_world), 4));
+    runs.decouple.push(r.abs_decouple === 'TRUE' ? 1 : 0);
+    runs.selected.push(r.selected === 'TRUE' ? 1 : 0);
+    runs.bin.push(bins.indexOf(r.growth_bin));
+    const fitted = Number(r.fit_mat_cagr);
+    if (Number.isFinite(fitted)) {
+      xs.push(gdp);
+      yFits.push(fitted);
+    }
+  }
+
+  const recovered = recoverFit(xs, yFits);
+  const residSigma = Number(scatterRows[0].resid_sigma);
+  const seMult = Number(scatterRows[0].se_mult);
+  const fit = recovered
+    ? {
+        // Both axes are in %/yr, so the slope — a ratio — carries over unscaled.
+        slope: num(recovered.slope),
+        intercept: pct(recovered.intercept),
+        residSigma: pct(residSigma),
+        seMult: Number.isFinite(seMult) ? seMult : 1,
+      }
+    : null;
+
+  // Each lever's effect is its coefficient times its OWN delta, and the deltas
+  // differ (+0.1 kg/USD vs +20yr vs +25%) — so the delta travels with the row
+  // and the chart has to print it beside the bar.
+  // Some display labels carry their own delta ("Fe (+25%)") and some do not;
+  // the delta is printed beside every bar, so strip the duplicate.
+  const trimDelta = (label, delta) => {
+    const m = /^(.*?)\s*\(([^()]*)\)$/.exec(label ?? '');
+    return m && m[2].trim() === (delta ?? '').trim() ? m[1].trim() : label;
+  };
+
+  const levers = leverRows
+    .map((r) => ({
+      order: Number(r.order),
+      label: trimDelta(r.display_label, r.delta_label),
+      group: r.group_label,
+      family: r.family,
+      delta: r.delta_label,
+      effect: num(Number(r.effect_pp)),
+      lo: num(Number(r.ci_lo_pp)),
+      hi: num(Number(r.ci_hi_pp)),
+      significant: r.significant === 'TRUE',
+      color: LEVER_FAMILY_COLORS[r.family] ?? LEVER_FAMILY_COLORS.Other,
+    }))
+    .filter((l) => Number.isFinite(l.effect))
+    .sort((a, b) => a.order - b.order);
+
+  const importance = {};
+  for (const r of importanceRows) {
+    const bin = r.growth_bin;
+    if (!bins.includes(bin)) continue;
+    const share = Number(r.pct);
+    if (!Number.isFinite(share)) continue;
+    (importance[bin] ??= []).push({
+      label: r.display_label,
+      pct: num(share),
+      order: Number(r.stack_order),
+      color: r.fill_hex,
+    });
+  }
+  // Stack order descends in the source; keep it so every bin stacks alike.
+  for (const bin of Object.keys(importance)) importance[bin].sort((a, b) => b.order - a.order);
+
+  const binCounts = {};
+  for (const b of runs.bin) {
+    const name = bins[b];
+    if (name) binCounts[name] = (binCounts[name] ?? 0) + 1;
+  }
+
+  return {
+    nRuns: runs.id.length,
+    window: [2025, PROJECTION_END],
+    sspLevels,
+    bins,
+    binCounts,
+    runs,
+    fit,
+    levers,
+    importance,
+    notes: {
+      outcome:
+        'Total world material consumption CAGR 2025–2060, population included, against the GDP CAGR each run was drawn with.',
+      decouple: 'Absolute decoupling means consumption falls outright — a CAGR below zero.',
+      selected:
+        'Runs sitting more than one residual standard deviation below the fitted line: material growth well under what their GDP growth implies.',
+      levers:
+        'Multivariate regression over every lever in real units, each coefficient scaled by its own physically meaningful change. Bars are not comparable between levers with different deltas.',
+      importance:
+        'TreeSHAP attribution from a gradient-boosted surrogate, averaged within each growth bin and renormalised to 100%.',
+    },
+  };
+}
+
 async function buildMeta(worldRows, regionRows) {
   const years = uniqueSorted(worldRows, 'year', Number);
   const materials = uniqueSorted(worldRows, 'material_category');
@@ -847,6 +1028,7 @@ async function run() {
   const sspDrivers = await buildSspDrivers(years, gdpPop);
   const extraFlows = await buildExtraFlows(years);
   const projections = await buildProjections();
+  const sensitivity = await buildSensitivity();
 
   await mkdir(OUT_DIR, { recursive: true });
 
@@ -858,6 +1040,7 @@ async function run() {
     ['stocks-2024.json', stocks2024],
     ['ssp-drivers.json', sspDrivers],
     ...(projections ? [['projections.json', projections]] : []),
+    ...(sensitivity ? [['sensitivity.json', sensitivity]] : []),
   ];
   for (const [name, data] of outputs) {
     const path = resolve(OUT_DIR, name);

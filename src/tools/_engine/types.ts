@@ -16,7 +16,19 @@ export type ChartType =
   | 'treemap'
   | 'choropleth'
   | 'scatter'
-  | 'contour';
+  | 'contour'
+  // Monte Carlo ensemble views. These read the sensitivity layer and ignore
+  // the dimension filters entirely — a run is not a place or a material.
+  | 'runs'
+  | 'levers'
+  | 'importance';
+
+/** Chart types driven by the Monte Carlo ensemble rather than the time series. */
+export const ENSEMBLE_CHARTS: ChartType[] = ['runs', 'levers', 'importance'];
+
+export function isEnsembleChart(chart: ChartType): boolean {
+  return ENSEMBLE_CHARTS.includes(chart);
+}
 
 // ── Dimensions ──────────────────────────────────────────────────────────────
 //
@@ -85,6 +97,17 @@ export const DRIVER_LABELS: Record<DriverName, string> = {
   gdp_per_capita: 'GDP per capita',
 };
 
+// ── Monte Carlo run cloud ───────────────────────────────────────────────────
+
+export type RunColorName = 'ssp' | 'decouple' | 'selected' | 't2060';
+
+export const RUN_COLOR_LABELS: Record<RunColorName, string> = {
+  ssp: 'Assigned SSP',
+  decouple: 'Absolute decoupling',
+  selected: 'Beats its own growth',
+  t2060: 'Warming in 2060',
+};
+
 // ── Spec (the URL-encoded explorer state) ───────────────────────────────────
 //
 // The user's current view, fully serializable. Encoded into location.hash
@@ -122,6 +145,13 @@ export type Spec = {
    * for the median across SSP1-5 with the full spread as a band.
    */
   scenario?: ScenarioName;
+
+  /**
+   * How to colour the Monte Carlo run cloud: by the SSP each run was assigned,
+   * by whether it decouples outright, by whether it beats its own growth, or
+   * by the 2060 warming it implies.
+   */
+  runColor?: RunColorName;
 
   // Chart-specific
   scatterX?: MeasureName;

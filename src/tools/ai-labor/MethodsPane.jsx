@@ -58,10 +58,12 @@ export default function MethodsPane({ onClose }) {
         </h1>
 
         <p style={pStyle}>
-          Every chart in the tool reports one model at full AI progress: an 84-industry general
-          equilibrium of the US economy in which one budget and one labor market discipline every
-          industry at once. It asks which industries' jobs AI shrinks or grows, what happens to
-          pay in each, and why.
+          Every chart in the tool reports one model at full AI progress: a general equilibrium of
+          the whole US economy, all 399 industries with employment linked by their supply chains,
+          in which one budget and one labor market discipline every industry at once. It asks
+          which industries' jobs AI shrinks or grows, what happens to pay in each, and why.
+          Industries with fewer than 100,000 jobs are shown folded into one row per group,
+          averaged by employment.
         </p>
 
         <p style={{ margin: '18px 0 24px', padding: '12px 14px', border: '1px solid var(--rule-strong)', borderRadius: 4, background: 'var(--paper-2)', fontSize: 13, lineHeight: 1.5, color: 'var(--ink)' }}>
@@ -76,11 +78,18 @@ export default function MethodsPane({ onClose }) {
 
         <h2 style={h2Style}>The model</h2>
         <p style={pStyle}>
-          Demand follows nonhomothetic preferences calibrated to the measured income elasticities,
-          so richer households shift spending toward income-elastic industries and away from
-          saturated ones. Each industry produces with labor and capital; automation reassigns its
-          AI-exposed tasks from labor to capital, except the share protected by the human-attention
-          shield. Total employment is fixed, so an industry's change in jobs is a change in its share
+          Household demand follows nonhomothetic preferences calibrated to the measured income
+          elasticities, so richer households shift spending toward income-elastic goods and away
+          from saturated ones; each good carries its retail and transport margins. Industries buy
+          from one another at fixed input-output coefficients (BEA 2017 benchmark supply and use
+          tables), so AI that cheapens an upstream industry lowers downstream prices, and an
+          industry that sells to other firms gets its demand from what its customers sell.
+          Investment replaces and grows the capital stock, so it rises when AI attracts more
+          capital; government buys a fixed share of output; exports adjust to hold the trade
+          balance. Each industry combines purchased inputs with labor and capital; automation
+          reassigns its AI-exposed tasks from labor to capital, except the share protected by the
+          human-attention shield, which applies in proportion to the share of an industry's output
+          bought directly by households or by government on their behalf. Total employment is fixed, so an industry's change in jobs is a change in its share
           of the workforce. Workers move between industries imperfectly (mobility elasticity 2), so
           average wages differ by industry. Workers (90% of people) earn wages plus a share χ of
           capital income; capital owners receive the rest.
@@ -88,12 +97,13 @@ export default function MethodsPane({ onClose }) {
 
         <h2 style={h2Style}>The forces</h2>
         <p style={pStyle}>
-          An industry's employment equals labor per unit of output times its spending share
-          divided by its price, so its log change in jobs splits exactly into AI taking over tasks
-          (split by physical, analytic and creative tasks in proportion to each type's share of the
+          An industry's employment equals labor per unit of output times its sales divided by its
+          price, so its log change in jobs splits exactly into AI taking over tasks (split by
+          physical, analytic and creative tasks in proportion to each type's share of the
           automated tasks), the human-attention shield, the shift toward labor as it gets cheaper
-          relative to capital, cheaper output, and spending shifts. The parts add up to the net
-          change.
+          relative to capital, cheaper output, and changes in sales to each kind of buyer:
+          households, other industries, investment, and government and exports. The parts add up
+          to the net change.
         </p>
 
         <h2 style={h2Style}>Scenarios and ranges</h2>
@@ -102,25 +112,26 @@ export default function MethodsPane({ onClose }) {
           (3 levels), analytic (3) and creative (3) tasks, capital supply (3), the human share of
           attention spending (2), productivity growth (2) and the demand estimate (2), 648
           economies, each in three ownership worlds, 1,944 outcomes per industry. The growth chip
-          splits them in half: no additional productivity growth (real output about 1.2 times
-          today's at full progress) or growth that raises it about 3.5-fold, and the ownership chip
+          splits them in half: no additional productivity growth (real output about 1.3 times
+          today's at full progress) or growth that raises it about fourfold, and the ownership chip
           picks one of the three worlds. Ranges are the 5th to 95th percentile of an industry's 324
           outcomes in the chosen growth and ownership case. An industry "loses" or "gains" if it
           does so in at least 90% of all 1,944 outcomes, and loses or gains "in 75–90%" if it does so
           in that share of them. In the wage view of the forces, an industry's real wage change is
           its jobs forces divided by the mobility elasticity (2) plus an economy-wide term common to
-          all industries, exactly. The five lanes of the first chart are sector types
-          from a Ward clustering of each industry's central-case force mix (the five forces below,
-          standardized). Care, desk work and the attention-shielded group hold across k-means, the
-          growth case and a clustering on industry traits; saturated services mostly do; the mixed
-          group of goods and utilities is a residual. The decision bar splits an industry's uncertainty
+          all industries, exactly. The five lanes of the first chart are sector types from a Ward
+          clustering of the 84 household-facing industries' force mix (displacement, shield,
+          labor-capital mix, cheaper output and spending, standardized); every industry is then
+          assigned to the type whose average force mix is nearest its own. Care, desk work and the
+          attention-shielded group are robust; saturated services mostly are; the mixed group of
+          goods, construction, transport and utilities is a residual. The decision bar splits an industry's uncertainty
           among capability, demand and ownership by a first-order variance decomposition over the
-          grid. Scatter colours, the forces and the contour use the central assumptions.
+          grid. Scatter colors, the forces and the contour use the central assumptions.
         </p>
 
         <h2 style={h2Style}>Wages and prices</h2>
         <p style={pStyle}>
-          Real wages are wages deflated by a consumer price index, so they already include the fall in prices that automation brings. Deflating instead by what workers themselves buy, which leans toward care and housing whose prices fall least, lowers the central real wage only slightly (0.73 rather than 0.74 of today's). The index covers existing industries' output only: new goods, better quality and free AI services never appear in it, so the decline in living standards is likely overstated on that count. Worker welfare also counts workers' share of capital income, which is why it can hold up while the real wage falls.
+          Real wages are wages deflated by a consumer price index, so they already include the fall in prices that automation brings. Deflating instead by what workers themselves buy, which leans toward care and housing whose prices fall least, lowers the central real wage only slightly (0.76 rather than 0.77 of today's). The index covers existing industries' output only: new goods, better quality and free AI services never appear in it, so the decline in living standards is likely overstated on that count. Worker welfare also counts workers' share of capital income, which is why it can hold up while the real wage falls.
         </p>
 
         <h2 style={h2Style}>The inputs, and where each value comes from</h2>

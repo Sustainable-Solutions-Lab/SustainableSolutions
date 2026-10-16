@@ -50,7 +50,7 @@ export default function Sidebar({ config, meta, countries }: Props) {
         </Section>
       )}
 
-      {spec.driver && (
+      {(spec.driver || projectsMaterials(spec, config)) && (
         <Section title="Scenario">
           <ScenarioPicker active={spec.scenario ?? 'range'} />
         </Section>
@@ -135,7 +135,7 @@ export default function Sidebar({ config, meta, countries }: Props) {
         <YearRangeSlider
           min={meta.years[0]}
           max={
-            spec.driver
+            spec.driver || projectsMaterials(spec, config)
               ? (config.projectionEnd ?? meta.years[meta.years.length - 1])
               : meta.years[meta.years.length - 1]
           }
@@ -144,6 +144,15 @@ export default function Sidebar({ config, meta, countries }: Props) {
       </Section>
     </div>
   );
+}
+
+// Material flows project only when grouped and on the default account, which
+// is also when the scenario choice and the 2060 horizon become meaningful.
+function projectsMaterials(spec: Spec, config: ExplorerConfig): boolean {
+  if (config.projectionEnd == null) return false;
+  if (spec.driver) return false;
+  const flow = spec.filters.flow?.[0] ?? 'DMC';
+  return spec.groupings?.material === 'group' && flow === 'DMC' && spec.measure === 'absolute';
 }
 
 // ── Section wrapper ────────────────────────────────────────────────────────

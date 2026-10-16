@@ -185,6 +185,18 @@ type SspDrivers = {
   regions: Record<string, DriverBundle>;
 };
 
+type Projections = {
+  years: number[];
+  scenarios: string[];
+  groups: string[];
+  /** World totals per group with the Monte Carlo percentile band, Mt. */
+  envelope: Record<string, Record<string, (number | null)[]>>;
+  /** One deterministic run per SSP: ssp → geography → group → Mt per year. */
+  deterministic: Record<string, Record<string, Record<string, (number | null)[]>>>;
+  stock: Record<string, Record<string, Record<string, (number | null)[]>>>;
+  basis: string;
+};
+
 type ExtraFlows = {
   years: number[];
   /** flow id → material → value per year (world totals). */
@@ -228,6 +240,56 @@ function countriesToRegionalShape(
   return out;
 }
 
+
+
+// ── Projected material flows ────────────────────────────────────────────────
+//
+// Two published products back this. The Monte Carlo envelope covers world
+// totals per material group and carries the uncertainty band; the
+// deterministic runs cover each SSP by region but give a single line. So a
+// world view on the default 'range' scenario draws the band, and anything
+// more specific draws the matching deterministic run.
+//
+// Only the four modelled groups project — manufactured products and waste are
+// outside the stock-flow model — and only when materials are grouped, since
+// the model does not resolve individual categories.
+
+const PROJECTION_FALLBACK_SSP = 'SSP2';
+
+function projectedPoints(
+  proj: Projections,
+  opts: { geo: string; group: string; scenario: ScenarioName; years: number[] },
+): { points: Point[]; banded: boolean } {
+  const { geo, group, scenario, years } = opts;
+  const idx = (y: number) => proj.years.indexOf(y);
+  const useEnvelope = scenario === 'range' && (geo === 'World' || geo === '') && proj.envelope[group];
+
+  if (useEnvelope) {
+    const band = proj.envelope[group];
+    return {
+      banded: true,
+      points: years.map((y) => {
+        const i = idx(y);
+        return {
+          year: y,
+          value: band.p50?.[i] ?? null,
+          lo: band.p25?.[i] ?? null,
+          hi: band.p75?.[i] ?? null,
+          loOuter: band.p_min?.[i] ?? null,
+          hiOuter: band.p_max?.[i] ?? null,
+        };
+      }),
+    };
+  }
+
+  const ssp = scenario === 'range' ? PROJECTION_FALLBACK_SSP : scenario;
+  const series = proj.deterministic[ssp]?.[geo || 'World']?.[group];
+  if (!series) return { points: [], banded: false };
+  return {
+    banded: false,
+    points: years.map((y) => ({ year: y, value: series[idx(y)] ?? null })),
+  };
+}
 
 // ── Flow accounts ───────────────────────────────────────────────────────────
 //
@@ -281,6 +343,19 @@ export function derive(data: DataBundle, spec: Spec): DerivedData {
   const matFilter = spec.filters.material ?? [];
   const matGrouping = spec.groupings?.material ?? 'category';
 
+  // Projections extend the material series past the observed record. They
+  // exist only for the four modelled groups, on the default DMC account, and
+  // only when materials are grouped.
+  const proj = data.projections as Projections | undefined;
+  const scenario: ScenarioName = spec.scenario ?? 'range';
+  const histEnd = meta.years[meta.years.length - 1];
+  const projectable =
+    proj != null && matGrouping === 'group' && flows.flow === DEFAULT_FLOW && yEnd > histEnd;
+  const projYears = projectable
+    ? (proj as Projections).years.filter((y) => y > histEnd && y <= yEnd)
+    : [];
+  let drewBand = false;
+
   // At country level, re-source the regional data layer from the country
   // file (filtered to the user's selections + the DMC flow).
   let effectiveRegions: Record<string, Record<string, number[]>>;
@@ -307,12 +382,30 @@ export function derive(data: DataBundle, spec: Spec): DerivedData {
       const matByYear = effectiveRegions[geo] ?? {};
       const summed = sumMaterials(matByYear, matSelections, meta.years);
       const transformed = applyMeasure(summed, geo, spec.measure, gdpPop, meta.years);
+      const points: Point[] = years.map((y, idx) => ({
+        year: y,
+        value: transformed[yearIndexes[idx]],
+      }));
+      let projectedFrom: number | undefined;
+      // Regional projections sum the selected groups from the deterministic run.
+      if (projYears.length > 0 && spec.measure === 'absolute') {
+        const summedProjection = sumProjectedGroups(
+          proj as Projections,
+          matSelections,
+          { geo, scenario, years: projYears },
+        );
+        if (summedProjection) {
+          points.push(...summedProjection.points);
+          projectedFrom = projYears[0];
+        }
+      }
       series.push({
         key: geo,
         label: geo,
         color: colorFor('geo', geo, i),
         dimension: 'geo',
-        points: years.map((y, idx) => ({ year: y, value: transformed[yearIndexes[idx]] })),
+        points,
+        projectedFrom,
       });
     });
   } else {
@@ -324,17 +417,74 @@ export function derive(data: DataBundle, spec: Spec): DerivedData {
     matSelections.forEach((sel, i) => {
       const summed = sumLeafMaterials(sourceByMaterial, sel.leaves, meta.years);
       const transformed = applyMeasure(summed, seriesKey, spec.measure, gdpPop, meta.years);
+      const points: Point[] = years.map((y, idx) => ({
+        year: y,
+        value: transformed[yearIndexes[idx]],
+      }));
+      let projectedFrom: number | undefined;
+      if (projYears.length > 0 && spec.measure === 'absolute') {
+        const projected = projectedPoints(proj as Projections, {
+          geo: seriesKey,
+          group: sel.key,
+          scenario,
+          years: projYears,
+        });
+        if (projected.points.length > 0) {
+          points.push(...projected.points);
+          projectedFrom = projYears[0];
+          if (projected.banded) drewBand = true;
+        }
+      }
       series.push({
         key: sel.key,
         label: sel.label,
         color: colorFor(matGrouping === 'group' ? 'group' : 'material', sel.key, i),
         dimension: matGrouping === 'group' ? 'group' : 'material',
-        points: years.map((y, idx) => ({ year: y, value: transformed[yearIndexes[idx]] })),
+        points,
+        projectedFrom,
       });
     });
   }
 
-  return { series, units: unitsFor(spec.measure), years, pending: flows.pending };
+  const projected = projYears.length > 0 && series.some((x) => x.projectedFrom != null);
+  return {
+    series,
+    units: unitsFor(spec.measure),
+    years: projected ? [...years, ...projYears] : years,
+    pending: flows.pending,
+    historicalEnd: projected ? histEnd : undefined,
+    bandLabel: projected ? projectionNote(drewBand, scenario) : undefined,
+  };
+}
+
+// Sum several groups out of one deterministic run — what a regional series
+// needs, since the band only exists for world totals per group.
+function sumProjectedGroups(
+  proj: Projections,
+  selections: MatSelection[],
+  opts: { geo: string; scenario: ScenarioName; years: number[] },
+): { points: Point[] } | null {
+  const totals = new Array(opts.years.length).fill(null) as (number | null)[];
+  let any = false;
+  for (const sel of selections) {
+    const { points } = projectedPoints(proj, { ...opts, group: sel.key });
+    if (points.length === 0) continue;
+    any = true;
+    points.forEach((p, i) => {
+      if (p.value == null) return;
+      totals[i] = (totals[i] ?? 0) + p.value;
+    });
+  }
+  if (!any) return null;
+  return { points: opts.years.map((y, i) => ({ year: y, value: totals[i] })) };
+}
+
+function projectionNote(banded: boolean, scenario: ScenarioName): string {
+  const basis =
+    'Projected primary consumption from the stock-flow model; metal ores are ore-equivalent and step up at 2024.';
+  if (banded) return `Monte Carlo median; bands show P25–P75 and the full run range. ${basis}`;
+  const ssp = scenario === 'range' ? PROJECTION_FALLBACK_SSP : scenario;
+  return `Deterministic ${ssp} run — the Monte Carlo band covers world totals only. ${basis}`;
 }
 
 

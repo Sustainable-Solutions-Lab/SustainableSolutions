@@ -14,6 +14,7 @@ const eagerLayers = {
   gdpPop: '/tools/materials/gdp-pop.json',
   stocks2024: '/tools/materials/stocks-2024.json',
   sspDrivers: '/tools/materials/ssp-drivers.json',
+  projections: '/tools/materials/projections.json',
 };
 
 export const materialsConfig: ExplorerConfig = {
@@ -82,6 +83,20 @@ export const materialsConfig: ExplorerConfig = {
         scenario: 'range',
         yearRange: [1970, 2060],
         filters: { geo: [], material: [], flow: [] },
+      },
+    },
+    {
+      id: 'projected-flows',
+      title: 'Material consumption to 2060',
+      blurb:
+        'World totals by material group, observed to 2024 then the Monte Carlo median with its P25–P75 and full-run bands.',
+      spec: {
+        chart: 'line',
+        measure: 'absolute',
+        scenario: 'range',
+        yearRange: [1970, 2060],
+        filters: { geo: [], material: [], flow: [] },
+        groupings: { material: 'group' },
       },
     },
     {

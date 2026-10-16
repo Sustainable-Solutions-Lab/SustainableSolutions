@@ -29,6 +29,9 @@ const REPO_DIR =
     'Library/CloudStorage/Dropbox/Papers/Active Prep/Material intensity/material-intensity',
   );
 const PARAMETERS_DIR = process.env.MATERIALS_PARAMETERS_DIR ?? resolve(REPO_DIR, 'Parameters');
+// Model outputs (Monte Carlo envelope, deterministic runs) live beside the
+// inputs rather than inside Parameters/, and are indexed the same way.
+const RESULTS_DIR = process.env.MATERIALS_RESULTS_DIR ?? resolve(REPO_DIR, 'Results');
 const INPUTS_DIR = process.env.MATERIALS_INPUTS_DIR ?? resolve(REPO_DIR, 'Inputs');
 const PROCESSED_DIR =
   process.env.MATERIALS_PROCESSED_DIR ??
@@ -215,7 +218,10 @@ function indexParameters(dir) {
   return index;
 }
 
-const PARAMETER_FILES = indexParameters(PARAMETERS_DIR);
+const PARAMETER_FILES = new Map([
+  ...indexParameters(PARAMETERS_DIR),
+  ...indexParameters(RESULTS_DIR),
+]);
 
 function sourceCsv(name) {
   return PARAMETER_FILES.get(name) ?? resolve(PROCESSED_DIR, name);
@@ -698,6 +704,96 @@ async function buildSspDrivers(historyYears, gdpPop) {
   };
 }
 
+// ── Projected material flows (Results/) ─────────────────────────────────────
+//
+// Two published products, complementary:
+//   mc_envelope.csv          world totals per material group, 2025-2060, with
+//                            the Monte Carlo percentile band (1000 runs).
+//   deterministic_results.csv one run per SSP, by region and material, with
+//                            primary consumption and in-use stock.
+// The envelope carries the uncertainty but only globally; the deterministic
+// runs carry the regional and scenario detail but no band. The explorer uses
+// whichever fits the view, so both ship.
+//
+// Note on basis: the model projects PRIMARY consumption from the stock-flow
+// model, and for metals that is ore-equivalent, which sits about 25% above
+// UNEP's DMC metal-ore series in 2024. Biomass, fossil fuels and non-metallic
+// minerals line up with history to within a couple of percent.
+
+// Pablo's group ids → the explorer's.
+const PROJECTION_GROUPS = {
+  biomass: 'biomass',
+  fossil_fuels: 'fossil',
+  metal_fe: 'metal',
+  metal_nonfe: 'metal',
+  nonmetallic_minerals: 'nonmetallic',
+  Biomass: 'biomass',
+  'Fossil fuels': 'fossil',
+  'Metal ores': 'metal',
+  'Non-metallic minerals': 'nonmetallic',
+};
+
+const PERCENTILES = ['p05', 'p25', 'p50', 'p75', 'p95', 'p_min', 'p_max'];
+
+async function buildProjections() {
+  const envelopeRows = await readCsv(sourceCsv('mc_envelope.csv'));
+  const detRows = await readCsv(sourceCsv('deterministic_results.csv'));
+  if (envelopeRows.length === 0 && detRows.length === 0) return null;
+
+  const years = uniqueSorted(envelopeRows, 'year', Number);
+  const slot = (y) => years.indexOf(Number(y));
+
+  // Envelope: world totals per group, Gt in the source, Mt here to match flows.
+  const envelope = {};
+  for (const r of envelopeRows) {
+    const group = PROJECTION_GROUPS[r.material_group];
+    const i = slot(r.year);
+    if (!group || i < 0) continue;
+    const bucket = (envelope[group] ??= Object.fromEntries(
+      PERCENTILES.map((k) => [k, new Array(years.length).fill(null)]),
+    ));
+    for (const k of PERCENTILES) {
+      const v = Number(r[k]);
+      if (Number.isFinite(v)) bucket[k][i] = v * 1000;
+    }
+  }
+
+  // Deterministic: one line per SSP, per region and world, for consumption and
+  // the in-use stock that drives it.
+  const deterministic = {};
+  const stock = {};
+  const add = (target, ssp, geo, group, i, v) => {
+    if (!Number.isFinite(v)) return;
+    const byGeo = (target[ssp] ??= {});
+    const byGroup = (byGeo[geo] ??= {});
+    const arr = (byGroup[group] ??= new Array(years.length).fill(null));
+    arr[i] = (arr[i] ?? 0) + v;
+  };
+
+  for (const r of detRows) {
+    const group = PROJECTION_GROUPS[r.material_group];
+    const i = slot(r.year);
+    if (!group || i < 0) continue;
+    const flow = Number(r.primary_consumption_Mt);
+    const inUse = Number(r.in_use_stock_Mt);
+    for (const geo of [r.region, 'World']) {
+      add(deterministic, r.ssp_label, geo, group, i, flow);
+      add(stock, r.ssp_label, geo, group, i, inUse);
+    }
+  }
+
+  return {
+    years,
+    scenarios: uniqueSorted(detRows, 'ssp_label'),
+    groups: [...new Set(Object.values(PROJECTION_GROUPS))],
+    envelope,
+    deterministic,
+    stock,
+    basis:
+      'Modelled primary consumption. Metal ores are ore-equivalent and sit above the UNEP DMC series at the 2024 splice.',
+  };
+}
+
 async function buildMeta(worldRows, regionRows) {
   const years = uniqueSorted(worldRows, 'year', Number);
   const materials = uniqueSorted(worldRows, 'material_category');
@@ -734,6 +830,7 @@ async function buildMeta(worldRows, regionRows) {
 async function run() {
   console.log('[build-materials] reading from:');
   console.log(`  parameters: ${PARAMETERS_DIR}`);
+  console.log(`  results: ${RESULTS_DIR}`);
   console.log(`  processed (fallback): ${PROCESSED_DIR}`);
 
   // Read the world flows first so we can derive the canonical year axis from it.
@@ -749,6 +846,7 @@ async function run() {
   const stocks2024 = await buildStocks2024();
   const sspDrivers = await buildSspDrivers(years, gdpPop);
   const extraFlows = await buildExtraFlows(years);
+  const projections = await buildProjections();
 
   await mkdir(OUT_DIR, { recursive: true });
 
@@ -759,6 +857,7 @@ async function run() {
     ['gdp-pop.json', gdpPop],
     ['stocks-2024.json', stocks2024],
     ['ssp-drivers.json', sspDrivers],
+    ...(projections ? [['projections.json', projections]] : []),
   ];
   for (const [name, data] of outputs) {
     const path = resolve(OUT_DIR, name);

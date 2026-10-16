@@ -72,14 +72,15 @@ type AirportRow = [string, string, string, string];
 
 const API = '/api/contrails';
 // bump when the API response schema changes: busts stale CDN-cached responses
-const SV = 'sv=8';
+const SV = 'sv=9';
 
 // Shareable links: the assessment is encoded in the query string, so a
 // copied URL reproduces the exact flight for the recipient.
 const QS = typeof window !== 'undefined'
   ? new URLSearchParams(window.location.search)
   : new URLSearchParams();
-// aircraft types with low-soot engines (mirrors the API's _CLEAN_TYPES)
+// aircraft types the model scores far lower, largely on engine soot
+// (mirrors the API's _CLEAN_TYPES; see the caveat there)
 const CLEAN_TYPES = new Set(['B788', 'B789', 'B78X', 'B748', 'B38M', 'B39M', 'A20N', 'A21N']);
 // Chrome Web Store listing (live as of 24 Aug 26)
 const CWS_URL: string | null =
@@ -1172,9 +1173,11 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
                 {result.aircraft_comparison[result.aircraft_comparison.length - 1].percentile -
                   result.aircraft_comparison[0].percentile >= 30 && (
                   <p className="mt-2 max-w-[640px] text-sm opacity-80">
-                    Aircraft choice matters a lot on this route: some engine designs
-                    emit far less soot than others and typically seed much weaker
-                    contrails at the same time and place.
+                    Aircraft choice matters a lot on this route in our model,
+                    which credits engines that emit little soot with much weaker
+                    contrails. Recent in-flight measurements suggest that
+                    advantage may be smaller than modeled, so differences in
+                    timing and route are the more reliable guide.
                   </p>
                 )}
               </div>
@@ -1363,7 +1366,7 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
                           if (altNight !== null && altNight <= yourNight - 8) {
                             parts.push(`it flies more in daylight (${altNight}% night vs your ${yourNight}%)`);
                           }
-                          if (acUpgrade) parts.push('its lower-soot engines seed fewer contrails');
+                          if (acUpgrade) parts.push('the model rates its aircraft lower');
                           const note = parts.length
                             ? `Cooler because ${parts.join(', and ')}.`
                             : 'Cooler thanks to schedule differences that avoid contrail-prone conditions.';
@@ -1420,7 +1423,10 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
               weather forecast. Percentile is relative to 22M scheduled commercial
               flights flown in 2021. Warming figures are per passenger, using
               typical passenger counts for each leg's aircraft; connecting
-              itineraries sum their legs.
+              itineraries sum their legs. Differences between aircraft types
+              are less certain than those from timing and route: they rest on
+              how the underlying contrail model treats engine soot, which recent
+              measurements suggest overstates the advantage of low-soot engines.
             </p>
           </>
         )}

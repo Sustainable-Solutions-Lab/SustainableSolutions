@@ -13,13 +13,14 @@ const eagerLayers = {
   flowsRegions: '/tools/materials/flows-regions.json',
   gdpPop: '/tools/materials/gdp-pop.json',
   stocks2024: '/tools/materials/stocks-2024.json',
+  sspDrivers: '/tools/materials/ssp-drivers.json',
 };
 
 export const materialsConfig: ExplorerConfig = {
   slug: 'materials',
   title: 'Material flows explorer',
   description:
-    'Historical (1970–2024) global use of 22 material categories across 8 world regions, with flexible chart types and shareable views. Country-level data and projection scenarios arrive in later versions.',
+    'Historical (1970–2024) global use of 22 material categories across 8 world regions, with flexible chart types and shareable views. Population and GDP also run forward to 2060 on the SSP trajectories; projected material flows arrive with the paper\'s Monte Carlo results.',
   citation: {
     authors: 'Busch et al.',
     title: 'Global material consumption persists despite optimal efficiency and circularity',
@@ -29,6 +30,9 @@ export const materialsConfig: ExplorerConfig = {
   },
 
   yearRange: [1970, 2024],
+  // Drivers carry SSP trajectories past the observed record; the material
+  // series still stop at 2024 until the paper's Monte Carlo runs land.
+  projectionEnd: 2060,
 
   // Dimensions are seeded from meta.json at runtime; this declares only the
   // dimension names and picker hints. The loader will populate `.values` from
@@ -52,6 +56,34 @@ export const materialsConfig: ExplorerConfig = {
   // preset library (8+ entries from EXPLORER_TOOLS_PLAN.md §5) fills in
   // as charts arrive in milestones 5+.
   presets: [
+    {
+      id: 'population-2060',
+      title: 'Population, 1970–2060',
+      blurb:
+        'Observed population to 2024, then the SSP1–5 range. Panel a of the projection figure.',
+      spec: {
+        chart: 'line',
+        measure: 'absolute',
+        driver: 'population',
+        scenario: 'range',
+        yearRange: [1970, 2060],
+        filters: { geo: [], material: [], flow: [] },
+      },
+    },
+    {
+      id: 'gdp-per-capita-2060',
+      title: 'GDP per capita, 1970–2060',
+      blurb:
+        'Observed GDP per capita to 2024, then the SSP1–5 range. Panel b of the projection figure.',
+      spec: {
+        chart: 'line',
+        measure: 'absolute',
+        driver: 'gdp_per_capita',
+        scenario: 'range',
+        yearRange: [1970, 2060],
+        filters: { geo: [], material: [], flow: [] },
+      },
+    },
     {
       id: 'global-flow',
       title: 'Global material flow over time',

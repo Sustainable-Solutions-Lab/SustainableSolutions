@@ -2,7 +2,7 @@
  * The range of impacts: every industry at full AI progress, in general
  * equilibrium. Each dot is an industry at its median change across the
  * scenario ensemble for the chosen growth case, in one of five lanes by
- * sector type (clusters of the GE force mix, ai-labor analysis/ws4-clusters),
+ * sector type (GE force-mix types, ai-labor analysis/ws6-scope/io_clusters.py),
  * coloured by the share of all scenarios in which it loses jobs (five tiers)
  * and sized by employment. Ownership and growth chips pick the case. The metric is the
  * change in jobs or in the industry's average real wage. Tap or click a dot
@@ -21,6 +21,7 @@ export const LANES = [
   ['Exposed desk work', 'Exposed desk work'],
 ];
 const LANE_OF = Object.fromEntries(LANES.map(([t], i) => [t, i]));
+const LABEL = 14;
 
 function jitter(code) {
   let h = 0;
@@ -46,7 +47,7 @@ export default function OutlookChart({ sectors, metric, growth, world, selCode, 
     return () => ro.disconnect();
   }, [tip.ref]);
   const svgRef = useRef(null);
-  const W = narrow ? 380 : 640, H = narrow ? 372 : 322, M = { l: 8, r: 8, t: 22, b: 40 };
+  const W = narrow ? 380 : 640, H = narrow ? 470 : 420, M = { l: 8, r: 8, t: 22, b: 40 };
   const laneH = (H - M.t - M.b) / LANES.length;
 
   const val = (s) => caseOf(s, growth, world)[metric];
@@ -62,8 +63,10 @@ export default function OutlookChart({ sectors, metric, growth, world, selCode, 
   const pts = sectors.map((s) => {
     const lane = LANE_OF[s.type];
     const v = val(s);
-    return { s, v, x: sx(v[1]), y: M.t + laneH * (lane + 0.5) + jitter(s.code) * laneH * 0.3,
-             r: 2.5 + 2.2 * Math.sqrt(s.emp ?? 0.1), color: TIERS[tierOf(s)].color };
+    // the top LABEL px of each lane hold its label; circles spread below it
+    const band = laneH - LABEL;
+    return { s, v, x: sx(v[1]), y: M.t + laneH * lane + LABEL + band * (0.5 + jitter(s.code) * 0.38),
+             r: 2.2 + 2.0 * Math.sqrt(s.emp ?? 0.1), color: TIERS[tierOf(s)].color };
   });
   const sel = pts.find((p) => p.s.code === selCode);
   const nearest = (ev) => {

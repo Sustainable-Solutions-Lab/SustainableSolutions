@@ -1,6 +1,7 @@
 /**
- * AI and labor: how AI changes jobs and pay across 84 US industries, all in
- * general equilibrium at full AI progress. All industries at once (the range
+ * AI and labor: how AI changes jobs and pay across every US industry, all in
+ * general equilibrium at full AI progress (whole-economy input-output model;
+ * industries under 100,000 jobs are folded into one row per group). All industries at once (the range
  * of impacts, what drives each industry), then one industry in detail
  * (industry picker, scorecard, forces, contour over any two assumptions).
  * A plain scrolling page: no side rail. Data: ./data/tool.json,
@@ -15,9 +16,8 @@ import MethodsPane from './MethodsPane';
 import OutlookChart, { LANES } from './OutlookChart';
 import ForceMix from './ForceMix';
 import { Scorecard, DecidesBar, ForceBars, GEContour } from './SectorDetail';
-import { Chips, WORLD_LAB, shortName } from './ui.jsx';
+import { Chips, GROWTH_LAB, WORLD_LAB, shortName } from './ui.jsx';
 import * as km from './km.js';
-import SECTORS from './data/sectors.json';
 import TOOL from './data/tool.json';
 
 const SHOW_KM = false;
@@ -285,7 +285,6 @@ export default function DemandCeilingsTool() {
   const detailRef = useRef(null);
 
   const tsel = TOOL.sectors.find((x) => x.code === selCode) ?? null;
-  const emp = Object.fromEntries(SECTORS.map((x) => [x.code, x.emp]));
   const nAll = TOOL.meta.n_outcomes;
   const what = metric === 'jobs' ? 'jobs' : 'average real wage';
   const nCase = TOOL.meta.n_case;
@@ -309,17 +308,20 @@ export default function DemandCeilingsTool() {
             <p style={{ ...mono11, margin: 0 }}>Interactive model · AI and labor · {methodsBtn('methods')}</p>
             <h2 style={{ ...h2, fontSize: 'clamp(24px, 3.4vw, 32px)' }}>How AI changes US jobs and pay across industries</h2>
             <p style={lede}>
-              Across 84 US industries employing 71 million people, analytic and creative services
-              (insurance, legal, software, finance) lose jobs under almost any assumption; care, schooling and in-person services gain. AI capability
-              decides how far the losers fall. Demand decides the survivors: as people grow richer
-              they buy more human attention per unit in care and education. Pay is a separate
-              story: unless AI also multiplies output, average real wages fall in every industry.
+              Across all {TOOL.meta.n_industries} US industries employing {TOOL.meta.jobs_total.toFixed(1)} million people,
+              linked by their supply chains, analytic and creative services (software, insurance,
+              law, finance) and the business services that sell to them (head offices, consulting,
+              office support) lose jobs under almost any assumption; care, schooling and in-person
+              services gain. AI capability decides how far the losers fall. Robotics and demand
+              decide the rest: as people grow richer they buy more human attention per unit in care
+              and education. Pay is a separate story: unless AI also multiplies output, average real
+              wages fall in every industry.
             </p>
           </div>
 
           <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--paper)', padding: '8px 0', borderBottom: '1px solid var(--rule)', display: 'flex', gap: '8px 18px', flexWrap: 'wrap', alignItems: 'center' }}>
             <Chips label="Show" value={metric} onChange={setMetric} options={[['jobs', 'Jobs'], ['wage', 'Average real wage']]} />
-            <Chips label="Growth" value={growth} onChange={setGrowth} options={[['none', 'No extra growth'], ['growth', 'Output ×3.5']]} />
+            <Chips label="Growth" value={growth} onChange={setGrowth} options={[['none', 'No extra growth'], ['growth', GROWTH_LAB]]} />
             <Chips label="Ownership" value={world} onChange={setWorld} options={[['concentrated', 'Concentrated'], ['today', 'Today-like'], ['broad', 'Broad']]} />
             {tsel && (
               <button type="button" onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
@@ -337,13 +339,15 @@ export default function DemandCeilingsTool() {
             <OutlookChart sectors={TOOL.sectors} metric={metric} growth={growth} world={world} selCode={selCode} onPick={setSelCode} />
             <p style={caption}>
               Each circle is an industry, sized by employment, at its median change in {what} at
-              full AI progress, coloured by the share of all scenarios (every growth and ownership
-              case) in which it loses or gains jobs.
+              full AI progress, colored by the share of all scenarios (every growth and ownership
+              case) in which it loses or gains jobs. Industries with fewer than 100,000 jobs are
+              folded into one circle per group.
               Lanes group industries by what drives them: care, where income-elastic demand for
-              human attention outruns AI; saturated in-person services, little touched by AI and
-              little helped by income; education and civic work, highly exposed but shielded by a
-              preference for people; desk work in finance, law and software, exposed with no such
-              shield; and a mixed group of goods and utilities. Tap a circle to select it. The bar on the selected circle spans the middle
+              human attention outruns AI; saturated in-person services and stores, little touched by AI and
+              little helped by income; education and civic work, public and private, highly exposed but shielded by a
+              preference for people; desk work in finance, law, software and the business services
+              that sell to other firms, exposed with no such shield; and a mixed group of goods,
+              construction, transport, wholesale and utilities. Tap a circle to select it. The bar on the selected circle spans the middle
               90% (5–95%) of outcomes across a full grid of the model's other assumptions, every
               combination of AI reach into physical, analytic and creative tasks, capital supply,
               the human share of attention spending and the demand estimate: {nCase.toLocaleString()} outcomes
@@ -361,8 +365,10 @@ export default function DemandCeilingsTool() {
             <p style={caption}>
               Each column is an industry, width proportional to its wage bill, ordered by its net
               change in {metric === 'wage' ? 'average real wage' : 'jobs'} (central assumptions). AI taking over physical, analytic or creative
-              tasks pushes jobs down; the human-attention shield, cheaper output, a shift toward
-              labor as it gets cheaper, and spending shifts push them up.
+              tasks pushes jobs down; the human-attention shield, cheaper output and a shift toward
+              labor as it gets cheaper push them up. Changes in what households, other industries,
+              investors, government and export buyers purchase push either way: industries that
+              sell to other firms lose sales when AI shrinks or replaces their customers' work.
               {metric === 'wage' ? ' Because workers move between industries imperfectly, the same forces move pay too, at half their effect on jobs (a mobility elasticity of 2); on top sits the economy-wide pay level, the same for every industry.' : ''}
               {' '}The parts add up exactly to the net change (the line). Tap a column to select the industry.
             </p>
@@ -373,7 +379,7 @@ export default function DemandCeilingsTool() {
               style={{ borderTop: '2px solid var(--ink)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12, scrollMarginTop: 60 }}>
               <p style={{ ...mono11, margin: 0 }}>One industry in detail</p>
               <h3 style={{ font: '600 clamp(20px, 2.8vw, 26px)/1.2 var(--font-serif)', color: 'var(--ink)', margin: 0 }}>
-                {tsel.name} <span style={{ fontWeight: 400, fontSize: '0.7em', color: 'var(--ink-3)' }}>{emp[tsel.code]}M jobs · {tsel.type}</span>
+                {tsel.name} <span style={{ fontWeight: 400, fontSize: '0.7em', color: 'var(--ink-3)' }}>{tsel.emp.toFixed(2)}M jobs · {tsel.type}</span>
               </h3>
               <label htmlFor="dc-sector" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px' }}>
                 <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>Change industry (or tap any circle or column above)</span>
@@ -395,7 +401,7 @@ export default function DemandCeilingsTool() {
                 <ForceBars s={tsel} growth={growth} world={world} metric={metric} />
                 <figcaption style={caption}>
                   The same decomposition as the columns above, for this industry alone (central
-                  assumptions, {growth === 'none' ? 'no extra growth' : 'output ×3.5'}, {WORLD_LAB[world]} ownership). Bars add up,
+                  assumptions, {growth === 'none' ? 'no extra growth' : GROWTH_LAB.toLowerCase()}, {WORLD_LAB[world]} ownership). Bars add up,
                   in logs, to the net change.
                 </figcaption>
               </figure>
@@ -438,8 +444,8 @@ export default function DemandCeilingsTool() {
 
           <p style={{ fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.6, borderTop: '1px solid var(--rule)', paddingTop: 12, margin: 0 }}>
             Sector data: BEA 2017 detail benchmark × BLS QCEW 2025 employment × OEWS/O*NET task
-            decomposition × PCE Engel slopes (1959–2025); results from the project's 84-industry
-            general equilibrium. The aggregate framework builds on{' '}
+            decomposition × PCE Engel slopes (1959–2025); results from the project's whole-economy
+            general equilibrium with input-output links. The aggregate framework builds on{' '}
             <a href="https://www.brookings.edu/articles/artificial-intelligence-saturation-and-the-future-of-work/">
               Kording & Marinescu (2025)
             </a>. Full {methodsBtn('methods')} in the tool; the{' '}

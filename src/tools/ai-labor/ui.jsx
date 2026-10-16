@@ -3,6 +3,10 @@
  * chart (phones included), segmented chips, and colour helpers.
  */
 import { useEffect, useRef, useState } from 'react';
+import TOOL from './data/tool.json';
+
+/** Chip and caption label for the growth case, e.g. "Output ×4.0". */
+export const GROWTH_LAB = `Output ×${TOOL.meta.growth.growth.match(/x([\d.]+)/)[1]}`;
 
 export const mono11 = { fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--ink-3)' };
 export const svgText = { fontFamily: 'var(--font-mono)', fontSize: 11, fill: 'var(--ink-3)' };

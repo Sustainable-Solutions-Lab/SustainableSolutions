@@ -3,7 +3,9 @@
  * industry's log change in jobs at full AI progress (the paper's Fig. 2b).
  * Columns are industries, width proportional to wage bill, ordered by net
  * change; bars above zero raise jobs, below cut them, and the line is the net
- * change. Displacement is split by the type of task AI takes over. In the
+ * change. Displacement is split by the type of task AI takes over; changes in
+ * sales are split by direct buyer (households, other industries, investment,
+ * government and exports). In the
  * wage view the same forces, divided by the mobility elasticity theta, move
  * each industry's real wage relative to the rest, and one economy-wide term
  * (the average pay level after prices) is common to all industries.
@@ -18,7 +20,10 @@ export const FORCES = [
   ['shield', 'Human-attention shield', '#66C2A5'],
   ['substitute', 'Labor-capital mix', '#BFBFB4'],
   ['cheaper', 'Cheaper output', '#3288BD'],
-  ['spending', 'Spending shifts', '#5E4FA2'],
+  ['households', 'Household spending shifts', '#5E4FA2'],
+  ['supply_chain', 'Demand from other industries', '#B07CC6'],
+  ['investment', 'Investment demand', '#E6C35C'],
+  ['other_demand', 'Government and export demand', '#D9D2C3'],
 ];
 
 /** Plain-language meaning of each force, shown on hover or tap. */
@@ -29,7 +34,10 @@ export const FORCE_INFO = {
   shield: 'In saturated services, rising spending buys more human attention per unit rather than more units: more nurse hours per hospital day, more teachers per pupil. That part of the work stays human whatever AI can do. Measured from 66 years of US consumption data.',
   substitute: 'As AI pulls wages down relative to the cost of capital, industries lean back toward people for the work AI does not take over.',
   cheaper: 'Automation lowers prices, so the same spending buys more output, and more output needs more workers.',
-  spending: 'Household spending shifts toward or away from the industry as incomes grow and relative prices change: saturated industries lose share, income-elastic ones gain it.',
+  households: 'Household spending shifts toward or away from the industry as incomes grow and relative prices change: saturated industries lose share, income-elastic ones gain it.',
+  supply_chain: 'Industries that buy this industry’s output need less (or more) of it: when AI shrinks a customer industry or replaces the work it bought, sales to it fall. Most of what head offices, staffing agencies and wholesalers sell goes to other industries.',
+  investment: 'Spending on new buildings, equipment and software, which keeps the capital stock in place and grows with it when AI raises the return to capital.',
+  other_demand: 'Government purchases (public schools, defense, roads) and exports, held at a fixed share of output.',
   economy: 'The change in average pay across the whole economy after prices, the same for every industry: negative when AI lowers labor’s share of income, positive when output grows enough to outrun it. Industry forces then move each industry’s pay above or below it.',
   net: 'The sum of all forces: the change in the industry’s share of a fixed US workforce.',
   netW: 'The sum of all forces: the change in the industry’s average real wage.',

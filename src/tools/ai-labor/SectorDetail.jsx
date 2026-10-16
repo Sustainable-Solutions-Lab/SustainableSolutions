@@ -6,7 +6,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { contours } from 'd3-contour';
-import { Pct, TIERS, WORLD_LAB, caseOf, mono11, pctChange, svgText, tierOf, useTip } from './ui.jsx';
+import { GROWTH_LAB, Pct, TIERS, WORLD_LAB, caseOf, mono11, pctChange, svgText, tierOf, useTip } from './ui.jsx';
 import { FORCE_INFO, forceView } from './ForceMix';
 
 function Kpi({ v, l }) {
@@ -48,14 +48,20 @@ function saturation(e) {
 /** What the model assumes for this industry, by group: shown on hover/tap. */
 export function assumptions(s) {
   const [lv, pcx] = s.eps_range ?? [s.eps, s.eps];
+  const folded = s.folded ? `This row averages ${s.folded} smaller industries (under 100,000 jobs each), weighted by employment. ` : '';
   const shield = s.rho_basis === 'measured'
     ? `${pc(s.rho)} of its spending growth buys human attention per unit, measured from ${s.rho_from?.split(', ')[1] ?? 'natural-unit data'}`
     : s.rho_basis === 'imputed'
       ? `${pc(s.rho)} of its spending growth is assumed to buy human attention per unit, assigned from its demand class (not measured for this industry)`
-      : 'no human-attention shield assumed (not measured; its demand class has none)';
+      : s.rho_basis === 'mixed'
+        ? `on average ${pc(s.rho)} of its members' spending growth buys human attention per unit`
+        : 'no human-attention shield assumed (not measured; its demand class has none)';
+  const demand = lv == null
+    ? `It sells mainly to other industries, government or investors rather than to households, so its demand follows its buyers' rather than an income elasticity of its own. ${shield.charAt(0).toUpperCase() + shield.slice(1)}.`
+    : `Modeled as ${CLASS[s.ct] ?? 'an industry'}. Income elasticity ${lv.toFixed(2)} in levels, ${pcx.toFixed(2)} price-controlled (66 years of US consumption data): ${saturation(Math.min(lv, pcx))}${Math.abs(lv - pcx) > 0.4 ? '; the two estimates disagree, so the demand estimate matters here' : ''}. ${shield.charAt(0).toUpperCase() + shield.slice(1)}. Growth matters more the more income-elastic it is.`;
   return {
-    cap: `AI exposure: ${pc(s.expo)} of its tasks automated at full progress under central reach. Task mix ${pc(s.thP)} physical (AI reach 25%), ${pc(s.thA)} analytic (95%), ${pc(s.thC)} creative (60%), from occupation staffing and task content. Reach varies across scenarios.`,
-    dem: `Modelled as ${CLASS[s.ct] ?? 'an industry'}. Income elasticity ${lv.toFixed(2)} in levels, ${pcx.toFixed(2)} price-controlled (66 years of US consumption data): ${saturation(Math.min(lv, pcx))}${Math.abs(lv - pcx) > 0.4 ? '; the two estimates disagree, so the demand estimate matters here' : ''}. ${shield.charAt(0).toUpperCase() + shield.slice(1)}. Growth matters more the more income-elastic it is.`,
+    cap: `${folded}AI exposure: ${pc(s.expo)} of its tasks automated at full progress under central reach. Task mix ${pc(s.thP)} physical (AI reach 25%), ${pc(s.thA)} analytic (95%), ${pc(s.thC)} creative (60%), from occupation staffing and task content. Reach varies across scenarios.`,
+    dem: demand,
     own: `Workers' share of capital income: none, 30% or all of it across scenarios. This industry's median jobs change runs from ${pctChange(s.worlds.concentrated)} (concentrated) to ${pctChange(s.worlds.broad)} (broad).`,
   };
 }
@@ -314,7 +320,7 @@ export function GEContour({ s, metric, growth }) {
         {tip.node}
       </div>
       <p style={{ ...mono11, fontSize: 10, margin: 0, textTransform: 'none', letterSpacing: 0 }}>
-        Dot: central case{g === '-' ? '' : `, ${growth === 'none' ? 'no extra growth' : 'output ×3.5'}`}. Other assumptions at central values.
+        Dot: central case{g === '-' ? '' : `, ${growth === 'none' ? 'no extra growth' : GROWTH_LAB.toLowerCase()}`}. Other assumptions at central values.
       </p>
     </div>
   );

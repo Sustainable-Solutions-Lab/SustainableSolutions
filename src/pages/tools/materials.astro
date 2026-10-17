@@ -1,7 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import Explorer from '../../tools/_engine/Explorer';
-import { materialsConfig } from '../../tools/materials/config';
+import MaterialsTool from '../../tools/materials/MaterialsTool';
 import tools from '../../data/tools.json';
 import type { Tool } from '../../lib/types';
 
@@ -9,14 +8,14 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
 ---
 
 <BaseLayout
-  title={tool?.title ?? materialsConfig.title}
-  description={tool?.summary ?? materialsConfig.description}
+  title={tool?.title ?? 'Will material use keep growing?'}
+  description={tool?.summary ?? 'Set the assumptions behind global material use to 2060 and see what the model does.'}
   hideFooter={true}
   noindex
 >
-  <section aria-label="Materials explorer">
+  <section aria-label="Material use explorer">
     <div class="materials-frame">
-      <Explorer client:only="react" config={materialsConfig} />
+      <MaterialsTool client:only="react" />
     </div>
   </section>
 </BaseLayout>
@@ -32,4 +31,166 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
     overflow: hidden;
   }
   .materials-frame > * { width: 100%; height: 100%; }
+
+  /* --mag-thumb is the thumb's width and the one number the tick marks under a
+     slider need, because a thumb's centre travels from half its width inside
+     one end of the track to half its width inside the other. The sliders are
+     the magnet explorer's, so the variable names are too: one definition, one
+     look across both tools. */
+  .materials-tool { --mag-thumb: 19px; --mag-hit: 22px; }
+  .materials-tool p { max-width: none; }
+  @media (pointer: fine) and (min-width: 1000px) {
+    .materials-tool { --mag-thumb: 15px; --mag-hit: 18px; }
+  }
+  @media (pointer: coarse) {
+    .materials-tool { --mag-thumb: 28px; --mag-hit: 44px; }
+    /* A finger is followed by Slider.tsx's followTouches, not by the input,
+       which would otherwise jump to any touch that lands on it. */
+    .materials-tool input[type="range"] { pointer-events: none; }
+    .materials-tool :has(> input[type="range"]) { touch-action: pan-y; }
+  }
+  .materials-tool input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: var(--mag-hit);
+    background: transparent;
+    cursor: pointer;
+    margin: 0;
+    touch-action: pan-y;
+  }
+  .materials-tool input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 3px;
+    background: var(--mag-track, var(--rule-strong));
+  }
+  .materials-tool input[type="range"]::-moz-range-track {
+    height: 6px; border-radius: 3px;
+    background: var(--mag-track, var(--rule-strong));
+  }
+  .materials-tool input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    box-sizing: border-box;
+    width: var(--mag-thumb); height: var(--mag-thumb);
+    margin-top: calc((6px - var(--mag-thumb)) / 2);
+    border-radius: 50%;
+    background: var(--cardinal);
+    border: 2px solid var(--paper);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  .materials-tool input[type="range"]::-moz-range-thumb {
+    width: var(--mag-thumb); height: var(--mag-thumb);
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: var(--cardinal);
+    border: 2px solid var(--paper);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  .materials-tool input[type="range"]:focus-visible { outline: none; }
+  .materials-tool input[type="range"]:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cardinal) 35%, transparent);
+  }
+  .materials-tool input[type="range"]:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cardinal) 35%, transparent);
+  }
+
+  /* Chart beside a rail of controls on a desktop; chart first, then controls,
+     on a phone — the picture is the point, so it is never below the fold. */
+  .materials-tool .mat-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+  .materials-tool .mat-chart-pane {
+    min-width: 0; min-height: 0;
+    padding: 12px 16px 14px;
+    display: flex; flex-direction: column;
+  }
+  .materials-tool .mat-rail {
+    border-left: 1px solid var(--rule);
+    overflow-y: auto;
+    padding: 12px 14px 28px;
+    display: flex; flex-direction: column; gap: 12px;
+    min-width: 0;
+  }
+  @media (max-width: 880px) {
+    body:has(.materials-frame) { overflow: auto; }
+    .materials-frame { height: auto; overflow: visible; }
+    .materials-frame > * { height: auto; }
+    .materials-tool .mat-body { grid-template-columns: minmax(0, 1fr); }
+    .materials-tool .mat-chart-pane { height: 62vh; padding: 10px 14px 12px; }
+    .materials-tool .mat-rail { border-left: none; border-top: 1px solid var(--rule); overflow: visible; }
+  }
+
+  .materials-tool .mat-card {
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 11px 12px 12px;
+    background: var(--paper);
+  }
+  .materials-tool .mat-card-title {
+    font: 600 11px var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--ink-3);
+    margin: 0 0 8px;
+  }
+  .materials-tool .mat-card-note {
+    font-size: 11px; line-height: 1.45; color: var(--ink-2); margin: 0 0 10px;
+  }
+  .materials-tool .mat-chip {
+    font: 500 11.5px var(--font-mono);
+    padding: 3px 9px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .materials-tool .mat-chip.on {
+    background: var(--cardinal); border-color: var(--cardinal); color: var(--paper);
+  }
+  .materials-tool .mat-more {
+    font: 600 11.5px var(--font-mono);
+    background: transparent; border: none; color: var(--accent);
+    padding: 0; cursor: pointer;
+  }
+  .materials-tool .mat-readout {
+    display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; margin: 0;
+    align-items: baseline;
+  }
+  .materials-tool .mat-readout dt { font-size: 11.5px; color: var(--ink-2); }
+  .materials-tool .mat-readout dd {
+    margin: 0; font: 600 13px var(--font-mono); text-align: right; color: var(--ink);
+  }
+  /* The paper's own colour for absolute decoupling, lightened on dark paper. */
+  .materials-tool .mat-readout dd.good { color: #1B7837; }
+  [data-theme="dark"] .materials-tool .mat-readout dd.good { color: #6FD08C; }
+  .materials-tool .mat-readout dd span { font-weight: 400; font-size: 10.5px; color: var(--ink-3); }
+
+  .materials-tool .mat-footer {
+    border-top: 1px solid var(--rule);
+    padding: 14px 18px 18px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 9px;
+    max-width: 640px;
+  }
+  .materials-tool .mat-footer-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--ink-2); text-decoration: none;
+  }
+  .materials-tool .mat-footer-note {
+    font-size: 11px; opacity: .62; line-height: 1.5; margin: 0;
+  }
+  .materials-tool .mat-footer-note.dim { opacity: .5; }
+  .materials-tool .mat-footer-note a { color: var(--accent); }
+  .materials-tool .mat-footer-steer {
+    display: inline-flex; align-items: center; gap: 7px;
+    text-decoration: none; color: var(--accent);
+  }
+  .materials-tool .steer-light-bg,
+  .materials-tool .steer-dark-bg { height: 18px !important; width: auto !important; max-width: none !important; }
+  .materials-tool .steer-light-bg { display: block; }
+  .materials-tool .steer-dark-bg { display: none; }
+  [data-theme="dark"] .materials-tool .steer-light-bg { display: none !important; }
+  [data-theme="dark"] .materials-tool .steer-dark-bg { display: block !important; }
 </style>

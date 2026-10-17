@@ -1,0 +1,35 @@
+---
+// The generic data explorer, kept whole but moved off the tool's front door:
+// the opening view is now the projection, and this is where someone goes to
+// pull the underlying series apart — six UNEP accounts, countries, the
+// Monte Carlo ensemble behind the sensitivity figure.
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Explorer from '../../../tools/_engine/Explorer';
+import { materialsConfig } from '../../../tools/materials/config';
+---
+
+<BaseLayout
+  title="Material use — full data explorer"
+  description="Every series behind the material-use projections: six UNEP accounts by country and region, SSP drivers, and the paper's Monte Carlo ensemble."
+  hideFooter={true}
+  noindex
+>
+  <section aria-label="Materials data explorer">
+    <div class="materials-data-frame">
+      <Explorer client:only="react" config={materialsConfig} />
+    </div>
+  </section>
+</BaseLayout>
+
+<style is:global>
+  body:has(.materials-data-frame) { overflow: hidden; }
+  .materials-data-frame {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
+    background: var(--paper);
+    overflow: hidden;
+  }
+  .materials-data-frame > * { width: 100%; height: 100%; }
+</style>

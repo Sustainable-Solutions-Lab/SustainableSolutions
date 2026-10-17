@@ -1,0 +1,40 @@
+---
+import ToolFrame from '../../layouts/ToolFrame.astro';
+import MiningWaterTool from '../../tools/mining-water/MiningWaterTool.jsx';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+
+// Companion explorer to Busch et al., "Reducing water stress from mining
+// battery materials". The paper is in review, so the page is noindex and
+// unlisted until a Tools-sheet row (slug: mining-water) lists it. The
+// companion line names the public preprint only, never the journal under
+// review. Data: scripts/build-mining-water.mjs.
+const tool = (tools as Tool[]).find((t) => t.slug === 'mining-water') ?? null;
+
+const companion = {
+  title: 'Reducing water stress from mining battery materials',
+  lead: 'Busch et al.',
+  journal: 'Preprint',
+  year: 2026,
+  url: 'https://www.researchsquare.com/article/rs-11011048/v1',
+};
+
+const repoLinks = {
+  github: 'https://github.com/pmbusch/sustainable-mining',
+};
+---
+
+<ToolFrame
+  title={tool?.title ?? 'Mining within water limits'}
+  description={tool?.summary ??
+    'Battery-mineral deposits mapped against basin water stress, and the cost of mining where water is available.'}
+  noindex
+  background="var(--paper)"
+>
+  <MiningWaterTool
+    client:only="react"
+    companion={companion}
+    repoLinks={repoLinks}
+    display={tool ? { title: tool.title, eyebrow: tool.eyebrow, summary: tool.summary } : null}
+  />
+</ToolFrame>

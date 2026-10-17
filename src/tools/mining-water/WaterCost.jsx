@@ -160,9 +160,9 @@ export default function WaterCost({ data, scenario, material }) {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto px-4 py-4 md:px-8 md:py-6" style={{ maxWidth: 1000 }}>
-        <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Water vs. cost · {scenario} · {material === 'All' ? 'all four minerals' : material}</p>
+        <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Water vs. cost · {scenario} · {material === 'All' ? 'all minerals' : material}</p>
         <p className="font-serif text-ink" style={{ fontSize: 23, fontWeight: 600, lineHeight: 1.2, margin: '2px 0 6px' }}>
-          What it costs to mine {what} where water is available
+          What it costs to mine {what} where water is more available
         </p>
         <p className="text-ink-2 m-0" style={{ fontSize: 13, lineHeight: 1.5, maxWidth: 680 }}>
           The model meets demand at least cost, then is allowed a little more cost and asked to cut stress-weighted
@@ -214,7 +214,7 @@ export default function WaterCost({ data, scenario, material }) {
             {curves.filter((c) => c.s !== scenario).map((c) => (
               <g key={c.s}>
                 <path d={ln(c.pts)} fill="none" stroke="var(--ink-3)" strokeWidth={1} strokeDasharray="3 3" />
-                <text x={X(c.pts[0]) + 6} y={Y(c.pts[0]) + 4} fill="var(--ink-3)" style={{ font: '10.5px var(--font-sans)' }}>{c.s}</text>
+                <text x={X(c.pts[0]) + 6} y={Y(c.pts[0]) + 4} fill="var(--ink-3)" stroke="var(--paper)" strokeWidth={3} paintOrder="stroke" strokeLinejoin="round" style={{ font: '10.5px var(--font-sans)' }}>{c.s}</text>
               </g>
             ))}
 
@@ -227,10 +227,24 @@ export default function WaterCost({ data, scenario, material }) {
               const p = sel.find((q) => q.step === s)
               // Hide a step label when the handle sits on it.
               if (p && Math.hypot(X(p) - X(cur), Y(p) - Y(cur)) < 22) return null
-              return p ? <text key={s} x={X(p) - 7} y={Y(p) - 7} textAnchor="end" fill="var(--ink-3)" style={{ font: '10px var(--font-mono)' }}>+{s}</text> : null
+              if (!p) return null
+              // Offset along the curve's normal, to the side away from the
+              // origin (up and to the right of a descending frontier), and
+              // haloed so the label reads over the bands.
+              const i = sel.indexOf(p)
+              const a = sel[Math.max(0, i - 1)], b = sel[Math.min(n - 1, i + 1)]
+              let nx = -(Y(b) - Y(a)), ny = X(b) - X(a)
+              const L = Math.hypot(nx, ny) || 1
+              nx /= L; ny /= L
+              if (nx + -ny < 0) { nx = -nx; ny = -ny } // point up-right
+              return (
+                <text key={s} x={X(p) + nx * 16} y={Y(p) + ny * 16} dy="0.32em" textAnchor="start"
+                  fill="var(--ink-2)" stroke="var(--paper)" strokeWidth={3} paintOrder="stroke" strokeLinejoin="round"
+                  style={{ font: '600 10.5px var(--font-mono)' }}>+{s}</text>
+              )
             })}
             <circle cx={X(base)} cy={Y(base)} r={5} fill="var(--paper)" stroke="var(--ink)" strokeWidth={1.5} />
-            <text x={X(base) + 9} y={Y(base) + 4} fill="var(--ink-2)" style={{ font: '600 11px var(--font-sans)' }}>Least cost</text>
+            <text x={X(base) + 9} y={Y(base) + 4} fill="var(--ink-2)" stroke="var(--paper)" strokeWidth={3} paintOrder="stroke" strokeLinejoin="round" style={{ font: '600 11px var(--font-sans)' }}>Least cost</text>
             {/* Guides from the handle to the axes */}
             <line x1={X(cur)} x2={X(cur)} y1={Y(cur)} y2={h - m.b} stroke="var(--cardinal)" strokeDasharray="2 3" />
             <line x1={m.l} x2={X(cur)} y1={Y(cur)} y2={Y(cur)} stroke="var(--cardinal)" strokeDasharray="2 3" />

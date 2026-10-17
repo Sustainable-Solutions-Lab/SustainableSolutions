@@ -604,7 +604,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
             <div className="mb-4">
               <Eyebrow>Minerals</Eyebrow>
               <WordRow value={material} onChange={setMaterial}
-                options={[['All', 'All four'], ...MINERALS.map(([mi]) => [mi, mi])]} />
+                options={[['All', 'All'], ...MINERALS.map(([mi]) => [mi, mi])]} />
             </div>
             <div className="mb-4">
               <Eyebrow>Impact</Eyebrow>

@@ -188,6 +188,25 @@ export const SUB_USE_LABEL: Record<SubUse, string> = {
   durables: 'Durables',
   packaging: 'Packaging',
 };
+/**
+ * The leaf a group can be broken into, named as the historical UNEP data names
+ * it so the same choice draws both the measured past and the projection.
+ * Non-metallic minerals have no leaf: the model carries them as one material.
+ */
+export const GROUP_LEAVES: Record<GroupKey, string[]> = {
+  biomass: ['Crops', 'Crop Residues', 'Grazed biomass and fodder crops', 'Wood', 'Other biomass'],
+  fossil_fuels: ['Coal', 'Natural Gas', 'Petroleum', 'Other fossil fuels'],
+  metal_ores: ['Ferrous ores', 'Non-ferrous ores'],
+  nonmetallic_minerals: [],
+};
+
+/** Stock material -> the leaf its ore is reported under. */
+const STOCK_LEAF: Record<StockMaterial, string> = {
+  Metal_Fe: 'Ferrous ores',
+  Metal_NonFe: 'Non-ferrous ores',
+  'Non-metallic minerals': 'Non-metallic minerals',
+};
+
 /** The two flow groups' materials, and which draw each one follows. */
 const FLOW_MATERIALS: { key: FlowKey; group: 'biomass' | 'fossil_fuels'; fixed: boolean }[] = [
   { key: 'crops', group: 'biomass', fixed: false },
@@ -382,7 +401,74 @@ interface DsmResult {
   waste: Float64Array;
 }
 
+/**
+ * What the cohorts already standing in 2024 do, year by year.
+ *
+ * Nothing a scenario can change touches this: the stock is built, and it
+ * retires on its survival curve whatever happens to demand. Only the lifetime
+ * assumption moves it, so it is computed once per cell and lifetime and kept.
+ * This is most of the model's arithmetic — 129 cohorts across 36 years in each
+ * of 192 cells — so caching it is what makes the contour panels possible.
+ */
+interface LegacyPath {
+  survived: Float64Array;
+  waste: Float64Array;
+}
+
+const legacyCache = new Map<string, LegacyPath>();
+
+function legacyPath(
+  key: string,
+  cohortStart: number,
+  cohortStocks: number[],
+  meanLife: number,
+  k: number,
+  meanLifeHist: number,
+  kHist: number,
+  startYear: number,
+  nYears: number,
+): LegacyPath {
+  const cacheKey = `${key}|${meanLife}|${k}`;
+  const hit = legacyCache.get(cacheKey);
+  if (hit) return hit;
+
+  const lambdaNew = meanLife / gammaFn(1 + 1 / k);
+  const lambdaHist = meanLifeHist / gammaFn(1 + 1 / kHist);
+
+  const survived = new Float64Array(nYears);
+  const waste = new Float64Array(nYears);
+  for (let i = 0; i < cohortStocks.length; i++) {
+    const stock = cohortStocks[i];
+    if (!(stock > 1e-9)) continue;
+    const age = startYear - (cohortStart + i);
+    const sstar = lambdaNew * Math.pow(age / lambdaHist, kHist / k);
+    const sAt = Math.exp(-Math.pow(sstar / lambdaNew, k));
+    if (!(sAt > 1e-3)) continue;
+    const o = stock / sAt;
+    let prev = stock;
+    for (let t = 0; t < nYears; t++) {
+      const cur = o * Math.exp(-Math.pow((t + 1 + sstar) / lambdaNew, k));
+      survived[t] += cur;
+      waste[t] += prev - cur;
+      prev = cur;
+    }
+  }
+
+  // A lifetime slider can mint a new key on every frame; keep the map bounded.
+  if (legacyCache.size > 4000) legacyCache.clear();
+  const path = { survived, waste };
+  legacyCache.set(cacheKey, path);
+  return path;
+}
+
+/**
+ * Cohorts in place at 2024 retire on a Weibull survival curve; each year the
+ * model builds whatever the target stock needs beyond what survived. Legacy
+ * cohorts are re-aged by Nelson's cumulative-exposure model so that changing
+ * the lifetime does not make the 2024 stock jump.
+ */
 function runForwardDsm(
+  key: string,
   cohortStart: number,
   cohortStocks: number[],
   targetStock: Float64Array,
@@ -401,66 +487,40 @@ function runForwardDsm(
     waste: new Float64Array(nYears),
   };
 
-  const lambdaNew = meanLife / gammaFn(1 + 1 / k);
-  const lambdaHist = meanLifeHist / gammaFn(1 + 1 / kHist);
+  const legacy = legacyPath(key, cohortStart, cohortStocks, meanLife, k, meanLifeHist, kHist, startYear, nYears);
 
+  const lambdaNew = meanLife / gammaFn(1 + 1 / k);
   const sGrid = new Float64Array(nYears + 1);
   for (let i = 0; i <= nYears; i++) sGrid[i] = Math.exp(-Math.pow(i / lambdaNew, k));
 
-  // Legacy cohorts, re-aged to the equivalent age on the new survival curve.
-  const preO: number[] = [];
-  const preSstar: number[] = [];
-  let prevPre: number[] = [];
-  for (let i = 0; i < cohortStocks.length; i++) {
-    const stock = cohortStocks[i];
-    if (!(stock > 1e-9)) continue;
-    const age = startYear - (cohortStart + i);
-    const sstar = lambdaNew * Math.pow(age / lambdaHist, kHist / k);
-    const sAt = Math.exp(-Math.pow(sstar / lambdaNew, k));
-    if (!(sAt > 1e-3)) continue;
-    preO.push(stock / sAt);
-    preSstar.push(sstar);
-    prevPre.push(stock);
-  }
-
-  const newYear: number[] = [];
-  const newO: number[] = [];
-  let prevNew: number[] = [];
-  const stockPre = new Float64Array(preO.length);
+  // Cohorts this run builds. Year i's cohort is at index i.
+  const built = new Float64Array(nYears);
+  const prevNew = new Float64Array(nYears);
 
   for (let i = 0; i < nYears; i++) {
-    const t = startYear + 1 + i;
     const target = targetStock[i];
     if (!Number.isFinite(target)) continue;
-    const dt = t - startYear;
 
-    let survived = 0;
-    let waste = 0;
-    for (let j = 0; j < preO.length; j++) {
-      const s = preO[j] * Math.exp(-Math.pow((dt + preSstar[j]) / lambdaNew, k));
-      stockPre[j] = s;
-      survived += s;
-      waste += prevPre[j] - s;
+    let survivedNew = 0;
+    let wasteNew = 0;
+    for (let j = 0; j < i; j++) {
+      const b = built[j];
+      if (b === 0) continue;
+      const cur = b * sGrid[i - j];
+      survivedNew += cur;
+      wasteNew += prevNew[j] - cur;
+      prevNew[j] = cur;
     }
-    const stockNew = new Array<number>(newO.length);
-    for (let j = 0; j < newO.length; j++) {
-      const s = newO[j] * sGrid[t - newYear[j]];
-      stockNew[j] = s;
-      survived += s;
-      waste += prevNew[j] - s;
-    }
+
+    const survived = legacy.survived[i] + survivedNew;
+    let waste = legacy.waste[i] + wasteNew;
     if (waste < 0) waste = 0;
 
     const production = Math.max(0, target - survived);
     const replacement = Math.min(waste, production);
 
-    if (production > 0) {
-      newYear.push(t);
-      newO.push(production);
-      stockNew.push(production);
-    }
-    prevNew = stockNew;
-    prevPre = Array.from(stockPre);
+    built[i] = production;
+    prevNew[i] = production;
 
     out.totalStock[i] = survived + production;
     out.production[i] = production;
@@ -513,13 +573,21 @@ export interface ModelRun {
   primary: {
     byGroup: Record<GroupKey, Float64Array>;
     byRegionGroup: Record<string, Record<GroupKey, Float64Array>>;
-    /** Leaf series: UNEP label for flows, end-use label for stocks. */
+    /** By leaf material, named as the historical data names it. */
     byGroupDetail: Record<GroupKey, Record<string, Float64Array>>;
     byRegionGroupDetail: Record<string, Record<GroupKey, Record<string, Float64Array>>>;
+    /** Stock groups only: where the material goes, by end use. */
+    byEndUse: Record<StockGroup, Record<string, Float64Array>>;
     total: Float64Array;
   };
   /** Secondary supply (recycled or downcycled), Mt/yr, ore-equivalent. */
   secondary: Record<GroupKey, Float64Array>;
+  /**
+   * The end-of-life pool and the demand it is measured against, both in
+   * material mass rather than ore. Their ratio is the ceiling on secondary
+   * supply: collect everything and you still only get this share.
+   */
+  scrap: Record<StockGroup, { retired: Float64Array; demand: Float64Array }>;
   /** In-use stock of the two stock materials, Mt. */
   stock: Record<'metal_ores' | 'nonmetallic_minerals', Float64Array>;
   population: Float64Array;
@@ -595,9 +663,14 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       byRegionGroup: {},
       byGroupDetail: emptyDetailRecord(),
       byRegionGroupDetail: {},
+      byEndUse: { metal_ores: {}, nonmetallic_minerals: {} },
       total: zeros(n),
     },
     secondary: emptyGroupRecord(n),
+    scrap: {
+      metal_ores: { retired: zeros(n), demand: zeros(n) },
+      nonmetallic_minerals: { retired: zeros(n), demand: zeros(n) },
+    },
     stock: { metal_ores: zeros(n), nonmetallic_minerals: zeros(n) },
     population: zeros(n),
     gdp: zeros(n),
@@ -740,6 +813,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
             subUse,
             superUse,
             res: runForwardDsm(
+              `${material}|${region}|${subUse}`,
               age.start,
               age.stocks,
               target,
@@ -775,6 +849,8 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       const primaryByRow = rows.map(() => new Float64Array(n));
       const secondaryTotal = out.secondary.metal_ores;
       const stockTotal = out.stock.metal_ores;
+      const scrap = out.scrap.metal_ores;
+      const endUse = out.primary.byEndUse.metal_ores;
       for (let i = 0; i < n; i++) {
         const eol = allocateEol(
           rows.map((r) => {
@@ -786,10 +862,15 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
           primaryByRow[j][i] = eol.primary[j] / grade[i];
           secondaryTotal[i] += eol.secondary[j] / grade[i];
           stockTotal[i] += rows[j].res.totalStock[i] / grade[i];
+          scrap.retired[i] += Math.max(0, rows[j].res.waste[i]);
+          scrap.demand[i] += Math.max(0, rows[j].res.production[i]);
+          const bucket = (endUse[SUB_USE_LABEL[rows[j].subUse]] ??= zeros(n));
+          bucket[i] += primaryByRow[j][i] + eol.secondary[j] / grade[i];
         }
       }
+      const leaf = STOCK_LEAF[material];
       for (let j = 0; j < rows.length; j++) {
-        addPrimary(region, 'metal_ores', SUB_USE_LABEL[rows[j].subUse], primaryByRow[j]);
+        addPrimary(region, 'metal_ores', leaf, primaryByRow[j]);
       }
     }
 
@@ -818,6 +899,8 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       const primaryByRow = mineralRows.map(() => new Float64Array(n));
       const secondaryTotal = out.secondary.nonmetallic_minerals;
       const stockTotal = out.stock.nonmetallic_minerals;
+      const scrap = out.scrap.nonmetallic_minerals;
+      const endUse = out.primary.byEndUse.nonmetallic_minerals;
       for (let i = 0; i < n; i++) {
         const eol = allocateEol(
           mineralRows.map((r, j) => {
@@ -834,10 +917,14 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
           primaryByRow[j][i] = eol.primary[j];
           secondaryTotal[i] += eol.secondary[j];
           stockTotal[i] += mineralRows[j].res.totalStock[i];
+          scrap.retired[i] += Math.max(0, mineralRows[j].res.waste[i]);
+          scrap.demand[i] += Math.max(0, mineralRows[j].res.production[i]);
+          const bucket = (endUse[SUB_USE_LABEL[mineralRows[j].subUse]] ??= zeros(n));
+          bucket[i] += primaryByRow[j][i] + eol.secondary[j];
         }
       }
       for (let j = 0; j < mineralRows.length; j++) {
-        addPrimary(region, 'nonmetallic_minerals', SUB_USE_LABEL[mineralRows[j].subUse], primaryByRow[j]);
+        addPrimary(region, 'nonmetallic_minerals', STOCK_LEAF['Non-metallic minerals'], primaryByRow[j]);
       }
     }
   }

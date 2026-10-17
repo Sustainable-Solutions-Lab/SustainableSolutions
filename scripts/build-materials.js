@@ -1291,6 +1291,39 @@ async function buildProjectionInputs() {
   };
 }
 
+// ── What each SSP means for temperature ──────────────────────────────────────
+// An SSP is a socioeconomic story, not a forcing level: ScenarioMIP runs each
+// one at several forcing levels, so "the temperature of SSP2" is a range, not
+// a number. The tool prints that range rather than inventing a single figure.
+
+async function buildSspWarming() {
+  const dir = resolve(INPUTS_DIR, 'IIASA_SSP/2026-MIP-CMIP7');
+  if (!existsSync(dir)) return null;
+  const file = readdirSync(dir).find((f) => f.startsWith('climate_iamc_data-'));
+  if (!file) return null;
+  const rows = await readCsv(resolve(dir, file));
+  const variable = 'Climate Assessment|Surface Temperature (GSAT)|Median [MAGICC v7.6.0a3]';
+  const by = {};
+  for (const r of rows) {
+    if (r.variable !== variable) continue;
+    const m = /SSP(\d)/.exec(r.scenario ?? '');
+    const v = cell(r['2100']);
+    if (!m || v == null) continue;
+    (by[`SSP${m[1]}`] ??= []).push(v);
+  }
+  const out = {};
+  for (const [ssp, vals] of Object.entries(by)) {
+    vals.sort((a, b) => a - b);
+    out[ssp] = {
+      min: vals[0],
+      median: vals[(vals.length - 1) >> 1],
+      max: vals[vals.length - 1],
+      runs: vals.length,
+    };
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 // ── Monte Carlo envelope ─────────────────────────────────────────────────────
 // The paper's 1,000 published draws, run back through the same model the
 // explorer uses, so the spread drawn behind someone's own scenario is the
@@ -1395,6 +1428,7 @@ async function buildEnvelope(modelInputs) {
 
   const started = Date.now();
   let matCagrs = [];
+  const scatter = { gdpGrowth: [], lever: {}, cagr: {} };
   for (const row of draws) {
     const run = runModel(modelInputs, leversFor(row));
     for (const place of places) {
@@ -1427,6 +1461,34 @@ async function buildEnvelope(modelInputs) {
     const t = run.primary.total;
     if (t[0] > 0 && t[nYears - 1] > 0) {
       matCagrs.push(Math.pow(t[nYears - 1] / t[0], 1 / (nYears - 1)) - 1);
+    }
+
+    // Where this run sits on every contour axis, and what it grew at — the
+    // cloud of published runs the contour panels draw underneath the surface.
+    const levers = leversFor(row);
+    const blend = model.resolveSsp(modelInputs, levers.sspU);
+    // Per person, to match the contour axis and the slider readout — not total
+    // GDP, which grows faster because population does too.
+    const gdp = run.gdp;
+    const pop = run.population;
+    const pc0 = gdp[0] / pop[0];
+    const pc1 = gdp[nYears - 1] / pop[nYears - 1];
+    scatter.gdpGrowth.push(round6(Math.pow(pc1 / pc0, 1 / (nYears - 1)) - 1));
+    for (const lever of model.INTENSITY_LEVER_KEYS) {
+      const spec = model.INTENSITY_LEVERS[lever];
+      const u = spec.flows.length
+        ? levers.flowIntensityU[spec.flows[0]]
+        : levers.stockIntensityU[spec.stocks[0][0]][spec.stocks[0][1]];
+      (scatter.lever[lever] ??= []).push(round6(model.leverWorldValue(modelInputs, lever, u, blend).value));
+    }
+    (scatter.lever.metalRecycling ??= []).push(round6((levers.recyclingFe + levers.recyclingNonFe) / 2));
+    (scatter.lever.mineralDowncycling ??= []).push(round6(levers.downcycling));
+    for (const g of [...GROUP_KEYS, 'total']) {
+      const series = g === 'total' ? run.primary.total : run.primary.byGroup[g];
+      const ok = series[0] > 0 && series[nYears - 1] > 0;
+      (scatter.cagr[g] ??= []).push(
+        ok ? round6(Math.pow(series[nYears - 1] / series[0], 1 / (nYears - 1)) - 1) : null,
+      );
     }
   }
 
@@ -1467,6 +1529,8 @@ async function buildEnvelope(modelInputs) {
     bands,
     /** Sorted world material-growth rates, for "where does my scenario sit". */
     worldGrowth: matCagrs.map((v) => round6(v)),
+    /** One point per published run, for the contour panels' background cloud. */
+    scatter,
     growthShareAbove: round6(matCagrs.filter((v) => v > 0).length / matCagrs.length),
   };
 }
@@ -1494,6 +1558,7 @@ async function run() {
   const sensitivity = await buildSensitivity();
   const modelInputs = await buildProjectionInputs();
   const envelope = await buildEnvelope(modelInputs);
+  const sspWarming = await buildSspWarming();
 
   await mkdir(OUT_DIR, { recursive: true });
 
@@ -1508,6 +1573,7 @@ async function run() {
     ...(sensitivity ? [['sensitivity.json', sensitivity]] : []),
     ...(modelInputs ? [['model-inputs.json', modelInputs]] : []),
     ...(envelope ? [['envelope.json', envelope]] : []),
+    ...(sspWarming ? [['ssp-warming.json', sspWarming]] : []),
   ];
   for (const [name, data] of outputs) {
     const path = resolve(OUT_DIR, name);

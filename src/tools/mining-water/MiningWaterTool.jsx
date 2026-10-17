@@ -52,12 +52,14 @@ const MINERAL_COLOR = Object.fromEntries(MINERALS)
 // Scenario lines: the paper's three IEA demand cases.
 const SCEN_COLOR = { 'Current policies': '#6B6B80', Pledges: '#D53E4F', 'Net-zero': '#3288BD' }
 // Latitude band the camera may show, as Food Emissions does with
-// region.latBounds: the Arctic and Antarctic carry no deposits and almost no
-// modelled basins (deposits run 42° S to 74° N), so they only cost space.
-const LAT_BOUNDS = [-56, 77]
-// Share of the viewport that may hang below the southern cut, so Patagonia
-// and Tasmania can clear the bottom-of-map attribution and phone chrome.
-const SOUTH_SLACK = 0.4
+// region.latBounds. North stops just past the northernmost deposit (73.6° N);
+// south just past Cape Horn (56° S). The bands beyond carry no deposits, and
+// north of ~75° N the AWARE basins thin into artefacts over Greenland.
+const LAT_BOUNDS = [-57, 75]
+// Share of the viewport that may hang below the southern cut: just enough
+// for Cape Horn to clear the attribution line and phone chrome. It also
+// sets how far out the user can zoom on a tall screen.
+const SOUTH_SLACK = 0.04
 
 // The water and mining work is a STEER project (Materials for Humanity).
 const STEER = {
@@ -254,10 +256,16 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
     const landFill = dark ? '#14142A' : '#F1F1DF'
     const outline = dark ? 'rgba(248,248,232,0.85)' : 'rgba(24,24,56,0.85)'
     const depStroke = dark ? 'rgba(248,248,232,0.75)' : 'rgba(24,24,56,0.75)'
-    if (!map.getSource('land')) map.addSource('land', { type: 'geojson', data: '/tools/food-emissions/ne110m-land.json' })
     if (!map.getSource('basins')) map.addSource('basins', { type: 'geojson', data: data.basins, promoteId: 'id' })
     if (!map.getSource('deposits')) map.addSource('deposits', { type: 'geojson', data: data.deposits })
-    map.addLayer({ id: 'land', type: 'fill', source: 'land', paint: { 'fill-color': landFill } })
+    // Land outside the model is drawn from the basins themselves (s = null)
+    // rather than from Natural Earth land, whose Eurasia polygon fills a band
+    // across the Arctic at these zooms.
+    map.addLayer({
+      id: 'land', type: 'fill', source: 'basins',
+      filter: ['==', ['get', 's'], null],
+      paint: { 'fill-color': landFill, 'fill-antialias': false },
+    })
     map.addLayer({
       id: 'basins', type: 'fill', source: 'basins',
       filter: ['!=', ['get', 's'], null],
@@ -337,11 +345,14 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
       if (Math.abs(lat - center.lat) < 1e-9) return {}
       return { center: { lng: center.lng, lat } }
     }
+    const startCenter = isSmall ? [-79.5, 21.5] : [-30, 20]
     const map = new maplibregl.Map({
       container: ref.current,
       style: basemapStyle(isDark ? 'dark' : 'light'),
-      center: isSmall ? [10, 15] : [8, 18],
-      zoom: isSmall ? 0.6 : 1.15,
+      // Opening view: the mid-Atlantic on desktop, Cuba on a phone. The
+      // minimum zoom below raises the zoom if the band needs it.
+      center: startCenter,
+      zoom: isSmall ? 1.2 : 1.15,
       minZoom: 0,
       maxZoom: 8,
       renderWorldCopies: false,
@@ -350,11 +361,17 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
     })
     // The band must always at least fill the viewport height, so no zoom
     // can reveal past the cuts. Recomputed on resize.
+    // The first call re-applies the opening centre: at the constructor's
+    // zoom the world can be narrower than the screen, which pins longitude
+    // to 0 until the zoom is raised.
+    let first = true
     const applyMinZoom = () => {
       const h = map.getContainer().clientHeight
       if (!h) return
-      map.setMinZoom(Math.max(0, Math.log2((h * (1 - SOUTH_SLACK)) / (512 * (yBot - yTop)))))
-      map.jumpTo({ center: map.getCenter() })
+      const minZ = Math.max(0, Math.log2((h * (1 - SOUTH_SLACK)) / (512 * (yBot - yTop))))
+      map.setMinZoom(minZ)
+      map.jumpTo(first ? { center: startCenter, zoom: Math.max(map.getZoom(), minZ) } : { center: map.getCenter() })
+      first = false
     }
     applyMinZoom()
     map.on('resize', applyMinZoom)
@@ -838,7 +855,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
             className="absolute font-mono text-ink-3 m-0"
             style={{ right: 8, bottom: 4, fontSize: 9, zIndex: 5, pointerEvents: 'none' }}
           >
-            Basins © AWARE 2.0 · Land © Natural Earth
+            Basins © AWARE 2.0 · Names: Natural Earth
           </p>
         </>
       )}

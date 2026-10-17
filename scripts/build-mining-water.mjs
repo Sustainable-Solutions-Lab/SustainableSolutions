@@ -386,10 +386,42 @@ async function main() {
     (byMineral[name] ??= []).push({ step: r.metric, mineral: r.Mineral, cost: num(r.Cost), water: num(r.Water) });
   }
 
+  // ── Water vs. cost view: one frontier per scenario and material ────────
+  // Per-mineral frontiers are the per-tonne intensities times cumulative
+  // 2025–2050 demand (Parameters/IEA_Demand.csv, kt/yr), which reproduces
+  // the paper's all-mineral totals exactly. Units: cost in billion USD
+  // (discounted), water in billion m³ world-equivalent, stress-weighted.
+  const demCsv = await fetchText(
+    `https://raw.githubusercontent.com/pmbusch/sustainable-mining/${REF}/Parameters/IEA_Demand.csv`,
+  );
+  const MINERALS = ['Copper', 'Nickel', 'Cobalt', 'Lithium'];
+  const demandMt = {}; // scenario name -> { Copper: Mt, ..., All: Mt }
+  for (const r of parseCsv(demCsv)) {
+    const name = scenName[r.Scenario];
+    if (!name) continue; // demand variants without public model results
+    demandMt[name] ??= Object.fromEntries([...MINERALS, 'All'].map((m) => [m, 0]));
+    for (const m of MINERALS) {
+      demandMt[name][m] += Number(r[m]) / 1e3;
+      demandMt[name].All += Number(r[m]) / 1e3;
+    }
+  }
+  const series = {};
+  for (const name of Object.keys(frontier)) {
+    series[name] = { All: frontier[name].map(({ step, cost, water, consumed, mines }) => ({ step, cost, water, consumed, mines })) };
+    for (const m of MINERALS) {
+      series[name][m] = byMineral[name]
+        .filter((r) => r.mineral === m)
+        .map((r) => ({ step: r.step, cost: (r.cost * demandMt[name][m]) / 1e3, water: (r.water * demandMt[name][m]) / 1e3 }))
+        .sort((a, b) => order(a.step) - order(b.step));
+    }
+  }
+  // Least- to most-demanding, as the view lists them.
+  const scenarios = Object.keys(frontier).sort((a, b) => demandMt[a].All - demandMt[b].All);
+
   const write = (name, obj) => writeFile(resolve(OUT, name), JSON.stringify(obj));
   await write('basins.json', { type: 'FeatureCollection', features });
   await write('deposits.json', { type: 'FeatureCollection', features: deposits });
-  await write('frontier.json', { scenarios: Object.keys(frontier), frontier, byMineral });
+  await write('frontier.json', { scenarios, series, demandMt });
   console.log(`wrote ${OUT}`);
 }
 

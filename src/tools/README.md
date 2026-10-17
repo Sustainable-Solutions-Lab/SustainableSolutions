@@ -12,6 +12,7 @@ Three kinds of thing live here. Each tool is mounted by a page at
 | `food-emissions/` | **config** | Thin config that drives `_map` — Food Emissions (global cropland-management GHGs). |
 | `materials/` | **config** | Thin config that drives `_engine` — global material flows (Busch et al.). The broad "materials explorer." Future `calue/` (land-use emissions) is added the same way. |
 | `magnets/` | **bespoke** | Standalone US rare-earth-magnet supply-chain explorer (its own components + a scenario grid from the rare-magnets-cem model, kept in Dropbox and fetched at build time: `docs/magnet-grid.md`). Does not use `_engine`. |
+| `mining-water/` | **bespoke** | Companion explorer to Busch et al. on water stress from mining battery minerals: AWARE 2.0 basins, deposits and the cost/water frontier. MapLibre over small GeoJSON built by `scripts/build-mining-water.mjs` from public sources; reuses `_map`'s basemap and footer. |
 | `contrails/` | **bespoke** | Booking-time contrail predictor (SVG great-circle map + Duffel flight search via `api/contrails.py`). Does not use `_engine`. |
 | `_shell/` | **shell** | `ToolShell.tsx` — the standard chrome every full-viewport tool wraps itself in. Not a tool by itself. |
 

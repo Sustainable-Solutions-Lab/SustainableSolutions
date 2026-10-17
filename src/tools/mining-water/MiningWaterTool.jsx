@@ -51,6 +51,14 @@ const MINERALS = [
 const MINERAL_COLOR = Object.fromEntries(MINERALS)
 // Scenario lines: the paper's three IEA demand cases.
 const SCEN_COLOR = { 'Current policies': '#6B6B80', Pledges: '#D53E4F', 'Net-zero': '#3288BD' }
+// Latitude band the camera may show, as Food Emissions does with
+// region.latBounds: the Arctic and Antarctic carry no deposits and almost no
+// modelled basins (deposits run 42° S to 74° N), so they only cost space.
+const LAT_BOUNDS = [-56, 77]
+// Share of the viewport that may hang below the southern cut, so Patagonia
+// and Tasmania can clear the bottom-of-map attribution and phone chrome.
+const SOUTH_SLACK = 0.4
+
 // Basins above this index count as stressed for the filter (the paper's
 // "moderate" threshold).
 const STRESSED = 0.1
@@ -249,6 +257,17 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
           0, dark ? 0.18 : 0.35, 0.25, dark ? 0.55 : 0.7, 0.45, 0.9],
       },
     })
+    // Basin borders: a deliberate hairline in ink, drawn as its own layer
+    // (fill antialiasing stays off, which drew seams, not borders). Fades
+    // in with zoom so the world view does not turn to mesh.
+    map.addLayer({
+      id: 'basin-borders', type: 'line', source: 'basins',
+      paint: {
+        'line-color': dark ? '#F8F8E8' : '#181838',
+        'line-opacity': ['interpolate', ['linear'], ['zoom'], 1, dark ? 0.08 : 0.07, 3, dark ? 0.2 : 0.18, 6, dark ? 0.32 : 0.3],
+        'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.3, 4, 0.5, 8, 0.9],
+      },
+    })
     map.addLayer({
       id: 'basin-hl', type: 'line', source: 'basins',
       filter: ['==', ['get', 'id'], -1],
@@ -284,18 +303,50 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
   // Create once.
   useEffect(() => {
     const isSmall = window.innerWidth < 768
+    // Latitude clamp inside MapLibre's camera pipeline (the same technique
+    // as _map/components/map/index.jsx): the update is corrected before it
+    // applies, so dragging at the limit stays smooth. North is hard; the
+    // south gets SOUTH_SLACK of the viewport as ocean.
+    const mc = maplibregl.MercatorCoordinate
+    const yTop = mc.fromLngLat({ lng: 0, lat: LAT_BOUNDS[1] }).y
+    const yBot = mc.fromLngLat({ lng: 0, lat: LAT_BOUNDS[0] }).y
+    const transformCameraUpdate = ({ center, zoom }) => {
+      const h = ref.current?.clientHeight
+      if (!h || center == null || zoom == null) return {}
+      const half = h / (512 * 2 ** zoom) / 2
+      const lo = yTop + half
+      let hi = yBot - half * (1 - 2 * SOUTH_SLACK)
+      if (lo > hi) hi = lo
+      const cy = Math.min(hi, Math.max(lo, mc.fromLngLat({ lng: 0, lat: center.lat }).y))
+      const lat = new mc(0.5, cy, 0).toLngLat().lat
+      if (Math.abs(lat - center.lat) < 1e-9) return {}
+      return { center: { lng: center.lng, lat } }
+    }
     const map = new maplibregl.Map({
       container: ref.current,
       style: basemapStyle(isDark ? 'dark' : 'light'),
-      center: isSmall ? [10, 5] : [5, 12],
-      zoom: isSmall ? 0.2 : 1.15,
+      center: isSmall ? [10, 15] : [8, 18],
+      zoom: isSmall ? 0.6 : 1.15,
       minZoom: 0,
       maxZoom: 8,
       renderWorldCopies: false,
       attributionControl: false,
+      transformCameraUpdate,
     })
+    // The band must always at least fill the viewport height, so no zoom
+    // can reveal past the cuts. Recomputed on resize.
+    const applyMinZoom = () => {
+      const h = map.getContainer().clientHeight
+      if (!h) return
+      map.setMinZoom(Math.max(0, Math.log2((h * (1 - SOUTH_SLACK)) / (512 * (yBot - yTop)))))
+      map.jumpTo({ center: map.getCenter() })
+    }
+    applyMinZoom()
+    map.on('resize', applyMinZoom)
     map.dragRotate.disable()
     map.touchZoomRotate.disableRotation()
+    map.touchPitch.disable()
+    map.keyboard?.disableRotation?.()
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
     mapRef.current = map
     map.on('load', () => {
@@ -581,7 +632,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
     return () => obs.disconnect()
   }, [])
 
-  // Matches the circle-radius expression at the opening zoom (≈1.15).
+  // Matches the circle-radius expression near the opening zoom.
   const radius = (v) => 1.3 + 0.9 * Math.sqrt(v)
   const shownItem = hover ?? (picked ? { ...picked, pinned: true } : null)
   const counts = useMemo(() => {

@@ -14,7 +14,16 @@ const currentSlugs = new Set(
 const cardable = (people as Person[]).filter(
   (p) => p.slug && !(p.status === 'alumni' && currentSlugs.has(p.slug)),
 );
-const all = cardable.slice().sort((a, b) => a.order - b.order);
+// The lab lead (order 1 in the People sheet) stays at the top; everyone
+// else runs alphabetically by surname, then first name. The sheet's other
+// order values no longer affect this page.
+const surname = (n: string) => (n ?? '').trim().split(/\s+/).pop()!.toLowerCase();
+const isLead = (p: Person) => p.order === 1;
+const all = cardable.slice().sort((a, b) =>
+  Number(isLead(b)) - Number(isLead(a)) ||
+  surname(a.name).localeCompare(surname(b.name)) ||
+  (a.name ?? '').localeCompare(b.name ?? ''),
+);
 
 // Sections are mutually exclusive — each person appears in exactly one.
 // Priority: alumni > current CIU > current main.

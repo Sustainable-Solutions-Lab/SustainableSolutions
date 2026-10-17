@@ -1008,6 +1008,469 @@ async function buildMeta(worldRows, regionRows) {
 
 // ── Run ─────────────────────────────────────────────────────────────────────
 
+// Local to this section: CSV cells arrive as strings, and every number shipped
+// to the browser is trimmed to six significant digits to keep the payload small.
+const cell = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Number(n.toPrecision(6)) : null;
+};
+const round6 = (v) => (Number.isFinite(v) ? Number(v.toPrecision(6)) : null);
+
+// ── Live projection model ────────────────────────────────────────────────────
+// src/tools/materials/model.ts runs the paper's model in the browser so that
+// moving a slider reprojects rather than interpolating a precomputed grid.
+// Everything it needs is assembled here; the shapes match ModelInputs.
+
+const SSP_SAMPLED = ['SSP1', 'SSP2', 'SSP3', 'SSP5'];
+const SSP_ALL = ['SSP1', 'SSP2', 'SSP3', 'SSP4', 'SSP5'];
+const MODEL_YEARS = [];
+for (let y = 2025; y <= 2060; y++) MODEL_YEARS.push(y);
+
+const BIOMASS_INTENSITY_KEYS = {
+  Crops: 'crops',
+  'Grazed biomass and fodder crops': 'grazed_biomass',
+  Wood: 'wood',
+  'Other biomass': 'other_biomass',
+};
+const BIOMASS_FLOW_LABEL = {
+  crops: 'Crops',
+  grazed_biomass: 'Grazed biomass and fodder crops',
+  other_biomass: 'Other biomass',
+  wood: 'Wood',
+};
+const FOSSIL_FLOW_LABEL = {
+  coal: 'Coal',
+  gas: 'Natural Gas',
+  oil: 'Petroleum',
+  other_fossil: 'Other fossil fuels',
+};
+
+// The four free-text end-use rows in the Excel sheets -> the model's key.
+function classifySuperUse(value) {
+  const s = String(value ?? '').toLowerCase();
+  if (s.includes('build')) return 'buildings';
+  if (s.includes('civil')) return 'civil';
+  if (s.includes('short')) return 'sl_products';
+  if (s.includes('machin')) return 'machinery';
+  return null;
+}
+
+function readSheet(file, name, skip = 0) {
+  const path = resolve(INPUTS_DIR, file);
+  if (!existsSync(path)) return [];
+  const wb = XLSX.read(readFileSync(path));
+  const ws = wb.Sheets[name];
+  if (!ws) return [];
+  return XLSX.utils.sheet_to_json(ws, { raw: true, range: skip });
+}
+
+async function buildProjectionInputs() {
+  const driverRows = await readCsv(sourceCsv('ssp_drivers.csv'));
+  if (driverRows.length === 0) return null;
+
+  const regions = [...new Set(driverRows.map((r) => r.region))].filter((r) => r && r !== 'World').sort();
+
+  const pickIndex = (variable, scenarios) => {
+    const out = {};
+    for (const s of scenarios) {
+      out[s] = {};
+      for (const r of regions) out[s][r] = new Array(MODEL_YEARS.length).fill(null);
+    }
+    for (const row of driverRows) {
+      if (row.variable !== variable) continue;
+      const y = Number(row.year);
+      const slot = out[row.scenario]?.[row.region];
+      if (!slot || y < 2025 || y > 2060) continue;
+      slot[y - 2025] = cell(row.index);
+    }
+    return out;
+  };
+
+  const gdpRows = (await readCsv(sourceCsv('gdp_region.csv'))).filter((r) => Number(r.year) === 2024);
+  const popRows = (await readCsv(sourceCsv('population_region_historical.csv'))).filter(
+    (r) => Number(r.year) === 2024,
+  );
+
+  // 2024 mass anchors for the Kaya flow materials, on the model's own
+  // categories: everything minor collapses into "Other biomass" / "Other
+  // fossil fuels", exactly as 02-RunSimulations.R collapses it.
+  const dict = new Map(
+    readSheet('Dict_Materials.xlsx', 'Categories').map((r) => [r.Material_22, r.Material_group]),
+  );
+  const namedBiomass = new Set(['Crops', 'Grazed biomass and fodder crops', 'Wood', 'Crop Residues']);
+  const namedFossil = new Set(['Coal', 'Natural Gas', 'Petroleum']);
+  const m2024 = {};
+  for (const row of await readCsv(sourceCsv('materials_region_DMC.csv'))) {
+    if (Number(row.year) !== 2024) continue;
+    const group = dict.get(row.material_category);
+    let label = row.material_category;
+    if (group === 'Biomass') label = namedBiomass.has(label) ? label : 'Other biomass';
+    else if (group === 'Fossil fuels') label = namedFossil.has(label) ? label : 'Other fossil fuels';
+    else continue;
+    m2024[row.Region] ??= {};
+    m2024[row.Region][label] = (m2024[row.Region][label] ?? 0) + (cell(row.DMC_Mt) ?? 0);
+  }
+
+  // 2024 intensity levels and each SSP's own target, by region.
+  const flowInt2024 = {};
+  const sspFlowTargets = {};
+  const addFlowRow = (region, key, row) => {
+    if (!region || !key) return;
+    flowInt2024[region] ??= {};
+    flowInt2024[region][key] ??= cell(row['kg/USD 2024']);
+    for (const ssp of SSP_ALL) {
+      const t = cell(row[ssp]);
+      if (t == null) continue;
+      sspFlowTargets[key] ??= {};
+      sspFlowTargets[key][ssp] ??= {};
+      sspFlowTargets[key][ssp][region] ??= t;
+    }
+  };
+  for (const row of readSheet('MatIntensity_Assumptions.xlsx', 'Biomass')) {
+    addFlowRow(row.Region, BIOMASS_INTENSITY_KEYS[row.Category], row);
+  }
+  for (const row of readSheet('MatIntensity_Assumptions.xlsx', 'FossilFuels')) {
+    addFlowRow(row.Region, row.fuel === 'Other fossil fuels' ? 'other_fossil' : row.fuel, row);
+  }
+
+  const stockInt2024 = { metal_ores: {}, nonmetallic_minerals: {} };
+  const sspStockTargets = { metal_ores: {}, nonmetallic_minerals: {} };
+  for (const [sheetName, group] of [
+    ['MetalOres', 'metal_ores'],
+    ['NonMetallicMinerals', 'nonmetallic_minerals'],
+  ]) {
+    for (const row of readSheet('MatIntensity_Assumptions.xlsx', sheetName, 1)) {
+      const key = classifySuperUse(row.end_use);
+      const region = row.region;
+      if (!key || !region) continue;
+      stockInt2024[group][region] ??= {};
+      stockInt2024[group][region][key] ??= cell(row['kg/USD 2024']);
+      for (const ssp of SSP_ALL) {
+        const t = cell(row[ssp]);
+        if (t == null) continue;
+        sspStockTargets[group][key] ??= {};
+        sspStockTargets[group][key][ssp] ??= {};
+        sspStockTargets[group][key][ssp][region] ??= t;
+      }
+    }
+  }
+
+  // Intensity ratio bounds (endpoint / 2024): flows differ by SSP, stocks don't.
+  const flowRatioBounds = {};
+  for (const r of await readCsv(sourceCsv('flow_ratio_bounds.csv'))) {
+    flowRatioBounds[r.mat_key] ??= {};
+    flowRatioBounds[r.mat_key][r.ssp] ??= {};
+    flowRatioBounds[r.mat_key][r.ssp][r.region] = [cell(r.ratio_min), cell(r.ratio_max)];
+  }
+  const stockRatioBounds = {};
+  for (const r of await readCsv(sourceCsv('stock_ratio_bounds.csv'))) {
+    stockRatioBounds[r.material_group] ??= {};
+    stockRatioBounds[r.material_group][r.mat_key] ??= {};
+    stockRatioBounds[r.material_group][r.mat_key][r.region] = [cell(r.ratio_min), cell(r.ratio_max)];
+  }
+  const intensityWorldBounds = {};
+  for (const r of await readCsv(sourceCsv('intensity_world_bounds.csv'))) {
+    intensityWorldBounds[r.param] = { min: cell(r.bound_min), max: cell(r.bound_max), base: cell(r.int_2024) };
+  }
+
+  // 2024 stock by end use, and the cohort age profile the dynamic stock model
+  // starts from. Upstream reports the profile in 5-year bins; spreading each
+  // bin evenly over the years it covers removes the staircase that would
+  // otherwise show up in the retirement curve.
+  const stock2024 = {};
+  for (const r of await readCsv(sourceCsv('stock_2024_total.csv'))) {
+    stock2024[r.material] ??= {};
+    stock2024[r.material][r.Region] ??= {};
+    stock2024[r.material][r.Region][r.sub_use] = cell(r.stock_Mt);
+  }
+
+  const bins = new Map();
+  for (const r of await readCsv(sourceCsv('stock_2024_age_profile.csv'))) {
+    const cohort = Number(r.cohort_year);
+    if (!Number.isFinite(cohort) || cohort < 1884) continue;
+    const key = `${r.material}\u0000${r.Region}\u0000${r.sub_use}`;
+    let byYear = bins.get(key);
+    if (!byYear) bins.set(key, (byYear = new Map()));
+    byYear.set(cohort, (byYear.get(cohort) ?? 0) + (cell(r.surviving_stock_Mt) ?? 0));
+  }
+  const ageProfile = {};
+  for (const [key, byYear] of bins) {
+    const [material, region, subUse] = key.split('\u0000');
+    const cohorts = [...byYear.keys()].sort((a, b) => a - b);
+    const dense = new Map();
+    let prev = null;
+    for (const cohort of cohorts) {
+      const gap = prev === null ? 5 : cohort - prev;
+      const perYear = byYear.get(cohort) / gap;
+      for (let y = cohort - gap + 1; y <= cohort; y++) dense.set(y, (dense.get(y) ?? 0) + perYear);
+      prev = cohort;
+    }
+    const start = Math.min(...dense.keys());
+    const end = Math.max(...dense.keys());
+    const stocks = [];
+    for (let y = start; y <= end; y++) stocks.push(round6(dense.get(y) ?? 0));
+    ageProfile[material] ??= {};
+    ageProfile[material][region] ??= {};
+    ageProfile[material][region][subUse] = { start, stocks };
+  }
+
+  // 2024 stock log-growth per end use: the model eases out of this rate rather
+  // than opening 2025 with a step.
+  const growthPairs = new Map();
+  for (const r of await readCsv(sourceCsv('stock_trajectory_subenduse.csv'))) {
+    const y = Number(r.year);
+    if (y !== 2023 && y !== 2024) continue;
+    const key = `${r.material}\u0000${r.Region}\u0000${r.sub_use}`;
+    const slot = growthPairs.get(key) ?? {};
+    slot[y] = cell(r.stock_Mt);
+    growthPairs.set(key, slot);
+  }
+  const stockGrowthHist = {};
+  for (const [key, v] of growthPairs) {
+    if (!(v[2023] > 0) || !(v[2024] > 0)) continue;
+    const [material, region, subUse] = key.split('\u0000');
+    stockGrowthHist[material] ??= {};
+    stockGrowthHist[material][region] ??= {};
+    stockGrowthHist[material][region][subUse] = Math.log(v[2024] / v[2023]);
+  }
+
+  const recycRows = readSheet('Recycling_Assumptions.xlsx', 'Recycling_EOL').filter(
+    (r) => r.Region && !String(r.Region).includes('—'),
+  );
+  const downRows = readSheet('Recycling_Assumptions.xlsx', 'Downcycling').filter(
+    (r) => r.Region && !String(r.Region).includes('—'),
+  );
+
+  const lifetimes = {};
+  for (const r of readSheet('MC_Assumptions.xlsx', 'Lifetimes')) {
+    if (!r.sub_use) continue;
+    lifetimes[r.sub_use] = {
+      superCategory: r.super_category,
+      meanLife: cell(r.mean_life),
+      k: cell(r.weibull_k),
+      meanMin: cell(r.mean_life_min),
+      meanMax: cell(r.mean_life_max),
+      kMin: cell(r.k_min),
+      kMax: cell(r.k_max),
+    };
+  }
+  const mcParams = {};
+  for (const r of readSheet('MC_Assumptions.xlsx', 'Parameters')) {
+    if (!r.parameter_name) continue;
+    mcParams[r.parameter_name] = { min: cell(r.min), central: cell(r.central_value), max: cell(r.max) };
+  }
+
+  return {
+    regions,
+    sspSampled: SSP_SAMPLED,
+    years: MODEL_YEARS,
+    baseYear: 2024,
+    forecastEnd: 2060,
+    popIndex: pickIndex('Population', SSP_SAMPLED),
+    gdppcIndex: pickIndex('GDP|PPP [per capita]', SSP_SAMPLED),
+    gdp2024: Object.fromEntries(gdpRows.map((r) => [r.Region, cell(r.GDP_2015USD)])),
+    pop2024: Object.fromEntries(popRows.map((r) => [r.Region, cell(r.population)])),
+    m2024,
+    flowInt2024,
+    stockInt2024,
+    flowRatioBounds,
+    stockRatioBounds,
+    intensityWorldBounds,
+    stock2024,
+    ageProfile,
+    stockGrowthHist,
+    recyclingNow: {
+      fe: Object.fromEntries(recycRows.map((r) => [r.Region, cell(r.Recycling_rate_Fe)])),
+      nonfe: Object.fromEntries(recycRows.map((r) => [r.Region, cell(r.Recycling_rate_NonFe)])),
+    },
+    downcyclingNow: Object.fromEntries(downRows.map((r) => [r.Region, cell(r['Downcycling rate'])])),
+    lifetimes,
+    mcParams,
+    gradeOre2024: { fe: 0.4, nonfe: 0.016 },
+    sspTargets: { flow: sspFlowTargets, stock: sspStockTargets },
+  };
+}
+
+// ── Monte Carlo envelope ─────────────────────────────────────────────────────
+// The paper's 1,000 published draws, run back through the same model the
+// explorer uses, so the spread drawn behind someone's own scenario is the
+// paper's spread at whatever slice they are looking at. Quantiles are taken
+// per measure: a ratio of medians is not the median of the ratio.
+
+const ENVELOPE_QUANTILES = [0.05, 0.25, 0.5, 0.75, 0.95];
+
+function quantileSorted(sorted, p) {
+  if (sorted.length === 0) return null;
+  const idx = (sorted.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+async function buildEnvelope(modelInputs) {
+  if (!modelInputs) return null;
+  const matrixPath = sourceCsv('mc_input_matrix.csv');
+  if (!existsSync(matrixPath)) {
+    console.log('[build-materials] no mc_input_matrix.csv — skipping envelope');
+    return null;
+  }
+  const draws = await readCsv(matrixPath);
+  if (draws.length === 0) return null;
+
+  const model = await import('../src/tools/materials/model.ts');
+  const { runModel, defaultLevers, GROUP_KEYS } = model;
+
+  // One draw becomes one parameter set exactly as 02-RunSimulations.R maps it:
+  // intensity draws stay in [0,1], global scalars land semi-uniformly either
+  // side of their central value.
+  const semi = (name, u) => {
+    const p = modelInputs.mcParams[name];
+    return u < 0.5 ? p.min + 2 * u * (p.central - p.min) : p.central + 2 * (u - 0.5) * (p.max - p.central);
+  };
+  const leversFor = (row) => {
+    const u = (k) => Number(row[k]);
+    const levers = defaultLevers(modelInputs);
+    levers.sspU = u('ssp_u');
+    levers.flowIntensityU = {
+      crops: u('intensity_crops_global'),
+      grazed_biomass: u('intensity_grazed_biomass_global'),
+      wood: u('intensity_wood_global'),
+      coal: u('intensity_coal_global'),
+      gas: u('intensity_gas_global'),
+      oil: u('intensity_oil_global'),
+    };
+    levers.stockIntensityU = {
+      metal_ores: {
+        buildings: u('intensity_buildings_metalOres_global'),
+        civil: u('intensity_civil_metalOres_global'),
+        machinery: u('intensity_machinery_metalOres_global'),
+        sl_products: u('intensity_sl_products_metalOres_global'),
+      },
+      nonmetallic_minerals: {
+        buildings: u('intensity_buildings_nonMetallic_global'),
+        civil: u('intensity_civil_nonMetallic_global'),
+      },
+    };
+    levers.recyclingFe = semi('RECYCLING_RATE_FE', u('recycling_rate_fe'));
+    levers.recyclingNonFe = semi('RECYCLING_RATE_NONFE', u('recycling_rate_nonfe'));
+    levers.downcycling = semi('DOWNCYCLING', u('downcycling'));
+    levers.gradeOreFe = semi('GRADE_ORE_FE', u('grade_ore_fe'));
+    levers.gradeOreNonFe = semi('GRADE_ORE_NONFE', u('grade_ore_nonfe'));
+    levers.targetYear = Math.round(semi('TARGET_YEAR', u('target_year')));
+    levers.convergenceYear = Math.round(semi('RECYC_CONVERGENCE_YR', u('recyc_convergence_yr')));
+    levers.maxSecondaryBuildCivil = semi('MAX_SECONDARY_BUILD_CIVIL', u('max_secondary_build_civil'));
+    levers.maxSecondaryRoads = semi('MAX_SECONDARY_ROADS', u('max_secondary_roads'));
+    levers.shareConcreteBuildings = semi('SHARE_CONCRETE_BUILDINGS', u('share_concrete_buildings'));
+    levers.shareConcreteCivil = semi('SHARE_CONCRETE_CIVIL', u('share_concrete_civil'));
+    levers.shareAggConcrete = semi('SHARE_AGG_CONCRETE', u('share_agg_concrete'));
+    levers.shareGranularRoad = semi('SHARE_GRANULAR_ROAD', u('share_granular_road'));
+    levers.lifetimeU = {
+      buildings: { mean: u('lifetime_mean_buildings'), k: u('lifetime_k_buildings') },
+      civil_infrastructure: {
+        mean: u('lifetime_mean_civil_infrastructure'),
+        k: u('lifetime_k_civil_infrastructure'),
+      },
+      machinery: { mean: u('lifetime_mean_machinery'), k: u('lifetime_k_machinery') },
+      short_lived: { mean: u('lifetime_mean_short_lived'), k: u('lifetime_k_short_lived') },
+    };
+    return levers;
+  };
+
+  const places = ['World', ...modelInputs.regions];
+  const groups = ['total', ...GROUP_KEYS];
+  const measures = ['consumption', 'perCapita', 'intensity'];
+  const nYears = modelInputs.years.length;
+
+  // samples[place][group][measure][year] = one value per run
+  const samples = {};
+  for (const place of places) {
+    samples[place] = {};
+    for (const group of groups) {
+      samples[place][group] = {};
+      for (const measure of measures) {
+        samples[place][group][measure] = Array.from({ length: nYears }, () => []);
+      }
+    }
+  }
+
+  const started = Date.now();
+  let matCagrs = [];
+  for (const row of draws) {
+    const run = runModel(modelInputs, leversFor(row));
+    for (const place of places) {
+      const world = place === 'World';
+      const pop = world ? run.population : run.popByRegion[place];
+      const gdp = world ? run.gdp : run.gdpByRegion[place];
+      if (!pop || !gdp) continue;
+      for (const group of groups) {
+        const series =
+          group === 'total'
+            ? world
+              ? run.primary.total
+              : GROUP_KEYS.reduce((acc, g) => {
+                  const s = run.primary.byRegionGroup[place]?.[g];
+                  if (s) for (let i = 0; i < nYears; i++) acc[i] += s[i];
+                  return acc;
+                }, new Float64Array(nYears))
+            : world
+              ? run.primary.byGroup[group]
+              : run.primary.byRegionGroup[place]?.[group];
+        if (!series) continue;
+        const bucket = samples[place][group];
+        for (let i = 0; i < nYears; i++) {
+          bucket.consumption[i].push(series[i]);
+          bucket.perCapita[i].push((series[i] * 1e6) / pop[i]);
+          bucket.intensity[i].push((series[i] * 1e9) / gdp[i]);
+        }
+      }
+    }
+    const t = run.primary.total;
+    if (t[0] > 0 && t[nYears - 1] > 0) {
+      matCagrs.push(Math.pow(t[nYears - 1] / t[0], 1 / (nYears - 1)) - 1);
+    }
+  }
+
+  const bands = {};
+  for (const place of places) {
+    bands[place] = {};
+    for (const group of groups) {
+      bands[place][group] = {};
+      for (const measure of measures) {
+        const out = { p05: [], p25: [], p50: [], p75: [], p95: [], min: [], max: [] };
+        for (let i = 0; i < nYears; i++) {
+          const sorted = samples[place][group][measure][i].slice().sort((a, b) => a - b);
+          if (sorted.length === 0) continue;
+          out.p05.push(round6(quantileSorted(sorted, 0.05)));
+          out.p25.push(round6(quantileSorted(sorted, 0.25)));
+          out.p50.push(round6(quantileSorted(sorted, 0.5)));
+          out.p75.push(round6(quantileSorted(sorted, 0.75)));
+          out.p95.push(round6(quantileSorted(sorted, 0.95)));
+          out.min.push(round6(sorted[0]));
+          out.max.push(round6(sorted[sorted.length - 1]));
+        }
+        bands[place][group][measure] = out;
+      }
+    }
+  }
+
+  matCagrs.sort((a, b) => a - b);
+  const secs = ((Date.now() - started) / 1000).toFixed(1);
+  console.log(
+    `[build-materials] envelope: ${draws.length} published draws re-run in ${secs}s; ` +
+      `world material growth ${(100 * matCagrs[0]).toFixed(2)}% to ${(100 * matCagrs[matCagrs.length - 1]).toFixed(2)}%/yr`,
+  );
+
+  return {
+    years: modelInputs.years,
+    runs: draws.length,
+    quantiles: ENVELOPE_QUANTILES,
+    bands,
+    /** Sorted world material-growth rates, for "where does my scenario sit". */
+    worldGrowth: matCagrs.map((v) => round6(v)),
+    growthShareAbove: round6(matCagrs.filter((v) => v > 0).length / matCagrs.length),
+  };
+}
+
 async function run() {
   console.log('[build-materials] reading from:');
   console.log(`  parameters: ${PARAMETERS_DIR}`);
@@ -1029,6 +1492,8 @@ async function run() {
   const extraFlows = await buildExtraFlows(years);
   const projections = await buildProjections();
   const sensitivity = await buildSensitivity();
+  const modelInputs = await buildProjectionInputs();
+  const envelope = await buildEnvelope(modelInputs);
 
   await mkdir(OUT_DIR, { recursive: true });
 
@@ -1041,6 +1506,8 @@ async function run() {
     ['ssp-drivers.json', sspDrivers],
     ...(projections ? [['projections.json', projections]] : []),
     ...(sensitivity ? [['sensitivity.json', sensitivity]] : []),
+    ...(modelInputs ? [['model-inputs.json', modelInputs]] : []),
+    ...(envelope ? [['envelope.json', envelope]] : []),
   ];
   for (const [name, data] of outputs) {
     const path = resolve(OUT_DIR, name);

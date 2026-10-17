@@ -23,6 +23,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { X } from 'lucide-react'
 import ToolShell from '../_shell/ToolShell'
 import { BusyOverlay } from '../_shell/busy-overlay.jsx'
 import { basemapStyle } from '../_map/components/map/basemap-style.jsx'
@@ -402,7 +403,7 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
     map.touchZoomRotate.disableRotation()
     map.touchPitch.disable()
     map.keyboard?.disableRotation?.()
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left')
     mapRef.current = map
     map.on('load', () => {
       addLayers(map, isDark)
@@ -486,7 +487,8 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [isDark, setIsDark] = useState(isDarkNow())
-  const [view, setView] = useState('map')
+  // Water vs. cost opens as a panel over the map rather than replacing it.
+  const [panelOpen, setPanelOpen] = useState(false)
   const [minerals, setMinerals] = useState(MINERALS.map(([m]) => m))
   const [stressedOnly, setStressedOnly] = useState(false)
   const [hover, setHover] = useState(null)
@@ -547,10 +549,10 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
 
       <div className="mb-4">
         <Eyebrow>View</Eyebrow>
-        <ToggleRow value={view} onChange={(v) => { setView(v); setDrawerOpen(false) }} options={[['map', 'Map'], ['tradeoff', 'Water vs. cost']]} />
+        <ToggleRow value={panelOpen ? 'tradeoff' : 'map'} onChange={(v) => { setPanelOpen(v === 'tradeoff'); setDrawerOpen(false) }} options={[['map', 'Map'], ['tradeoff', 'Water vs. cost']]} />
       </div>
 
-      {view === 'map' ? (
+      {(
         <>
           <div className="mb-4">
             <Eyebrow>Deposits</Eyebrow>
@@ -594,32 +596,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
             <Detail item={shownItem} onClose={() => setPicked(null)} />
           </div>
         </>
-      ) : (
-        data && (
-          <>
-            <div className="mb-4">
-              <Eyebrow>Demand scenario</Eyebrow>
-              <WordRow value={scenario} onChange={setScenario} options={data.scenarios.map((x) => [x, x])} />
-            </div>
-            <div className="mb-4">
-              <Eyebrow>Minerals</Eyebrow>
-              <WordRow value={material} onChange={setMaterial}
-                options={[['All', 'All'], ...MINERALS.map(([mi]) => [mi, mi])]} />
-            </div>
-            <div className="mb-4">
-              <Eyebrow>Impact</Eyebrow>
-              <WordRow value="water" onChange={() => {}} options={[['water', 'Water stress']]} />
-              <p className="text-ink-3 m-0" style={{ fontSize: 10.5, lineHeight: 1.45, marginTop: 6 }}>
-                The paper's fish biodiversity runs are not yet public; they will appear here when they are.
-              </p>
-            </div>
-            <p className="text-ink-3 m-0 mb-4" style={{ fontSize: 11, lineHeight: 1.45 }}>
-              Drag the red point along the curve, or focus it and use the arrow keys.
-            </p>
-          </>
-        )
       )}
-
       <div className="border-t border-rule" style={{ paddingTop: 8 }}>
         <p className="text-ink-3 m-0" style={{ fontSize: 10, lineHeight: 1.45 }}>
           Basins: AWARE 2.0 (Seitfudem, Berger &amp; Boulay, CC BY 4.0), simplified for display. Deposits and
@@ -645,18 +622,17 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
       rail={controls}
       drawerOpen={drawerOpen}
       onDrawerOpenChange={setDrawerOpen}
-      mainScroll={view === 'tradeoff'}
     >
       {error && (
         <p className="text-ink-2 p-6" style={{ fontSize: 14 }}>The data did not load ({error}). Reload the page to try again.</p>
       )}
       {!data && !error && <BusyOverlay busy label="Loading" />}
-      {data && view === 'map' && (
+      {data && (
         <>
           <MiningMap
             data={data}
             isDark={isDark}
-            minerals={minerals}
+            minerals={panelOpen && material !== 'All' ? [material] : minerals}
             stressedOnly={stressedOnly}
             onHover={setHover}
             onPick={setPicked}
@@ -664,7 +640,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
           />
           {/* Mobile: the rail is a drawer, so a tapped feature gets its card
               on the map, clear of the attribution strip and Safari's bar. */}
-          {picked && (
+          {picked && !panelOpen && (
             <div
               className="block md:hidden absolute z-10 border border-rule"
               style={{
@@ -677,7 +653,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
           )}
           {/* Mobile legend, as the map engine's: the rail's legend lives in
               the drawer on a phone. */}
-          {!picked && (
+          {!picked && !panelOpen && (
             <div
               className="block md:hidden absolute z-10"
               style={{
@@ -699,7 +675,44 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
           </p>
         </>
       )}
-      {data && view === 'tradeoff' && <WaterCost data={data} scenario={scenario} material={material} />}
+      {/* Water vs. cost panel: a floating card over the map on desktop, a
+          bottom sheet on a phone. The map stays live behind it, filtered to
+          the chosen mineral. */}
+      {data && panelOpen && (
+        <div
+          className="absolute z-20 flex flex-col border border-rule bg-paper overflow-hidden mw-panel"
+          role="dialog"
+          aria-label="Water vs. cost"
+        >
+          <div className="flex items-center justify-between shrink-0 px-3 pt-2.5 pb-1">
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none m-0">Water vs. cost</p>
+            <button
+              type="button"
+              onClick={() => setPanelOpen(false)}
+              aria-label="Close water vs. cost"
+              className="bg-transparent border-0 cursor-pointer p-1 text-ink-3 hover:text-ink inline-flex"
+            >
+              <X size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+          {/* Scenario and minerals live here too, so a phone needs no drawer. */}
+          <div className="shrink-0 px-3 pb-2 flex flex-col" style={{ gap: 6 }}>
+            <WordRow value={scenario} onChange={setScenario} options={data.scenarios.map((x) => [x, x])} />
+            <WordRow value={material} onChange={setMaterial} options={[['All', 'All'], ...MINERALS.map(([mi]) => [mi, mi])]} />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto border-t border-rule" style={{ paddingTop: 8 }}>
+            <WaterCost data={data} scenario={scenario} material={material} compact />
+          </div>
+          <style>{`
+            .mw-panel { left: 0; right: 0; bottom: 0; height: 66%; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+              box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08); }
+            @media (min-width: 768px) {
+              .mw-panel { left: auto; top: 12px; right: 12px; bottom: 28px; height: auto; width: min(560px, 52%);
+                border-radius: var(--radius-lg); }
+            }
+          `}</style>
+        </div>
+      )}
     </ToolShell>
   )
 }

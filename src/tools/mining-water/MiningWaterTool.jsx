@@ -17,10 +17,17 @@
  * public/tools/mining-water/. It reuses the engine's flat basemap, world land
  * underlay and footer, and wraps itself in ToolShell like every other tool.
  *
+ * Model runs. runs.json (scripts/build-mining-water-runs.mjs) adds the
+ * paper's demand sweep, the fish-protection runs and, for each run, which
+ * deposits the model mines. While the water vs. cost panel is open the map
+ * follows its point: deposits mined, added and dropped against the
+ * reference solution. Without runs.json the tool falls back to the
+ * published figure data.
+ *
  * Hover reads a feature on desktop; click or tap pins it to the card, which
  * is the touch equivalent.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { X } from 'lucide-react'
@@ -73,6 +80,22 @@ const STEER = {
 // Basins above this index count as stressed for the filter (the paper's
 // "moderate" threshold).
 const STRESSED = 0.1
+
+// Fish-protection thresholds offered in the panel (runs.json fish.series).
+const FISH_LEVELS = ['none', '95', '90', '80', '70', '60', '50']
+
+// runs.json stores, per run, one bit per deposit (ids order): does the
+// model mine it at all 2025–2050.
+function decodeBits(b64) {
+  const s = atob(b64)
+  const b = new Uint8Array(s.length)
+  for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i)
+  return b
+}
+const hasBit = (b, i) => (b[i >> 3] >> (i & 7)) & 1
+// Run state per deposit, as the map draws it: 1 mined in both, 2 added
+// (mined here, not at the reference), 3 dropped, 4 mined in neither.
+const RUN_STATE_LABEL = { 1: 'mined', 2: 'mined at this point, not at the reference', 3: 'mined at the reference, dropped here', 4: 'not mined' }
 
 const isDarkNow = () =>
   typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
@@ -215,11 +238,14 @@ function Detail({ item, onClose }) {
           ['Region', item.place ?? '—'],
           ['Basin water stress', item.s == null ? 'not in model' : `${pct(item.s)}, ${stressClass(item.s)}`],
           ['AWARE 2.0 factor', item.cf == null ? '—' : `${fmt(item.cf, 2)} m³-eq/m³`],
+          ...(item.fi != null ? [['Basin fish index', fmt(item.fi, 0)]] : []),
+          ...(item.run ? [['In the model run', RUN_STATE_LABEL[item.run]]] : []),
         ]
       : [
           ['Region', item.place ?? '—'],
           ['Water stress', item.s == null ? 'not in model' : `${pct(item.s)}, ${stressClass(item.s)}`],
           ['AWARE 2.0 factor', item.cf == null ? '—' : `${fmt(item.cf, 2)} m³-eq/m³`],
+          ...(item.fi != null ? [['Fish index', fmt(item.fi, 0)]] : []),
           ['Deposits in basin', item.count ? `${item.count} (${fmt(item.resTotal, 1)} Mt)` : 'none in the model'],
         ]
   return (
@@ -263,9 +289,44 @@ function Detail({ item, onClose }) {
   )
 }
 
+// Key to the deposit marks while the panel drives the map.
+function RunKey({ fishRef, closed }) {
+  const ink = 'var(--ink)'
+  const mark = (fill, stroke, sw, op = 1) => (
+    <svg width={12} height={12} aria-hidden="true" style={{ flexShrink: 0 }}>
+      <circle cx={6} cy={6} r={4.5} fill={fill} fillOpacity={op} stroke={stroke} strokeWidth={sw} />
+    </svg>
+  )
+  const items = [
+    [mark('var(--ink-3)', 'var(--rule-strong)', 0.6), 'mined'],
+    [mark('var(--ink-3)', ink, 1.6), 'added'],
+    [mark('none', 'var(--cardinal)', 1.5), 'dropped'],
+    [mark('var(--ink-3)', 'var(--rule)', 0.4, 0.15), 'not mined'],
+  ]
+  return (
+    <div className="px-3 pb-3">
+      <p className={eyebrowCls} style={eyebrowStyle}>On the map</p>
+      <div className="flex flex-wrap items-center text-ink-2" style={{ gap: '4px 12px', fontSize: 12 }}>
+        {items.map(([m, l]) => (
+          <span key={l} className="inline-flex items-center" style={{ gap: 5 }}>{m}{l}</span>
+        ))}
+        {closed && (
+          <span className="inline-flex items-center" style={{ gap: 5 }}>
+            <span aria-hidden="true" style={{ width: 12, height: 9, background: 'var(--ink)', opacity: 0.38, display: 'inline-block' }} />
+            closed to mining
+          </span>
+        )}
+      </div>
+      <p className="text-ink-3 m-0" style={{ fontSize: 10.5, lineHeight: 1.4, marginTop: 4 }}>
+        Deposits the model mines at the point on the curve, against {fishRef ? 'no protection at least cost' : 'the least-cost solution'}.
+      </p>
+    </div>
+  )
+}
+
 // ─── Map ─────────────────────────────────────────────────────────────────────
 
-function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, picked }) {
+function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, picked, runState, fishCut }) {
   const ref = useRef(null)
   const mapRef = useRef(null)
   const [ready, setReady] = useState(false)
@@ -281,7 +342,7 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
     const outline = dark ? 'rgba(248,248,232,0.85)' : 'rgba(24,24,56,0.85)'
     const depStroke = dark ? 'rgba(248,248,232,0.75)' : 'rgba(24,24,56,0.75)'
     if (!map.getSource('basins')) map.addSource('basins', { type: 'geojson', data: data.basins, promoteId: 'id' })
-    if (!map.getSource('deposits')) map.addSource('deposits', { type: 'geojson', data: data.deposits })
+    if (!map.getSource('deposits')) map.addSource('deposits', { type: 'geojson', data: data.deposits, promoteId: 'id' })
     // Land outside the model is drawn from the basins themselves (s = null)
     // rather than from Natural Earth land, whose Eurasia polygon fills a band
     // across the Arctic at these zooms.
@@ -315,11 +376,22 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
         'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.3, 4, 0.5, 8, 0.9],
       },
     })
+    // Basins closed to mining in the fish view: an ink veil, so the stress
+    // colour still reads through.
+    map.addLayer({
+      id: 'fish-closed', type: 'fill', source: 'basins',
+      filter: ['>', ['coalesce', ['get', 'fi'], 0], 1000],
+      paint: { 'fill-antialias': false, 'fill-color': dark ? '#F8F8E8' : '#181838', 'fill-opacity': dark ? 0.32 : 0.38 },
+    })
     map.addLayer({
       id: 'basin-hl', type: 'line', source: 'basins',
       filter: ['==', ['get', 'id'], -1],
       paint: { 'line-color': outline, 'line-width': 1.4 },
     })
+    // Run state (feature-state `st`, set while the water vs. cost panel is
+    // open): mined deposits as usual, added ones ringed in ink, dropped ones
+    // hollow with a cardinal ring, unmined ones faint.
+    const st = ['coalesce', ['feature-state', 'st'], 0]
     map.addLayer({
       id: 'deposits', type: 'circle', source: 'deposits',
       paint: {
@@ -328,9 +400,10 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
         'circle-radius': ['interpolate', ['linear'], ['zoom'],
           1, ['+', 1.2, ['*', 0.85, ['sqrt', ['get', 'res']]]],
           6, ['+', 2.5, ['*', 2.2, ['sqrt', ['get', 'res']]]]],
-        'circle-opacity': 0.85,
-        'circle-stroke-color': depStroke,
-        'circle-stroke-width': 0.5,
+        'circle-opacity': ['match', st, 3, 0, 4, 0.14, 0.85],
+        'circle-stroke-color': ['match', st, 2, dark ? '#F8F8E8' : '#181838', 3, '#8C1515', depStroke],
+        'circle-stroke-width': ['match', st, 2, 1.6, 3, 1.5, 0.5],
+        'circle-stroke-opacity': ['match', st, 4, 0.25, 1],
       },
     })
     map.addLayer({
@@ -414,12 +487,14 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
       kind: 'deposit', id: f.properties.id, mineral: f.properties.mineral, res: f.properties.res,
       basin: f.properties.basin, river: f.properties.river, place: f.properties.place,
       s: f.properties.s, cf: f.properties.cf, coords: f.geometry.coordinates,
+      fi: data.fishIndex?.[f.properties.basin] ?? null,
     })
     const basinFrom = (f) => {
       const id = f.properties.id
       const inBasin = data.deposits.features.filter((d) => d.properties.basin === id)
       return {
         kind: 'basin', id, river: f.properties.river, place: f.properties.place, s: f.properties.s, cf: f.properties.cf,
+        fi: f.properties.fi || null,
         count: inBasin.length, resTotal: inBasin.reduce((a, d) => a + d.properties.res, 0),
       }
     }
@@ -452,6 +527,8 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
       addLayers(map, isDark)
       applyFilter(map)
       applyHighlight(map)
+      applyRun(map)
+      applyFish(map)
     })
   }, [isDark]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -466,7 +543,20 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
     map.setFilter('deposit-hl', ['==', ['get', 'id'], picked?.kind === 'deposit' ? picked.id : -1])
     map.setFilter('basin-hl', ['==', ['get', 'id'], picked ? (picked.kind === 'basin' ? picked.id : picked.basin ?? -1) : -1])
   }
+  // Run state: one feature-state per deposit ID, cleared when the panel closes.
+  const applyRun = (map) => {
+    if (!map.getSource('deposits')) return
+    map.removeFeatureState({ source: 'deposits' })
+    if (!runState) return
+    for (const [id, v] of runState) map.setFeatureState({ source: 'deposits', id }, { st: v })
+  }
+  const applyFish = (map) => {
+    if (!map.getLayer('fish-closed')) return
+    map.setFilter('fish-closed', ['>', ['coalesce', ['get', 'fi'], 0], fishCut ?? 1000])
+  }
   useEffect(() => { if (ready) applyFilter(mapRef.current) }, [ready, minerals.join(','), stressedOnly]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (ready) applyRun(mapRef.current) }, [ready, runState]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (ready) applyFish(mapRef.current) }, [ready, fishCut]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (ready) applyHighlight(mapRef.current) }, [ready, picked]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -495,6 +585,9 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
   const [picked, setPicked] = useState(null)
   const [scenario, setScenario] = useState('Pledges')
   const [material, setMaterial] = useState('All')
+  const [impact, setImpact] = useState('water')
+  const [fishLevel, setFishLevel] = useState('70')
+  const [step, setStep] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   useEffect(() => {
@@ -502,7 +595,14 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
       if (!r.ok) throw new Error(`${n}.json: ${r.status}`)
       return r.json()
     })))
-      .then(([basins, deposits, frontier]) => setData({ basins, deposits, ...frontier }))
+      .then(async ([basins, deposits, frontier]) => {
+        // Model runs (per-deposit results, demand sweep, fish protection)
+        // are optional: without them the tool falls back to the paper's
+        // published figures.
+        const runs = await fetch(`${DATA}/runs.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+        if (runs) for (const f of basins.features) f.properties.fi = runs.fishIndex[f.properties.id] ?? 0
+        setData({ basins, deposits, ...frontier, runs, fishIndex: runs?.fishIndex ?? null })
+      })
       .catch((e) => setError(String(e)))
   }, [])
 
@@ -514,9 +614,57 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
     return () => obs.disconnect()
   }, [])
 
+  // The run behind the panel's point, and the reference it is compared with:
+  // the same curve's least-cost solution, or in the fish view the least-cost
+  // solution with no protection.
+  const fishView = impact === 'fish' && !!data?.runs
+  const run = useMemo(() => {
+    const r = data?.runs
+    if (!r || !panelOpen || step == null) return null
+    const arr = fishView ? r.fish.producing[fishLevel] : r.producing[scenario]
+    if (!arr) return null
+    const now = decodeBits(arr[step])
+    const ref = decodeBits(fishView ? r.fish.producing.none[0] : arr[0])
+    const state = new Map()
+    r.ids.forEach((id, i) => {
+      const a = hasBit(now, i), b = hasBit(ref, i)
+      state.set(id, a && b ? 1 : a ? 2 : b ? 3 : 4)
+    })
+    return state
+  }, [data, panelOpen, step, fishView, fishLevel, scenario])
+  // Deposit counts for the readout at every step of the selected curve,
+  // restricted to the chosen mineral.
+  const mineStats = useMemo(() => {
+    const r = data?.runs
+    if (!r || !panelOpen) return null
+    const arr = fishView ? r.fish.producing[fishLevel] : r.producing[scenario]
+    if (!arr) return null
+    const mat = fishView ? 'All' : material
+    const idx = []
+    if (mat === 'All') r.ids.forEach((_, i) => idx.push(i))
+    else {
+      const pos = new Map(r.ids.map((id, i) => [id, i]))
+      for (const f of data.deposits.features) if (f.properties.mineral === mat) idx.push(pos.get(f.properties.id))
+    }
+    const ref = decodeBits(fishView ? r.fish.producing.none[0] : arr[0])
+    return arr.map((b64) => {
+      const now = decodeBits(b64)
+      let n = 0, added = 0, dropped = 0
+      for (const i of idx) {
+        const a = hasBit(now, i), b = hasBit(ref, i)
+        if (a) n++
+        if (a && !b) added++
+        if (b && !a) dropped++
+      }
+      return { n, added, dropped, total: idx.length }
+    })
+  }, [data, panelOpen, fishView, fishLevel, scenario, material])
+  const onStep = useCallback((i) => setStep(i), [])
+  const withRun = (item) => (item && item.kind === 'deposit' && run ? { ...item, run: run.get(item.id) } : item)
+
   // Matches the circle-radius expression near the opening zoom.
   const radius = (v) => 1.3 + 0.9 * Math.sqrt(v)
-  const shownItem = hover ?? (picked ? { ...picked, pinned: true } : null)
+  const shownItem = withRun(hover ?? (picked ? { ...picked, pinned: true } : null))
   const counts = useMemo(() => {
     if (!data) return null
     let n = 0, mt = 0
@@ -632,11 +780,13 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
           <MiningMap
             data={data}
             isDark={isDark}
-            minerals={panelOpen && material !== 'All' ? [material] : minerals}
+            minerals={panelOpen && !fishView && material !== 'All' ? [material] : minerals}
             stressedOnly={stressedOnly}
             onHover={setHover}
             onPick={setPicked}
             picked={picked}
+            runState={run}
+            fishCut={panelOpen && fishView && fishLevel !== 'none' ? Number(fishLevel) : null}
           />
           {/* Mobile: the rail is a drawer, so a tapped feature gets its card
               on the map, clear of the attribution strip and Safari's bar. */}
@@ -648,7 +798,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
                 background: isDark ? 'rgba(12, 12, 28, 0.94)' : 'rgba(248, 248, 232, 0.94)',
               }}
             >
-              <Detail item={{ ...picked, pinned: true }} onClose={() => setPicked(null)} />
+              <Detail item={withRun({ ...picked, pinned: true })} onClose={() => setPicked(null)} />
             </div>
           )}
           {/* Mobile legend, as the map engine's: the rail's legend lives in
@@ -695,13 +845,27 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
               <X size={16} strokeWidth={1.5} />
             </button>
           </div>
-          {/* Scenario and minerals live here too, so a phone needs no drawer. */}
+          {/* Scenario and minerals live here too, so a phone needs no drawer.
+              The fish view is Net-zero, all minerals: the only runs made. */}
           <div className="shrink-0 px-3 pb-2 flex flex-col" style={{ gap: 6 }}>
-            <WordRow value={scenario} onChange={setScenario} options={data.scenarios.map((x) => [x, x])} />
-            <WordRow value={material} onChange={setMaterial} options={[['All', 'All'], ...MINERALS.map(([mi]) => [mi, mi])]} />
+            {data.runs && (
+              <WordRow value={impact} onChange={setImpact} options={[['water', 'Water stress'], ['fish', 'Fish biodiversity']]} />
+            )}
+            {fishView ? (
+              <div className="flex flex-wrap items-baseline" style={{ gap: '6px 14px' }}>
+                <span className="font-sans text-ink-3" style={{ fontSize: 12 }}>Close basins with fish index above</span>
+                <WordRow value={fishLevel} onChange={setFishLevel} options={FISH_LEVELS.map((k) => [k, k === 'none' ? 'None' : k])} />
+              </div>
+            ) : (
+              <>
+                <WordRow value={scenario} onChange={setScenario} options={data.scenarios.map((x) => [x, x])} />
+                <WordRow value={material} onChange={setMaterial} options={[['All', 'All'], ...MINERALS.map(([mi]) => [mi, mi])]} />
+              </>
+            )}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto border-t border-rule" style={{ paddingTop: 8 }}>
-            <WaterCost data={data} scenario={scenario} material={material} compact />
+            <WaterCost data={data} scenario={scenario} material={material} impact={fishView ? 'fish' : 'water'} fishLevel={fishLevel} mineStats={mineStats} onStep={onStep} compact />
+            {run && <RunKey fishRef={fishView} closed={fishView && fishLevel !== 'none'} />}
           </div>
           <style>{`
             .mw-panel { left: 0; right: 0; bottom: 0; height: 66%; border-radius: var(--radius-lg) var(--radius-lg) 0 0;

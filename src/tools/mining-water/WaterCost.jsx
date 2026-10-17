@@ -4,13 +4,16 @@
  * The "Water vs. cost" view: what it costs to cut the stress-weighted water
  * use of mining, after the paper's Figure 2a.
  *
- * Contours. The paper shades bands between frontiers solved for eleven
- * demand levels, coloured by cumulative metal demand. Only three of those
- * runs are public (the IEA Current policies, Pledges and Net-zero cases), so
- * the bands here are interpolated between those three frontiers by demand,
- * step by step along the cost ceiling. They show how the trade-off shifts
- * with demand; they are not additional model runs. Swap in the solved sweep
- * by adding its frontiers to frontier.json (scripts/build-mining-water.mjs).
+ * Contours. As in the paper, bands between frontiers solved for many
+ * demand levels, coloured by cumulative metal demand. For all four minerals
+ * they are the model's own demand sweep (runs.json, 31 levels). Single-
+ * mineral curves exist only for the three IEA cases, so for one mineral the
+ * bands are interpolated between those three by demand.
+ *
+ * Fish biodiversity. With impact = 'fish' the curves are Net-zero demand
+ * with basins above a fish-index threshold closed to mining (Extended Data
+ * Fig. 6). Deltas are then measured from the least-cost solution with no
+ * protection, so the cost of protection shows.
  *
  * Curve and handle. The selected scenario and material draw as a curve over
  * the bands. Its handle can be dragged along the curve (or moved with the
@@ -65,6 +68,7 @@ function at(pts, t) {
   const o = { step: lerp(stepNum(a.step), stepNum(b.step), f), cost: lerp(a.cost, b.cost, f), water: lerp(a.water, b.water, f) }
   if (a.mines != null) o.mines = lerp(a.mines, b.mines, f)
   if (a.consumed != null) o.consumed = lerp(a.consumed, b.consumed, f)
+  if (a.unmetCo != null) o.unmetCo = lerp(a.unmetCo, b.unmetCo, f)
   return o
 }
 
@@ -79,7 +83,9 @@ function useWidth(ref) {
   return w
 }
 
-export default function WaterCost({ data, scenario, material, compact = false }) {
+const fishLabel = (k) => (k === 'none' ? 'No protection' : `Fish index > ${k}`)
+
+export default function WaterCost({ data, scenario, material, compact = false, impact = 'water', fishLevel = '70', mineStats = null, onStep = null }) {
   const box = useRef(null)
   const svgRef = useRef(null)
   const w = useWidth(box)
@@ -87,17 +93,30 @@ export default function WaterCost({ data, scenario, material, compact = false })
   const narrow = w < 560
   const m = { t: 18, r: narrow ? 58 : 86, b: 48, l: narrow ? 52 : 64 }
 
-  const curves = data.scenarios.map((s) => ({ s, pts: data.series[s][material], d: data.demandMt[s][material] }))
-  const sel = data.series[scenario][material]
+  const fish = impact === 'fish' && data.runs?.fish
+  const curves = fish
+    ? Object.keys(data.runs.fish.series).map((k) => ({ s: k, label: fishLabel(k), pts: data.runs.fish.series[k] }))
+    : data.scenarios.map((s) => ({ s, label: s, pts: data.series[s][material], d: data.demandMt[s][material] }))
+  const sel = fish ? data.runs.fish.series[fishLevel] : data.series[scenario][material]
+  const selKey = fish ? fishLevel : scenario
   const n = sel.length
 
   // Default handle at the 10% cost ceiling; kept per scenario/material change.
   const tAt = (step) => Math.max(0, sel.findIndex((p) => p.step === step))
   const [t, setT] = useState(tAt('10%'))
-  useEffect(() => { setT(tAt('10%')) }, [scenario, material]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setT(tAt('10%')) }, [scenario, material, impact, fishLevel]) // eslint-disable-line react-hooks/exhaustive-deps
+  const stepIdx = Math.round(t)
+  useEffect(() => { onStep?.(stepIdx) }, [stepIdx, onStep])
 
-  // Interpolated demand bands between the scenario frontiers.
+  // Demand bands: the solved sweep for all minerals, else interpolated
+  // between the three IEA frontiers. None in the fish view.
+  const sweep = !fish && material === 'All' && data.runs?.sweep
   const bands = useMemo(() => {
+    if (fish) return null
+    if (sweep) {
+      const L = sweep.map((r) => ({ d: r.demand, pts: r.pts.map(([cost, water]) => ({ cost, water })) }))
+      return { dMin: L[0].d, dMax: L[L.length - 1].d, polys: L.slice(0, -1).map((l, k) => ({ d: (l.d + L[k + 1].d) / 2, pts: [...l.pts, ...[...L[k + 1].pts].reverse()] })) }
+    }
     const sorted = [...curves].sort((a, b) => a.d - b.d)
     const dMin = sorted[0].d, dMax = sorted[sorted.length - 1].d
     const levels = Array.from({ length: BANDS + 1 }, (_, k) => dMin + ((dMax - dMin) * k) / BANDS)
@@ -110,9 +129,9 @@ export default function WaterCost({ data, scenario, material, compact = false })
     }
     const lines = levels.map((d) => ({ d, pts: curveAt(d) }))
     return { dMin, dMax, polys: lines.slice(0, -1).map((l, k) => ({ d: (l.d + lines[k + 1].d) / 2, pts: [...l.pts, ...[...lines[k + 1].pts].reverse()] })) }
-  }, [data, material]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data, material, fish]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const allPts = curves.flatMap((c) => c.pts)
+  const allPts = [...curves.flatMap((c) => c.pts), ...(bands ? bands.polys.flatMap((b) => b.pts) : [])]
   const u = units(Math.max(...allPts.map((p) => p.cost)), Math.max(...allPts.map((p) => p.water)))
   const wMax = Math.max(...allPts.map((p) => p.water))
   const cMin = Math.min(...allPts.map((p) => p.cost)), cMax = Math.max(...allPts.map((p) => p.cost))
@@ -121,8 +140,11 @@ export default function WaterCost({ data, scenario, material, compact = false })
   const X = (p) => x(u.water(p.water)), Y = (p) => y(u.cost(p.cost))
   const ln = d3line().x(X).y(Y)
 
-  const base = sel[0]
+  // Deltas from the least-cost point; in the fish view, the least-cost point
+  // with no protection.
+  const base = fish ? data.runs.fish.series.none[0] : sel[0]
   const cur = at(sel, t)
+  const ms = mineStats?.[stepIdx]
 
   // Drag: project the pointer onto the curve in screen space.
   const dragging = useRef(false)
@@ -195,15 +217,17 @@ export default function WaterCost({ data, scenario, material, compact = false })
   }
 
   const dCost = cur.cost - base.cost, dWater = cur.water - base.water
-  const what = material === 'All' ? 'copper, nickel, cobalt and lithium' : material.toLowerCase()
+  const what = fish || material === 'All' ? 'copper, nickel, cobalt and lithium' : material.toLowerCase()
   const barW = narrow ? 8 : 12, barH = h - m.t - m.b, barX = w - m.r + (narrow ? 10 : 34)
 
   return (
     <div className={compact ? '' : 'h-full overflow-y-auto'}>
       <div className={compact ? 'px-3 pb-3' : 'mx-auto px-4 py-4 md:px-8 md:py-6'} style={compact ? null : { maxWidth: 1000 }}>
-        {!compact && <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Water vs. cost · {scenario} · {material === 'All' ? 'all minerals' : material}</p>}
+        {!compact && <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Water vs. cost · {fish ? `Net-zero · ${fishLabel(fishLevel)}` : `${scenario} · ${material === 'All' ? 'all minerals' : material}`}</p>}
         <p className="font-serif text-ink" style={{ fontSize: compact ? 17 : 23, fontWeight: 600, lineHeight: 1.2, margin: '2px 0 6px' }}>
-          What it costs to mine {what} where water is more available
+          {fish
+            ? 'What it costs to protect fish-rich rivers as well'
+            : <>What it costs to mine {what} where water is more available</>}
         </p>
         <p className="text-ink-2 m-0" style={{ fontSize: compact ? 12 : 13, lineHeight: 1.5, maxWidth: 680, display: compact ? 'none' : undefined }}>
           The model meets demand at least cost, then is allowed a little more cost and asked to cut stress-weighted
@@ -216,7 +240,7 @@ export default function WaterCost({ data, scenario, material, compact = false })
             width={w}
             height={h}
             role="img"
-            aria-label={`Cost against stress-weighted water use for ${what}, ${scenario} scenario`}
+            aria-label={`Cost against stress-weighted water use for ${what}, ${fish ? `Net-zero, ${fishLabel(fishLevel)}` : `${scenario} scenario`}`}
             style={{ display: 'block', touchAction: 'none' }}
             onPointerDown={onDown}
             onPointerMove={onMove}
@@ -228,7 +252,7 @@ export default function WaterCost({ data, scenario, material, compact = false })
             </defs>
             {/* Demand bands */}
             <g clipPath="url(#mw-plot)">
-              {bands.polys.map((b, k) => (
+              {bands?.polys.map((b, k) => (
                 <path key={k} d={`M${b.pts.map((p) => `${X(p)},${Y(p)}`).join('L')}Z`}
                   fill={demandColor((b.d - bands.dMin) / (bands.dMax - bands.dMin || 1))} fillOpacity={0.32} stroke="var(--paper)" strokeWidth={0.6} />
               ))}
@@ -251,11 +275,12 @@ export default function WaterCost({ data, scenario, material, compact = false })
               Total cost, {u.costLabel}
             </text>}
 
-            {/* Other scenarios, faint */}
-            {curves.filter((c) => c.s !== scenario).map((c) => (
+            {/* Other scenarios (or protection levels), faint. In the fish view
+                only the unprotected curve is labelled. */}
+            {curves.filter((c) => c.s !== selKey).map((c) => (
               <g key={c.s}>
-                <path d={ln(c.pts)} fill="none" stroke="var(--ink-3)" strokeWidth={1} strokeDasharray="3 3" />
-                <text x={X(c.pts[0]) + 6} y={Y(c.pts[0]) + 4} fill="var(--ink-3)" stroke="var(--paper)" strokeWidth={3} paintOrder="stroke" strokeLinejoin="round" style={{ font: '10.5px var(--font-sans)' }}>{c.s}</text>
+                <path d={ln(c.pts)} fill="none" stroke="var(--ink-3)" strokeWidth={1} strokeDasharray={fish && c.s !== 'none' ? '1 3' : '3 3'} />
+                {(!fish || c.s === 'none') && <text x={X(c.pts[0]) + 6} y={Y(c.pts[0]) + 4} fill="var(--ink-3)" stroke="var(--paper)" strokeWidth={3} paintOrder="stroke" strokeLinejoin="round" style={{ font: '10.5px var(--font-sans)' }}>{c.label}</text>}
               </g>
             ))}
 
@@ -284,8 +309,8 @@ export default function WaterCost({ data, scenario, material, compact = false })
                   style={{ font: '600 10.5px var(--font-mono)' }}>+{s}</text>
               )
             })}
-            <circle cx={X(base)} cy={Y(base)} r={5} fill="var(--paper)" stroke="var(--ink)" strokeWidth={1.5} />
-            <text x={X(base) + 9} y={Y(base) + 4} fill="var(--ink-2)" stroke="var(--paper)" strokeWidth={3} paintOrder="stroke" strokeLinejoin="round" style={{ font: '600 11px var(--font-sans)' }}>Least cost</text>
+            <circle cx={X(sel[0])} cy={Y(sel[0])} r={5} fill="var(--paper)" stroke="var(--ink)" strokeWidth={1.5} />
+            <text x={X(sel[0]) + 9} y={Y(sel[0]) + 4} fill="var(--ink-2)" stroke="var(--paper)" strokeWidth={3} paintOrder="stroke" strokeLinejoin="round" style={{ font: '600 11px var(--font-sans)' }}>Least cost</text>
             {/* Guides from the handle to the axes */}
             <line x1={X(cur)} x2={X(cur)} y1={Y(cur)} y2={h - m.b} stroke="var(--cardinal)" strokeDasharray="2 3" />
             <line x1={m.l} x2={X(cur)} y1={Y(cur)} y2={Y(cur)} stroke="var(--cardinal)" strokeDasharray="2 3" />
@@ -305,17 +330,17 @@ export default function WaterCost({ data, scenario, material, compact = false })
             />
 
             {/* Demand colour bar */}
-            {Array.from({ length: 40 }, (_, k) => (
+            {bands && Array.from({ length: 40 }, (_, k) => (
               <rect key={k} x={barX} y={m.t + (barH * (39 - k)) / 40} width={barW} height={barH / 40 + 0.5}
                 fill={demandColor(k / 39)} fillOpacity={0.55} />
             ))}
-            <rect x={barX} y={m.t} width={barW} height={barH} fill="none" stroke="var(--rule-strong)" />
-            {(narrow ? [0, 1] : [0, 0.5, 1]).map((f) => (
+            {bands && <rect x={barX} y={m.t} width={barW} height={barH} fill="none" stroke="var(--rule-strong)" />}
+            {bands && (narrow ? [0, 1] : [0, 0.5, 1]).map((f) => (
               <text key={f} x={barX + barW + 3} y={m.t + barH * (1 - f)} dy="0.32em" fill="var(--ink-3)" style={{ font: `${narrow ? 9 : 10}px var(--font-mono)` }}>
                 {fmt(lerp(bands.dMin, bands.dMax, f), bands.dMax < 100 ? 1 : 0)}
               </text>
             ))}
-            {!narrow && <text transform={`translate(${barX - 6},${m.t + barH / 2}) rotate(-90)`} textAnchor="middle" fill="var(--ink-3)" style={{ font: '10px var(--font-sans)' }}>
+            {bands && !narrow && <text transform={`translate(${barX - 6},${m.t + barH / 2}) rotate(-90)`} textAnchor="middle" fill="var(--ink-3)" style={{ font: '10px var(--font-sans)' }}>
               Metal demand 2025–2050, Mt
             </text>}
           </svg>
@@ -336,7 +361,7 @@ export default function WaterCost({ data, scenario, material, compact = false })
               {u.costFull(cur.cost)}
             </p>
             <p className="font-mono text-ink-3 m-0" style={{ fontSize: 11 }}>
-              {dCost >= 0 ? '+' : '−'}${fmt(Math.abs(dCost))}bn · {signed((100 * dCost) / base.cost, 1)}%
+              {dCost >= 0 ? '+' : '−'}${fmt(Math.abs(dCost))}bn · {signed((100 * dCost) / base.cost, 1)}%{fish ? ' vs. no protection' : ''}
             </p>
           </div>
           <div>
@@ -353,21 +378,29 @@ export default function WaterCost({ data, scenario, material, compact = false })
               <p className="font-mono text-ink-3 m-0" style={{ fontSize: 11 }}>average from least cost</p>
             </div>
           )}
-          {cur.mines != null && (
+          {ms && (
             <div>
-              <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Mines opened</p>
-              <p className="text-ink m-0" style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>{fmt(cur.mines)}</p>
-              <p className="font-mono text-ink-3 m-0" style={{ fontSize: 11 }}>{signed(cur.mines - base.mines, 0)} vs least cost</p>
+              <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Deposits mined</p>
+              <p className="text-ink m-0" style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>{fmt(ms.n)} of {fmt(ms.total)}</p>
+              <p className="font-mono text-ink-3 m-0" style={{ fontSize: 11 }}>+{ms.added} · −{ms.dropped} vs. {fish ? 'no protection' : 'least cost'}</p>
+            </div>
+          )}
+          {fish && cur.unmetCo > 0.005 && (
+            <div>
+              <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Cobalt demand unmet</p>
+              <p className="text-ink m-0" style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>{fmt(cur.unmetCo, 2)} Mt</p>
+              <p className="font-mono text-ink-3 m-0" style={{ fontSize: 11 }}>2025–2050 · cost includes a penalty for it</p>
             </div>
           )}
         </div>
 
         <p className="text-ink-3 m-0" style={{ fontSize: 11, lineHeight: 1.5, marginTop: 14, maxWidth: 760 }}>
           Costs are discounted US dollars; water is weighted by AWARE 2.0 basin scarcity (m³ world-equivalent).
-          Shading shows how the curve moves with cumulative metal demand (colour bar, Mt of metal, 2025–2050). It interpolates between the three IEA
-          scenarios the paper solves and published; it is not a set of additional model runs.
-          {' Fish biodiversity, the paper’s second impact measure, will join water stress here once those runs are public.'}
-          {material !== 'All' && ' Single-mineral curves are the paper’s per-kilogram results times that mineral’s demand; the cost ceiling applies to all four minerals together, so one mineral’s cost can move either way.'}
+          {bands && sweep && ' Shading shows how the curve moves with cumulative metal demand (colour bar, Mt of metal, 2025–2050): each band lies between two of the model’s 31 demand levels.'}
+          {bands && !sweep && ' Shading shows how the curve moves with cumulative metal demand (colour bar, Mt of metal, 2025–2050), interpolated between the three IEA scenarios, the only demand levels solved mineral by mineral.'}
+          {fish && ' Net-zero demand. Each dotted curve closes basins above a fish biodiversity index (0–100, from IUCN fish ranges) to mining, along with basins that drain into them; the tighter the threshold, the higher the curve. Shortfalls are cobalt, much of which lies in fish-rich basins; where demand goes unmet, total cost includes the model’s penalty for the shortfall.'}
+          {' The map behind follows the point: deposits the model mines at that cost ceiling, those it adds and those it drops.'}
+          {!fish && material !== 'All' && ' Single-mineral curves are the paper’s per-kilogram results times that mineral’s demand; the cost ceiling applies to all four minerals together, so one mineral’s cost can move either way.'}
         </p>
       </div>
     </div>

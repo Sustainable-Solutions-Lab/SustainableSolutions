@@ -24,6 +24,15 @@
 //   deposits.json   GeoJSON points, one per deposit, joined to its basin
 //   frontier.json   Pareto frontiers and per-mineral splits by scenario
 //
+// Basin names. AWARE 2.0 identifies basins by number only, so each basin is
+// named from two other public sources:
+//   - the river: the most prominent Natural Earth 10m river that runs
+//     through it, or, for a sub-basin with none, the river of the basin it
+//     drains into (AWARE's own subbasin_discharges_into_Basin_ID);
+//   - the place: the Natural Earth 10m state/province and country that
+//     cover most of it.
+// Small coastal basins with no named river are labelled by place alone.
+//
 // Usage:  node scripts/build-mining-water.mjs
 // Env:    MINING_WATER_REPO_REF  git ref of the replication repo (default main)
 
@@ -31,12 +40,23 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { unzipSync, strFromU8 } from 'fflate';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
+import * as XLSX from 'xlsx';
 
 const REF = process.env.MINING_WATER_REPO_REF ?? 'main';
 const RAW = `https://raw.githubusercontent.com/pmbusch/sustainable-mining/${REF}/Figures/Data_Figures`;
 const AWARE_KMZ =
   'https://zenodo.org/api/records/15133241/files/AWARE20_Native_CFs_geospatial.kmz/content';
+const AWARE_INTERMEDIATE =
+  'https://zenodo.org/api/records/15133241/files/AWARE20_Intermediate_Variables.xlsx/content';
+const NE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson';
 const OUT = resolve('public/tools/mining-water');
+// Natural Earth's formal country names, shortened for the detail card.
+const COUNTRY_SHORT = {
+  'United States of America': 'United States',
+  'United Republic of Tanzania': 'Tanzania',
+  'Republic of the Congo': 'Congo',
+  'Republic of Serbia': 'Serbia',
+};
 
 // Simplification tolerance in degrees. 0.04° keeps basin outlines legible at
 // the zooms the tool allows while holding basins.json near 2 MB.
@@ -102,6 +122,39 @@ function simplify(pts, tol) {
   return pts.filter((_, i) => keep[i]);
 }
 const r2 = (x) => Math.round(x * 100) / 100;
+
+// Coarse grid index over feature bounding boxes, for point lookups.
+function gridIndex(feats, cell = 2) {
+  const grid = new Map();
+  const boxes = feats.map((f) => {
+    let x0 = 180, y0 = 90, x1 = -180, y1 = -90;
+    const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+    for (const poly of polys) for (const [x, y] of poly[0]) {
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    return [x0, y0, x1, y1];
+  });
+  boxes.forEach(([x0, y0, x1, y1], i) => {
+    for (let gx = Math.floor(x0 / cell); gx <= Math.floor(x1 / cell); gx++)
+      for (let gy = Math.floor(y0 / cell); gy <= Math.floor(y1 / cell); gy++) {
+        const k = gx + ':' + gy;
+        if (!grid.has(k)) grid.set(k, []);
+        grid.get(k).push(i);
+      }
+  });
+  return (x, y) => {
+    for (const i of grid.get(Math.floor(x / cell) + ':' + Math.floor(y / cell)) ?? []) {
+      const [x0, y0, x1, y1] = boxes[i];
+      if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+      if (booleanPointInPolygon([x, y], feats[i])) return i;
+    }
+    return -1;
+  };
+}
+
+async function fetchJson(url) {
+  return JSON.parse(await fetchText(url));
+}
 
 async function main() {
   await mkdir(OUT, { recursive: true });
@@ -169,6 +222,93 @@ async function main() {
   }
   console.log(`basins ${features.length}, vertices ${nIn} -> ${nOut}`);
 
+  // ── Basin names ────────────────────────────────────────────────────────
+  console.log('Naming basins from Natural Earth…');
+  const [admin1, rivers] = await Promise.all([
+    fetchJson(`${NE}/ne_10m_admin_1_states_provinces.geojson`),
+    fetchJson(`${NE}/ne_10m_rivers_lake_centerlines.geojson`),
+  ]);
+  const basinAt = gridIndex(features);
+  const adminAt = gridIndex(admin1.features);
+
+  // Place: majority vote of the state/province under the basin's vertices
+  // and its bounding-box centre.
+  const place = features.map((f) => {
+    const pts = [];
+    for (const poly of f.geometry.coordinates) {
+      const ring = poly[0];
+      const step = Math.max(1, Math.floor(ring.length / 10));
+      for (let i = 0; i < ring.length; i += step) pts.push(ring[i]);
+    }
+    const votes = new Map();
+    for (const [x, y] of pts) {
+      const a = adminAt(x, y);
+      if (a < 0) continue;
+      const p = admin1.features[a].properties;
+      const country = COUNTRY_SHORT[p.admin] ?? p.admin;
+      const label = [p.name, country].filter(Boolean).join(', ');
+      votes.set(label, (votes.get(label) ?? 0) + 1);
+    }
+    let best = null, n = 0;
+    for (const [k, v] of votes) if (v > n) { best = k; n = v; }
+    return best;
+  });
+
+  // River: the most prominent (lowest scalerank) named river with a vertex
+  // in the basin; ties go to the river with more vertices there.
+  const riverHits = new Map(); // basin index -> Map(name -> {rank, n})
+  for (const r of rivers.features) {
+    const p = r.properties;
+    if (p.featurecla !== 'River') continue;
+    const name = p.name_en || p.name;
+    if (!name) continue;
+    const lines = r.geometry.type === 'LineString' ? [r.geometry.coordinates] : r.geometry.coordinates;
+    for (const line of lines) for (const [x, y] of line) {
+      const b = basinAt(x, y);
+      if (b < 0) continue;
+      if (!riverHits.has(b)) riverHits.set(b, new Map());
+      const h = riverHits.get(b);
+      const cur = h.get(name) ?? { rank: p.scalerank ?? 99, n: 0 };
+      cur.n++;
+      h.set(name, cur);
+    }
+  }
+  const riverOf = new Map();
+  for (const [b, h] of riverHits) {
+    let best = null;
+    for (const [name, v] of h)
+      if (!best || v.rank < best.rank || (v.rank === best.rank && v.n > best.n)) best = { name, ...v };
+    riverOf.set(features[b].properties.id, best.name);
+  }
+
+  // Sub-basins without a river of their own take the river of the basin
+  // they drain into, per AWARE's own hierarchy.
+  console.log('Reading the AWARE 2.0 basin hierarchy…');
+  const ir = await fetch(AWARE_INTERMEDIATE, { headers: HEADERS });
+  if (!ir.ok) throw new Error(`${AWARE_INTERMEDIATE} -> ${ir.status}`);
+  const wb = XLSX.read(new Uint8Array(await ir.arrayBuffer()), { type: 'array', sheets: 'additional_information' });
+  const parent = new Map();
+  for (const r of XLSX.utils.sheet_to_json(wb.Sheets.additional_information)) {
+    const into = Number(r.subbasin_discharges_into_Basin_ID);
+    if (into > 0 && into !== Number(r.Basin_ID)) parent.set(Number(r.Basin_ID), into);
+  }
+  const riverFor = (id) => {
+    for (let k = 0, cur = id; k < 30 && cur != null; k++, cur = parent.get(cur)) {
+      if (riverOf.has(cur)) return riverOf.get(cur);
+    }
+    return null;
+  };
+
+  let named = 0, placed = 0;
+  features.forEach((f, i) => {
+    const river = riverFor(f.properties.id);
+    f.properties.river = river;
+    f.properties.place = place[i];
+    if (river) named++;
+    if (place[i]) placed++;
+  });
+  console.log(`basins with a river name ${named}, with a place ${placed} of ${features.length}`);
+
   // ── Deposits, joined to the basin they sit in ──────────────────────────
   const bboxes = features.map((f) => {
     let x0 = 180, y0 = 90, x1 = -180, y1 = -90;
@@ -208,6 +348,8 @@ async function main() {
         // Contained resources, million tonnes of metal.
         res: Math.round(Number(r.resources) * 1000) / 1000,
         basin: hit ? hit.properties.id : null,
+        river: hit ? hit.properties.river : null,
+        place: hit ? hit.properties.place : null,
         s: hit ? hit.properties.s : null,
         cf: hit ? hit.properties.cf : null,
       },
@@ -244,10 +386,42 @@ async function main() {
     (byMineral[name] ??= []).push({ step: r.metric, mineral: r.Mineral, cost: num(r.Cost), water: num(r.Water) });
   }
 
+  // ── Water vs. cost view: one frontier per scenario and material ────────
+  // Per-mineral frontiers are the per-tonne intensities times cumulative
+  // 2025–2050 demand (Parameters/IEA_Demand.csv, kt/yr), which reproduces
+  // the paper's all-mineral totals exactly. Units: cost in billion USD
+  // (discounted), water in billion m³ world-equivalent, stress-weighted.
+  const demCsv = await fetchText(
+    `https://raw.githubusercontent.com/pmbusch/sustainable-mining/${REF}/Parameters/IEA_Demand.csv`,
+  );
+  const MINERALS = ['Copper', 'Nickel', 'Cobalt', 'Lithium'];
+  const demandMt = {}; // scenario name -> { Copper: Mt, ..., All: Mt }
+  for (const r of parseCsv(demCsv)) {
+    const name = scenName[r.Scenario];
+    if (!name) continue; // demand variants without public model results
+    demandMt[name] ??= Object.fromEntries([...MINERALS, 'All'].map((m) => [m, 0]));
+    for (const m of MINERALS) {
+      demandMt[name][m] += Number(r[m]) / 1e3;
+      demandMt[name].All += Number(r[m]) / 1e3;
+    }
+  }
+  const series = {};
+  for (const name of Object.keys(frontier)) {
+    series[name] = { All: frontier[name].map(({ step, cost, water, consumed, mines }) => ({ step, cost, water, consumed, mines })) };
+    for (const m of MINERALS) {
+      series[name][m] = byMineral[name]
+        .filter((r) => r.mineral === m)
+        .map((r) => ({ step: r.step, cost: (r.cost * demandMt[name][m]) / 1e3, water: (r.water * demandMt[name][m]) / 1e3 }))
+        .sort((a, b) => order(a.step) - order(b.step));
+    }
+  }
+  // Least- to most-demanding, as the view lists them.
+  const scenarios = Object.keys(frontier).sort((a, b) => demandMt[a].All - demandMt[b].All);
+
   const write = (name, obj) => writeFile(resolve(OUT, name), JSON.stringify(obj));
   await write('basins.json', { type: 'FeatureCollection', features });
   await write('deposits.json', { type: 'FeatureCollection', features: deposits });
-  await write('frontier.json', { scenarios: Object.keys(frontier), frontier, byMineral });
+  await write('frontier.json', { scenarios, series, demandMt });
   console.log(`wrote ${OUT}`);
 }
 

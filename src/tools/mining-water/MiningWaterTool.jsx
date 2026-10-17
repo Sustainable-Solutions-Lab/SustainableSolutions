@@ -23,12 +23,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { scaleLinear } from 'd3-scale'
-import { line as d3line } from 'd3-shape'
 import ToolShell from '../_shell/ToolShell'
 import { BusyOverlay } from '../_shell/busy-overlay.jsx'
 import { basemapStyle } from '../_map/components/map/basemap-style.jsx'
 import { ToolFooter } from '../_map/components/sidebar/tool-footer.jsx'
+import WaterCost from './WaterCost.jsx'
 
 const DATA = '/tools/mining-water'
 
@@ -51,6 +50,25 @@ const MINERALS = [
 const MINERAL_COLOR = Object.fromEntries(MINERALS)
 // Scenario lines: the paper's three IEA demand cases.
 const SCEN_COLOR = { 'Current policies': '#6B6B80', Pledges: '#D53E4F', 'Net-zero': '#3288BD' }
+// Latitude band the camera may show, as Food Emissions does with
+// region.latBounds. North stops just past the northernmost deposit (73.6° N);
+// south just past Cape Horn (56° S). The bands beyond carry no deposits, and
+// north of ~75° N the AWARE basins thin into artefacts over Greenland.
+const LAT_BOUNDS = [-57, 75]
+// Share of the viewport that may hang below the southern cut: just enough
+// for Cape Horn to clear the attribution line and phone chrome. It also
+// sets how far out the user can zoom on a tall screen.
+const SOUTH_SLACK = 0.04
+
+// The water and mining work is a STEER project (Materials for Humanity).
+const STEER = {
+  name: 'STEER',
+  url: 'https://steer-stanford.webflow.io/',
+  logo: '/logos/steer/STEER-forweb-light.png',
+  logoDark: '/logos/steer/STEER-forweb-dark.png',
+  note: <>A STEER project at Stanford ↗</>,
+}
+
 // Basins above this index count as stressed for the filter (the paper's
 // "moderate" threshold).
 const STRESSED = 0.1
@@ -67,6 +85,10 @@ const stressClass = (s) =>
     : s >= STRESSED ? 'moderate'
     : s >= 0.01 ? 'low'
     : 'very low'
+// Basin names come from the build script: the river it lies on (or drains
+// to) and the state/province and country under it. AWARE itself numbers them.
+const basinName = (river, place) =>
+  river ? `${river} basin` : place ? `Basin in ${place.split(', ')[0]}` : 'Unnamed basin'
 const latlon = ([x, y]) => `${fmt(Math.abs(y), 1)}° ${y >= 0 ? 'N' : 'S'}, ${fmt(Math.abs(x), 1)}° ${x >= 0 ? 'E' : 'W'}`
 
 const eyebrowCls = 'font-mono text-xs uppercase tracking-wider text-ink-3 leading-none'
@@ -81,6 +103,30 @@ function Eyebrow({ children }) {
 function ToggleRow({ value, options, onChange }) {
   return (
     <div className="flex gap-4">
+      {options.map(([v, label]) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          aria-pressed={value === v}
+          className={[
+            'bg-transparent border-0 cursor-pointer p-0',
+            'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
+            'transition-colors hover:text-ink',
+            value === v ? 'font-bold text-ink underline' : 'font-normal text-ink-3',
+          ].join(' ')}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// Clickable words, as the View toggle, wrapping onto more lines as needed.
+function WordRow({ value, options, onChange }) {
+  return (
+    <div className="flex flex-wrap" style={{ gap: '6px 14px' }}>
       {options.map(([v, label]) => (
         <button
           key={v}
@@ -164,11 +210,13 @@ function Detail({ item, onClose }) {
       ? [
           ['Contained resources', `${fmt(item.res, 2)} Mt metal`],
           ['Location', latlon(item.coords)],
-          ['Basin', item.basin == null ? '—' : `#${item.basin}`],
+          ['Basin', item.basin == null ? '—' : basinName(item.river, item.place)],
+          ['Region', item.place ?? '—'],
           ['Basin water stress', item.s == null ? 'not in model' : `${pct(item.s)}, ${stressClass(item.s)}`],
           ['AWARE 2.0 factor', item.cf == null ? '—' : `${fmt(item.cf, 2)} m³-eq/m³`],
         ]
       : [
+          ['Region', item.place ?? '—'],
           ['Water stress', item.s == null ? 'not in model' : `${pct(item.s)}, ${stressClass(item.s)}`],
           ['AWARE 2.0 factor', item.cf == null ? '—' : `${fmt(item.cf, 2)} m³-eq/m³`],
           ['Deposits in basin', item.count ? `${item.count} (${fmt(item.resTotal, 1)} Mt)` : 'none in the model'],
@@ -183,7 +231,7 @@ function Detail({ item, onClose }) {
               {item.mineral} deposit
             </span>
           ) : (
-            `Basin #${item.id}`
+            basinName(item.river, item.place)
           )}
         </p>
         {item.pinned && onClose && (
@@ -205,11 +253,11 @@ function Detail({ item, onClose }) {
           </div>
         ))}
       </dl>
-      {item.kind === 'deposit' && (
-        <p className="text-ink-3 m-0" style={{ fontSize: 10, lineHeight: 1.4, marginTop: 6 }}>
-          Deposit {item.id}. Names, grades and costs are licensed from S&amp;P Global and not shown.
-        </p>
-      )}
+      <p className="text-ink-3 m-0" style={{ fontSize: 10, lineHeight: 1.4, marginTop: 6 }}>
+        {item.kind === 'deposit'
+          ? <>Deposit {item.id}{item.basin != null ? `, AWARE basin ${item.basin}` : ''}. Deposit names, grades and costs are licensed from S&amp;P Global and not shown.</>
+          : <>AWARE basin {item.id}. Named from Natural Earth rivers and provinces.</>}
+      </p>
     </div>
   )
 }
@@ -231,10 +279,16 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
     const landFill = dark ? '#14142A' : '#F1F1DF'
     const outline = dark ? 'rgba(248,248,232,0.85)' : 'rgba(24,24,56,0.85)'
     const depStroke = dark ? 'rgba(248,248,232,0.75)' : 'rgba(24,24,56,0.75)'
-    if (!map.getSource('land')) map.addSource('land', { type: 'geojson', data: '/tools/food-emissions/ne110m-land.json' })
     if (!map.getSource('basins')) map.addSource('basins', { type: 'geojson', data: data.basins, promoteId: 'id' })
     if (!map.getSource('deposits')) map.addSource('deposits', { type: 'geojson', data: data.deposits })
-    map.addLayer({ id: 'land', type: 'fill', source: 'land', paint: { 'fill-color': landFill } })
+    // Land outside the model is drawn from the basins themselves (s = null)
+    // rather than from Natural Earth land, whose Eurasia polygon fills a band
+    // across the Arctic at these zooms.
+    map.addLayer({
+      id: 'land', type: 'fill', source: 'basins',
+      filter: ['==', ['get', 's'], null],
+      paint: { 'fill-color': landFill, 'fill-antialias': false },
+    })
     map.addLayer({
       id: 'basins', type: 'fill', source: 'basins',
       filter: ['!=', ['get', 's'], null],
@@ -247,6 +301,17 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
         'fill-color': stressColor,
         'fill-opacity': ['interpolate', ['linear'], ['sqrt', ['min', 1, ['get', 's']]],
           0, dark ? 0.18 : 0.35, 0.25, dark ? 0.55 : 0.7, 0.45, 0.9],
+      },
+    })
+    // Basin borders: a deliberate hairline in ink, drawn as its own layer
+    // (fill antialiasing stays off, which drew seams, not borders). Fades
+    // in with zoom so the world view does not turn to mesh.
+    map.addLayer({
+      id: 'basin-borders', type: 'line', source: 'basins',
+      paint: {
+        'line-color': dark ? '#F8F8E8' : '#181838',
+        'line-opacity': ['interpolate', ['linear'], ['zoom'], 1, dark ? 0.08 : 0.07, 3, dark ? 0.2 : 0.18, 6, dark ? 0.32 : 0.3],
+        'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.3, 4, 0.5, 8, 0.9],
       },
     })
     map.addLayer({
@@ -284,18 +349,59 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
   // Create once.
   useEffect(() => {
     const isSmall = window.innerWidth < 768
+    // Latitude clamp inside MapLibre's camera pipeline (the same technique
+    // as _map/components/map/index.jsx): the update is corrected before it
+    // applies, so dragging at the limit stays smooth. North is hard; the
+    // south gets SOUTH_SLACK of the viewport as ocean.
+    const mc = maplibregl.MercatorCoordinate
+    const yTop = mc.fromLngLat({ lng: 0, lat: LAT_BOUNDS[1] }).y
+    const yBot = mc.fromLngLat({ lng: 0, lat: LAT_BOUNDS[0] }).y
+    const transformCameraUpdate = ({ center, zoom }) => {
+      const h = ref.current?.clientHeight
+      if (!h || center == null || zoom == null) return {}
+      const half = h / (512 * 2 ** zoom) / 2
+      const lo = yTop + half
+      let hi = yBot - half * (1 - 2 * SOUTH_SLACK)
+      if (lo > hi) hi = lo
+      const cy = Math.min(hi, Math.max(lo, mc.fromLngLat({ lng: 0, lat: center.lat }).y))
+      const lat = new mc(0.5, cy, 0).toLngLat().lat
+      if (Math.abs(lat - center.lat) < 1e-9) return {}
+      return { center: { lng: center.lng, lat } }
+    }
+    const startCenter = isSmall ? [-79.5, 21.5] : [-30, 20]
     const map = new maplibregl.Map({
       container: ref.current,
       style: basemapStyle(isDark ? 'dark' : 'light'),
-      center: isSmall ? [10, 5] : [5, 12],
-      zoom: isSmall ? 0.2 : 1.15,
+      // Opening view: the mid-Atlantic on desktop, Cuba on a phone. The
+      // minimum zoom below raises the zoom if the band needs it.
+      center: startCenter,
+      zoom: isSmall ? 1.2 : 1.15,
       minZoom: 0,
       maxZoom: 8,
       renderWorldCopies: false,
       attributionControl: false,
+      transformCameraUpdate,
     })
+    // The band must always at least fill the viewport height, so no zoom
+    // can reveal past the cuts. Recomputed on resize.
+    // The first call re-applies the opening centre: at the constructor's
+    // zoom the world can be narrower than the screen, which pins longitude
+    // to 0 until the zoom is raised.
+    let first = true
+    const applyMinZoom = () => {
+      const h = map.getContainer().clientHeight
+      if (!h) return
+      const minZ = Math.max(0, Math.log2((h * (1 - SOUTH_SLACK)) / (512 * (yBot - yTop))))
+      map.setMinZoom(minZ)
+      map.jumpTo(first ? { center: startCenter, zoom: Math.max(map.getZoom(), minZ) } : { center: map.getCenter() })
+      first = false
+    }
+    applyMinZoom()
+    map.on('resize', applyMinZoom)
     map.dragRotate.disable()
     map.touchZoomRotate.disableRotation()
+    map.touchPitch.disable()
+    map.keyboard?.disableRotation?.()
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
     mapRef.current = map
     map.on('load', () => {
@@ -305,13 +411,14 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
 
     const depositFrom = (f) => ({
       kind: 'deposit', id: f.properties.id, mineral: f.properties.mineral, res: f.properties.res,
-      basin: f.properties.basin, s: f.properties.s, cf: f.properties.cf, coords: f.geometry.coordinates,
+      basin: f.properties.basin, river: f.properties.river, place: f.properties.place,
+      s: f.properties.s, cf: f.properties.cf, coords: f.geometry.coordinates,
     })
     const basinFrom = (f) => {
       const id = f.properties.id
       const inBasin = data.deposits.features.filter((d) => d.properties.basin === id)
       return {
-        kind: 'basin', id, s: f.properties.s, cf: f.properties.cf,
+        kind: 'basin', id, river: f.properties.river, place: f.properties.place, s: f.properties.s, cf: f.properties.cf,
         count: inBasin.length, resTotal: inBasin.reduce((a, d) => a + d.properties.res, 0),
       }
     }
@@ -373,182 +480,6 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
   )
 }
 
-// ─── Trade-off chart (Figure 2) ──────────────────────────────────────────────
-
-function useWidth(ref) {
-  const [w, setW] = useState(640)
-  useEffect(() => {
-    if (!ref.current) return
-    const ro = new ResizeObserver(([e]) => setW(Math.max(300, Math.floor(e.contentRect.width))))
-    ro.observe(ref.current)
-    return () => ro.disconnect()
-  }, [ref])
-  return w
-}
-
-function TradeoffView({ data, scenario, step, onPick }) {
-  const box = useRef(null)
-  const w = useWidth(box)
-  const h = Math.round(Math.min(460, Math.max(300, w * 0.62)))
-  const m = { t: 16, r: 18, b: 46, l: 58 }
-  const all = data.scenarios.flatMap((s) => data.frontier[s])
-  const x = scaleLinear().domain([0, Math.max(...all.map((d) => d.water)) / 1000 * 1.04]).nice().range([m.l, w - m.r])
-  const y = scaleLinear()
-    .domain([Math.min(...all.map((d) => d.cost)) / 1000 * 0.92, Math.max(...all.map((d) => d.cost)) / 1000 * 1.03])
-    .nice().range([h - m.b, m.t])
-  const ln = d3line().x((d) => x(d.water / 1000)).y((d) => y(d.cost / 1000))
-  const [hover, setHover] = useState(null)
-  const shown = hover ?? { scenario, step }
-  const pt = data.frontier[shown.scenario]?.find((d) => d.step === shown.step)
-  const base = data.frontier[shown.scenario]?.[0]
-  const labelled = new Set(['1%', '5%', '10%', '25%'])
-
-  const rows = (data.byMineral[scenario] ?? []).filter((d) => d.step === step)
-  const baseRows = (data.byMineral[scenario] ?? []).filter((d) => d.step === '0%')
-  const maxW = Math.max(1, ...baseRows.map((d) => d.water))
-
-  return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto px-4 py-4 md:px-8 md:py-6" style={{ maxWidth: 980 }}>
-        <p className={eyebrowCls} style={eyebrowStyle}>Figure 2 · cost of avoiding water stress</p>
-        <p className="font-serif text-ink" style={{ fontSize: 23, fontWeight: 600, lineHeight: 1.2, margin: '2px 0 6px' }}>
-          Half of mining's stress-weighted water use can be avoided for about 10% more cost
-        </p>
-        <p className="text-ink-2 m-0" style={{ fontSize: 13, lineHeight: 1.5, maxWidth: 680 }}>
-          The model meets each demand scenario at least cost, then is allowed a small cost increase and asked to
-          cut stress-weighted water use. Each line is one scenario; each point one cost ceiling. Totals are for
-          2025–2050.
-        </p>
-
-        <div ref={box} className="relative" style={{ marginTop: 14 }}>
-          <svg width={w} height={h} role="img" aria-label="Cost against stress-weighted water use, by demand scenario" style={{ display: 'block' }}>
-            {y.ticks(6).map((t) => (
-              <g key={`y${t}`}>
-                <line x1={m.l} x2={w - m.r} y1={y(t)} y2={y(t)} stroke="var(--rule)" />
-                <text x={m.l - 8} y={y(t)} dy="0.32em" textAnchor="end" fill="var(--ink-3)" style={{ font: '11px var(--font-mono)' }}>
-                  ${fmt(t, 1)}T
-                </text>
-              </g>
-            ))}
-            {x.ticks(6).map((t) => (
-              <g key={`x${t}`}>
-                <line x1={x(t)} x2={x(t)} y1={h - m.b} y2={h - m.b + 4} stroke="var(--rule-strong)" />
-                <text x={x(t)} y={h - m.b + 16} textAnchor="middle" fill="var(--ink-3)" style={{ font: '11px var(--font-mono)' }}>
-                  {fmt(t, 0)}
-                </text>
-              </g>
-            ))}
-            <line x1={m.l} x2={w - m.r} y1={h - m.b} y2={h - m.b} stroke="var(--rule-strong)" />
-            <text x={(m.l + w - m.r) / 2} y={h - 8} textAnchor="middle" fill="var(--ink-2)" style={{ font: '12px var(--font-sans)' }}>
-              Stress-weighted water use, trillion m³-eq
-            </text>
-            <text transform={`translate(14,${(m.t + h - m.b) / 2}) rotate(-90)`} textAnchor="middle" fill="var(--ink-2)" style={{ font: '12px var(--font-sans)' }}>
-              Total cost
-            </text>
-            {data.scenarios.map((s) => {
-              const pts = data.frontier[s]
-              const on = s === scenario
-              return (
-                <g key={s} opacity={on ? 1 : 0.45}>
-                  <path d={ln(pts)} fill="none" stroke={SCEN_COLOR[s]} strokeWidth={on ? 2 : 1.4} />
-                  {pts.map((d) => {
-                    const sel = on && d.step === step
-                    return (
-                      <circle
-                        key={d.step}
-                        cx={x(d.water / 1000)} cy={y(d.cost / 1000)}
-                        r={sel ? 6.5 : d.step === '0%' ? 5 : 3.5}
-                        fill={SCEN_COLOR[s]}
-                        stroke={sel ? 'var(--ink)' : 'var(--paper)'}
-                        strokeWidth={sel ? 2 : 1}
-                        style={{ cursor: 'pointer' }}
-                        onMouseEnter={() => setHover({ scenario: s, step: d.step })}
-                        onMouseLeave={() => setHover(null)}
-                        onClick={() => onPick(s, d.step)}
-                      />
-                    )
-                  })}
-                  {(() => {
-                    const b = pts[0]
-                    return (
-                      <text x={x(b.water / 1000) + 9} y={y(b.cost / 1000) - 7} fill={SCEN_COLOR[s]} style={{ font: '600 11px var(--font-sans)' }}>
-                        {s}
-                      </text>
-                    )
-                  })()}
-                  {on && pts.filter((d) => labelled.has(d.step)).map((d) => (
-                    <text key={`l${d.step}`} x={x(d.water / 1000) - 7} y={y(d.cost / 1000) + 4} textAnchor="end" fill="var(--ink-3)" style={{ font: '10px var(--font-mono)' }}>
-                      +{d.step}
-                    </text>
-                  ))}
-                </g>
-              )
-            })}
-          </svg>
-        </div>
-
-        {pt && base && (
-          <div className="border-t border-rule" style={{ marginTop: 6, paddingTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-            {[
-              ['Scenario', `${shown.scenario}, ${shown.step === '0%' ? 'least cost' : `+${shown.step} cost`}`],
-              ['Total cost', `$${fmt(pt.cost / 1000, 2)}T`],
-              ['Stress-weighted water', `${fmt(pt.water / 1000, 2)} trillion m³-eq${pt.reduction ? ` (${fmt(pt.reduction, 0)}%)` : ''}`],
-              ['Water consumed', `${fmt(pt.consumed, 0)} billion m³`],
-              ['Mines opened', `${pt.mines.toLocaleString()} (${pt.mines - base.mines >= 0 ? '+' : ''}${pt.mines - base.mines})`],
-            ].map(([k, v]) => (
-              <div key={k}>
-                <p className={eyebrowCls} style={eyebrowStyle}>{k}</p>
-                <p className="text-ink m-0" style={{ fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{v}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div style={{ marginTop: 22 }}>
-          <p className={eyebrowCls} style={eyebrowStyle}>By mineral · {scenario}, {step === '0%' ? 'least cost' : `+${step} cost`}</p>
-          <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
-            <thead>
-              <tr className="text-ink-3" style={{ fontSize: 11 }}>
-                <th className="text-left font-normal border-b border-rule" style={{ padding: '4px 6px' }}>Mineral</th>
-                <th className="text-right font-normal border-b border-rule" style={{ padding: '4px 6px' }}>Unit cost, $/kg</th>
-                <th className="text-right font-normal border-b border-rule" style={{ padding: '4px 6px' }}>Water, m³-eq/kg</th>
-                <th className="text-left font-normal border-b border-rule" style={{ padding: '4px 6px', width: '38%' }}>Water vs least cost</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MINERALS.map(([mi, col]) => {
-                const d = rows.find((r) => r.mineral === mi)
-                const b = baseRows.find((r) => r.mineral === mi)
-                if (!d) return null
-                const chg = b && b.water ? (d.water - b.water) / b.water : 0
-                return (
-                  <tr key={mi}>
-                    <td className="border-b border-rule text-ink" style={{ padding: '5px 6px' }}>
-                      <span className="inline-flex items-center" style={{ gap: 6 }}><Swatch color={col} />{mi}</span>
-                    </td>
-                    <td className="border-b border-rule text-right text-ink" style={{ padding: '5px 6px' }}>{fmt(d.cost / 1000, 2)}</td>
-                    <td className="border-b border-rule text-right text-ink" style={{ padding: '5px 6px' }}>{fmt(d.water / 1000, 2)}</td>
-                    <td className="border-b border-rule" style={{ padding: '5px 6px' }}>
-                      <div className="flex items-center" style={{ gap: 8 }}>
-                        <div style={{ height: 7, borderRadius: 2, background: col, width: `${Math.max(2, (70 * d.water) / maxW)}%` }} />
-                        <span className="font-mono text-ink-3" style={{ fontSize: 11 }}>{step === '0%' ? '' : `${chg >= 0 ? '+' : ''}${Math.round(chg * 100)}%`}</span>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          <p className="text-ink-3 m-0" style={{ fontSize: 11, lineHeight: 1.45, marginTop: 6 }}>
-            Per kilogram of metal demanded, 2025–2050. Unit cost in discounted US dollars; water is
-            stress-weighted (m³ world-equivalent, AWARE 2.0).
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Tool ────────────────────────────────────────────────────────────────────
 
 export default function MiningWaterTool({ companion = null, repoLinks = null, display = null }) {
@@ -561,7 +492,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
   const [hover, setHover] = useState(null)
   const [picked, setPicked] = useState(null)
   const [scenario, setScenario] = useState('Pledges')
-  const [step, setStep] = useState('10%')
+  const [material, setMaterial] = useState('All')
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   useEffect(() => {
@@ -581,7 +512,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
     return () => obs.disconnect()
   }, [])
 
-  // Matches the circle-radius expression at the opening zoom (≈1.15).
+  // Matches the circle-radius expression near the opening zoom.
   const radius = (v) => 1.3 + 0.9 * Math.sqrt(v)
   const shownItem = hover ?? (picked ? { ...picked, pinned: true } : null)
   const counts = useMemo(() => {
@@ -596,7 +527,6 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
     return { n, mt }
   }, [data, minerals.join(','), stressedOnly]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const steps = data ? data.frontier[scenario].map((d) => d.step) : []
 
   const controls = (
     <>
@@ -617,7 +547,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
 
       <div className="mb-4">
         <Eyebrow>View</Eyebrow>
-        <ToggleRow value={view} onChange={(v) => { setView(v); setDrawerOpen(false) }} options={[['map', 'Map'], ['tradeoff', 'Trade-off']]} />
+        <ToggleRow value={view} onChange={(v) => { setView(v); setDrawerOpen(false) }} options={[['map', 'Map'], ['tradeoff', 'Water vs. cost']]} />
       </div>
 
       {view === 'map' ? (
@@ -666,33 +596,27 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
         </>
       ) : (
         data && (
-          <div className="mb-4">
-            <Eyebrow>Demand scenario</Eyebrow>
-            <select
-              id="mw-scenario"
-              value={scenario}
-              onChange={(e) => setScenario(e.target.value)}
-              className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
-              style={{ borderRadius: 'var(--radius-sm)' }}
-            >
-              {data.scenarios.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <div style={{ marginTop: 12 }}>
-              <Eyebrow>Allowed cost increase</Eyebrow>
-              <select
-                id="mw-step"
-                value={step}
-                onChange={(e) => setStep(e.target.value)}
-                className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
-                {steps.map((s) => <option key={s} value={s}>{s === '0%' ? 'None (least cost)' : `+${s}`}</option>)}
-              </select>
+          <>
+            <div className="mb-4">
+              <Eyebrow>Demand scenario</Eyebrow>
+              <WordRow value={scenario} onChange={setScenario} options={data.scenarios.map((x) => [x, x])} />
             </div>
-            <p className="text-ink-3 m-0" style={{ fontSize: 11, lineHeight: 1.45, marginTop: 8 }}>
-              Or tap any point on the chart.
+            <div className="mb-4">
+              <Eyebrow>Minerals</Eyebrow>
+              <WordRow value={material} onChange={setMaterial}
+                options={[['All', 'All'], ...MINERALS.map(([mi]) => [mi, mi])]} />
+            </div>
+            <div className="mb-4">
+              <Eyebrow>Impact</Eyebrow>
+              <WordRow value="water" onChange={() => {}} options={[['water', 'Water stress']]} />
+              <p className="text-ink-3 m-0" style={{ fontSize: 10.5, lineHeight: 1.45, marginTop: 6 }}>
+                The paper's fish biodiversity runs are not yet public; they will appear here when they are.
+              </p>
+            </div>
+            <p className="text-ink-3 m-0 mb-4" style={{ fontSize: 11, lineHeight: 1.45 }}>
+              Drag the red point along the curve, or focus it and use the arrow keys.
             </p>
-          </div>
+          </>
         )
       )}
 
@@ -701,7 +625,10 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
           Basins: AWARE 2.0 (Seitfudem, Berger &amp; Boulay, CC BY 4.0), simplified for display. Deposits and
           results: the paper's replication data.
         </p>
-        <ToolFooter config={{}} repoLinks={repoLinks} isDark={isDark} />
+        {/* STEER credit through ToolFooter's initiative slot (as Food
+            Emissions credits Cornerstone), with the wordmark the magnet
+            explorer uses. */}
+        <ToolFooter config={{ initiative: STEER }} repoLinks={repoLinks} isDark={isDark} />
       </div>
     </>
   )
@@ -768,18 +695,11 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
             className="absolute font-mono text-ink-3 m-0"
             style={{ right: 8, bottom: 4, fontSize: 9, zIndex: 5, pointerEvents: 'none' }}
           >
-            Basins © AWARE 2.0 · Land © Natural Earth
+            Basins © AWARE 2.0 · Names: Natural Earth
           </p>
         </>
       )}
-      {data && view === 'tradeoff' && (
-        <TradeoffView
-          data={data}
-          scenario={scenario}
-          step={step}
-          onPick={(s, st) => { setScenario(s); setStep(st) }}
-        />
-      )}
+      {data && view === 'tradeoff' && <WaterCost data={data} scenario={scenario} material={material} />}
     </ToolShell>
   )
 }

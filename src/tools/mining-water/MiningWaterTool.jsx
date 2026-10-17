@@ -84,6 +84,10 @@ const stressClass = (s) =>
     : s >= STRESSED ? 'moderate'
     : s >= 0.01 ? 'low'
     : 'very low'
+// Basin names come from the build script: the river it lies on (or drains
+// to) and the state/province and country under it. AWARE itself numbers them.
+const basinName = (river, place) =>
+  river ? `${river} basin` : place ? `Basin in ${place.split(', ')[0]}` : 'Unnamed basin'
 const latlon = ([x, y]) => `${fmt(Math.abs(y), 1)}° ${y >= 0 ? 'N' : 'S'}, ${fmt(Math.abs(x), 1)}° ${x >= 0 ? 'E' : 'W'}`
 
 const eyebrowCls = 'font-mono text-xs uppercase tracking-wider text-ink-3 leading-none'
@@ -181,11 +185,13 @@ function Detail({ item, onClose }) {
       ? [
           ['Contained resources', `${fmt(item.res, 2)} Mt metal`],
           ['Location', latlon(item.coords)],
-          ['Basin', item.basin == null ? '—' : `#${item.basin}`],
+          ['Basin', item.basin == null ? '—' : basinName(item.river, item.place)],
+          ['Region', item.place ?? '—'],
           ['Basin water stress', item.s == null ? 'not in model' : `${pct(item.s)}, ${stressClass(item.s)}`],
           ['AWARE 2.0 factor', item.cf == null ? '—' : `${fmt(item.cf, 2)} m³-eq/m³`],
         ]
       : [
+          ['Region', item.place ?? '—'],
           ['Water stress', item.s == null ? 'not in model' : `${pct(item.s)}, ${stressClass(item.s)}`],
           ['AWARE 2.0 factor', item.cf == null ? '—' : `${fmt(item.cf, 2)} m³-eq/m³`],
           ['Deposits in basin', item.count ? `${item.count} (${fmt(item.resTotal, 1)} Mt)` : 'none in the model'],
@@ -200,7 +206,7 @@ function Detail({ item, onClose }) {
               {item.mineral} deposit
             </span>
           ) : (
-            `Basin #${item.id}`
+            basinName(item.river, item.place)
           )}
         </p>
         {item.pinned && onClose && (
@@ -222,11 +228,11 @@ function Detail({ item, onClose }) {
           </div>
         ))}
       </dl>
-      {item.kind === 'deposit' && (
-        <p className="text-ink-3 m-0" style={{ fontSize: 10, lineHeight: 1.4, marginTop: 6 }}>
-          Deposit {item.id}. Names, grades and costs are licensed from S&amp;P Global and not shown.
-        </p>
-      )}
+      <p className="text-ink-3 m-0" style={{ fontSize: 10, lineHeight: 1.4, marginTop: 6 }}>
+        {item.kind === 'deposit'
+          ? <>Deposit {item.id}{item.basin != null ? `, AWARE basin ${item.basin}` : ''}. Deposit names, grades and costs are licensed from S&amp;P Global and not shown.</>
+          : <>AWARE basin {item.id}. Named from Natural Earth rivers and provinces.</>}
+      </p>
     </div>
   )
 }
@@ -365,13 +371,14 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
 
     const depositFrom = (f) => ({
       kind: 'deposit', id: f.properties.id, mineral: f.properties.mineral, res: f.properties.res,
-      basin: f.properties.basin, s: f.properties.s, cf: f.properties.cf, coords: f.geometry.coordinates,
+      basin: f.properties.basin, river: f.properties.river, place: f.properties.place,
+      s: f.properties.s, cf: f.properties.cf, coords: f.geometry.coordinates,
     })
     const basinFrom = (f) => {
       const id = f.properties.id
       const inBasin = data.deposits.features.filter((d) => d.properties.basin === id)
       return {
-        kind: 'basin', id, s: f.properties.s, cf: f.properties.cf,
+        kind: 'basin', id, river: f.properties.river, place: f.properties.place, s: f.properties.s, cf: f.properties.cf,
         count: inBasin.length, resTotal: inBasin.reduce((a, d) => a + d.properties.res, 0),
       }
     }

@@ -59,6 +59,15 @@ const LAT_BOUNDS = [-56, 77]
 // and Tasmania can clear the bottom-of-map attribution and phone chrome.
 const SOUTH_SLACK = 0.4
 
+// The water and mining work is a STEER project (Materials for Humanity).
+const STEER = {
+  name: 'STEER',
+  url: 'https://steer-stanford.webflow.io/',
+  logo: '/logos/steer/STEER-forweb-light.png',
+  logoDark: '/logos/steer/STEER-forweb-dark.png',
+  note: <>A STEER project at Stanford ↗</>,
+}
+
 // Basins above this index count as stressed for the filter (the paper's
 // "moderate" threshold).
 const STRESSED = 0.1
@@ -752,7 +761,10 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
           Basins: AWARE 2.0 (Seitfudem, Berger &amp; Boulay, CC BY 4.0), simplified for display. Deposits and
           results: the paper's replication data.
         </p>
-        <ToolFooter config={{}} repoLinks={repoLinks} isDark={isDark} />
+        {/* STEER credit through ToolFooter's initiative slot (as Food
+            Emissions credits Cornerstone), with the wordmark the magnet
+            explorer uses. */}
+        <ToolFooter config={{ initiative: STEER }} repoLinks={repoLinks} isDark={isDark} />
       </div>
     </>
   )

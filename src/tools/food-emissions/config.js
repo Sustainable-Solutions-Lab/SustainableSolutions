@@ -357,14 +357,16 @@ const config = {
         { id: 'all', label: 'All sources' },
         { id: 'cat2', label: 'Land management net biogenic CO₂ (LSRS cat. 2)' },
         { id: 'cat3', label: 'Land management production (LSRS cat. 3)' },
-        ...SOURCES.map(([id, label]) => ({ id, label })),
+        // Forest soil (drained organic soil from national inventories;
+        // mineral = 0, IPCC default; map only, not in totals) sits with the
+        // other soil carbon sources, right after rangeland.
+        ...SOURCES.flatMap(([id, label]) => id === 'rsoil'
+          ? [{ id, label }, { id: 'fsoil', label: 'Soil carbon CO₂ — forest (drained organic · map only)', cat: 'cat2' }]
+          : [{ id, label }]),
         // Forest carbon pilot: the two GHG Protocol accounting options as
         // selectable signed views (research preview, not in totals).
         { id: 'fmlp', label: 'Forest carbon — net stock change (opt. 1 · pilot)', cat: 'cat2' },
         { id: 'fab', label: 'Forest carbon — management-attributable (opt. 2 · pilot)', cat: 'cat2' },
-        // Forest soil: drained organic soil from national inventories
-        // (mineral = 0, IPCC default). Map only, not in totals.
-        { id: 'fsoil', label: 'Soil carbon CO₂ — forest (drained organic · map only)', cat: 'cat2' },
       ],
     },
     {

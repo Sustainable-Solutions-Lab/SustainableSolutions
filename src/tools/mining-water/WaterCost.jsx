@@ -79,11 +79,11 @@ function useWidth(ref) {
   return w
 }
 
-export default function WaterCost({ data, scenario, material }) {
+export default function WaterCost({ data, scenario, material, compact = false }) {
   const box = useRef(null)
   const svgRef = useRef(null)
   const w = useWidth(box)
-  const h = Math.round(Math.min(520, Math.max(320, w * 0.6)))
+  const h = Math.round(compact ? Math.min(380, Math.max(240, w * 0.7)) : Math.min(520, Math.max(320, w * 0.6)))
   const narrow = w < 560
   const m = { t: 18, r: narrow ? 58 : 86, b: 48, l: narrow ? 52 : 64 }
 
@@ -199,18 +199,18 @@ export default function WaterCost({ data, scenario, material }) {
   const barW = narrow ? 8 : 12, barH = h - m.t - m.b, barX = w - m.r + (narrow ? 10 : 34)
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto px-4 py-4 md:px-8 md:py-6" style={{ maxWidth: 1000 }}>
-        <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Water vs. cost · {scenario} · {material === 'All' ? 'all minerals' : material}</p>
-        <p className="font-serif text-ink" style={{ fontSize: 23, fontWeight: 600, lineHeight: 1.2, margin: '2px 0 6px' }}>
+    <div className={compact ? '' : 'h-full overflow-y-auto'}>
+      <div className={compact ? 'px-3 pb-3' : 'mx-auto px-4 py-4 md:px-8 md:py-6'} style={compact ? null : { maxWidth: 1000 }}>
+        {!compact && <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Water vs. cost · {scenario} · {material === 'All' ? 'all minerals' : material}</p>}
+        <p className="font-serif text-ink" style={{ fontSize: compact ? 17 : 23, fontWeight: 600, lineHeight: 1.2, margin: '2px 0 6px' }}>
           What it costs to mine {what} where water is more available
         </p>
-        <p className="text-ink-2 m-0" style={{ fontSize: 13, lineHeight: 1.5, maxWidth: 680 }}>
+        <p className="text-ink-2 m-0" style={{ fontSize: compact ? 12 : 13, lineHeight: 1.5, maxWidth: 680, display: compact ? 'none' : undefined }}>
           The model meets demand at least cost, then is allowed a little more cost and asked to cut stress-weighted
           water use. Drag the point along the curve to see what each step buys. Totals are for 2025–2050.
         </p>
 
-        <div ref={box} className="relative" style={{ marginTop: 14 }}>
+        <div ref={box} className="relative" style={{ marginTop: compact ? 6 : 14 }}>
           <svg
             ref={svgRef}
             width={w}
@@ -325,7 +325,7 @@ export default function WaterCost({ data, scenario, material }) {
         <style>{`.mw-handle:focus{outline:none}.mw-handle:focus-visible{stroke:var(--ink);stroke-width:3}`}</style>
 
         {/* Readout */}
-        <div className="border-t border-rule" style={{ marginTop: 6, paddingTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14 }}>
+        <div className="border-t border-rule" style={{ marginTop: 6, paddingTop: 10, display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${compact ? 130 : 170}px, 1fr))`, gap: compact ? 10 : 14 }}>
           <div>
             <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Cost increase allowed</p>
             <p className="text-ink m-0" style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>{cur.step < 0.05 ? 'None (least cost)' : `+${fmt(cur.step, 1)}%`}</p>
@@ -366,6 +366,7 @@ export default function WaterCost({ data, scenario, material }) {
           Costs are discounted US dollars; water is weighted by AWARE 2.0 basin scarcity (m³ world-equivalent).
           Shading shows how the curve moves with cumulative metal demand (colour bar, Mt of metal, 2025–2050). It interpolates between the three IEA
           scenarios the paper solves and published; it is not a set of additional model runs.
+          {' Fish biodiversity, the paper’s second impact measure, will join water stress here once those runs are public.'}
           {material !== 'All' && ' Single-mineral curves are the paper’s per-kilogram results times that mineral’s demand; the cost ceiling applies to all four minerals together, so one mineral’s cost can move either way.'}
         </p>
       </div>

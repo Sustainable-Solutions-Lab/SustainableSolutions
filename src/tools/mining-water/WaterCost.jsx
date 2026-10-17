@@ -139,15 +139,56 @@ export default function WaterCost({ data, scenario, material }) {
     }
     return best
   }
+  // Mouse and pen drag through pointer events. Touch is handled separately
+  // below: iOS Safari ignores touch-action on SVG, so the scrolling panel
+  // takes the gesture and cancels the pointer stream mid-drag.
   const onDown = (e) => {
+    if (e.pointerType === 'touch') return
     const b = project(e.clientX, e.clientY)
     if (b.d > 40) return
     dragging.current = true
     e.currentTarget.setPointerCapture?.(e.pointerId)
     setT(b.t)
   }
-  const onMove = (e) => { if (dragging.current) setT(project(e.clientX, e.clientY).t) }
-  const onUp = () => { dragging.current = false }
+  const onMove = (e) => { if (e.pointerType !== 'touch' && dragging.current) setT(project(e.clientX, e.clientY).t) }
+  const onUp = (e) => { if (e.pointerType !== 'touch') dragging.current = false }
+
+  // Touch: non-passive listeners, so a touch that starts on or near the
+  // curve can stop the page from scrolling (React's touch handlers are
+  // passive and cannot). A touch that starts away from it scrolls as usual.
+  const projectRef = useRef(project)
+  projectRef.current = project
+  useEffect(() => {
+    const el = svgRef.current
+    if (!el) return
+    let active = false
+    const start = (e) => {
+      if (e.touches.length !== 1) return
+      const tch = e.touches[0]
+      const b = projectRef.current(tch.clientX, tch.clientY)
+      if (b.d > 44) return
+      active = true
+      e.preventDefault()
+      setT(b.t)
+    }
+    const move = (e) => {
+      if (!active) return
+      e.preventDefault()
+      const tch = e.touches[0]
+      setT(projectRef.current(tch.clientX, tch.clientY).t)
+    }
+    const end = () => { active = false }
+    el.addEventListener('touchstart', start, { passive: false })
+    el.addEventListener('touchmove', move, { passive: false })
+    el.addEventListener('touchend', end)
+    el.addEventListener('touchcancel', end)
+    return () => {
+      el.removeEventListener('touchstart', start)
+      el.removeEventListener('touchmove', move)
+      el.removeEventListener('touchend', end)
+      el.removeEventListener('touchcancel', end)
+    }
+  }, [])
   const onKey = (e) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { setT((v) => Math.max(0, v - 0.25)); e.preventDefault() }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { setT((v) => Math.min(n - 1, v + 0.25)); e.preventDefault() }

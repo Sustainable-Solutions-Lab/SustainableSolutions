@@ -23,12 +23,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { scaleLinear } from 'd3-scale'
-import { line as d3line } from 'd3-shape'
 import ToolShell from '../_shell/ToolShell'
 import { BusyOverlay } from '../_shell/busy-overlay.jsx'
 import { basemapStyle } from '../_map/components/map/basemap-style.jsx'
 import { ToolFooter } from '../_map/components/sidebar/tool-footer.jsx'
+import WaterCost from './WaterCost.jsx'
 
 const DATA = '/tools/mining-water'
 
@@ -104,6 +103,30 @@ function Eyebrow({ children }) {
 function ToggleRow({ value, options, onChange }) {
   return (
     <div className="flex gap-4">
+      {options.map(([v, label]) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          aria-pressed={value === v}
+          className={[
+            'bg-transparent border-0 cursor-pointer p-0',
+            'font-sans text-[12px] uppercase tracking-[0.12em] underline-offset-[3px]',
+            'transition-colors hover:text-ink',
+            value === v ? 'font-bold text-ink underline' : 'font-normal text-ink-3',
+          ].join(' ')}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// Clickable words, as the View toggle, wrapping onto more lines as needed.
+function WordRow({ value, options, onChange }) {
+  return (
+    <div className="flex flex-wrap" style={{ gap: '6px 14px' }}>
       {options.map(([v, label]) => (
         <button
           key={v}
@@ -457,182 +480,6 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
   )
 }
 
-// ─── Trade-off chart (Figure 2) ──────────────────────────────────────────────
-
-function useWidth(ref) {
-  const [w, setW] = useState(640)
-  useEffect(() => {
-    if (!ref.current) return
-    const ro = new ResizeObserver(([e]) => setW(Math.max(300, Math.floor(e.contentRect.width))))
-    ro.observe(ref.current)
-    return () => ro.disconnect()
-  }, [ref])
-  return w
-}
-
-function TradeoffView({ data, scenario, step, onPick }) {
-  const box = useRef(null)
-  const w = useWidth(box)
-  const h = Math.round(Math.min(460, Math.max(300, w * 0.62)))
-  const m = { t: 16, r: 18, b: 46, l: 58 }
-  const all = data.scenarios.flatMap((s) => data.frontier[s])
-  const x = scaleLinear().domain([0, Math.max(...all.map((d) => d.water)) / 1000 * 1.04]).nice().range([m.l, w - m.r])
-  const y = scaleLinear()
-    .domain([Math.min(...all.map((d) => d.cost)) / 1000 * 0.92, Math.max(...all.map((d) => d.cost)) / 1000 * 1.03])
-    .nice().range([h - m.b, m.t])
-  const ln = d3line().x((d) => x(d.water / 1000)).y((d) => y(d.cost / 1000))
-  const [hover, setHover] = useState(null)
-  const shown = hover ?? { scenario, step }
-  const pt = data.frontier[shown.scenario]?.find((d) => d.step === shown.step)
-  const base = data.frontier[shown.scenario]?.[0]
-  const labelled = new Set(['1%', '5%', '10%', '25%'])
-
-  const rows = (data.byMineral[scenario] ?? []).filter((d) => d.step === step)
-  const baseRows = (data.byMineral[scenario] ?? []).filter((d) => d.step === '0%')
-  const maxW = Math.max(1, ...baseRows.map((d) => d.water))
-
-  return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto px-4 py-4 md:px-8 md:py-6" style={{ maxWidth: 980 }}>
-        <p className={eyebrowCls} style={eyebrowStyle}>Figure 2 · cost of avoiding water stress</p>
-        <p className="font-serif text-ink" style={{ fontSize: 23, fontWeight: 600, lineHeight: 1.2, margin: '2px 0 6px' }}>
-          Half of mining's stress-weighted water use can be avoided for about 10% more cost
-        </p>
-        <p className="text-ink-2 m-0" style={{ fontSize: 13, lineHeight: 1.5, maxWidth: 680 }}>
-          The model meets each demand scenario at least cost, then is allowed a small cost increase and asked to
-          cut stress-weighted water use. Each line is one scenario; each point one cost ceiling. Totals are for
-          2025–2050.
-        </p>
-
-        <div ref={box} className="relative" style={{ marginTop: 14 }}>
-          <svg width={w} height={h} role="img" aria-label="Cost against stress-weighted water use, by demand scenario" style={{ display: 'block' }}>
-            {y.ticks(6).map((t) => (
-              <g key={`y${t}`}>
-                <line x1={m.l} x2={w - m.r} y1={y(t)} y2={y(t)} stroke="var(--rule)" />
-                <text x={m.l - 8} y={y(t)} dy="0.32em" textAnchor="end" fill="var(--ink-3)" style={{ font: '11px var(--font-mono)' }}>
-                  ${fmt(t, 1)}T
-                </text>
-              </g>
-            ))}
-            {x.ticks(6).map((t) => (
-              <g key={`x${t}`}>
-                <line x1={x(t)} x2={x(t)} y1={h - m.b} y2={h - m.b + 4} stroke="var(--rule-strong)" />
-                <text x={x(t)} y={h - m.b + 16} textAnchor="middle" fill="var(--ink-3)" style={{ font: '11px var(--font-mono)' }}>
-                  {fmt(t, 0)}
-                </text>
-              </g>
-            ))}
-            <line x1={m.l} x2={w - m.r} y1={h - m.b} y2={h - m.b} stroke="var(--rule-strong)" />
-            <text x={(m.l + w - m.r) / 2} y={h - 8} textAnchor="middle" fill="var(--ink-2)" style={{ font: '12px var(--font-sans)' }}>
-              Stress-weighted water use, trillion m³-eq
-            </text>
-            <text transform={`translate(14,${(m.t + h - m.b) / 2}) rotate(-90)`} textAnchor="middle" fill="var(--ink-2)" style={{ font: '12px var(--font-sans)' }}>
-              Total cost
-            </text>
-            {data.scenarios.map((s) => {
-              const pts = data.frontier[s]
-              const on = s === scenario
-              return (
-                <g key={s} opacity={on ? 1 : 0.45}>
-                  <path d={ln(pts)} fill="none" stroke={SCEN_COLOR[s]} strokeWidth={on ? 2 : 1.4} />
-                  {pts.map((d) => {
-                    const sel = on && d.step === step
-                    return (
-                      <circle
-                        key={d.step}
-                        cx={x(d.water / 1000)} cy={y(d.cost / 1000)}
-                        r={sel ? 6.5 : d.step === '0%' ? 5 : 3.5}
-                        fill={SCEN_COLOR[s]}
-                        stroke={sel ? 'var(--ink)' : 'var(--paper)'}
-                        strokeWidth={sel ? 2 : 1}
-                        style={{ cursor: 'pointer' }}
-                        onMouseEnter={() => setHover({ scenario: s, step: d.step })}
-                        onMouseLeave={() => setHover(null)}
-                        onClick={() => onPick(s, d.step)}
-                      />
-                    )
-                  })}
-                  {(() => {
-                    const b = pts[0]
-                    return (
-                      <text x={x(b.water / 1000) + 9} y={y(b.cost / 1000) - 7} fill={SCEN_COLOR[s]} style={{ font: '600 11px var(--font-sans)' }}>
-                        {s}
-                      </text>
-                    )
-                  })()}
-                  {on && pts.filter((d) => labelled.has(d.step)).map((d) => (
-                    <text key={`l${d.step}`} x={x(d.water / 1000) - 7} y={y(d.cost / 1000) + 4} textAnchor="end" fill="var(--ink-3)" style={{ font: '10px var(--font-mono)' }}>
-                      +{d.step}
-                    </text>
-                  ))}
-                </g>
-              )
-            })}
-          </svg>
-        </div>
-
-        {pt && base && (
-          <div className="border-t border-rule" style={{ marginTop: 6, paddingTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-            {[
-              ['Scenario', `${shown.scenario}, ${shown.step === '0%' ? 'least cost' : `+${shown.step} cost`}`],
-              ['Total cost', `$${fmt(pt.cost / 1000, 2)}T`],
-              ['Stress-weighted water', `${fmt(pt.water / 1000, 2)} trillion m³-eq${pt.reduction ? ` (${fmt(pt.reduction, 0)}%)` : ''}`],
-              ['Water consumed', `${fmt(pt.consumed, 0)} billion m³`],
-              ['Mines opened', `${pt.mines.toLocaleString()} (${pt.mines - base.mines >= 0 ? '+' : ''}${pt.mines - base.mines})`],
-            ].map(([k, v]) => (
-              <div key={k}>
-                <p className={eyebrowCls} style={eyebrowStyle}>{k}</p>
-                <p className="text-ink m-0" style={{ fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{v}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div style={{ marginTop: 22 }}>
-          <p className={eyebrowCls} style={eyebrowStyle}>By mineral · {scenario}, {step === '0%' ? 'least cost' : `+${step} cost`}</p>
-          <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
-            <thead>
-              <tr className="text-ink-3" style={{ fontSize: 11 }}>
-                <th className="text-left font-normal border-b border-rule" style={{ padding: '4px 6px' }}>Mineral</th>
-                <th className="text-right font-normal border-b border-rule" style={{ padding: '4px 6px' }}>Unit cost, $/kg</th>
-                <th className="text-right font-normal border-b border-rule" style={{ padding: '4px 6px' }}>Water, m³-eq/kg</th>
-                <th className="text-left font-normal border-b border-rule" style={{ padding: '4px 6px', width: '38%' }}>Water vs least cost</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MINERALS.map(([mi, col]) => {
-                const d = rows.find((r) => r.mineral === mi)
-                const b = baseRows.find((r) => r.mineral === mi)
-                if (!d) return null
-                const chg = b && b.water ? (d.water - b.water) / b.water : 0
-                return (
-                  <tr key={mi}>
-                    <td className="border-b border-rule text-ink" style={{ padding: '5px 6px' }}>
-                      <span className="inline-flex items-center" style={{ gap: 6 }}><Swatch color={col} />{mi}</span>
-                    </td>
-                    <td className="border-b border-rule text-right text-ink" style={{ padding: '5px 6px' }}>{fmt(d.cost / 1000, 2)}</td>
-                    <td className="border-b border-rule text-right text-ink" style={{ padding: '5px 6px' }}>{fmt(d.water / 1000, 2)}</td>
-                    <td className="border-b border-rule" style={{ padding: '5px 6px' }}>
-                      <div className="flex items-center" style={{ gap: 8 }}>
-                        <div style={{ height: 7, borderRadius: 2, background: col, width: `${Math.max(2, (70 * d.water) / maxW)}%` }} />
-                        <span className="font-mono text-ink-3" style={{ fontSize: 11 }}>{step === '0%' ? '' : `${chg >= 0 ? '+' : ''}${Math.round(chg * 100)}%`}</span>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          <p className="text-ink-3 m-0" style={{ fontSize: 11, lineHeight: 1.45, marginTop: 6 }}>
-            Per kilogram of metal demanded, 2025–2050. Unit cost in discounted US dollars; water is
-            stress-weighted (m³ world-equivalent, AWARE 2.0).
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Tool ────────────────────────────────────────────────────────────────────
 
 export default function MiningWaterTool({ companion = null, repoLinks = null, display = null }) {
@@ -645,7 +492,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
   const [hover, setHover] = useState(null)
   const [picked, setPicked] = useState(null)
   const [scenario, setScenario] = useState('Pledges')
-  const [step, setStep] = useState('10%')
+  const [material, setMaterial] = useState('All')
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   useEffect(() => {
@@ -680,7 +527,6 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
     return { n, mt }
   }, [data, minerals.join(','), stressedOnly]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const steps = data ? data.frontier[scenario].map((d) => d.step) : []
 
   const controls = (
     <>
@@ -701,7 +547,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
 
       <div className="mb-4">
         <Eyebrow>View</Eyebrow>
-        <ToggleRow value={view} onChange={(v) => { setView(v); setDrawerOpen(false) }} options={[['map', 'Map'], ['tradeoff', 'Trade-off']]} />
+        <ToggleRow value={view} onChange={(v) => { setView(v); setDrawerOpen(false) }} options={[['map', 'Map'], ['tradeoff', 'Water vs. cost']]} />
       </div>
 
       {view === 'map' ? (
@@ -750,33 +596,27 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
         </>
       ) : (
         data && (
-          <div className="mb-4">
-            <Eyebrow>Demand scenario</Eyebrow>
-            <select
-              id="mw-scenario"
-              value={scenario}
-              onChange={(e) => setScenario(e.target.value)}
-              className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
-              style={{ borderRadius: 'var(--radius-sm)' }}
-            >
-              {data.scenarios.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <div style={{ marginTop: 12 }}>
-              <Eyebrow>Allowed cost increase</Eyebrow>
-              <select
-                id="mw-step"
-                value={step}
-                onChange={(e) => setStep(e.target.value)}
-                className="w-full bg-paper-2 text-ink border border-rule px-2 py-1 font-sans text-[13px] cursor-pointer focus:outline-none focus:border-ink"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
-                {steps.map((s) => <option key={s} value={s}>{s === '0%' ? 'None (least cost)' : `+${s}`}</option>)}
-              </select>
+          <>
+            <div className="mb-4">
+              <Eyebrow>Demand scenario</Eyebrow>
+              <WordRow value={scenario} onChange={setScenario} options={data.scenarios.map((x) => [x, x])} />
             </div>
-            <p className="text-ink-3 m-0" style={{ fontSize: 11, lineHeight: 1.45, marginTop: 8 }}>
-              Or tap any point on the chart.
+            <div className="mb-4">
+              <Eyebrow>Minerals</Eyebrow>
+              <WordRow value={material} onChange={setMaterial}
+                options={[['All', 'All four'], ...MINERALS.map(([mi]) => [mi, mi])]} />
+            </div>
+            <div className="mb-4">
+              <Eyebrow>Impact</Eyebrow>
+              <WordRow value="water" onChange={() => {}} options={[['water', 'Water stress']]} />
+              <p className="text-ink-3 m-0" style={{ fontSize: 10.5, lineHeight: 1.45, marginTop: 6 }}>
+                The paper's fish biodiversity runs are not yet public; they will appear here when they are.
+              </p>
+            </div>
+            <p className="text-ink-3 m-0 mb-4" style={{ fontSize: 11, lineHeight: 1.45 }}>
+              Drag the red point along the curve, or focus it and use the arrow keys.
             </p>
-          </div>
+          </>
         )
       )}
 
@@ -859,14 +699,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
           </p>
         </>
       )}
-      {data && view === 'tradeoff' && (
-        <TradeoffView
-          data={data}
-          scenario={scenario}
-          step={step}
-          onPick={(s, st) => { setScenario(s); setStep(st) }}
-        />
-      )}
+      {data && view === 'tradeoff' && <WaterCost data={data} scenario={scenario} material={material} />}
     </ToolShell>
   )
 }

@@ -47,6 +47,14 @@ const COMPANION_OVERRIDES: Record<string, { title: string; journal: string | nul
     year: 2026,
     url: 'https://www.nature.com/articles/s41558-026-02675-0',
   },
+  // Tools-sheet slug for /tools/mining-water. Preprint only: the journal
+  // reviewing it is not named on the public site.
+  'water-mining': {
+    title: 'Reducing water stress from mining battery materials',
+    journal: 'in review',
+    year: 2026,
+    url: 'https://www.researchsquare.com/article/rs-11011048/v1',
+  },
   materials: {
     title: 'Global material consumption persists despite optimal efficiency and circularity',
     journal: 'in preparation',
@@ -68,6 +76,9 @@ const REPO_LINKS: Record<string, { github?: string; zenodo?: string; website?: s
   },
   materials: {
     github: 'https://github.com/pmbusch/material-intensity',
+  },
+  'water-mining': {
+    github: 'https://github.com/pmbusch/sustainable-mining',
   },
 };
 

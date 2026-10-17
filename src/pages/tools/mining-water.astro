@@ -5,11 +5,11 @@ import tools from '../../data/tools.json';
 import type { Tool } from '../../lib/types';
 
 // Companion explorer to Busch et al., "Reducing water stress from mining
-// battery materials". The paper is in review, so the page is noindex and
-// unlisted until a Tools-sheet row (slug: mining-water) lists it. The
-// companion line names the public preprint only, never the journal under
-// review. Data: scripts/build-mining-water.mjs.
-const tool = (tools as Tool[]).find((t) => t.slug === 'mining-water') ?? null;
+// battery materials". Listed on /tools by the Tools-sheet row, which uses the
+// slug water-mining (/tools/water-mining redirects here, see
+// astro.config.mjs). The companion line names the public preprint only,
+// never the journal under review. Data: scripts/build-mining-water.mjs.
+const tool = (tools as Tool[]).find((t) => t.slug === 'mining-water' || t.slug === 'water-mining') ?? null;
 
 const companion = {
   title: 'Reducing water stress from mining battery materials',
@@ -28,7 +28,6 @@ const repoLinks = {
   title={tool?.title ?? 'Mining within water limits'}
   description={tool?.summary ??
     'Battery-mineral deposits mapped against basin water stress, and the cost of mining where water is available.'}
-  noindex
   background="var(--paper)"
 >
   <MiningWaterTool

@@ -467,10 +467,10 @@ function FoodEmissionsMethods() {
         (2026)</strong></a>. The Ren response, refit on public covariates,
         is the primary model for the paper and the Powell ensemble a
         cross-check on cells where its response is well conditioned. The
-        map shows the Ren response refit on 61 of its 84 covariates, nine
-        of them from the authors&rsquo; own gridded layers, as a 100-member
-        bootstrap ensemble scaled to its median: about 2.2 Gt CO₂e
-        cumulative over 2000–2022 (range 1.6–3.1), or roughly 0.2 Gt per
+        map shows the Ren response refit on 78 of its 84 covariates, all
+        but elevation from the authors&rsquo; own gridded layers, as a 100-member
+        bootstrap ensemble scaled to its median: about 2.3 Gt CO₂e
+        cumulative over 2000–2022 (range 1.7–3.2), or roughly 0.2 Gt per
         year of gross loss by 2020. It follows the cropland rule: losing
         cells count in the totals, gaining cells are shown but not
         credited. The year slider shows period-mean rates (2001–05,

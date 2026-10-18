@@ -253,7 +253,9 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
           what retired, so more of it can come from scrap. It is the same lifetime setting as in
           the panel under the intensity slider, so it moves every product and every material at
           once, and the other dot moves with it. Where a share is out of reach, the dot stops at
-          the shortest or longest lifetimes the paper sampled.
+          the shortest or longest lifetimes the paper sampled. The number beside each dot is the average
+          lifetime of what retires that year: each product’s mean lifetime, weighted by the
+          tonnes of it retiring, so it shifts with the mix of products as well as the setting.
         </p>
         <p style={p}>
           The open circles relax the no-trade assumption. With everything collected, some regions

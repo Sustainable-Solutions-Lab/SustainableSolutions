@@ -9,6 +9,8 @@
  *   AND every key in variable.dimensionValues matches activeDimensions
  */
 
+import { applyRangelandScope } from './rangeland-scope.js'
+
 /**
  * @param {import('../contracts/project-config').ProjectConfig} config
  * @param {string} activeLayer
@@ -16,6 +18,11 @@
  * @returns {import('../contracts/project-config').Variable | null}
  */
 export function getActiveVariable(config, activeLayer, activeDimensions) {
+  return applyRangelandScope(config, activeDimensions,
+    resolveVariable(config, activeLayer, activeDimensions))
+}
+
+function resolveVariable(config, activeLayer, activeDimensions) {
   const v =
     config.variables.find((vv) => {
       if (vv.layer !== activeLayer) return false

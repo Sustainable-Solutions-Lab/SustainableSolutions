@@ -608,6 +608,12 @@ export interface ModelRun {
    * scrap would have to work with.
    */
   eolByRegion: Record<string, Record<EolMaterial, { surplus: Float64Array; spare: Float64Array }>>;
+  /**
+   * Per region and stock group: retiring mass, and retiring mass times the
+   * mean lifetime of the product it retires from. Their ratio is the
+   * average lifetime of what retires that year.
+   */
+  retiringLife: Record<string, Record<StockGroup, { mass: Float64Array; massLife: Float64Array }>>;
   /** Metal per tonne of ore, by year, to put scrap mass into ore terms. */
   grade: { Metal_Fe: Float64Array; Metal_NonFe: Float64Array };
   /**
@@ -699,6 +705,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
     secondary: emptyGroupRecord(n),
     secondaryByRegion: {},
     eolByRegion: {},
+    retiringLife: {},
     grade: { Metal_Fe: gradeFe, Metal_NonFe: gradeNonFe },
     scrap: {
       metal_ores: { retired: zeros(n), demand: zeros(n) },
@@ -709,6 +716,11 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
     gdp: zeros(n),
     popByRegion: {},
     gdpByRegion: {},
+  };
+
+  const lifeSlot = (region: string, group: StockGroup) => {
+    const r = (out.retiringLife[region] ??= {} as ModelRun['retiringLife'][string]);
+    return (r[group] ??= { mass: zeros(n), massLife: zeros(n) });
   };
 
   const eolSlot = (region: string, material: EolMaterial) => {
@@ -819,6 +831,8 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       const rows: {
         subUse: SubUse;
         superUse: SuperUse;
+        /** Mean lifetime used for this product, years. */
+        meanLife: number;
         res: DsmResult;
       }[] = [];
       for (const superUse of SUPER_USES) {
@@ -856,15 +870,17 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
           const draw = levers.lifetimeU[LIFETIME_GROUP_OF[superUse]];
           const uMean = draw?.mean ?? 0.5;
           const uK = draw?.k ?? 0.5;
+          const meanLife = Math.max(0.3, life.meanMin + uMean * (life.meanMax - life.meanMin));
           rows.push({
             subUse,
             superUse,
+            meanLife,
             res: runForwardDsm(
               `${material}|${region}|${subUse}`,
               age.start,
               age.stocks,
               target,
-              Math.max(0.3, life.meanMin + uMean * (life.meanMax - life.meanMin)),
+              meanLife,
               Math.max(0.1, life.kMin + uK * (life.kMax - life.kMin)),
               life.meanLife,
               life.k,
@@ -900,6 +916,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       const scrap = out.scrap.metal_ores;
       const endUse = out.primary.byEndUse.metal_ores;
       const left = eolSlot(region, material);
+      const lifeM = lifeSlot(region, 'metal_ores');
       for (let i = 0; i < n; i++) {
         const eol = allocateEol(
           rows.map((r) => {
@@ -915,6 +932,8 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
           secondaryRegion[i] += eol.secondary[j] / grade[i];
           stockTotal[i] += rows[j].res.totalStock[i] / grade[i];
           scrap.retired[i] += Math.max(0, rows[j].res.waste[i]);
+          lifeM.mass[i] += Math.max(0, rows[j].res.waste[i]);
+          lifeM.massLife[i] += Math.max(0, rows[j].res.waste[i]) * rows[j].meanLife;
           scrap.demand[i] += Math.max(0, rows[j].res.production[i]);
           const bucket = (endUse[SUB_USE_LABEL[rows[j].subUse]] ??= zeros(n));
           bucket[i] += primaryByRow[j][i] + eol.secondary[j] / grade[i];
@@ -955,6 +974,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       const scrap = out.scrap.nonmetallic_minerals;
       const endUse = out.primary.byEndUse.nonmetallic_minerals;
       const left = eolSlot(region, 'Non-metallic minerals');
+      const lifeN = lifeSlot(region, 'nonmetallic_minerals');
       for (let i = 0; i < n; i++) {
         const eol = allocateEol(
           mineralRows.map((r, j) => {
@@ -975,6 +995,8 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
           secondaryRegion[i] += eol.secondary[j];
           stockTotal[i] += mineralRows[j].res.totalStock[i];
           scrap.retired[i] += Math.max(0, mineralRows[j].res.waste[i]);
+          lifeN.mass[i] += Math.max(0, mineralRows[j].res.waste[i]);
+          lifeN.massLife[i] += Math.max(0, mineralRows[j].res.waste[i]) * mineralRows[j].meanLife;
           scrap.demand[i] += Math.max(0, mineralRows[j].res.production[i]);
           const bucket = (endUse[SUB_USE_LABEL[mineralRows[j].subUse]] ??= zeros(n));
           bucket[i] += primaryByRow[j][i] + eol.secondary[j];

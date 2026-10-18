@@ -16,6 +16,7 @@ import { Legend } from './legend.jsx'
 import { DistributionChart } from './distribution-chart.jsx'
 import { ZipInput } from './zip-input.jsx'
 import { PolygonUpload } from './polygon-upload.jsx'
+import { RangelandScopeControl } from './rangeland-scope-control.jsx'
 import { categoricalLegend } from '../../lib/analysis-categorical.js'
 
 export function Sidebar({ config, state, dispatch, allValues = [], companion = null, repoLinks = null, paleActive = false, setPaleActive = null, paleDriver = 'r_net', setPaleDriver = null, analysisEntries = [], colorRange = null }) {
@@ -214,6 +215,11 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             />
           )
         })}
+
+        {/* Rangeland LSRS scope: which grazing land counts (food emissions). */}
+        {isEmissions && config.rangelandScope && (
+          <RangelandScopeControl config={config} state={state} dispatch={dispatch} />
+        )}
 
         {/* Enhanced-mask toggles: SPAM default, finer datasets opt-in.
             Gridded view only - unit tiles carry no overrides. */}

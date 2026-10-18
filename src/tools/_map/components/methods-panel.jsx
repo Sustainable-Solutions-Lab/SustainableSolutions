@@ -189,8 +189,14 @@ function FoodEmissionsMethods() {
         CH₄, manure-management CH₄ and N₂O, and N₂O from manure deposited on
         pasture are taken from FAO's national Tier 1 series by species and
         year, then distributed within each country by gridded animal
-        densities (Gridded Livestock of the World, interpolated between
-        census years). National totals therefore match FAOSTAT exactly for
+        densities. Grazing animals (cattle, sheep, goats and horses) follow
+        Global Pasture Watch&rsquo;s annual 1 km livestock maps (Parente et
+        al., 2026), which are built as one consistent 2000–2022 series;
+        buffalo, which Global Pasture Watch does not map, follow its cattle
+        pattern within each country. Pigs and poultry follow Gridded
+        Livestock of the World, interpolated between its 2010, 2015 and
+        2020 editions. Both are census downscalings rather than
+        observations of animals. National totals therefore match FAOSTAT exactly for
         every year 2000–2023, and each species group carries its own
         primary product — raw milk, carcass meat, eggs — so emissions per
         kilogram can be reported per commodity. What it does not yet carry
@@ -502,7 +508,17 @@ function FoodEmissionsMethods() {
         products, whose 2010 release assigned the whole former-Sudan herd
         to both successor states. Rangeland losses are not yet attributed
         to livestock commodities, so they appear in all-commodity views
-        only.
+        only. Which grazing land counts is left to the reader, because the
+        Standard and its Guidance read differently: the Standard treats any
+        land used for livestock as productive land, while the Guidance
+        leaves natural grassland out of version 1 &ldquo;as long as animal
+        stocking rates are not intensively managed&rdquo;. The Rangeland
+        scope control counts all grazing land, cultivated grassland only,
+        or cultivated grassland plus natural grassland and shrubland where
+        2020 grazing intensity reaches a threshold the reader sets, using
+        each cell&rsquo;s Global Pasture Watch grassland classes (2018–2022
+        mean). It applies to the gridded view; national trend charts and
+        regional units count all grazing land.
       </p>
 
       <h2 style={h2Style}>Drivers of change</h2>

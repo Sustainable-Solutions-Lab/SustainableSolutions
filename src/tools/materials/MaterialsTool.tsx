@@ -670,7 +670,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
                 {ceiling.lines.map((l, k) => (
                   <span key={l.group}>{k ? ' and ' : ''}<b>{(100 * l.ceiling).toFixed(0)}%</b> of {CEILING_NAME[l.group].replace(/s$/, '')} supply</span>
                 ))}{place === 'World' ? '' : ` in ${place}`}, because so little of what is needed that year is retiring.
-                Dots are yours: drag one sideways to set collection, up or down to set how long things last{ceiling.lines.some((l) => l.withTrade != null) ? '; open circles add trade in scrap that would otherwise go unused elsewhere' : ''}.
+                Dots are yours, labelled with the average lifetime of what retires in {ceiling.year}: drag one sideways to set collection, up or down to set how long things last{ceiling.lines.some((l) => l.withTrade != null) ? '; open circles add trade in scrap that would otherwise go unused elsewhere' : ''}.
                 {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
               </p>
             </>

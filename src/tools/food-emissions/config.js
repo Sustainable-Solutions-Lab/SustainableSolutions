@@ -33,6 +33,14 @@
 
 // Rangeland colour cap, t CO2e/yr per 0.25° cell (set from the p95 of |rsoc|).
 const RSOC_COLOR_MAX = 15000
+// Global 2020 rangeland soil-carbon losses (Mt CO₂e/yr) under each LSRS
+// scope reading, filled from the exporter's meta.json at each export.
+const RANGELAND_SCOPE_TOTALS = {
+  all: 196.5,
+  cult: 38.1,
+  gi: { 0: 194.8, 10: 191.0, 20: 190.4, 30: 188.6, 40: 184.1, 50: 175.4, 60: 163.4, 70: 152.2, 80: 137.1, 90: 117.1 },
+}
+
 // Forest soil colour cap, t CO2e/yr per 0.25° cell (p95 of fsoil).
 const FSOIL_COLOR_MAX = 12000
 
@@ -427,6 +435,24 @@ const config = {
   // finer, core-track (open + redistributable) dataset the user can
   // toggle on; the tiles carry sparse `<prop><suffix>` overrides where
   // the reallocation differs, and every read falls back to SPAM.
+  // LSRS grassland scope for rangeland soil carbon (Gridded LM cat2 plan,
+  // 2026-10-17): the reader decides which grazing land counts. Cells carry
+  // gc / gn / gi (export_explorer_cells.py); lib/rangeland-scope.js applies
+  // the share to the rangeland term wherever it appears. Totals are the
+  // exporter's global 2020 losses under each reading, from the same 0.25°
+  // props the map uses (meta.json rangeland_scope_MtCO2e_2020).
+  rangelandScope: {
+    modeDimensionId: 'rscope',
+    thresholdDimensionId: 'rgi',
+    defaultThreshold: 50,
+    thresholdMin: 0,
+    thresholdMax: 90,
+    thresholdStep: 10,
+    sources: ['rsoil'],
+    variableIds: ['rsoc'],
+    showForSources: ['rsoil', 'all', 'cat2'],
+    totals: RANGELAND_SCOPE_TOTALS,
+  },
   enhancedMasks: [
     {
       id: 'descals-palm',

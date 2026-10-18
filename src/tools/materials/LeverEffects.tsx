@@ -342,10 +342,20 @@ export function useCeiling(inputs: ModelInputs, levers: Levers, place: string, g
       const points = runs.map((run, k) => ({ rate: rates[k], share: share(run, group) }));
       const ceiling = points[points.length - 1].share;
       const withTrade = traded(runs[runs.length - 1], group);
+      const nowRun = runModel(inputs, levers);
+      const i = nowRun.years.indexOf(year);
+      let mass = 0;
+      let massLife = 0;
+      for (const r of regions) {
+        const rl = nowRun.retiringLife[r]?.[group];
+        if (rl) { mass += rl.mass[i]; massLife += rl.massLife[i]; }
+      }
       return {
         group,
         points,
-        now: { rate: metal ? (levers.recyclingFe + levers.recyclingNonFe) / 2 : levers.downcycling, share: share(runModel(inputs, levers), group) },
+        /** Average lifetime, in years, of what retires in `year` at your settings. */
+        life: mass > 0 ? massLife / mass : null,
+        now: { rate: metal ? (levers.recyclingFe + levers.recyclingNonFe) / 2 : levers.downcycling, share: share(nowRun, group) },
         ceiling,
         // Only worth drawing where it differs from the line's own end.
         withTrade: withTrade - ceiling > 0.005 ? withTrade : null,
@@ -415,6 +425,16 @@ export function RecyclingCeiling({ data, onDrag }: {
               <circle cx={x(l.now.rate)} cy={y(l.now.share)} r={14} fill="transparent" />
               <circle cx={x(l.now.rate)} cy={y(l.now.share)} r={dragging === l.group ? 6 : 4.5} fill={c} stroke="var(--paper)" strokeWidth={1.5} />
             </g>
+            {/* What dragging up and down is doing: the average lifetime of what retires. */}
+            {l.life != null && (
+              // Metals above their line, minerals (the lower line) below theirs.
+              <text x={x(l.now.rate) + (l.group === 'metal_ores' ? -8 : 8)}
+                y={y(l.now.share) + (l.group === 'metal_ores' ? -9 : 17)}
+                textAnchor={l.group === 'metal_ores' ? 'end' : 'start'}
+                style={{ font: '600 10px var(--font-mono)', fill: c, stroke: 'var(--paper)', strokeWidth: 3, paintOrder: 'stroke', pointerEvents: 'none' }}>
+                {Math.round(l.life)}-yr life
+              </text>
+            )}
             {l.withTrade != null && (
               <>
                 <line x1={x(1)} x2={x(1)} y1={y(l.ceiling)} y2={y(l.withTrade)} stroke={c} strokeWidth={1.2} strokeDasharray="2 2" />

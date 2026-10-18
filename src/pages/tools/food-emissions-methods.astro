@@ -38,7 +38,7 @@ const pattern: Array<{ n: string; d: string; s: Status }> = [
   { n: 'Descals oil palm · Wang rubber · Song soy', s: 'built', d: 'Observed 10–30 m maps; palm and rubber carry planting year, so they double as conversion-cohort sources' },
   { n: 'FDaP cocoa & coffee', s: 'built', d: '2024 in hand; the 2018–2024 biennial series is re-exporting as threshold-then-aggregate cover, which fixes the partial-cover loss of the mean-probability form. Unreviewed and version-unstable, so a secondary layer.' },
   { n: 'MapBiomas Brazil', s: 'built', d: '30 m annual, national detail where it matters most' },
-  { n: 'GLW 3 / 4 livestock shares', s: 'built', d: '2010 / 2015 / 2020, interpolated between epochs. Pattern is modelled, not observed.' },
+  { n: 'Global Pasture Watch · GLW livestock shares', s: 'built', d: 'Grazing animals follow Global Pasture Watch’s annual 1 km maps, 2000–2022 (buffalo on its cattle pattern); pigs and poultry follow GLW 2010 / 2015 / 2020, interpolated between editions. Both are census downscalings: pattern is modelled, not observed.' },
   { n: 'Trase · Kalischek cocoa shares', s: 'built', d: 'Ghana and Côte d’Ivoire cocoa follows Kalischek et al. (2023) district totals via Trase, with FDaP as the within-district weight. Ghana’s national cocoa area follows Kalischek (2.71 Mha) rather than FAOSTAT (1.49).' },
 ];
 
@@ -48,7 +48,7 @@ const cat2: Array<{ n: string; d: string; s: Status }> = [
   { n: 'Peatland', s: 'built', d: 'Cornerstone steady-state occupation floor, 37.3 t CO₂e/ha/yr, perpetual while drained. Malaysia, empty in the upstream drained-peat map, is patched from PEATMAP extent × crop maps (1.5 Mha of crops on peat, ~56 Mt CO₂e/yr).' },
   { n: 'Peat split by land use', s: 'aspire', d: 'IPCC rates span 13× within tropical peat — acacia 20.0, oil palm 11.0, forest 5.3 t CO₂-C/ha/yr. The single rate is, to 8%, the oil-palm value.' },
   { n: 'Peat as an exhaustible stock', s: 'aspire', d: 'A 0.5 m profile is gone in about 23 years at the current rate. Needs gridded depth, which we lack globally.' },
-  { n: 'Rangeland soil carbon', s: 'built', d: 'Preliminary, on the map. The Ren et al. (2024) grazing response, refit on 78 of its 84 covariates (all but elevation from the authors’ own layers), is primary: about 2.3 Gt CO₂e cumulative 2000–2022. Powell et al. (2026) is a cross-check on well-conditioned cells. Still open: the present-day grazing-intensity level, where the other global product gives 2.7 Gt. Refitting on every layer the authors supplied does not close that gap, so it is the grazing-intensity map, not the covariates. The herd time axis follows FAOSTAT stocks: a seam in the 2010 livestock grid had given South Sudan the whole former-Sudan herd.' },
+  { n: 'Rangeland soil carbon', s: 'built', d: 'Preliminary, on the map. The Ren et al. (2024) grazing response, refit on 78 of its 84 covariates (all but elevation from the authors’ own layers), is primary: about 2.3 Gt CO₂e cumulative 2000–2022. Powell et al. (2026) is a cross-check on well-conditioned cells. Still open: the present-day grazing-intensity level, where the other global product gives 2.7 Gt. Refitting on every layer the authors supplied does not close that gap, so it is the grazing-intensity map, not the covariates. A scope control lets readers choose which grazing land counts under the LSRS: all of it, cultivated grassland only, or natural grassland too above a grazing-intensity threshold. The herd time axis follows FAOSTAT stocks: a seam in the 2010 livestock grid had given South Sudan the whole former-Sudan herd.' },
   { n: 'Forest soil carbon', s: 'built', d: 'On the map, not in any total. Mineral forest soil is held at the IPCC default of steady state, which national inventories support: Annex I parties report a net gain of +0.03 t C/ha/yr across 1,665 Mha. The drained organic soil that had fallen between the peat and forest layers is now its own layer: CO₂, CH₄ and N₂O as 22 Annex I parties report them (38 Mt CO₂e/yr on 10.4 Mha in 2020), placed on forest over PEATMAP peat.' },
   { n: 'Tropical drained forest peat', s: 'gap', d: 'Non-Annex I parties report no drained forest area, so drained peat-swamp forest in Southeast Asia is not yet on the map.' },
   { n: 'Forest soil re-measurement', s: 'aspire', d: 'ICP Forests BioSoil, Germany’s BZE I–III and the Nordic forest soil inventories: the forest analogue of LUCAS, and the only direct test of the steady-state default.' },
@@ -139,7 +139,7 @@ const cat3 = ['Fertilizer', 'Manure applied', 'Manure mgmt', 'Pasture N₂O', 'R
         total, so mask error is bounded and local.</p>
         <p class="note"><strong>What it costs.</strong> Sub-national accuracy is only as
         good as the mask, and nothing in the pipeline checks it. That is exactly where
-        the Trase cocoa constraint now bites for Ghana and C&ocirc;te d&rsquo;Ivoire, and why GLW&rsquo;s modelled pattern matters
+        the Trase cocoa constraint now bites for Ghana and C&ocirc;te d&rsquo;Ivoire, and why the modelled livestock pattern matters
         far more for grazing intensity than it ever did for emissions.</p>
       </div>
     </section>

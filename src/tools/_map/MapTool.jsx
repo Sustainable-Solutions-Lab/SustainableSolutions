@@ -376,6 +376,9 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     yc ? state.activeDimensions?.[yc.compareDimensionId] : '-',
     domCompare ? `cmp${domCompare.from}-${domCompare.to}` : '-',
     maskSuffixes.join('+') || '-',
+    config.rangelandScope
+      ? `${state.activeDimensions?.[config.rangelandScope.modeDimensionId] ?? 'all'}${state.activeDimensions?.[config.rangelandScope.thresholdDimensionId] ?? ''}`
+      : '-',
   ].join('|')
 
   // Count repaints during render rather than in an effect, so the tick is

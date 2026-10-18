@@ -12,7 +12,8 @@
  *     is attached (use-just-air-layers, once the trends JSON loads) the
  *     value gracefully falls back to the base prop (variable.id), which is
  *     also the deliberate behavior for filters and stats: they operate on
- *     the reference-year pattern.
+ *     the reference-year pattern. A term may carry `cellScale` ({ expr, fn }),
+ *     a per-cell multiplier applied to that term only.
  *
  * Every consumer — paint expressions, filters, statistics — reads through
  * these so a computed variable behaves exactly like a stored one.
@@ -60,7 +61,8 @@ export function readVarValue(props, variable) {
       terms.reduce((sum, t) => {
         const v = readProp(props, t.prop, sfx)
         if (v == null || isNaN(v)) return sum
-        return sum + v * factorFor(factors, t.src, m49, y)
+        const k = t.cellScale ? t.cellScale.fn(props) : 1
+        return sum + v * k * factorFor(factors, t.src, m49, y)
       }, 0)
     const present = variable.hasAny
       ? variable.hasAny.some((k) => readProp(props, k, sfx) != null)
@@ -88,7 +90,10 @@ export function varValueExpr(variable) {
     const { terms, year, yearB, factors } = variable.scaled
     const at = (y) => {
       const parts = terms.map((t) => {
-        const get = ['coalesce', ['to-number', propExpr(t.prop, sfx)], 0]
+        const raw = ['coalesce', ['to-number', propExpr(t.prop, sfx)], 0]
+        // Per-term cell multiplier (e.g. the rangeland LSRS scope share,
+        // lib/rangeland-scope.js) applied before the national year factor.
+        const get = t.cellScale ? ['*', raw, t.cellScale.expr] : raw
         const pairs = factorPairs(factors, t.src, y)
         if (pairs.length === 0) return get
         return ['*', get, ['match', ['get', 'm49'], ...pairs, 1]]

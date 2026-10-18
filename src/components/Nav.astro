@@ -16,7 +16,7 @@ const path = Astro.url.pathname;
     aria-label="Primary"
     class="container-content flex items-center justify-between h-14"
   >
-    <a href="/" class="lab-wordmark border-b-0" aria-label="Sustainable Solutions Lab, home">
+    <a href="/" class="lab-wordmark no-rule" aria-label="Sustainable Solutions Lab, home">
       <img class="lab-logo lab-logo-light" src="/logos/lab/wordmark-dark.svg" alt="Sustainable Solutions Lab" />
       <img class="lab-logo lab-logo-dark"  src="/logos/lab/wordmark-light.svg" alt="" aria-hidden="true" />
     </a>
@@ -112,9 +112,15 @@ const path = Astro.url.pathname;
     display: inline-flex;
     align-items: center;
     min-width: 0;
+    transition: opacity var(--dur-ui) var(--ease);
+  }
+  /* A logo linking home is a convention readers know, so no underline;
+     a light fade on hover confirms it is clickable. */
+  .lab-wordmark:hover {
+    opacity: 0.75;
   }
   .lab-logo {
-    height: 32px;
+    height: 40px;
     max-width: 62vw;   /* the wordmark is about 7:1, so on a phone it
                           shrinks rather than crowding the controls */
     width: auto;

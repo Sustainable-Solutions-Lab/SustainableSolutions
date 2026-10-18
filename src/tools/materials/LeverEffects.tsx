@@ -1,10 +1,11 @@
 /**
  * Two readings the knobs cannot give on their own.
  *
- * LeverEffects: what each assumption is worth, in growth, from one end of its
- * range to the other with everything else left where you put it. This is the
- * efficiency-versus-circularity question answered in the units of the paper's
- * result rather than argued about.
+ * LeverEffects: what each assumption is worth, in growth of whatever is in
+ * focus, from one end of its range to the other with everything else left
+ * where you put it. This is the efficiency-versus-circularity question
+ * answered in the units of the paper's result rather than argued about. An
+ * assumption that cannot move the focus (ore grade, for biomass) gets no bar.
  *
  * RecyclingCeiling: why pushing recovery to the top does less than it looks.
  * Secondary supply is the collection rate times the share of demand that is
@@ -14,12 +15,12 @@ import { useMemo } from 'react';
 import {
   INTENSITY_LEVERS,
   INTENSITY_LEVER_KEYS,
-  cagr,
   runModel,
   type IntensityLever,
   type Levers,
   type ModelInputs,
 } from './model';
+import { focusGrowth, type Focus } from './focus';
 
 const pct = (v: number) => `${v >= 0 ? '+' : ''}${(100 * v).toFixed(2)}%`;
 
@@ -49,12 +50,9 @@ interface Bar {
   now: number;
 }
 
-export function useLeverEffects(inputs: ModelInputs, levers: Levers) {
+export function useLeverEffects(inputs: ModelInputs, levers: Levers, focus: Focus) {
   return useMemo(() => {
-    const growth = (l: Levers): number => {
-      const run = runModel(inputs, l);
-      return cagr(run.years, run.primary.total, 2025, 2060) ?? 0;
-    };
+    const growth = (l: Levers): number => focusGrowth(focus, runModel(inputs, l));
     const now = growth(levers);
     const p = (name: string) => inputs.mcParams[name];
 
@@ -75,13 +73,13 @@ export function useLeverEffects(inputs: ModelInputs, levers: Levers) {
       ),
       span(
         'efficiency',
-        'Material efficiency, all four',
-        withIntensity(levers, INTENSITY_LEVER_KEYS, 0),
-        withIntensity(levers, INTENSITY_LEVER_KEYS, 1),
+        focus.group === 'total' ? 'Material efficiency, all four' : 'Material efficiency',
+        withIntensity(levers, focus.levers, 0),
+        withIntensity(levers, focus.levers, 1),
       ),
       span(
         'circularity',
-        'Recycling and reuse, both',
+        focus.group === 'total' ? 'Recycling and reuse, both' : 'Recycling and reuse',
         {
           ...levers,
           recyclingFe: p('RECYCLING_RATE_FE').max,
@@ -125,8 +123,9 @@ export function useLeverEffects(inputs: ModelInputs, levers: Levers) {
       ),
     ];
 
-    // Per-material efficiency, so "which material" is answerable too.
-    for (const lever of INTENSITY_LEVER_KEYS) {
+    // Per-material efficiency, so "which material" is answerable too. With one
+    // group in focus that is the efficiency bar itself.
+    if (focus.group === 'total') for (const lever of INTENSITY_LEVER_KEYS) {
       bars.push(
         span(
           lever,
@@ -136,8 +135,9 @@ export function useLeverEffects(inputs: ModelInputs, levers: Levers) {
         ),
       );
     }
-    return { bars, now };
-  }, [inputs, levers]);
+    // A hundredth of a point a year is below anything the bars can show.
+    return { bars: bars.filter((b) => Math.abs(b.best - b.worst) > 1e-4), now };
+  }, [inputs, levers, focus]);
 }
 
 export function LeverEffects({ bars, now }: { bars: Bar[]; now: number }) {
@@ -206,90 +206,78 @@ export function LeverEffects({ bars, now }: { bars: Bar[]; now: number }) {
       <ul style={{ display: 'flex', flexDirection: 'column', gap: 7, margin: 0, padding: 0 }}>
         {headline.map((b) => row(b, false))}
       </ul>
-      <details>
+      {detail.length > 0 && <details>
         <summary style={{ font: '600 11px var(--font-mono)', color: 'var(--ink-3)', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '.05em' }}>
           Efficiency, material by material
         </summary>
         <ul style={{ display: 'flex', flexDirection: 'column', gap: 6, margin: '8px 0 0', padding: 0 }}>
           {detail.map((b) => row(b, true))}
         </ul>
-      </details>
-      <p style={{ fontSize: 11, color: 'var(--ink-3)', margin: 0, lineHeight: 1.5 }}>
-        Each bar runs from the most to the least ambitious end of that assumption, with everything
-        else left where you have set it. The dark line is where your scenario sits; the green line,
-        where it appears, is zero growth.
-      </p>
+      </details>}
     </div>
   );
 }
 
-/** Two sentences that read the bars, rather than leaving them to be read. */
-export function leverVerdict(bars: Bar[]): string {
+const NAME: Record<string, string> = {
+  growth: 'Population and income are',
+  efficiency: 'Efficiency is',
+  circularity: 'Recycling and reuse are',
+  grade: 'Ore grade is',
+  lifetime: 'How long things last is',
+};
+
+/** The bars read in one line, for the figure's title. */
+export function leverHeadline(bars: Bar[]): string {
   const width = (k: string) => {
     const b = bars.find((x) => x.key === k);
     return b ? Math.abs(b.worst - b.best) : 0;
   };
-  const pp = (v: number) => (100 * v).toFixed(2);
   const eff = width('efficiency');
   const circ = width('circularity');
-  const ranked = [
-    ['population and income', width('growth')],
-    ['material efficiency', eff],
-    ['recycling and reuse', circ],
-    ['ore grade', width('grade')],
-    ['how long things last', width('lifetime')],
-  ].sort((a, b) => (b[1] as number) - (a[1] as number));
-
-  const ratio = circ > 0 ? eff / circ : Infinity;
-  const compare =
-    ratio >= 1.15
-      ? `Efficiency is the bigger lever by about ${ratio.toFixed(1)}×`
-      : ratio <= 0.87
-        ? `Circularity is the bigger lever by about ${(1 / ratio).toFixed(1)}×`
-        : 'The two are worth about the same';
-
-  // Name the others rather than re-announcing whichever of the two just won.
-  const others = ranked
-    .filter(([name]) => name !== 'material efficiency' && name !== 'recycling and reuse')
-    .map(([name, w]) => `${name} ${pp(w as number)}`)
-    .join(', ');
-
-  return (
-    `Taken end to end, material efficiency moves world material growth by ${pp(eff)} percentage ` +
-    `points a year; recycling and reuse together move it by ${pp(circ)}. ${compare}. ` +
-    `For comparison, in points a year: ${others}.`
-  );
+  if (eff > 0 && circ > 0) {
+    const ratio = eff / circ;
+    if (ratio >= 1.15) return `Efficiency is worth ${ratio.toFixed(1)}× recycling and reuse`;
+    if (ratio <= 0.87) return `Recycling and reuse are worth ${(1 / ratio).toFixed(1)}× efficiency`;
+    return 'Efficiency and recycling are worth about the same';
+  }
+  const top = Object.keys(NAME).map((k) => [k, width(k)] as const).sort((a, b) => b[1] - a[1])[0];
+  return top && top[1] > 0 ? `${NAME[top[0]]} the biggest lever` : 'What each assumption is worth';
 }
 
-export function RecyclingCeiling({
-  inputs,
-  levers,
-  year = 2050,
-}: {
-  inputs: ModelInputs;
-  levers: Levers;
-  year?: number;
-}) {
-  const data = useMemo(() => {
-    const rates = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
-    const points = rates.map((rate) => {
-      const run = runModel(inputs, { ...levers, recyclingFe: rate, recyclingNonFe: rate });
-      const i = run.years.indexOf(year);
-      const p = run.primary.byGroup.metal_ores[i];
-      const s = run.secondary.metal_ores[i];
-      return { rate, share: s / (p + s) };
-    });
-    const here = runModel(inputs, levers);
-    const i = here.years.indexOf(year);
-    const p = here.primary.byGroup.metal_ores[i];
-    const s = here.secondary.metal_ores[i];
-    return {
-      points,
-      now: { rate: (levers.recyclingFe + levers.recyclingNonFe) / 2, share: s / (p + s) },
-      ceiling: points[points.length - 1].share,
-    };
-  }, [inputs, levers, year]);
+type CeilingGroup = 'metal_ores' | 'nonmetallic_minerals';
 
+/**
+ * Secondary share of supply across the whole range of collection rates, and
+ * where the scenario sits. Metals by default; for minerals the "collection
+ * rate" is the share of demolition waste reused.
+ */
+export function useCeiling(inputs: ModelInputs, levers: Levers, group: CeilingGroup, year = 2050) {
+  return useMemo(() => {
+    const metal = group === 'metal_ores';
+    const set = (rate: number): Levers =>
+      metal ? { ...levers, recyclingFe: rate, recyclingNonFe: rate } : { ...levers, downcycling: rate };
+    const at = (l: Levers) => {
+      const run = runModel(inputs, l);
+      const i = run.years.indexOf(year);
+      const p = run.primary.byGroup[group][i];
+      const s = run.secondary[group][i];
+      return s / (p + s);
+    };
+    const rates = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
+    const points = rates.map((rate) => ({ rate, share: at(set(rate)) }));
+    return {
+      group,
+      year,
+      points,
+      now: { rate: metal ? (levers.recyclingFe + levers.recyclingNonFe) / 2 : levers.downcycling, share: at(levers) },
+      ceiling: Math.max(...points.map((p) => p.share)),
+    };
+  }, [inputs, levers, year, group]);
+}
+
+export function RecyclingCeiling({ data }: { data: ReturnType<typeof useCeiling> }) {
+  const { year } = data;
+  const metal = data.group === 'metal_ores';
   const W = 420;
   const H = 210;
   const M = { l: 46, r: 12, t: 12, b: 36 };
@@ -298,48 +286,39 @@ export function RecyclingCeiling({
   const x = (v: number) => M.l + v * pw;
   const y = (v: number) => M.t + ph - v * ph;
   const d = data.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.rate).toFixed(1)},${y(p.share).toFixed(1)}`).join('');
+  const noun = metal ? 'metal' : 'minerals';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', maxWidth: 460, height: 'auto' }}
-        aria-label={`Secondary share of metal supply in ${year} against the collection rate`}>
-        {[0, 0.25, 0.5, 0.75, 1].map((t) => (
-          <g key={t}>
-            <line x1={M.l} x2={M.l + pw} y1={y(t)} y2={y(t)} stroke="var(--rule)" strokeWidth={0.6} />
-            <text x={M.l - 7} y={y(t)} textAnchor="end" dominantBaseline="middle"
-              style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-3)' }}>{(100 * t).toFixed(0)}%</text>
-          </g>
-        ))}
-        {/* one-for-one reference: what a rate would give if every tonne were available */}
-        <line x1={x(0)} x2={x(1)} y1={y(0)} y2={y(1)} stroke="var(--ink-3)" strokeWidth={1} strokeDasharray="3 3" />
-        <line x1={M.l} x2={M.l + pw} y1={y(data.ceiling)} y2={y(data.ceiling)} stroke="#1B7837" strokeWidth={1.2} strokeDasharray="5 3" />
-        <path d={d} fill="none" stroke="var(--cardinal)" strokeWidth={2.2} />
-        <circle cx={x(data.now.rate)} cy={y(data.now.share)} r={4} fill="var(--cardinal)" stroke="var(--paper)" strokeWidth={1.5} />
-        <text x={M.l + pw} y={y(data.ceiling) - 6} textAnchor="end"
-          style={{ font: '400 10.5px var(--font-mono)', fill: '#1B7837' }}>
-          ceiling {(100 * data.ceiling).toFixed(0)}%
-        </text>
-        {[0, 0.5, 1].map((t) => (
-          <text key={t} x={x(t)} y={M.t + ph + 15} textAnchor="middle"
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', maxWidth: 460, height: 'auto' }}
+      aria-label={`Secondary share of ${noun} supply in ${year} against the share collected`}>
+      {[0, 0.25, 0.5, 0.75, 1].map((t) => (
+        <g key={t}>
+          <line x1={M.l} x2={M.l + pw} y1={y(t)} y2={y(t)} stroke="var(--rule)" strokeWidth={0.6} />
+          <text x={M.l - 7} y={y(t)} textAnchor="end" dominantBaseline="middle"
             style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-3)' }}>{(100 * t).toFixed(0)}%</text>
-        ))}
-        <text x={M.l + pw / 2} y={H - 4} textAnchor="middle"
-          style={{ font: '400 10.5px var(--font-sans)', fill: 'var(--ink-2)' }}>
-          Share of retiring metal collected
-        </text>
-        <text transform={`translate(11,${M.t + ph / 2}) rotate(-90)`} textAnchor="middle"
-          style={{ font: '400 10.5px var(--font-sans)', fill: 'var(--ink-2)' }}>
-          Secondary share of supply
-        </text>
-      </svg>
-      <p style={{ fontSize: 12.5, lineHeight: 1.55, margin: 0, color: 'var(--ink-2)' }}>
-        The line is straight, and that is the point: doubling collection doubles secondary supply,
-        with no diminishing returns and no takeoff either. Collect <b>everything</b> that retires and
-        secondary supply still only reaches <b>{(100 * data.ceiling).toFixed(0)}%</b> of metal supply
-        in {year} — because that is how much of what is needed that year is retiring, from a stock
-        built when the world was smaller. At your settings it is{' '}
-        <b>{(100 * data.now.share).toFixed(0)}%</b>.
-      </p>
-    </div>
+        </g>
+      ))}
+      {/* one-for-one reference: what a rate would give if every tonne were available */}
+      <line x1={x(0)} x2={x(1)} y1={y(0)} y2={y(1)} stroke="var(--ink-3)" strokeWidth={1} strokeDasharray="3 3" />
+      <line x1={M.l} x2={M.l + pw} y1={y(data.ceiling)} y2={y(data.ceiling)} stroke="#1B7837" strokeWidth={1.2} strokeDasharray="5 3" />
+      <path d={d} fill="none" stroke="var(--cardinal)" strokeWidth={2.2} />
+      <circle cx={x(data.now.rate)} cy={y(data.now.share)} r={4} fill="var(--cardinal)" stroke="var(--paper)" strokeWidth={1.5} />
+      <text x={M.l + pw} y={y(data.ceiling) - 6} textAnchor="end"
+        style={{ font: '400 10.5px var(--font-mono)', fill: '#1B7837' }}>
+        ceiling {(100 * data.ceiling).toFixed(0)}%
+      </text>
+      {[0, 0.5, 1].map((t) => (
+        <text key={t} x={x(t)} y={M.t + ph + 15} textAnchor="middle"
+          style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-3)' }}>{(100 * t).toFixed(0)}%</text>
+      ))}
+      <text x={M.l + pw / 2} y={H - 4} textAnchor="middle"
+        style={{ font: '400 10.5px var(--font-sans)', fill: 'var(--ink-2)' }}>
+        {metal ? 'Share of retiring metal collected' : 'Share of demolished minerals reused'}
+      </text>
+      <text transform={`translate(11,${M.t + ph / 2}) rotate(-90)`} textAnchor="middle"
+        style={{ font: '400 10.5px var(--font-sans)', fill: 'var(--ink-2)' }}>
+        Secondary share of supply
+      </text>
+    </svg>
   );
 }

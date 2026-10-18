@@ -6,6 +6,10 @@
  * small: a heat-coloured number with what it was in 2024 beneath it, and the
  * explanation behind the (i). Two to a row on a phone, so the panel stays
  * short. Every group resets on its own, and nothing is ever greyed out.
+ *
+ * It holds only what acts on the material in focus: biomass has no recycling
+ * rate and fossil fuels no ore grade, so with either chosen those groups are
+ * left out rather than shown doing nothing.
  */
 import type { ReactNode } from 'react';
 import Slider, { type Tick } from '../magnets/Slider';
@@ -18,10 +22,12 @@ import {
   leverDraw,
   leverWorldValue,
   resolveSsp,
+  type GroupKey,
   type IntensityLever,
   type Levers,
   type ModelInputs,
 } from './model';
+import { GROUP_LEVER } from './focus';
 
 export type SspBlend = ReturnType<typeof resolveSsp>;
 
@@ -119,17 +125,30 @@ export default function Controls({
   levers,
   blend,
   intensityDraw,
+  group,
+  leaf,
   onChange,
 }: {
   inputs: ModelInputs;
   levers: Levers;
   blend: SspBlend;
+  /** The material in focus: only what acts on it is shown. */
+  group: GroupKey | 'total';
+  leaf: string | null;
   /** The draw each intensity rail should show, scenario-aware. */
   intensityDraw: (lever: IntensityLever) => number;
   onChange: (change: (l: Levers) => void) => void;
 }) {
   const d = defaultLevers(inputs);
   const p = (name: string) => inputs.mcParams[name];
+
+  const all = group === 'total';
+  const metals = all || group === 'metal_ores';
+  const minerals = all || group === 'nonmetallic_minerals';
+  const ferrous = metals && leaf !== 'Non-ferrous ores';
+  const nonFerrous = metals && leaf !== 'Ferrous ores';
+  const stocks = metals || minerals;
+  const efficiency = all ? INTENSITY_LEVER_KEYS : [GROUP_LEVER[group]];
 
   const resetIntensity = () =>
     onChange((l) => {
@@ -143,7 +162,7 @@ export default function Controls({
         title="Material efficiency"
         onReset={resetIntensity}
       >
-        {INTENSITY_LEVER_KEYS.map((lever) => (
+        {efficiency.map((lever) => (
           <IntensitySlider
             key={lever}
             lever={lever}
@@ -166,7 +185,7 @@ export default function Controls({
         ))}
       </Group>
 
-      <Group
+      {stocks && <Group
         title="Circularity"
         onReset={() =>
           onChange((l) => {
@@ -176,7 +195,7 @@ export default function Controls({
           })
         }
       >
-        <Small
+        {ferrous && <Small
           label="Iron and steel recovered"
           value={levers.recyclingFe}
           min={p('RECYCLING_RATE_FE').min}
@@ -186,8 +205,8 @@ export default function Controls({
           fmt={(v) => `${(100 * v).toFixed(0)}%`}
           level={`from ${(100 * worldRate(inputs, 'fe')).toFixed(0)}% today`}
           desc="Share of retiring iron and steel collected and used again, reached by the convergence year. Each region ramps from its own rate today, from 45% in Latin America to 75% in Europe."
-        />
-        <Small
+        />}
+        {nonFerrous && <Small
           label="Other metals recovered"
           value={levers.recyclingNonFe}
           min={p('RECYCLING_RATE_NONFE').min}
@@ -197,8 +216,8 @@ export default function Controls({
           fmt={(v) => `${(100 * v).toFixed(0)}%`}
           level={`from ${(100 * worldRate(inputs, 'nonfe')).toFixed(0)}% today`}
           desc="Aluminium, copper and the rest, pooled. A tonne of recycled metal displaces a tonne of mined metal, and far more than a tonne of ore, because the ore saved is the tonne divided by its grade."
-        />
-        <Small
+        />}
+        {minerals && <Small
           label="Minerals reused"
           value={levers.downcycling}
           min={p('DOWNCYCLING').min}
@@ -208,10 +227,10 @@ export default function Controls({
           fmt={(v) => `${(100 * v).toFixed(0)}%`}
           level={`from ${(100 * worldDown(inputs)).toFixed(0)}% today`}
           desc="Concrete and aggregate recovered from demolition. It loses quality, so it can only re-enter buildings and civil works up to a capped share; the top of this rail buys less than the top of the others."
-        />
-      </Group>
+        />}
+      </Group>}
 
-      <Group
+      {metals && <Group
         title="Ore grade in 2060"
         onReset={() =>
           onChange((l) => {
@@ -220,7 +239,7 @@ export default function Controls({
           })
         }
       >
-        <Small
+        {ferrous && <Small
           label="Iron ore"
           value={levers.gradeOreFe}
           min={p('GRADE_ORE_FE').min}
@@ -230,8 +249,8 @@ export default function Controls({
           fmt={(v) => `${(100 * v).toFixed(0)}%`}
           level={`from ${(100 * inputs.gradeOre2024.fe).toFixed(0)}% today`}
           desc="Metal per tonne of rock. Left is depletion, right is better deposits or better recovery: as grade falls, the same metal takes more mining."
-        />
-        <Small
+        />}
+        {nonFerrous && <Small
           label="Other metal ores"
           value={levers.gradeOreNonFe}
           min={p('GRADE_ORE_NONFE').min}
@@ -241,11 +260,11 @@ export default function Controls({
           fmt={(v) => `${(100 * v).toFixed(1)}%`}
           level={`from ${(100 * inputs.gradeOre2024.nonfe).toFixed(1)}% today`}
           desc="At 1.6%, a tonne of copper or aluminium carries about 60 tonnes of ore. This is why most of the mass counted as metal ore is non-ferrous."
-        />
-      </Group>
+        />}
+      </Group>}
 
       <Group
-        title="Timing and lifetimes"
+        title={stocks ? 'Timing and lifetimes' : 'Timing'}
         onReset={() =>
           onChange((l) => {
             l.lifetimeU = {};
@@ -254,7 +273,7 @@ export default function Controls({
           })
         }
       >
-        <Small
+        {stocks && <Small
           label="How long things last"
           value={levers.lifetimeU.buildings?.mean ?? 0.5}
           min={0}
@@ -272,7 +291,7 @@ export default function Controls({
           }
           fmt={(v) => (v < 0.49 ? 'shorter' : v > 0.51 ? 'longer' : 'as published')}
           desc={`Moves every product's mean lifetime inside its published range at once: ${Object.values(LIFETIME_GROUP_LABEL).join(', ').toLowerCase()}. Longer lifetimes slow replacement, and slow the scrap supply recycling depends on.`}
-        />
+        />}
         <Small
           label="Efficiency reached by"
           value={levers.targetYear}
@@ -283,7 +302,7 @@ export default function Controls({
           fmt={(v) => String(Math.round(v))}
           desc="Intensity eases from its 2024 value to the target by this year, then holds."
         />
-        <Small
+        {stocks && <Small
           label="Recovery reached by"
           value={levers.convergenceYear}
           min={p('RECYC_CONVERGENCE_YR').min}
@@ -292,7 +311,7 @@ export default function Controls({
           onChange={(v) => onChange((l) => (l.convergenceYear = Math.round(v)))}
           fmt={(v) => String(Math.round(v))}
           desc="Recycling and reuse ease from today's regional rates to the chosen ones by this year."
-        />
+        />}
       </Group>
     </div>
   );

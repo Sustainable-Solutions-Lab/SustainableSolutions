@@ -14,10 +14,11 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEv
 import { followTouches } from '../magnets/Slider';
 import ProjectionChart, { spectral, type Band, type StackSeries } from './ProjectionChart';
 import Methods from './Methods';
-import Drivers, { PAST_FROM, PAST_TO, type DriverNow, type DriverPast } from './Drivers';
-import ContourPanel, { CONTOUR_AXES, type ContourAxis, type ScatterData } from './ContourPanel';
+import Drivers, { PAST_FROM, PAST_TO, type DriverPast } from './Drivers';
+import ContourPanel, { CONTOUR_AXES, axesFor, type ContourAxis, type ScatterData } from './ContourPanel';
 import Controls from './Controls';
-import { LeverEffects, RecyclingCeiling, leverVerdict, useLeverEffects } from './LeverEffects';
+import { LeverEffects, RecyclingCeiling, leverHeadline, useCeiling, useLeverEffects } from './LeverEffects';
+import { focusPhrase, makeFocus } from './focus';
 import {
   GROUP_KEYS,
   GROUP_LABEL,
@@ -26,7 +27,6 @@ import {
   INTENSITY_LEVER_KEYS,
   customLeversFromSsp,
   defaultLevers,
-  driverGrowth,
   leverWorldValue,
   resolveSsp,
   runModel,
@@ -177,7 +177,6 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const shown = useDeferredValue(levers);
   const run = useMemo(() => runModel(inputs, shown), [inputs, shown]);
   const blend = useMemo(() => resolveSsp(inputs, shown.sspU), [inputs, shown.sspU]);
-  const effects = useLeverEffects(inputs, shown);
 
   const edit = (change: (l: Levers) => void) => {
     setScenario((prev) => {
@@ -187,9 +186,16 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     });
   };
 
-  const groups: GroupKey[] = group === 'total' ? GROUP_KEYS : [group];
   const leaves = group === 'total' ? [] : GROUP_LEAVES[group];
   const activeLeaf = leaf && leaves.includes(leaf) ? leaf : null;
+
+  // The menus at the top set what the whole page is about.
+  const focus = useMemo(() => makeFocus(place, group, activeLeaf), [place, group, activeLeaf]);
+  const effects = useLeverEffects(inputs, shown, focus);
+  const ceilingGroup = group === 'nonmetallic_minerals' ? 'nonmetallic_minerals' : 'metal_ores';
+  const ceiling = useCeiling(inputs, shown, ceilingGroup);
+  const axes = axesFor(group);
+  const axisShown = axes.includes(axis) ? axis : axes[0];
 
   // ── Series ────────────────────────────────────────────────────────────────
   // The figure is stacked, so everything below is per component rather than
@@ -351,62 +357,52 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
 
   const sliceName = group === 'total' ? 'all four groups' : (activeLeaf ?? GROUP_LABEL[group]).toLowerCase();
 
-  // ── The three terms the first figure answers to ───────────────────────────
-  // Measured over exactly the years the model's series cover, so that the
-  // product of the three is the fourth to the last decimal place.
-  const kayaNow = useMemo<DriverNow>(() => {
-    const n = run.years.length;
-    const yrs = run.years[n - 1] - run.years[0];
-    const g = (a: number, b: number) => Math.pow(b / a, 1 / yrs) - 1;
-    const d = driverGrowth(inputs, shown);
-    return {
-      pop: d.pop,
-      gdppc: d.gdppc,
-      intensity: g(run.primary.total[0] / run.gdp[0], run.primary.total[n - 1] / run.gdp[n - 1]),
-      material: g(run.primary.total[0], run.primary.total[n - 1]),
-      pop0: d.pop0,
-      pop1: d.pop1,
-      gdppc0: d.gdppc0,
-      gdppc1: d.gdppc1,
-      // Mt to kg is 1e9.
-      intensity0: (run.primary.total[0] * 1e9) / run.gdp[0],
-      intensity1: (run.primary.total[n - 1] * 1e9) / run.gdp[n - 1],
-      material0: run.primary.total[0],
-      material1: run.primary.total[n - 1],
-    };
-  }, [inputs, shown, run]);
-
-  /** The same four terms as measured over the 36 years to 2024, for the reference ticks and row. */
-  const kayaPast = useMemo<DriverPast>(() => {
-    const ids = new Set(Object.values(HISTORY_GROUP));
+  // ── The four terms, measured, for whatever is in focus ─────────────────────
+  // Over the 36 years to 2024: the strong reference tick on every rail.
+  const kayaPast = useMemo<DriverPast | null>(() => {
     const years = world.years;
     const i0 = years.indexOf(PAST_FROM);
     const i1 = years.indexOf(PAST_TO);
     const gy = gdpPop.years;
     const j0 = gy.indexOf(PAST_FROM);
     const j1 = gy.indexOf(PAST_TO);
-    const gdp = gdpPop.gdp.World;
-    const pop = gdpPop.population.World;
-    if (i0 < 0 || i1 < 0 || j0 < 0 || j1 < 0 || !gdp || !pop) {
-      return { pop: 0, gdppc: 0, intensity: 0, material: 0 };
-    }
+    const gdp = gdpPop.gdp[place];
+    const pop = gdpPop.population[place];
+    if (i0 < 0 || i1 < 0 || j0 < 0 || j1 < 0 || !gdp?.[j0] || !gdp?.[j1] || !pop?.[j0] || !pop?.[j1]) return null;
+    // A category with no data at all in a region is one it does not report,
+    // and counts as nothing; a gap inside one that does report is a gap.
+    const series = comps.map(pastMass).filter((s) => s.some((v) => v != null));
+    if (!series.length) return null;
     const mass = (i: number) => {
       let acc = 0;
-      for (const grp of meta.groups) {
-        if (!ids.has(grp.id)) continue;
-        for (const m of grp.members) acc += world.materials?.[m]?.[i] ?? 0;
+      for (const s of series) {
+        if (s[i] == null) return null;
+        acc += s[i] as number;
       }
       return acc;
     };
+    const m0 = mass(i0);
+    const m1 = mass(i1);
+    if (!m0 || !m1 || m0 <= 0 || m1 <= 0) return null;
     const k = years[i1] - years[i0];
     const g = (a: number, b: number) => Math.pow(b / a, 1 / k) - 1;
     return {
       pop: g(pop[j0], pop[j1]),
       gdppc: g(gdp[j0] / pop[j0], gdp[j1] / pop[j1]),
-      intensity: g(mass(i0) / gdp[j0], mass(i1) / gdp[j1]),
-      material: g(mass(i0), mass(i1)),
+      intensity: g(m0 / gdp[j0], m1 / gdp[j1]),
+      material: g(m0, m1),
     };
-  }, [meta, world, gdpPop]);
+  }, [world, gdpPop, place, comps, pastMass]);
+
+  /** The spread of the focus's growth across the paper's runs, to colour the headline on. */
+  const materialRange = useMemo<[number, number] | null>(() => {
+    const b = activeLeaf ? null : envelope.bands[place]?.[group]?.consumption;
+    if (!b) return null;
+    const n = b.p50.length;
+    const yrs = envelope.years[n - 1] - envelope.years[0];
+    const g = (a: number, z: number) => (a > 0 && z > 0 ? Math.pow(z / a, 1 / yrs) - 1 : 0);
+    return [g(b.p50[0], b.min[n - 1]), g(b.p50[0], b.max[n - 1])];
+  }, [envelope, place, group, activeLeaf]);
 
   // Recent conditions, for the contour's star: 2019–2024 income growth and
   // today's level of each lever.
@@ -518,85 +514,63 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
             {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
           </p>
 
-          <Drivers inputs={inputs} levers={shown} now={kayaNow} past={kayaPast}
-            materialRange={[Math.min(...envelope.worldGrowth), Math.max(...envelope.worldGrowth)]}
+          <Drivers inputs={inputs} levers={shown} run={run} focus={focus} past={kayaPast}
+            materialRange={materialRange}
             advanced={advanced} onAdvanced={() => setAdvanced((o) => !o)}
             onReset={() => setScenario({ kind: 'custom', levers: defaultLevers(inputs) })}
             onChange={edit}>
             <Controls inputs={inputs} levers={shown} blend={blend}
-              intensityDraw={intensityDraw} onChange={edit} />
+              intensityDraw={intensityDraw} group={group} leaf={activeLeaf} onChange={edit} />
           </Drivers>
         </section>
 
         {/* ── 2 ─────────────────────────────────────────────────────────── */}
         <section aria-label="What each assumption is worth" style={sectionRule}>
-          <p style={kicker}>Efficiency against circularity</p>
-          <h3 style={figTitle}>What each assumption is actually worth</h3>
+          <p style={kicker}>What each assumption is worth · {sliceName}{place === 'World' ? '' : `, ${place}`}</p>
+          <h3 style={figTitle}>{leverHeadline(effects.bars)}</h3>
           <LeverEffects bars={effects.bars} now={effects.now} />
-          <p style={caption}>{leverVerdict(effects.bars)}</p>
           <p style={caption}>
-            Ranges are the ones the paper sampled, so a bar is what that assumption could buy or
-            cost inside the published spread, not what is physically conceivable. The bars are read
-            one at a time: moving two levers does not add their widths, because they act on the same
-            tonnes.
+            Growth in {focusPhrase(focus)}, 2025–2060, from one end of each assumption’s range to
+            the other. The dark line is your scenario; green is zero.
+            {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
           </p>
         </section>
 
         {/* ── 3 ─────────────────────────────────────────────────────────── */}
         <section aria-label="Where consumption would fall" style={sectionRule}>
-          <p style={kicker}>Where the line is</p>
-          <h3 style={figTitle}>What it would take for a material to stop growing</h3>
-          <ContourPanel inputs={inputs} levers={shown} axis={axis} onAxis={setAxis}
+          <p style={kicker}>Where the line is · {sliceName}{place === 'World' ? '' : `, ${place}`}</p>
+          <h3 style={figTitle}>What it would take for {group === 'total' ? 'material use' : focus.name.toLowerCase()} to stop growing</h3>
+          <ContourPanel inputs={inputs} levers={shown} focus={focus} axis={axisShown} onAxis={setAxis}
             scatter={envelope.scatter} history={historyPoint} />
           <p style={caption}>
-            Figure 3 of the paper, recomputed for your settings. Growth in{' '}
-            {GROUP_LABEL[CONTOUR_AXES[axis].group].toLowerCase()} consumption, 2025–2060, across world
-            income growth and {CONTOUR_AXES[axis].label.toLowerCase()}, with every other assumption
-            where you left it. Green is where that material falls; the heavy green line is zero.
-            Grey dots are the paper’s published runs, the star is where the world sits now, and the
-            ring is your scenario. Panels where no green line appears are materials that grow
-            anywhere inside the range anyone has proposed.
+            Growth in {focusPhrase(focus)}, 2025–2060, across world income growth and{' '}
+            {CONTOUR_AXES[axisShown].label.toLowerCase()}, with everything else as you set it.
+            {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
           </p>
         </section>
 
         {/* ── 4 ─────────────────────────────────────────────────────────── */}
         <section aria-label="The recycling ceiling" style={sectionRule}>
-          <p style={kicker}>The ceiling</p>
+          <p style={kicker}>The ceiling{group === 'biomass' || group === 'fossil_fuels' ? '' : ` · ${ceilingGroup === 'metal_ores' ? 'metal ores' : 'non-metallic minerals'}, world`}</p>
           <h3 style={figTitle}>Why recycling runs out of road before the problem does</h3>
-          <RecyclingCeiling inputs={inputs} levers={shown} />
-          <p style={caption}>
-            Secondary supply is the collection rate multiplied by the share of this year’s demand
-            that happens to be retiring. The second term is set by how fast demand has grown and how
-            long things last — not by policy, technology or effort. This is why a 40% recycled share
-            for a particular metal and a paper saying material use keeps growing are not in
-            disagreement: they are the two terms of the same product.
-          </p>
+          {group === 'biomass' || group === 'fossil_fuels' ? (
+            <p style={caption}>
+              {group === 'biomass' ? 'Biomass is' : 'Fossil fuels are'} used up rather than kept in
+              use, so there is nothing to recycle. Choose metal ores or non-metallic minerals above to see this for them.
+            </p>
+          ) : (
+            <>
+              <RecyclingCeiling data={ceiling} />
+              <p style={caption}>
+                Collect everything that retires and recycled supply still reaches only{' '}
+                <b>{(100 * ceiling.ceiling).toFixed(0)}%</b> of {ceilingGroup === 'metal_ores' ? 'metal' : 'mineral'} supply
+                in {ceiling.year}, because that is all of the year’s demand that is retiring. Yours:{' '}
+                <b>{(100 * ceiling.now.share).toFixed(0)}%</b>.
+                {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
+              </p>
+            </>
+          )}
         </section>
-
-        <div className="mat-endnotes">
-          <div>
-            <h3 style={{ ...kicker, marginBottom: 6 }}>What to try</h3>
-            <p style={caption}>
-              Put recycling and reuse to the top and watch the growth figure barely move; then do
-              the same with the four efficiency rails and watch it fall. On the contour, choose
-              mineral stock intensity: there is a zero line, but only at low income growth. Choose
-              metal recovery instead: there is no zero line anywhere. Switch the material chip to
-              metal ores and the dropdown to non-ferrous, where falling grade, not demand, carries
-              the mass.
-            </p>
-          </div>
-          <div>
-            <h3 style={{ ...kicker, marginBottom: 6 }}>Honest caveats</h3>
-            <p style={caption}>
-              This is a top-down model: no prices, no trade response, no rebound from cheaper
-              material. Intensity paths are assumptions, not forecasts. Electricity generation and
-              storage are carried inside civil infrastructure rather than modelled as their own
-              stock, which leaves metal ores about 4% below the paper’s published runs; biomass and
-              fossil fuels reproduce them exactly. Ore grade is modelled as metal per tonne of ore
-              and excludes overburden, so it is not the full rock-to-metal ratio.
-            </p>
-          </div>
-        </div>
 
         <footer className="mat-footer">
           <a href={meta.source.repo} target="_blank" rel="noopener noreferrer" className="mat-footer-link">
@@ -613,12 +587,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           </a>
           <p style={{ ...caption, fontSize: 12 }}>
             Companion to Busch, Caldeira and Davis, <i>Global material consumption persists despite
-            intensity gains and circularity</i>. History from the UNEP IRP global material flows
-            database; drivers from the IIASA SSP basic drivers and ScenarioMIP; stocks and end uses
-            from MISO2. Warming ranges are the ScenarioMIP climate assessment’s 2100 median GSAT
-            across the runs that use each SSP. Developed by{' '}
-            <a href="https://steer-stanford.webflow.io/" target="_blank" rel="noopener noreferrer">STEER</a>{' '}
-            at Stanford. <button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods</button>
+            intensity gains and circularity</i>. <button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods</button>
             {' · '}<a href={`${BASE}/data`}>Full data explorer →</a>
           </p>
         </footer>

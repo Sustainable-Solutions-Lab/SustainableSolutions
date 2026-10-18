@@ -9,13 +9,16 @@
  * The line that matters is zero. Left and below it, consumption of that group
  * falls; anywhere else it grows. Most of these panels have no zero line at all
  * inside the plausible range, which is the paper's finding in one picture.
+ *
+ * The contours are of whatever the menus at the top have in focus, in the
+ * place in focus, and the vertical axes on offer are the ones that act on it.
+ * The figure is drawn at the size it is shown, not scaled from a fixed
+ * canvas, so its type is the same size on a phone as on a desktop.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { contours } from 'd3-contour';
 import {
-  GROUP_LABEL,
   INTENSITY_LEVERS,
-  cagr,
   leverDraw,
   leverWorldValue,
   resolveSsp,
@@ -25,6 +28,7 @@ import {
   type Levers,
   type ModelInputs,
 } from './model';
+import { focusGrowth, type Focus } from './focus';
 
 /** A vertical axis the panel can take: the paper's six, in its own order. */
 export type ContourAxis = IntensityLever | 'metalRecycling' | 'mineralDowncycling';
@@ -73,12 +77,13 @@ export const CONTOUR_AXES: Record<
 
 export const CONTOUR_AXIS_KEYS = Object.keys(CONTOUR_AXES) as ContourAxis[];
 
+/** The vertical axes that act on a group: all six for all four together. */
+export function axesFor(group: GroupKey | 'total'): ContourAxis[] {
+  return group === 'total' ? CONTOUR_AXIS_KEYS : CONTOUR_AXIS_KEYS.filter((k) => CONTOUR_AXES[k].group === group);
+}
+
 const N = 15;
-const W = 660;
-const H = 400;
-const M = { l: 70, r: 112, t: 12, b: 46 };
-const PW = W - M.l - M.r;
-const PH = H - M.t - M.b;
+const M = { l: 50, r: 10, t: 10, b: 44 };
 
 /** Contour levels in %/yr. Zero is drawn separately and heavily. */
 const LEVELS = [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
@@ -110,6 +115,7 @@ export interface ScatterData {
 export default function ContourPanel({
   inputs,
   levers,
+  focus,
   axis,
   onAxis,
   scatter,
@@ -117,6 +123,7 @@ export default function ContourPanel({
 }: {
   inputs: ModelInputs;
   levers: Levers;
+  focus: Focus;
   axis: ContourAxis;
   onAxis: (a: ContourAxis) => void;
   scatter: ScatterData | null;
@@ -124,9 +131,25 @@ export default function ContourPanel({
   history: { gdpGrowth: number; lever: Record<string, number> };
 }) {
   const spec = CONTOUR_AXES[axis];
-  const group = spec.group;
+  const axes = axesFor(focus.group);
+
+  // Drawn at its real width, so 12px type is 12px on the screen.
+  const box = useRef<HTMLDivElement>(null);
+  const [W, setW] = useState(640);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([e]) => setW(Math.max(280, Math.round(e.contentRect.width))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const H = Math.round(Math.max(280, Math.min(420, W * 0.6)));
+  const PW = W - M.l - M.r;
+  const PH = H - M.t - M.b;
+
   const [surface, setSurface] = useState<{
     axis: ContourAxis;
+    focus: Focus;
     z: Float64Array;
     xs: number[];
     ys: number[];
@@ -200,10 +223,7 @@ export default function ContourPanel({
             trial.stockIntensityU[g] = { ...trial.stockIntensityU[g], [su]: u };
           }
         }
-        const run = runModel(inputs, trial);
-        const series = run.primary.byGroup[group];
-        const v = cagr(run.years, series, 2025, 2060);
-        z[iy * N + ix] = v == null ? NaN : 100 * v;
+        z[iy * N + ix] = 100 * focusGrowth(focus, runModel(inputs, trial));
       }
       iy++;
     };
@@ -213,7 +233,7 @@ export default function ContourPanel({
       if (iy < N) {
         tick(step);
       } else {
-        setSurface({ axis, z, xs: frame.xs, ys: frame.ys });
+        setSurface({ axis, focus, z, xs: frame.xs, ys: frame.ys });
         setBusy(false);
       }
     };
@@ -221,10 +241,10 @@ export default function ContourPanel({
     return () => {
       job.current++;
     };
-  }, [inputs, axis, group, frame, levers]);
+  }, [inputs, axis, focus, frame, levers]);
 
   const paths = useMemo(() => {
-    if (!surface || surface.axis !== axis) return null;
+    if (!surface || surface.axis !== axis || surface.focus !== focus) return null;
     const z = Array.from(surface.z, (v) => (Number.isNaN(v) ? 0 : v));
     const gen = contours().size([N, N]);
     const toPath = (mp: { coordinates: number[][][][] }) =>
@@ -252,7 +272,7 @@ export default function ContourPanel({
     const bands = gen.thresholds(LEVELS)(z).map((c) => ({ value: c.value, d: toPath(c) }));
     const zeroBand = gen.thresholds([0])(z)[0];
     return { bands, zero: zeroBand ? toPath(zeroBand) : null };
-  }, [surface, axis]);
+  }, [surface, axis, focus, PW, PH]);
 
   const xOf = (growth: number) =>
     M.l + ((growth - frame.xGrowthLo) / (frame.xGrowthHi - frame.xGrowthLo)) * PW;
@@ -306,44 +326,29 @@ export default function ContourPanel({
     return pts;
   }, [scatter, axis]);
 
+  const tick = { font: '400 12px var(--font-mono)', fill: 'var(--ink-3)' };
+  const what = focus.group === 'total' ? 'material use' : focus.name.toLowerCase();
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12.5, color: 'var(--ink-2)', flexWrap: 'wrap' }}>
-        Vertical axis
-        <select
-          value={axis}
-          onChange={(e) => onAxis(e.target.value as ContourAxis)}
-          aria-label="Vertical axis"
-          style={{
-            font: '400 13px/1.3 var(--font-sans)',
-            color: 'var(--ink)',
-            background: 'var(--paper)',
-            border: '1px solid var(--rule-strong)',
-            borderRadius: 2,
-            padding: '3px 6px',
-          }}
-        >
-          <optgroup label="Using less material">
-            {(['biomass', 'fossil', 'metalStock', 'mineralStock'] as ContourAxis[]).map((k) => (
-              <option key={k} value={k}>{CONTOUR_AXES[k].label}</option>
-            ))}
-          </optgroup>
-          <optgroup label="Using it again">
-            {(['metalRecycling', 'mineralDowncycling'] as ContourAxis[]).map((k) => (
-              <option key={k} value={k}>{CONTOUR_AXES[k].label}</option>
-            ))}
-          </optgroup>
-        </select>
-        <span style={{ color: 'var(--ink-3)' }}>
-          → contours of {GROUP_LABEL[group].toLowerCase()} growth
-        </span>
-      </label>
+      {axes.length > 1 && (
+        <label className="mat-contour-axis">
+          Vertical axis
+          <select value={axis} onChange={(e) => onAxis(e.target.value as ContourAxis)} aria-label="Vertical axis">
+            {axes.map((k) => <option key={k} value={k}>{CONTOUR_AXES[k].label}</option>)}
+          </select>
+        </label>
+      )}
+      <p className="mat-contour-ytitle">↑ {spec.label}, {spec.unit}</p>
 
+      <div ref={box} style={{ width: '100%' }}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
+        width={W}
+        height={H}
         role="img"
         style={{ display: 'block', width: '100%', height: 'auto' }}
-        aria-label={`Growth in ${GROUP_LABEL[group]} consumption across income growth and ${spec.label}`}
+        aria-label={`Growth in ${what}, ${focus.place}, across income growth and ${spec.label}`}
       >
         <defs>
           <clipPath id="mat-contour-clip">
@@ -355,113 +360,62 @@ export default function ContourPanel({
         {paths?.bands.map((b) => (
           <path key={b.value} d={b.d} fill={levelColor(b.value)} stroke="none" />
         ))}
-        {paths?.zero && <path d={paths.zero} fill="none" stroke="#1B7837" strokeWidth={2.2} />}
+        {paths?.zero && <path d={paths.zero} fill="none" stroke="#1B7837" strokeWidth={2.4} />}
 
         {cloud.map((p, i) => (
-          <circle key={i} cx={xOf(p.x)} cy={yOf(p.y)} r={1.1} fill="var(--ink)" opacity={0.18} />
+          <circle key={i} cx={xOf(p.x)} cy={yOf(p.y)} r={1.3} fill="var(--ink)" opacity={0.18} />
         ))}
 
         {/* Recent conditions, as the paper marks them */}
         {Number.isFinite(star.y) && (
           <g transform={`translate(${xOf(star.x)},${yOf(star.y)})`}>
-            <path
-              d="M0,-7 L2,-2.2 L7,-2.2 L3,1 L4.4,6 L0,3 L-4.4,6 L-3,1 L-7,-2.2 L-2,-2.2 Z"
-              fill="var(--ink)"
-              stroke="var(--paper)"
-              strokeWidth={1}
-            />
+            <path d={STAR} fill="var(--ink)" stroke="var(--paper)" strokeWidth={1} />
           </g>
         )}
-        <circle cx={xOf(here.x)} cy={yOf(here.y)} r={6} fill="none" stroke="var(--cardinal)" strokeWidth={2.4} />
+        <circle cx={xOf(here.x)} cy={yOf(here.y)} r={6.5} fill="none" stroke="var(--cardinal)" strokeWidth={2.4} />
         <circle cx={xOf(here.x)} cy={yOf(here.y)} r={2} fill="var(--cardinal)" />
         </g>
 
         <rect x={M.l} y={M.t} width={PW} height={PH} fill="none" stroke="var(--rule-strong)" />
 
         {xTicks.map((t) => (
-          <text
-            key={t}
-            x={xOf(t)}
-            y={M.t + PH + 17}
-            textAnchor="middle"
-            style={{ font: '400 10.5px var(--font-mono)', fill: 'var(--ink-3)' }}
-          >
+          <text key={t} x={xOf(t)} y={M.t + PH + 17} textAnchor="middle" style={tick}>
             {(100 * t).toFixed(1)}
           </text>
         ))}
-        <text
-          x={M.l + PW / 2}
-          y={H - 6}
-          textAnchor="middle"
-          style={{ font: '400 11px var(--font-sans)', fill: 'var(--ink-2)' }}
-        >
-          World GDP per person, % a year
+        <text x={M.l + PW / 2} y={H - 6} textAnchor="middle"
+          style={{ font: '400 13px var(--font-sans)', fill: 'var(--ink-2)' }}>
+          World GDP per person, % a year →
         </text>
         {yTicks.map((t) => (
-          <text
-            key={t}
-            x={M.l - 8}
-            y={yOf(t)}
-            textAnchor="end"
-            dominantBaseline="middle"
-            style={{ font: '400 10.5px var(--font-mono)', fill: 'var(--ink-3)' }}
-          >
+          <text key={t} x={M.l - 7} y={yOf(t)} textAnchor="end" dominantBaseline="middle" style={tick}>
             {spec.fmt(t)}
           </text>
         ))}
-        <text
-          transform={`translate(14,${M.t + PH / 2}) rotate(-90)`}
-          textAnchor="middle"
-          style={{ font: '400 11px var(--font-sans)', fill: 'var(--ink-2)' }}
-        >
-          {spec.label}, {spec.unit}
-        </text>
-
-        {/* Key */}
-        <g transform={`translate(${M.l + PW + 14},${M.t + 6})`}>
-          <text style={{ font: '600 10px var(--font-mono)', fill: 'var(--ink-3)' }}>GROWTH %/YR</text>
-          {[4, 3, 2, 1, 0, -1].map((v, i) => (
-            <g key={v} transform={`translate(0,${14 + i * 16})`}>
-              <rect width={16} height={11} fill={levelColor(v)} stroke="var(--rule)" strokeWidth={0.5} />
-              <text x={21} y={9} style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-2)' }}>
-                {v > 0 ? `+${v}` : v}
-              </text>
-            </g>
-          ))}
-          <g transform={`translate(0,${14 + 6 * 16 + 8})`}>
-            <line x1={0} x2={16} y1={5} y2={5} stroke="#1B7837" strokeWidth={2.2} />
-            <text x={21} y={9} style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-2)' }}>
-              zero
-            </text>
-          </g>
-          <g transform={`translate(0,${14 + 7 * 16 + 14})`}>
-            <circle cx={8} cy={5} r={5} fill="none" stroke="var(--cardinal)" strokeWidth={2} />
-            <text x={21} y={9} style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-2)' }}>
-              yours
-            </text>
-          </g>
-          <g transform={`translate(0,${14 + 8 * 16 + 18})`}>
-            <path
-              d="M8,0 L10,4.8 L15,4.8 L11,8 L12.4,13 L8,10 L3.6,13 L5,8 L1,4.8 L6,4.8 Z"
-              fill="var(--ink)"
-            />
-            <text x={21} y={11} style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-2)' }}>
-              today
-            </text>
-          </g>
-        </g>
 
         {busy && (
-          <text
-            x={M.l + PW / 2}
-            y={M.t + 14}
-            textAnchor="middle"
-            style={{ font: '400 11px var(--font-mono)', fill: 'var(--ink-3)' }}
-          >
+          <text x={M.l + PW / 2} y={M.t + 18} textAnchor="middle"
+            style={{ font: '400 12px var(--font-mono)', fill: 'var(--ink-3)' }}>
             recomputing…
           </text>
         )}
       </svg>
+      </div>
+
+      <div className="mat-contour-key" aria-label="Key">
+        <span className="mat-contour-ramp">
+          {[-1, 0, 1, 2, 3, 4].map((v) => (
+            <span key={v}><i style={{ background: levelColor(v) }} />{v > 0 ? `+${v}` : v}</span>
+          ))}
+          <em>% a year</em>
+        </span>
+        <span><svg width={18} height={10} aria-hidden="true"><line x1={0} x2={18} y1={5} y2={5} stroke="#1B7837" strokeWidth={2.4} /></svg>zero</span>
+        <span><svg width={14} height={14} aria-hidden="true"><circle cx={7} cy={7} r={5} fill="none" stroke="var(--cardinal)" strokeWidth={2} /></svg>yours</span>
+        <span><svg width={14} height={14} viewBox="-7.5 -7.5 15 15" aria-hidden="true"><path d={STAR} fill="var(--ink)" /></svg>today</span>
+        <span><svg width={10} height={10} aria-hidden="true"><circle cx={5} cy={5} r={2} fill="var(--ink)" opacity={0.4} /></svg>paper’s runs</span>
+      </div>
     </div>
   );
 }
+
+const STAR = 'M0,-7 L2,-2.2 L7,-2.2 L3,1 L4.4,6 L0,3 L-4.4,6 L-3,1 L-7,-2.2 L-2,-2.2 Z';

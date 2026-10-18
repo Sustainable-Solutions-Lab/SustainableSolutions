@@ -224,11 +224,30 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
     padding: 5px 13px; cursor: pointer;
   }
 
-  .mat-tool .mat-endnotes {
-    border-top: 1px solid var(--rule); padding-top: 16px;
-    display: grid; gap: 18px;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  /* A rail with nowhere to go: said in words, never greyed. */
+  .mat-tool .mat-fixed-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .mat-tool .mat-fixed-label { font-size: 12px; font-weight: 600; }
+  .mat-tool .mat-fixed p { margin: 4px 0 0; font-size: 12px; line-height: 1.5; color: var(--ink-2); }
+
+  /* The contour's controls and key, in HTML so they read at phone size. */
+  .mat-tool .mat-contour-axis {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    font-size: 13px; color: var(--ink-2);
   }
+  .mat-tool .mat-contour-axis select {
+    font: 400 14px/1.3 var(--font-sans); color: var(--ink); background: var(--paper);
+    border: 1px solid var(--rule-strong); border-radius: 4px; padding: 4px 6px; max-width: 100%;
+  }
+  .mat-tool .mat-contour-ytitle { margin: 0 0 -4px; font-size: 13px; color: var(--ink-2); }
+  .mat-tool .mat-contour-key {
+    display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center;
+    font: 400 12px var(--font-mono); color: var(--ink-2);
+  }
+  .mat-tool .mat-contour-key > span { display: inline-flex; align-items: center; gap: 5px; }
+  .mat-tool .mat-contour-ramp { gap: 0 !important; }
+  .mat-tool .mat-contour-ramp > span { display: inline-flex; flex-direction: column; align-items: center; font-size: 11px; }
+  .mat-tool .mat-contour-ramp i { display: block; width: 26px; height: 12px; }
+  .mat-tool .mat-contour-ramp em { font-style: normal; margin-left: 7px; color: var(--ink-3); align-self: flex-end; }
 
   /* Methods: a full sheet over the page, as in the land-emissions explorer. */
   .mat-tool .mat-methods {

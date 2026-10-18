@@ -5,33 +5,32 @@
  *
  *     M  =  P  x  GDP/P  x  M/GDP
  *
- * so there are exactly three ways for it to fall. That identity is printed
- * under the sliders with the current numbers in it, because the whole argument
- * of the paper is an arithmetic claim about those three terms: the third one
- * has to fall faster than the first two rise, and it has never done so.
+ * so there are exactly three ways for it to fall. The headline is M; the
+ * three sliders are the terms, for whatever material and place the menus at
+ * the top have put in focus. Measured over the model's own years they
+ * multiply to the headline exactly.
  *
  * Each slider moves in annual percent to 2060, which is the unit the SSPs are
  * argued in, and carries each SSP's own value as a tick. Population and income
- * tilt the chosen pathway by a constant annual rate. Material intensity moves
- * all four efficiency rails at once; the advanced panel below the figure is
+ * tilt the chosen pathway by a constant annual rate in every region. Intensity
+ * moves the efficiency rails that act on the focus; the panel under it is
  * where they come apart.
  */
 import { useMemo, type ReactNode } from 'react';
 import Slider, { type Tick } from '../magnets/Slider';
 import {
+  INTENSITY_LEVERS,
   defaultLevers,
-  driverGrowth,
-  resolveSsp,
   runModel,
-  setAllIntensity,
-  sspDrivers,
   sspLevers,
   tiltFor,
   type Levers,
   type ModelInputs,
+  type ModelRun,
 } from './model';
+import { fmtMass, fmtPeople, fmtPerDollar, makeFocus, pick, setIntensity, type Focus } from './focus';
 
-/** The three rates the current run produces, and the levels behind them. */
+/** The three rates the current run produces for the focus, and the levels behind them. */
 export interface DriverNow {
   pop: number;
   gdppc: number;
@@ -42,20 +41,43 @@ export interface DriverNow {
   pop1: number;
   gdppc0: number;
   gdppc1: number;
-  /** World kilograms of primary material per 2015 dollar of output. */
+  /** Kilograms of primary material per 2015 dollar of output. */
   intensity0: number;
   intensity1: number;
-  /** World primary material use, Mt. */
+  /** Primary material use, Mt. */
   material0: number;
   material1: number;
 }
 
-/** The same four terms, measured over the 36 years to 2024 (1988-2024). */
+/** The same four terms, measured over the 36 years to 2024; null where the data has gaps. */
 export interface DriverPast {
   pop: number;
   gdppc: number;
   intensity: number;
   material: number;
+}
+
+/** The four terms for a focus, measured over exactly the model's own years. */
+export function measureNow(f: Focus, run: ModelRun): DriverNow {
+  const { mass, pop, gdp } = pick(f, run);
+  const n = run.years.length;
+  const yrs = run.years[n - 1] - run.years[0];
+  const g = (a: number, b: number) => (a > 0 && b > 0 ? Math.pow(b / a, 1 / yrs) - 1 : 0);
+  return {
+    pop: g(pop[0], pop[n - 1]),
+    gdppc: g(gdp[0] / pop[0], gdp[n - 1] / pop[n - 1]),
+    intensity: g(mass[0] / gdp[0], mass[n - 1] / gdp[n - 1]),
+    material: g(mass[0], mass[n - 1]),
+    pop0: pop[0],
+    pop1: pop[n - 1],
+    gdppc0: gdp[0] / pop[0],
+    gdppc1: gdp[n - 1] / pop[n - 1],
+    // Mt to kg is 1e9.
+    intensity0: (mass[0] * 1e9) / gdp[0],
+    intensity1: (mass[n - 1] * 1e9) / gdp[n - 1],
+    material0: mass[0],
+    material1: mass[n - 1],
+  };
 }
 
 const pct = (v: number, digits = 2) => `${v >= 0 ? '+' : '−'}${Math.abs(100 * v).toFixed(digits)}%`;
@@ -70,8 +92,8 @@ const PAST_LABEL = `${PAST_FROM}–${PAST_TO}`;
  * second row when it would collide with its neighbour. The past is drawn
  * strong: it is a reference to read the rail against, not a setting.
  */
-function railTicks(values: Record<string, number>, past: number, lo: number, hi: number): Tick[] {
-  const marks = [...Object.entries(values), [PAST_LABEL, past] as [string, number]]
+function railTicks(values: Record<string, number>, past: number | null, lo: number, hi: number): Tick[] {
+  const marks = [...Object.entries(values), ...(past == null ? [] : [[PAST_LABEL, past] as [string, number]])]
     .filter(([, v]) => v >= lo && v <= hi)
     .sort((a, b) => a[1] - b[1]);
   const span = hi - lo || 1;
@@ -117,7 +139,8 @@ export const SNAP = 0.03;
 export default function Drivers({
   inputs,
   levers,
-  now,
+  run,
+  focus,
   past,
   materialRange,
   advanced,
@@ -128,10 +151,12 @@ export default function Drivers({
 }: {
   inputs: ModelInputs;
   levers: Levers;
-  now: DriverNow;
-  past: DriverPast;
-  /** The spread of world material growth across the paper's runs, to colour the result on. */
-  materialRange: [number, number];
+  /** The run the figure above is drawing, so the headline is its numbers. */
+  run: ModelRun;
+  focus: Focus;
+  past: DriverPast | null;
+  /** The spread of the focus's growth across the paper's runs, to colour the result on. */
+  materialRange: [number, number] | null;
   advanced: boolean;
   onAdvanced: () => void;
   onReset: () => void;
@@ -139,40 +164,39 @@ export default function Drivers({
   children?: ReactNode;
   onChange: (change: (l: Levers) => void) => void;
 }) {
-  const blend = useMemo(() => resolveSsp(inputs, levers.sspU), [inputs, levers.sspU]);
-  const pathway = useMemo(() => driverGrowth(inputs, { ...levers, popTilt: 0, gdppcTilt: 0 }), [inputs, levers]);
-  const drivers = useMemo(() => sspDrivers(inputs), [inputs]);
+  const now = useMemo(() => measureNow(focus, run), [focus, run]);
+  const where = focus.place === 'World' ? 'world' : focus.place;
+  const what = focus.group === 'total' ? 'material' : focus.name.toLowerCase();
 
-  // Where each SSP's own intensity path lands, in percent a year. Four runs,
-  // and they only depend on the data, so this is computed once.
-  const sspIntensity = useMemo(() => {
-    const out: Record<string, number> = {};
-    for (const ssp of inputs.sspSampled) {
-      const r = runModel(inputs, sspLevers(inputs, ssp));
-      const n = r.years.length;
-      const yrs = r.years[n - 1] - r.years[0];
-      out[ssp] = Math.pow(
-        (r.primary.total[n - 1] / r.gdp[n - 1]) / (r.primary.total[0] / r.gdp[0]),
-        1 / yrs,
-      ) - 1;
+  // Each SSP run once, at its central draws; every tick on all three rails is
+  // read off these four runs for whatever is in focus.
+  const sspRuns = useMemo(
+    () => Object.fromEntries(inputs.sspSampled.map((s) => [s, runModel(inputs, sspLevers(inputs, s))])),
+    [inputs],
+  );
+  const ssp = useMemo(() => {
+    const out = { pop: {} as Record<string, number>, gdppc: {} as Record<string, number>, intensity: {} as Record<string, number> };
+    for (const [s, r] of Object.entries(sspRuns)) {
+      const m = measureNow(focus, r);
+      out.pop[s] = m.pop;
+      out.gdppc[s] = m.gdppc;
+      out.intensity[s] = m.intensity;
     }
     return out;
-  }, [inputs]);
+  }, [sspRuns, focus]);
 
   /**
    * Intensity is the one driver with no closed form: it is an endpoint for
-   * every material in every region, and what that does to world kilograms per
+   * every material in every region, and what that does to kilograms per
    * dollar depends on the mix. So the model is run across the draw and the
    * result inverted — seven runs, a few milliseconds, and the slider can then
-   * move in percent a year like the other two.
+   * move in percent a year like the other two. Only the rails that act on the
+   * focus move; the rest stay where they were set.
    */
-  const rateAt = (l: Levers, u: number): number => {
+  const rateAt = (l: Levers, u: number, f: Focus = focus): number => {
     const trial: Levers = { ...l };
-    setAllIntensity(trial, u);
-    const r = runModel(inputs, trial);
-    const n = r.years.length;
-    const yrs = r.years[n - 1] - r.years[0];
-    return Math.pow((r.primary.total[n - 1] / r.gdp[n - 1]) / (r.primary.total[0] / r.gdp[0]), 1 / yrs) - 1;
+    setIntensity(trial, f.levers, u);
+    return measureNow(f, runModel(inputs, trial)).intensity;
   };
 
   /** Piecewise-linear inverse of a monotone (u, rate) table. */
@@ -188,60 +212,77 @@ export default function Drivers({
   };
 
   /**
-   * How far the draw itself may travel, fixed once from the paper's ensemble
-   * at the central drivers. Bounding the DRAW rather than the rate matters:
-   * the rate a draw produces moves when population or income move, so a rail
-   * bounded in percent a year could be walked out of the sampled space
+   * How far the draw itself may travel. Bounding the DRAW rather than the rate
+   * matters: the rate a draw produces moves when population or income move, so
+   * a rail bounded in percent a year could be walked out of the sampled space
    * sideways — and outside it the stock model answers a step change in
-   * intensity by not building at all, which is a corner nobody has proposed.
-   * The top of the rail is the sampling box itself.
+   * intensity by not building at all. The top of the rail is the sampling box.
+   *
+   * With all four groups in focus the floor is the most improving of the
+   * paper's 1,000 runs, found at the central drivers for the world: every
+   * material at its fastest at once is further than any run went. One group
+   * on its own can go to the edge of its own box, because the paper drew each
+   * group independently.
    */
   const uBounds = useMemo(() => {
+    if (focus.group !== 'total') return { lo: 0, hi: 1 };
     const ref = defaultLevers(inputs);
+    const world = makeFocus('World', 'total', null);
     const us = [0, 0.25, 0.5, 0.75, 1];
-    const gs = us.map((u) => rateAt(ref, u));
+    const gs = us.map((u) => rateAt(ref, u, world));
     const floor = inputs.intensityCagrRange?.min;
     const lo = floor == null ? 0 : Math.min(1, Math.max(0, invert(us, gs, floor)));
     return { lo, hi: 1 };
-  }, [inputs]);
+  }, [inputs, focus.group]);
 
   const map = useMemo(() => {
     const us = Array.from({ length: 7 }, (_, i) => uBounds.lo + (i * (uBounds.hi - uBounds.lo)) / 6);
     return { us, gs: us.map((u) => rateAt(levers, u)) };
-  }, [inputs, levers, uBounds]);
+  }, [inputs, levers, uBounds, focus]);
 
   /** Draw that lands on a given intensity growth rate, by interpolation. */
   const drawFor = (target: number): number => invert(map.us, map.gs, target);
 
-  const popValues = Object.fromEntries(Object.entries(drivers).map(([s, d]) => [s, d.pop]));
-  const gdppcValues = Object.fromEntries(Object.entries(drivers).map(([s, d]) => [s, d.gdppc]));
+  // The tilts multiply every region by the same factor, so the rate showing is
+  // the pathway's own rate times the tilt, exactly, in any region.
+  const pathwayPop = (1 + now.pop) / (1 + (levers.popTilt ?? 0)) - 1;
+  const pathwayGdppc = (1 + now.gdppc) / (1 + (levers.gdppcTilt ?? 0)) - 1;
+
   // Both driver rails run four tenths of a point past the slowest and fastest
   // of the SSPs and the measured past, which is enough to ask what a stalled
   // population or a boom would do without leaving the territory they cover.
-  const popLo = Math.min(past.pop, ...Object.values(popValues)) - 0.004;
-  const popHi = Math.max(past.pop, ...Object.values(popValues)) + 0.004;
-  const gdppcLo = Math.max(0, Math.min(past.gdppc, ...Object.values(gdppcValues)) - 0.004);
-  const gdppcHi = Math.max(past.gdppc, ...Object.values(gdppcValues)) + 0.004;
+  const span = (vals: number[]) => [Math.min(...vals) - 0.004, Math.max(...vals) + 0.004];
+  const [popLo, popHi] = span([...(past ? [past.pop] : []), ...Object.values(ssp.pop)]);
+  const [gdppcLo, gdppcHi] = span([...(past ? [past.gdppc] : []), ...Object.values(ssp.gdppc)]);
   const intLo = map.gs[0];
   const intHi = map.gs[map.gs.length - 1];
+  // A material the paper gives no intensity target (the "other" categories)
+  // follows population and income alone, and its rail has nowhere to go.
+  const intFixed = intHi - intLo < 1e-5;
 
+  const [matLo, matHi] = materialRange ?? [
+    (1 + now.pop) * (1 + now.gdppc) * (1 + intLo) - 1,
+    (1 + now.pop) * (1 + now.gdppc) * (1 + intHi) - 1,
+  ];
   const popColor = heat(now.pop, popLo, popHi);
   const gdppcColor = heat(now.gdppc, gdppcLo, gdppcHi);
-  const intColor = heat(now.intensity, intLo, intHi);
-  const matColor = heat(now.material, materialRange[0], materialRange[1]);
+  const intColor = intFixed ? 'var(--ink)' : heat(now.intensity, intLo, intHi);
+  const matColor = heat(now.material, matLo, matHi);
+  const intensityLevel = `${fmtPerDollar(now.intensity1)} per $ in 2060`;
+  const intensityLabel = focus.group === 'total' ? 'Material intensity' : `${focus.name} intensity`;
 
   return (
     <div className="mat-drivers">
       <div className="mat-kpi">
         <div>
-          <p className="mat-kpi-label">World material use</p>
+          <p className="mat-kpi-label">{focus.name} · {focus.place}</p>
           <p className="mat-kpi-sub">
-            All four groups · {Math.round(now.material0 / 1000)} Gt in 2025 · {PAST_LABEL} {pct(past.material)}/yr
+            {fmtMass(now.material0)} in 2025{past && <> · {PAST_LABEL} {pct(past.material)}/yr</>}
             {' · '}<button type="button" className="mat-reset-link" onClick={onReset}>reset all</button>
           </p>
         </div>
         <Readout size="lg" color={matColor} main={pct(now.material)} unit="/yr"
-          level={`${Math.round(now.material1 / 1000)} Gt in 2060`} />
+          level={`${fmtMass(now.material1)} in 2060`} />
       </div>
 
       <Slider
@@ -251,12 +292,12 @@ export default function Drivers({
         max={popHi}
         step={0.0001}
         snap={SNAP}
-        onChange={(v) => onChange((l) => (l.popTilt = tiltFor(pathway.pop, v)))}
+        onChange={(v) => onChange((l) => (l.popTilt = tiltFor(pathwayPop, v)))}
         fmt={(v) => `${pct(v)}/yr`}
         readout={<Readout main={pct(now.pop)} unit="/yr" color={popColor}
-          level={`${(now.pop1 / 1e9).toFixed(1)} billion in 2060`} />}
-        ticks={railTicks(popValues, past.pop, popLo, popHi)}
-        desc={`World population growth, 2025 to 2060, as an average annual rate; ${(now.pop0 / 1e9).toFixed(1)} billion people in 2025. It bends the pathway by a constant rate in every region, so the regional spread is kept. Ticks: each SSP’s own rate, and the ${PAST_LABEL} average.`}
+          level={`${fmtPeople(now.pop1)} in 2060`} />}
+        ticks={railTicks(ssp.pop, past?.pop ?? null, popLo, popHi)}
+        desc={`Population growth in the ${where === 'world' ? 'world' : where}, 2025 to 2060, as an average annual rate; ${fmtPeople(now.pop0)} people in 2025. It bends the pathway by a constant rate in every region at once. Ticks: each SSP’s own rate, and the ${PAST_LABEL} average.`}
       />
       <Slider
         label="Income growth"
@@ -265,28 +306,37 @@ export default function Drivers({
         max={gdppcHi}
         step={0.0001}
         snap={SNAP}
-        onChange={(v) => onChange((l) => (l.gdppcTilt = tiltFor(pathway.gdppc, v)))}
+        onChange={(v) => onChange((l) => (l.gdppcTilt = tiltFor(pathwayGdppc, v)))}
         fmt={(v) => `${pct(v)}/yr`}
         readout={<Readout main={pct(now.gdppc)} unit="/yr" color={gdppcColor}
           level={`$${Math.round(now.gdppc1).toLocaleString()} a person in 2060`} />}
-        ticks={railTicks(gdppcValues, past.gdppc, gdppcLo, gdppcHi)}
-        desc={`World GDP per person, 2025 to 2060, as an average annual rate, in 2015 dollars: $${Math.round(now.gdppc0).toLocaleString()} in 2025. This is the axis Figure 3 of the paper puts income on. Ticks: each SSP’s own rate, and the ${PAST_LABEL} average.`}
+        ticks={railTicks(ssp.gdppc, past?.gdppc ?? null, gdppcLo, gdppcHi)}
+        desc={`GDP per person in the ${where === 'world' ? 'world' : where}, 2025 to 2060, as an average annual rate, in 2015 dollars: $${Math.round(now.gdppc0).toLocaleString()} in 2025. It bends the pathway by a constant rate in every region at once. Ticks: each SSP’s own rate, and the ${PAST_LABEL} average.`}
       />
       <div className="mat-intensity-col">
-        <Slider
-          label="Material intensity"
-          value={Math.max(intLo, Math.min(intHi, now.intensity))}
-          min={intLo}
-          max={intHi}
-          step={(intHi - intLo) / 300}
-          snap={SNAP}
-          onChange={(v) => onChange((l) => setAllIntensity(l, drawFor(v)))}
-          fmt={(v) => `${pct(v)}/yr`}
-          readout={<Readout main={pct(now.intensity)} unit="/yr" color={intColor}
-            level={`${now.intensity1.toFixed(2)} kg per $ in 2060`} />}
-          ticks={railTicks(sspIntensity, past.intensity, intLo, intHi)}
-          desc={`Kilograms of material per dollar of world output, as an average annual rate of change to 2060; ${now.intensity0.toFixed(2)} kg per 2015 dollar in 2025. One knob over everything in the panel below it, all of which move this. The rail stops where the paper’s 1,000 runs stop: its fast end is the most improving of them. Ticks: what each SSP’s own range gives at the central draw, and the ${PAST_LABEL} average.`}
-        />
+        {intFixed ? (
+          <div className="mat-fixed">
+            <div className="mat-fixed-head">
+              <span className="mat-fixed-label">{intensityLabel}</span>
+              <Readout main={pct(now.intensity)} unit="/yr" color={intColor} level={intensityLevel} />
+            </div>
+            <p>The paper sets no efficiency target for {what}: it follows population and income. Pick its group in the menu above to move the group’s efficiency.</p>
+          </div>
+        ) : (
+          <Slider
+            label={intensityLabel}
+            value={Math.max(intLo, Math.min(intHi, now.intensity))}
+            min={intLo}
+            max={intHi}
+            step={(intHi - intLo) / 300}
+            snap={SNAP}
+            onChange={(v) => onChange((l) => setIntensity(l, focus.levers, drawFor(v)))}
+            fmt={(v) => `${pct(v)}/yr`}
+            readout={<Readout main={pct(now.intensity)} unit="/yr" color={intColor} level={intensityLevel} />}
+            ticks={railTicks(ssp.intensity, past?.intensity ?? null, intLo, intHi)}
+            desc={`Kilograms of ${what} per dollar of ${where === 'world' ? 'world' : where} output, as an average annual rate of change to 2060; ${fmtPerDollar(now.intensity0)} per 2015 dollar in 2025. ${focus.group === 'total' ? 'One knob over every efficiency assumption in the panel below. The rail stops where the paper’s 1,000 runs stop.' : `It moves the ${INTENSITY_LEVERS[focus.levers[0]].label.toLowerCase()} rail in the panel below, across the range the paper sampled.`} Ticks: each SSP at its central draw, and the ${PAST_LABEL} average.`}
+          />
+        )}
         <button type="button" className="mat-advanced-toggle" aria-expanded={advanced} onClick={onAdvanced}>
           <span aria-hidden="true">{advanced ? '▾' : '▸'}</span> What makes up intensity
         </button>

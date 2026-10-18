@@ -11,7 +11,7 @@
  * Secondary supply is the collection rate times the share of demand that is
  * retiring, and during growth the second term is the binding one.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   INTENSITY_LEVERS,
   INTENSITY_LEVER_KEYS,
@@ -258,20 +258,55 @@ const CEILING_COLOR: Record<CeilingGroup, string> = { metal_ores: 'var(--cardina
  * The model pools scrap region by region, so a region's line is its own
  * retiring stock against its own demand.
  */
+/** Recycled share of a stock group's supply in one place and year, from one run. */
+export function ceilingShare(run: ModelRun, regions: string[], group: CeilingGroup, year: number, extra = 0): number {
+  const i = run.years.indexOf(year);
+  let p = 0;
+  let s = 0;
+  for (const r of regions) {
+    p += run.primary.byRegionGroup[r]?.[group][i] ?? 0;
+    s += run.secondaryByRegion[r]?.[group][i] ?? 0;
+  }
+  return p + s > 0 ? (s + extra) / (p + s) : 0;
+}
+
+/** Every product's mean lifetime at one place in its published range, as the lifetime slider sets it. */
+export function withLifetime(l: Levers, u: number): Levers {
+  const lt = { mean: u, k: 0.5 };
+  return { ...l, lifetimeU: { buildings: lt, civil_infrastructure: lt, machinery: lt, short_lived: lt } };
+}
+
+/** Set the collection rate the recycling figure's horizontal axis means for a group. */
+export function withCollection(l: Levers, group: CeilingGroup, rate: number): Levers {
+  return group === 'metal_ores' ? { ...l, recyclingFe: rate, recyclingNonFe: rate } : { ...l, downcycling: rate };
+}
+
+/**
+ * The lifetime setting at which a place's recycled share reaches `target`.
+ * Shorter lifetimes mean more of each year's demand is replacing what
+ * retired, so the share falls steadily as lifetimes lengthen; bisection,
+ * clamped to the slider's range.
+ */
+export function lifetimeForShare(inputs: ModelInputs, l: Levers, place: string, group: CeilingGroup, target: number, year = 2050): number {
+  const regions = place === 'World' ? inputs.regions : [place];
+  const at = (u: number) => ceilingShare(runModel(inputs, withLifetime(l, u)), regions, group, year);
+  if (target >= at(0)) return 0;
+  if (target <= at(1)) return 1;
+  let a = 0;
+  let b = 1;
+  for (let k = 0; k < 10; k++) {
+    const m = (a + b) / 2;
+    if (at(m) > target) a = m;
+    else b = m;
+  }
+  return (a + b) / 2;
+}
+
 export function useCeiling(inputs: ModelInputs, levers: Levers, place: string, groups: CeilingGroup[], year = 2050) {
   return useMemo(() => {
     const rates = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
     const regions = place === 'World' ? inputs.regions : [place];
-    const share = (run: ModelRun, group: CeilingGroup, extra = 0) => {
-      const i = run.years.indexOf(year);
-      let p = 0;
-      let s = 0;
-      for (const r of regions) {
-        p += run.primary.byRegionGroup[r]?.[group][i] ?? 0;
-        s += run.secondaryByRegion[r]?.[group][i] ?? 0;
-      }
-      return p + s > 0 ? (s + extra) / (p + s) : 0;
-    };
+    const share = (run: ModelRun, group: CeilingGroup, extra = 0) => ceilingShare(run, regions, group, year, extra);
 
     /**
      * What trade in scrap could add on top, with everything collected: the
@@ -302,8 +337,7 @@ export function useCeiling(inputs: ModelInputs, levers: Levers, place: string, g
 
     const lines = groups.map((group) => {
       const metal = group === 'metal_ores';
-      const set = (rate: number): Levers =>
-        metal ? { ...levers, recyclingFe: rate, recyclingNonFe: rate } : { ...levers, downcycling: rate };
+      const set = (rate: number): Levers => withCollection(levers, group, rate);
       const runs = rates.map((rate) => runModel(inputs, set(rate)));
       const points = runs.map((run, k) => ({ rate: rates[k], share: share(run, group) }));
       const ceiling = points[points.length - 1].share;
@@ -321,7 +355,12 @@ export function useCeiling(inputs: ModelInputs, levers: Levers, place: string, g
   }, [inputs, levers, place, groups.join('|'), year]);
 }
 
-export function RecyclingCeiling({ data }: { data: ReturnType<typeof useCeiling> }) {
+export function RecyclingCeiling({ data, onDrag }: {
+  data: ReturnType<typeof useCeiling>;
+  /** A dot dragged to a collection rate and a recycled share, both 0-1. */
+  onDrag?: (group: CeilingGroup, rate: number, share: number) => void;
+}) {
+  const [dragging, setDragging] = useState<CeilingGroup | null>(null);
   const W = 460;
   const H = 220;
   const M = { l: 46, r: 104, t: 12, b: 36 };
@@ -363,7 +402,19 @@ export function RecyclingCeiling({ data }: { data: ReturnType<typeof useCeiling>
         return (
           <g key={l.group}>
             <path d={d} fill="none" stroke={c} strokeWidth={2.2} />
-            <circle cx={x(l.now.rate)} cy={y(l.now.share)} r={4} fill={c} stroke="var(--paper)" strokeWidth={1.5} />
+            <g style={{ cursor: onDrag ? (dragging === l.group ? 'grabbing' : 'grab') : undefined, touchAction: 'none' }}
+              onPointerDown={onDrag ? (e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(l.group); } : undefined}
+              onPointerMove={onDrag ? (e) => {
+                if (dragging !== l.group) return;
+                const r = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect();
+                const sx = ((e.clientX - r.left) * W) / r.width;
+                const sy = ((e.clientY - r.top) * H) / r.height;
+                onDrag(l.group, Math.max(0, Math.min(1, (sx - M.l) / pw)), Math.max(0, Math.min(1, (M.t + ph - sy) / ph)));
+              } : undefined}
+              onPointerUp={() => setDragging(null)} onPointerCancel={() => setDragging(null)}>
+              <circle cx={x(l.now.rate)} cy={y(l.now.share)} r={14} fill="transparent" />
+              <circle cx={x(l.now.rate)} cy={y(l.now.share)} r={dragging === l.group ? 6 : 4.5} fill={c} stroke="var(--paper)" strokeWidth={1.5} />
+            </g>
             {l.withTrade != null && (
               <>
                 <line x1={x(1)} x2={x(1)} y1={y(l.ceiling)} y2={y(l.withTrade)} stroke={c} strokeWidth={1.2} strokeDasharray="2 2" />

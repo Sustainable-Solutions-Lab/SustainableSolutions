@@ -17,8 +17,8 @@ import Methods from './Methods';
 import Drivers, { PAST_FROM, PAST_TO, Readout, heat, measureNow, type DriverPast } from './Drivers';
 import ContourPanel, { CONTOUR_AXES, axesFor, type ContourAxis, type ScatterData } from './ContourPanel';
 import Controls from './Controls';
-import { CEILING_NAME, LeverEffects, RecyclingCeiling, leverHeadline, useCeiling, useLeverEffects, type CeilingGroup } from './LeverEffects';
-import { METAL_NAME, fmtMass, focusPhrase, makeFocus, metalBasisApplies } from './focus';
+import { CEILING_NAME, LeverEffects, RecyclingCeiling, leverHeadline, lifetimeForShare, useCeiling, useLeverEffects, withCollection, type CeilingGroup } from './LeverEffects';
+import { METAL_NAME, fmtMass, focusPhrase, makeFocus, metalBasisApplies, setIntensity } from './focus';
 import {
   GROUP_KEYS,
   GROUP_LABEL,
@@ -26,6 +26,7 @@ import {
   INTENSITY_LEVERS,
   INTENSITY_LEVER_KEYS,
   customLeversFromSsp,
+  leverDraw,
   leverWorldValue,
   resolveSsp,
   runModel,
@@ -498,6 +499,29 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     return { gdpGrowth, lever };
   }, [gdpPop, inputs, blend]);
 
+  /** The contour's ring let go somewhere: income growth and the axis's assumption. */
+  const onContourMove = (gdppcGrowth: number, value: number) => edit((l) => {
+    const blend = resolveSsp(inputs, l.sspU);
+    l.gdppcTilt = (1 + gdppcGrowth) / (1 + blend.gdppcGrowth) - 1;
+    if (axisShown === 'metalRecycling') { l.recyclingFe = value; l.recyclingNonFe = value; }
+    else if (axisShown === 'mineralDowncycling') l.downcycling = value;
+    else setIntensity(l, [axisShown], leverDraw(inputs, axisShown, value, blend));
+  });
+
+  /**
+   * A recycling dot dragged: sideways is the collection rate; up and down is
+   * the recycled share, reached by moving how long things last.
+   */
+  const onCeilingDrag = (g: CeilingGroup, rate: number, share: number) => {
+    const next = withCollection(levers, g, rate);
+    const u = lifetimeForShare(inputs, next, place, g, share);
+    edit((l) => {
+      Object.assign(l, withCollection(l, g, rate));
+      const lt = { mean: u, k: 0.5 };
+      l.lifetimeU = { buildings: lt, civil_infrastructure: lt, machinery: lt, short_lived: lt };
+    });
+  };
+
   const intensityDraw = (lever: IntensityLever): number => {
     const spec = INTENSITY_LEVERS[lever];
     return spec.flows.length
@@ -620,7 +644,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
         <section aria-label="Where consumption would fall" style={sectionRule}>
           <p style={kicker}>Where the line is · {sliceName}{place === 'World' ? '' : `, ${place}`}</p>
           <h3 style={figTitle}>What it would take for {group === 'total' ? 'material use' : focus.name.toLowerCase()} to stop growing</h3>
-          <ContourPanel inputs={inputs} levers={shown} focus={focus} axis={axisShown} onAxis={setAxis}
+          <ContourPanel inputs={inputs} levers={shown} focus={focus} axis={axisShown} onAxis={setAxis} onMove={onContourMove}
             scatter={envelope.scatter} history={historyPoint} />
           <p style={caption}>
             Growth in {focusPhrase(focus)}, 2025–2060, across world income growth and{' '}
@@ -640,13 +664,13 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
             </p>
           ) : (
             <>
-              <RecyclingCeiling data={ceiling} />
+              <RecyclingCeiling data={ceiling} onDrag={onCeilingDrag} />
               <p style={caption}>
                 Each line ends where everything that retires in {ceiling.year} is recycled:{' '}
                 {ceiling.lines.map((l, k) => (
                   <span key={l.group}>{k ? ' and ' : ''}<b>{(100 * l.ceiling).toFixed(0)}%</b> of {CEILING_NAME[l.group].replace(/s$/, '')} supply</span>
                 ))}{place === 'World' ? '' : ` in ${place}`}, because so little of what is needed that year is retiring.
-                Dots are yours{ceiling.lines.some((l) => l.withTrade != null) ? '; open circles add trade in scrap that would otherwise go unused elsewhere' : ''}.
+                Dots are yours: drag one sideways to set collection, up or down to set how long things last{ceiling.lines.some((l) => l.withTrade != null) ? '; open circles add trade in scrap that would otherwise go unused elsewhere' : ''}.
                 {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
               </p>
             </>

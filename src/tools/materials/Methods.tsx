@@ -219,6 +219,11 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
           Where no green line appears, the material grows everywhere inside the range anyone has
           proposed.
         </p>
+        <p style={p}>
+          The ring can be dragged. Where it is let go sets income growth, as a tilt on the pathway
+          in every region, and the assumption on the vertical axis; the sliders above follow. The
+          surface itself does not change, because every point on it already sets both of those.
+        </p>
 
         <h2 style={h2}>The recycling ceiling</h2>
         <p style={p}>
@@ -240,6 +245,15 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
           dashed diagonal, labelled “with no demand growth”, is what each collection rate would
           give if everything needed that year were retiring, as it would be if demand did not
           grow; the gap between it and each line is growth.
+        </p>
+        <p style={p}>
+          The dots can be dragged. Sideways sets the collection rate (both metal rates together,
+          or mineral reuse). Up and down sets the recycled share, which the page reaches by moving
+          how long things last: shorter lifetimes mean more of each year’s demand is replacing
+          what retired, so more of it can come from scrap. It is the same lifetime setting as in
+          the panel under the intensity slider, so it moves every product and every material at
+          once, and the other dot moves with it. Where a share is out of reach, the dot stops at
+          the shortest or longest lifetimes the paper sampled.
         </p>
         <p style={p}>
           The open circles relax the no-trade assumption. With everything collected, some regions

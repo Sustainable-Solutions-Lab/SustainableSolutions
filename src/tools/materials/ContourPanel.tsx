@@ -28,7 +28,7 @@ import {
   type Levers,
   type ModelInputs,
 } from './model';
-import { focusGrowth, type Focus } from './focus';
+import { focusGrowth, setIntensity, type Focus } from './focus';
 
 /** A vertical axis the panel can take: the paper's six, in its own order. */
 export type ContourAxis = IntensityLever | 'metalRecycling' | 'mineralDowncycling';
@@ -118,6 +118,7 @@ export default function ContourPanel({
   focus,
   axis,
   onAxis,
+  onMove,
   scatter,
   history,
 }: {
@@ -126,6 +127,11 @@ export default function ContourPanel({
   focus: Focus;
   axis: ContourAxis;
   onAxis: (a: ContourAxis) => void;
+  /**
+   * The ring dragged to a new place: world GDP-per-person growth (2024-2060)
+   * and the vertical axis's value, both inside the frame.
+   */
+  onMove?: (gdppcGrowth: number, value: number) => void;
   scatter: ScatterData | null;
   /** Recent conditions, for the star: world GDP/capita growth and each lever. */
   history: { gdpGrowth: number; lever: Record<string, number> };
@@ -155,6 +161,7 @@ export default function ContourPanel({
     ys: number[];
   } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const job = useRef(0);
 
   // The axis ranges: income growth spans the sampled SSPs, the lever spans the
@@ -186,7 +193,23 @@ export default function ContourPanel({
   // rows per frame rather than in one block that would drop the page's scroll.
   // Paced to paint: a background tab clamps setTimeout to a second a tick,
   // which would stretch this to a quarter of a minute.
+  /**
+   * The levers the surface depends on. Every point on it overrides the
+   * socioeconomic position, both tilts and the axis's own lever, so those are
+   * blanked here: dragging the ring changes exactly those, and must not set
+   * off 225 runs to redraw a surface that has not changed.
+   */
+  const surfaceKey = useMemo(() => {
+    const l: Levers = { ...levers, sspU: 0, popTilt: 0, gdppcTilt: 0 };
+    if (axis === 'metalRecycling') { l.recyclingFe = 0; l.recyclingNonFe = 0; }
+    else if (axis === 'mineralDowncycling') l.downcycling = 0;
+    else setIntensity(l, [axis], 0);
+    return JSON.stringify(l);
+  }, [levers, axis]);
+  const surfaceLevers = useMemo(() => JSON.parse(surfaceKey) as Levers, [surfaceKey]);
+
   useEffect(() => {
+    const levers = surfaceLevers;
     const id = ++job.current;
     setBusy(true);
     const z = new Float64Array(N * N);
@@ -241,7 +264,7 @@ export default function ContourPanel({
     return () => {
       job.current++;
     };
-  }, [inputs, axis, focus, frame, levers]);
+  }, [inputs, axis, focus, frame, surfaceLevers]);
 
   const paths = useMemo(() => {
     if (!surface || surface.axis !== axis || surface.focus !== focus) return null;
@@ -372,11 +395,29 @@ export default function ContourPanel({
             <path d={STAR} fill="var(--ink)" stroke="var(--paper)" strokeWidth={1} />
           </g>
         )}
-        <circle cx={xOf(here.x)} cy={yOf(here.y)} r={6.5} fill="none" stroke="var(--cardinal)" strokeWidth={2.4} />
-        <circle cx={xOf(here.x)} cy={yOf(here.y)} r={2} fill="var(--cardinal)" />
         </g>
 
         <rect x={M.l} y={M.t} width={PW} height={PH} fill="none" stroke="var(--rule-strong)" />
+
+        {/* Yours, on top and draggable: where it is let go sets income growth
+            and the vertical axis's assumption, and every slider follows. */}
+        <g style={{ cursor: onMove ? (dragging ? 'grabbing' : 'grab') : undefined, touchAction: 'none' }}
+          onPointerDown={onMove ? (e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(true); } : undefined}
+          onPointerMove={onMove ? (e) => {
+            if (!dragging) return;
+            const r = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect();
+            const sx = ((e.clientX - r.left) * W) / r.width;
+            const sy = ((e.clientY - r.top) * H) / r.height;
+            const fx = Math.max(0, Math.min(1, (sx - M.l) / PW));
+            const fy = Math.max(0, Math.min(1, (M.t + PH - sy) / PH));
+            onMove(frame.xGrowthLo + fx * (frame.xGrowthHi - frame.xGrowthLo), frame.yLo + fy * (frame.yHi - frame.yLo));
+          } : undefined}
+          onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)}>
+          <circle cx={xOf(here.x)} cy={yOf(here.y)} r={16} fill="transparent" />
+          <circle cx={xOf(here.x)} cy={yOf(here.y)} r={dragging ? 8 : 6.5} fill={onMove ? 'color-mix(in srgb, var(--cardinal) 15%, transparent)' : 'none'}
+            stroke="var(--cardinal)" strokeWidth={2.4} />
+          <circle cx={xOf(here.x)} cy={yOf(here.y)} r={2} fill="var(--cardinal)" />
+        </g>
 
         {xTicks.map((t) => (
           <text key={t} x={xOf(t)} y={M.t + PH + 17} textAnchor="middle" style={tick}>
@@ -410,7 +451,7 @@ export default function ContourPanel({
           <em>% a year</em>
         </span>
         <span><svg width={18} height={10} aria-hidden="true"><line x1={0} x2={18} y1={5} y2={5} stroke="#1B7837" strokeWidth={2.4} /></svg>zero</span>
-        <span><svg width={14} height={14} aria-hidden="true"><circle cx={7} cy={7} r={5} fill="none" stroke="var(--cardinal)" strokeWidth={2} /></svg>yours</span>
+        <span><svg width={14} height={14} aria-hidden="true"><circle cx={7} cy={7} r={5} fill="none" stroke="var(--cardinal)" strokeWidth={2} /></svg>{onMove ? 'yours (drag it)' : 'yours'}</span>
         <span><svg width={14} height={14} viewBox="-7.5 -7.5 15 15" aria-hidden="true"><path d={STAR} fill="var(--ink)" /></svg>today</span>
         <span><svg width={10} height={10} aria-hidden="true"><circle cx={5} cy={5} r={2} fill="var(--ink)" opacity={0.4} /></svg>paper’s runs</span>
       </div>

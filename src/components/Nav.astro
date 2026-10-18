@@ -16,11 +16,10 @@ const path = Astro.url.pathname;
     aria-label="Primary"
     class="container-content flex items-center justify-between h-14"
   >
-    <div class="lab-wordmark">
-      <img class="lab-logo lab-logo-light" src="/logos/lab/LabLogo_spectral_dark.png" alt="" aria-hidden="true" />
-      <img class="lab-logo lab-logo-dark"  src="/logos/lab/LabLogo_spectral_light.png" alt="" aria-hidden="true" />
-      <a href="/" class="font-serif text-lg leading-none">Sustainable Solutions Lab</a>
-    </div>
+    <a href="/" class="lab-wordmark border-b-0" aria-label="Sustainable Solutions Lab, home">
+      <img class="lab-logo lab-logo-light" src="/logos/lab/wordmark-dark.png" alt="Sustainable Solutions Lab" />
+      <img class="lab-logo lab-logo-dark"  src="/logos/lab/wordmark-light.png" alt="" aria-hidden="true" />
+    </a>
 
     {/* Desktop link list */}
     <ul class="hidden md:flex items-center gap-6 text-sm">
@@ -112,13 +111,15 @@ const path = Astro.url.pathname;
   .lab-wordmark {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    min-width: 0;
   }
   .lab-logo {
-    height: 28px;
-    width: auto;       /* preserve native aspect ratio — the light-mode
-                          PNG is 1600×1394, and forcing it to 28×28 was
-                          horizontally squishing it. */
+    height: 30px;
+    max-width: 62vw;   /* the wordmark is about 7:1, so on a phone it
+                          shrinks rather than crowding the controls */
+    width: auto;
+    object-fit: contain;
+    object-position: left center;
     display: block;
     flex: none;
   }

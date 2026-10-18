@@ -113,10 +113,12 @@ export type Tick = {
   at: number; label: string;
   /** Drop the label to a second row, for anchors too close to share one. */
   low?: boolean;
+  /** Draw this one at full strength in the accent colour: a reference, not an option. */
+  strong?: boolean;
 };
 
 export default function Slider({ label, value, max, min = 0, onChange, onCommit, fmt, aside,
-                                 desc, note, ticks, step = 0.01 }: {
+                                 desc, note, ticks, readout, step = 0.01 }: {
   label: string; value: number; max: number; min?: number; step?: number;
   onChange: (v: number) => void; fmt: (v: number) => string;
   /** Called with the value the slider is let go at (pointer up, key up). */
@@ -128,6 +130,8 @@ export default function Slider({ label, value, max, min = 0, onChange, onCommit,
   /** Always visible under the slider. */
   note?: ReactNode;
   ticks?: Tick[];
+  /** Replaces the value and aside at the top right, for callers that format their own. */
+  readout?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   // A RANGE INPUT STOPS AT THE LAST WHOLE STEP BELOW ITS MAXIMUM. When the
@@ -160,11 +164,13 @@ export default function Slider({ label, value, max, min = 0, onChange, onCommit,
             </button>
           )}
         </span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent)',
-                       textAlign: 'right' }}>
-          {fmt(value)}
-          {aside && <span style={{ fontSize: 10.5, color: 'var(--ink)', opacity: 0.55 }}> {aside}</span>}
-        </span>
+        {readout ?? (
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent)',
+                         textAlign: 'right' }}>
+            {fmt(value)}
+            {aside && <span style={{ fontSize: 10.5, color: 'var(--ink)', opacity: 0.55 }}> {aside}</span>}
+          </span>
+        )}
       </div>
       <input type="range" min={min} max={max} step={step} value={Math.min(value, max)} aria-label={label}
         onChange={(e) => onChange(Number(e.target.value))}
@@ -181,9 +187,11 @@ export default function Slider({ label, value, max, min = 0, onChange, onCommit,
                 style={{ position: 'absolute', left: onThumbTravel(frac),
                          transform: frac < 0.12 ? 'none' : frac > 0.88 ? 'translateX(-100%)' : 'translateX(-50%)',
                          textAlign: 'center', lineHeight: 1.1 }}>
-                <span style={{ display: 'block', width: 1, height: t.low ? 13 : 3, background: 'var(--ink)',
-                               opacity: 0.35, margin: frac < 0.12 ? '0' : frac > 0.88 ? '0 0 0 auto' : '0 auto' }} />
-                <span style={{ font: '400 8.5px var(--font-mono)', opacity: 0.45, whiteSpace: 'nowrap' }}>
+                <span style={{ display: 'block', width: t.strong ? 2 : 1, height: t.low ? 13 : t.strong ? 5 : 3,
+                               background: t.strong ? 'var(--accent)' : 'var(--ink)', opacity: t.strong ? 1 : 0.35,
+                               margin: frac < 0.12 ? '0' : frac > 0.88 ? '0 0 0 auto' : '0 auto' }} />
+                <span style={{ font: `${t.strong ? 600 : 400} 8.5px var(--font-mono)`, opacity: t.strong ? 1 : 0.45,
+                               color: t.strong ? 'var(--accent)' : undefined, whiteSpace: 'nowrap' }}>
                   {t.label}
                 </span>
               </span>

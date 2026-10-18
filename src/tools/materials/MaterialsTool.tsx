@@ -14,7 +14,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEv
 import { followTouches } from '../magnets/Slider';
 import ProjectionChart, { spectral, type Band, type StackSeries } from './ProjectionChart';
 import Methods from './Methods';
-import Drivers, { type DriverNow, type DriverPast } from './Drivers';
+import Drivers, { PAST_FROM, PAST_TO, type DriverNow, type DriverPast } from './Drivers';
 import ContourPanel, { CONTOUR_AXES, type ContourAxis, type ScatterData } from './ContourPanel';
 import Controls from './Controls';
 import { LeverEffects, RecyclingCeiling, leverVerdict, useLeverEffects } from './LeverEffects';
@@ -370,18 +370,23 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
       pop1: d.pop1,
       gdppc0: d.gdppc0,
       gdppc1: d.gdppc1,
+      // Mt to kg is 1e9.
+      intensity0: (run.primary.total[0] * 1e9) / run.gdp[0],
+      intensity1: (run.primary.total[n - 1] * 1e9) / run.gdp[n - 1],
+      material0: run.primary.total[0],
+      material1: run.primary.total[n - 1],
     };
   }, [inputs, shown, run]);
 
-  /** The same four terms as measured over 1970–2024, for the row underneath. */
+  /** The same four terms as measured over the 36 years to 2024, for the reference ticks and row. */
   const kayaPast = useMemo<DriverPast>(() => {
     const ids = new Set(Object.values(HISTORY_GROUP));
     const years = world.years;
-    const i0 = years.indexOf(1970);
-    const i1 = years.indexOf(2024);
+    const i0 = years.indexOf(PAST_FROM);
+    const i1 = years.indexOf(PAST_TO);
     const gy = gdpPop.years;
-    const j0 = gy.indexOf(1970);
-    const j1 = gy.indexOf(2024);
+    const j0 = gy.indexOf(PAST_FROM);
+    const j1 = gy.indexOf(PAST_TO);
     const gdp = gdpPop.gdp.World;
     const pop = gdpPop.population.World;
     if (i0 < 0 || i1 < 0 || j0 < 0 || j1 < 0 || !gdp || !pop) {
@@ -516,7 +521,8 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           </p>
 
           <Drivers inputs={inputs} levers={shown} now={kayaNow} past={kayaPast}
-            warming={warming} onChange={edit} />
+            materialRange={[Math.min(...envelope.worldGrowth), Math.max(...envelope.worldGrowth)]}
+            onChange={edit} />
 
           <p style={caption}>
             {worldGrowth > 0 ? (

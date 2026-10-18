@@ -119,13 +119,16 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
         <p style={p}>
           Population growth, income growth and the change in material intensity, each as an
           average annual rate from 2025 to 2060. Measured over the same years, the three
-          multiply exactly to the growth in material use printed beneath them; nothing else in
+          multiply exactly to the growth in material use printed above them; nothing else in
           the model can move world material use except through one of them.
         </p>
         <p style={p}>
           Population and income bend the SSP pathway by a constant annual rate, every region by
-          the same factor, so the regional spread is kept. The ticks are each SSP’s own rate. The
-          rails run four tenths of a point past the slowest and fastest SSP.
+          the same factor, so the regional spread is kept. The ticks are each SSP’s own rate and,
+          drawn strong, the measured average over 1988–2024: 36 years, the same span as the
+          projection. The rails run four tenths of a point past the slowest and fastest of those.
+          Each number is coloured by its place on its own rail, cooler for lower and hotter for
+          higher; the material total is coloured against the spread of the paper’s runs.
         </p>
         <p style={p}>
           Intensity has no closed form, because it is an endpoint for every material in every

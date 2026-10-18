@@ -149,24 +149,32 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
     padding: 13px 15px 11px;
     border: 1px solid var(--rule); border-radius: 10px;
   }
+  /* Heat colours for the driver numbers: Spectral's ends, through ink. */
+  .mat-tool { --mat-cool: #3288BD; --mat-hot: #D53E4F; }
+  [data-theme="dark"] .mat-tool { --mat-cool: #5EA9DB; --mat-hot: #F0606E; }
+
+  /* The identity sits on top of the sliders it adds up. */
   .mat-tool .mat-identity {
     grid-column: 1 / -1;
     display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 7px;
-    margin: 8px 0 0; padding-top: 9px;
-    border-top: 1px solid var(--rule);
-    font: 400 12.5px/1.5 var(--font-mono); color: var(--ink);
+    margin: 0;
+    font: 400 14px/1.5 var(--font-mono); color: var(--ink-2);
   }
   .mat-tool .mat-identity b { font-weight: 600; }
-  .mat-tool .mat-identity .good { color: #1B7837; }
+  .mat-tool .mat-identity i { font-style: normal; color: var(--ink-3); }
   .mat-tool .mat-identity-past {
-    border-top: 0; padding-top: 0; margin-top: 1px;
+    margin: 0 0 10px; padding-bottom: 10px; border-bottom: 1px solid var(--rule);
     font-size: 11.5px; color: var(--ink-3);
   }
-  .mat-tool .mat-drivers-note {
-    grid-column: 1 / -1;
-    margin: 6px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--ink-2);
+
+  /* A slider's own number: the rate large, the 2060 level beneath it. */
+  .mat-tool .mat-readout {
+    display: flex; flex-direction: column; align-items: flex-end; text-align: right;
+    font-family: var(--font-mono); line-height: 1.1;
   }
-  [data-theme="dark"] .mat-tool .mat-identity .good { color: #6FD08C; }
+  .mat-tool .mat-readout-rate { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+  .mat-tool .mat-readout-rate small { font-size: 11px; font-weight: 500; opacity: 0.75; margin-left: 1px; }
+  .mat-tool .mat-readout-level { font-size: 11.5px; font-weight: 500; margin-top: 2px; }
 
   /* The advanced panel: closed by default, opens under the sliders it explains. */
   .mat-tool .mat-advanced-row {

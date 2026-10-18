@@ -13,6 +13,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { followTouches } from '../magnets/Slider';
 import ProjectionChart, { spectral, type Band, type StackSeries } from './ProjectionChart';
+import Methods from './Methods';
 import Drivers, { type DriverNow, type DriverPast } from './Drivers';
 import ContourPanel, { CONTOUR_AXES, type ContourAxis, type ScatterData } from './ContourPanel';
 import Controls from './Controls';
@@ -157,6 +158,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const [measure, setMeasure] = useState<Measure>(initial?.measure ?? 'consumption');
   const [axis, setAxis] = useState<ContourAxis>(initial?.axis ?? 'mineralStock');
   const [advanced, setAdvanced] = useState(false);
+  const [methods, setMethods] = useState(false);
   const page = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -346,15 +348,6 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const first = projection[0];
   const last = projection[projection.length - 1];
   const change = first > 0 && last > 0 ? Math.pow(last / first, 1 / 35) - 1 : null;
-  const ratio = first > 0 ? last / first : null;
-  // A mid-century trough, when the scenario has one. Ask for a fast fall in
-  // material per dollar and the stock model answers by not building: what is
-  // already standing is more than the new intensity calls for, so demand is
-  // met out of the existing stock until the ramp has done its work.
-  const troughAt = projection.reduce((best, v, i) => (v < projection[best] ? i : best), 0);
-  const trough = troughAt > 0 && first > 0 && projection[troughAt] < 0.95 * first
-    ? { year: run.years[troughAt], drop: 1 - projection[troughAt] / first }
-    : null;
   const worldGrowth = effects.now;
   const percentile = envelope.worldGrowth.filter((g) => g < worldGrowth).length / envelope.worldGrowth.length;
 
@@ -516,30 +509,10 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
             />
           </div>
           <p style={caption}>
-            Measured domestic material consumption to 2024 (UNEP IRP) at full strength, then the
-            model from 2025 in the same colours, lightened.
-            {ratio != null && (
-              <> Your scenario ends {ratio.toFixed(2)}× its 2025 level, {change != null && `${change >= 0 ? '+' : ''}${(100 * change).toFixed(2)}% a year`}.</>
-            )}
-            {' '}The first years are not smooth, and should not be. Stock-heavy materials carry
-            2024’s own building rate for three years before the modelled path takes over, and the
-            intensity ramp leaves 2024 at the slope it was already on, steepens through the 2030s
-            and flattens again at the target year ({shown.targetYear}). Consumption follows the
-            slope of those paths rather than their level, so a bend in the assumption shows up
-            here as a dip.
-            {trough && (
-              <> The trough is the same mechanism at full size: a {(100 * trough.drop).toFixed(0)}%
-                fall to {trough.year}, because a fast enough fall in material per dollar is met by
-                not building — what is already standing is more than the new intensity calls for,
-                and demand returns once the ramp has done its work. A quarter of the paper’s own
-                1,000 draws do this.</>
-            )}
-            {(group === 'total' || group === 'metal_ores') && (
-              <> Metal ores step up at the seam: history reports ore as consumed, the projection
-                reports the ore that has to be mined at the modelled grade.</>
-            )}
-            {band && <> Dashed lines are the paper’s own 1,000 runs — median, 5th and 95th — for this total.</>}
-            {activeLeaf && <> No band is drawn for a single material: the paper’s runs are summarised by group.</>}
+            Historical and projected consumption of the selected material(s) in the selected region.
+            {band && <> Dashed lines are the median, 5th and 95th percentiles of the paper’s 1,000
+              projections for the same region and materials.</>}
+            {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
           </p>
 
           <Drivers inputs={inputs} levers={shown} now={kayaNow} past={kayaPast}
@@ -680,9 +653,11 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
             from MISO2. Warming ranges are the ScenarioMIP climate assessment’s 2100 median GSAT
             across the runs that use each SSP. Developed by{' '}
             <a href="https://steer-stanford.webflow.io/" target="_blank" rel="noopener noreferrer">STEER</a>{' '}
-            at Stanford. <a href={`${BASE}/data`}>Full data explorer →</a>
+            at Stanford. <button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods</button>
+            {' · '}<a href={`${BASE}/data`}>Full data explorer →</a>
           </p>
         </footer>
+        {methods && <Methods targetYear={shown.targetYear} onClose={() => setMethods(false)} />}
       </div>
     </div>
   );

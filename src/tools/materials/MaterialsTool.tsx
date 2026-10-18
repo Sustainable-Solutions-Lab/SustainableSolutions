@@ -367,7 +367,34 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     const totalPast = years.map((_, i) =>
       series.some((t) => t.past[i] == null) ? null : series.reduce((a, t) => a + (t.past[i] as number), 0),
     );
-    return { years, series, totalFuture, totalPast };
+    /**
+     * Recycled supply for each stock-material component, in the same measure:
+     * what the model's end-of-life pools put back. Ore-equivalent in ore
+     * terms (the ore that did not have to be mined), metal in metal terms.
+     */
+    const recycledOf = (c: Comp): number[] | null => {
+      if (c.group !== 'metal_ores' && c.group !== 'nonmetallic_minerals') return null;
+      const n = run.years.length;
+      const leaves = c.group === 'nonmetallic_minerals' ? ['Non-metallic minerals']
+        : c.leaf ? [c.leaf] : ['Ferrous ores', 'Non-ferrous ores'];
+      const regionsHere = place === 'World' ? inputs.regions : [place];
+      const out = new Array<number>(n).fill(0);
+      for (const r of regionsHere) {
+        for (const leaf of leaves) {
+          const sec = run.secondaryByRegionDetail[r]?.[leaf];
+          if (!sec) continue;
+          const g = !metal || c.group !== 'metal_ores' ? null
+            : leaf === 'Ferrous ores' ? run.grade.Metal_Fe : run.grade.Metal_NonFe;
+          for (let i = 0; i < n; i++) out[i] += sec[i] * (g ? g[i] : 1);
+        }
+      }
+      return out.map((v, i) => asMeasure(v, i, false) ?? 0);
+    };
+    const recycled = ordered
+      .map((r) => ({ key: r.c.key, color: colourOf(r.c), future: recycledOf(r.c) }))
+      .filter((r): r is { key: string; color: string; future: number[] } => !!r.future && r.future.some((v) => v > 0));
+
+    return { years, series, totalFuture, totalPast, recycled };
   }, [world, gdpPop, run, place, comps, measure, pastMass, palette, metal]);
 
   /** Extraction of the same materials in the same measure; null for the world. */
@@ -399,6 +426,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     ...(band ? band.max : []),
     ...stack.totalPast.map((v) => v ?? 0),
     ...(extraction ?? []).map((v) => v ?? 0),
+    ...projection.map((v, i) => v + stack.recycled.reduce((a, r) => a + r.future[i], 0)),
   );
   const unit = measure === 'consumption' ? (peak >= 2000 ? 'Gt per year' : 'Mt per year')
     : measure === 'perCapita' ? 't per person per year'
@@ -413,6 +441,10 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
       past: t.past.map((v) => (v == null ? null : v * scale)),
       future: t.future.map((v) => v * scale),
     }))),
+    [stack, scale],
+  );
+  const scaledRecycled = useMemo(
+    () => stack.recycled.map((r) => ({ ...r, future: r.future.map((v) => v * scale) })),
     [stack, scale],
   );
 
@@ -600,6 +632,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
               projectionYears={run.years}
               series={scaled}
               extraction={extraction?.map((v) => (v == null ? null : v * scale)) ?? null}
+              recycled={scaledRecycled}
               band={band ? {
                 p05: band.p05.map((v) => v * scale), p25: band.p25.map((v) => v * scale),
                 p50: band.p50.map((v) => v * scale), p75: band.p75.map((v) => v * scale),
@@ -612,6 +645,8 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           </div>
           <p style={caption}>
             Historical and projected consumption of the selected material(s) in the selected region.
+            {stack.recycled.length > 0 && <> Hatched above the stack: recycled and reused supply,
+              which the paper does not count as consumption.</>}
             {band && <> Dashed lines are the median, 5th and 95th percentiles of the paper’s 1,000
               projections for the same region and materials.</>}
             {extraction && <> The red dashed line is what the region extracted itself: above the

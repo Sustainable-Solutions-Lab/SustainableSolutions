@@ -51,6 +51,13 @@ export interface ProjectionChartProps {
    * it used. Null to leave it out.
    */
   extraction?: (number | null)[] | null;
+  /**
+   * Recycled supply, one per projection year, for the components that have
+   * any: drawn hatched in the component's colour ON TOP of the whole stack,
+   * so the solid top edge stays newly extracted material and the hatched top
+   * is everything used.
+   */
+  recycled?: { key: string; color: string; future: number[] }[];
   unit: string;
   caption?: React.ReactNode;
   format: (v: number) => string;
@@ -92,6 +99,7 @@ export default function ProjectionChart({
   series,
   band,
   extraction,
+  recycled = [],
   unit,
   caption,
   format,
@@ -139,8 +147,16 @@ export default function ProjectionChart({
     }));
   }
 
+  // Recycled layers continue the stack upward from the primary total.
+  const recEdges: number[][] = [futureEdges[series.length]];
+  for (const r of recycled) {
+    const below = recEdges[recEdges.length - 1];
+    recEdges.push(below.map((v, i) => v + (r.future[i] ?? 0)));
+  }
+
   let hi = 0;
   let lo = 0;
+  for (const v of recEdges[recEdges.length - 1]) hi = Math.max(hi, v);
   for (let i = 0; i < historyYears.length; i++) {
     if (!pastOk[i]) continue;
     for (let k = 0; k <= series.length; k++) {
@@ -289,6 +305,29 @@ export default function ProjectionChart({
               strokeWidth={0.9} opacity={0.9} />
           ))}
 
+          {/* Recycled supply, hatched, above the newly extracted stack. */}
+          <defs>
+            {recycled.map((r) => (
+              <pattern key={r.key} id={`mat-hatch-${r.key.replace(/[^a-z0-9]/gi, '')}`} width={5} height={5}
+                patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <rect width={5} height={5} fill={r.color} fillOpacity={0.12} />
+                <line x1={0} y1={0} x2={0} y2={5} stroke={r.color} strokeWidth={1.6} strokeOpacity={0.75} />
+              </pattern>
+            ))}
+          </defs>
+          {recycled.map((r, k) => {
+            const lo = recEdges[k];
+            const up = recEdges[k + 1];
+            let d = '';
+            projectionYears.forEach((yr, i) => { d += `${i ? 'L' : 'M'}${xScale(yr).toFixed(2)},${yScale(lo[i]).toFixed(2)}`; });
+            for (let i = projectionYears.length - 1; i >= 0; i--) d += `L${xScale(projectionYears[i]).toFixed(2)},${yScale(up[i]).toFixed(2)}`;
+            return <path key={`r${r.key}`} d={`${d}Z`} fill={`url(#mat-hatch-${r.key.replace(/[^a-z0-9]/gi, '')})`} />;
+          })}
+          {recycled.length > 0 && (
+            <path d={line(projectionYears, recEdges[recEdges.length - 1])} fill="none" stroke="var(--ink)"
+              strokeWidth={1} strokeDasharray="1 2.5" opacity={0.8} />
+          )}
+
           {/* The paper's own spread for this total, over the top. */}
           {band && (
             <>
@@ -340,10 +379,16 @@ export default function ProjectionChart({
             </span>
           );
         })}
-        {series.length > 1 && (
+        {(series.length > 1 || recycled.length > 0) && (
           <span className="mat-key-item">
             <span className="mat-key-swatch mat-key-rule" aria-hidden="true" />
-            Total<b>{totalAt == null ? '—' : format(totalAt)}</b>
+            {recycled.length > 0 ? 'Newly extracted' : 'Total'}<b>{totalAt == null ? '—' : format(totalAt)}</b>
+          </span>
+        )}
+        {recycled.length > 0 && (
+          <span className="mat-key-item">
+            <span className="mat-key-swatch" style={{ background: 'repeating-linear-gradient(45deg, var(--ink-3) 0 1.5px, transparent 1.5px 4px)' }} aria-hidden="true" />
+            Recycled<b>{pIdx >= 0 ? format(recycled.reduce((a, r) => a + (r.future[pIdx] ?? 0), 0)) : '—'}</b>
           </span>
         )}
         {extraction && (

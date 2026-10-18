@@ -59,6 +59,14 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
           menu are the colours in the figure.
         </p>
         <p style={p}>
+          The stack is primary consumption: newly extracted material, which is what the paper
+          counts. Recycled metal and reused minerals displace it and are never counted in it. They
+          are drawn hatched above the stack from 2025, in each material’s colour, so the solid top
+          is what is newly extracted and the hatched top is everything used. In ore terms recycled
+          metal is shown as the ore it saves mining; in metal terms, as metal. The measured years
+          have no recycled layer: the material flow accounts record primary flows only.
+        </p>
+        <p style={p}>
           With a region chosen, a dashed line over the measured years is that region’s domestic
           extraction of the same materials, from the same database. Consumption is extraction plus
           imports minus exports, so where the line runs above the stack the region was a net

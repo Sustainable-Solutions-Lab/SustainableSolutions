@@ -601,6 +601,8 @@ export interface ModelRun {
    * already assumes no trade in scrap.
    */
   secondaryByRegion: Record<string, Record<StockGroup, Float64Array>>;
+  /** The same by leaf material ("Ferrous ores", "Non-ferrous ores", "Non-metallic minerals"), ore-equivalent. */
+  secondaryByRegionDetail: Record<string, Record<string, Float64Array>>;
   /**
    * Per region and stock material, in material mass: collected scrap the
    * region's own end uses could not absorb, and room they left that its own
@@ -704,6 +706,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
     },
     secondary: emptyGroupRecord(n),
     secondaryByRegion: {},
+    secondaryByRegionDetail: {},
     eolByRegion: {},
     retiringLife: {},
     grade: { Metal_Fe: gradeFe, Metal_NonFe: gradeNonFe },
@@ -917,6 +920,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       const endUse = out.primary.byEndUse.metal_ores;
       const left = eolSlot(region, material);
       const lifeM = lifeSlot(region, 'metal_ores');
+      const secondaryLeaf = ((out.secondaryByRegionDetail[region] ??= {})[STOCK_LEAF[material]] ??= zeros(n));
       for (let i = 0; i < n; i++) {
         const eol = allocateEol(
           rows.map((r) => {
@@ -930,6 +934,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
           primaryByRow[j][i] = eol.primary[j] / grade[i];
           secondaryTotal[i] += eol.secondary[j] / grade[i];
           secondaryRegion[i] += eol.secondary[j] / grade[i];
+          secondaryLeaf[i] += eol.secondary[j] / grade[i];
           stockTotal[i] += rows[j].res.totalStock[i] / grade[i];
           scrap.retired[i] += Math.max(0, rows[j].res.waste[i]);
           lifeM.mass[i] += Math.max(0, rows[j].res.waste[i]);
@@ -975,6 +980,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       const endUse = out.primary.byEndUse.nonmetallic_minerals;
       const left = eolSlot(region, 'Non-metallic minerals');
       const lifeN = lifeSlot(region, 'nonmetallic_minerals');
+      const secondaryLeaf = ((out.secondaryByRegionDetail[region] ??= {})[STOCK_LEAF['Non-metallic minerals']] ??= zeros(n));
       for (let i = 0; i < n; i++) {
         const eol = allocateEol(
           mineralRows.map((r, j) => {
@@ -993,6 +999,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
           primaryByRow[j][i] = eol.primary[j];
           secondaryTotal[i] += eol.secondary[j];
           secondaryRegion[i] += eol.secondary[j];
+          secondaryLeaf[i] += eol.secondary[j];
           stockTotal[i] += mineralRows[j].res.totalStock[i];
           scrap.retired[i] += Math.max(0, mineralRows[j].res.waste[i]);
           lifeN.mass[i] += Math.max(0, mineralRows[j].res.waste[i]);

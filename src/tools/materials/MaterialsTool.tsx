@@ -26,8 +26,6 @@ import {
   customLeversFromSsp,
   defaultLevers,
   driverGrowth,
-  leverDraw,
-  leverSspValue,
   leverWorldValue,
   resolveSsp,
   runModel,
@@ -323,6 +321,14 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const last = projection[projection.length - 1];
   const change = first > 0 && last > 0 ? Math.pow(last / first, 1 / 35) - 1 : null;
   const ratio = first > 0 ? last / first : null;
+  // A mid-century trough, when the scenario has one. Ask for a fast fall in
+  // material per dollar and the stock model answers by not building: what is
+  // already standing is more than the new intensity calls for, so demand is
+  // met out of the existing stock until the ramp has done its work.
+  const troughAt = projection.reduce((best, v, i) => (v < projection[best] ? i : best), 0);
+  const trough = troughAt > 0 && first > 0 && projection[troughAt] < 0.95 * first
+    ? { year: run.years[troughAt], drop: 1 - projection[troughAt] / first }
+    : null;
   const worldGrowth = effects.now;
   const percentile = envelope.worldGrowth.filter((g) => g < worldGrowth).length / envelope.worldGrowth.length;
 
@@ -406,10 +412,6 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   }, [gdpPop, inputs, blend]);
 
   const intensityDraw = (lever: IntensityLever): number => {
-    if (scenario.kind === 'ssp') {
-      const t = leverSspValue(inputs, lever, scenario.ssp);
-      return t == null ? 0.5 : leverDraw(inputs, lever, t, blend);
-    }
     const spec = INTENSITY_LEVERS[lever];
     return spec.flows.length
       ? (shown.flowIntensityU[spec.flows[0]] ?? 0.5)
@@ -510,6 +512,13 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
             and flattens again at the target year ({shown.targetYear}). Consumption follows the
             slope of those paths rather than their level, so a bend in the assumption shows up
             here as a dip.
+            {trough && (
+              <> The trough is the same mechanism at full size: a {(100 * trough.drop).toFixed(0)}%
+                fall to {trough.year}, because a fast enough fall in material per dollar is met by
+                not building — what is already standing is more than the new intensity calls for,
+                and demand returns once the ramp has done its work. A quarter of the paper’s own
+                1,000 draws do this.</>
+            )}
             {(group === 'total' || group === 'metal_ores') && (
               <> Metal ores step up at the seam: history reports ore as consumed, the projection
                 reports the ore that has to be mined at the modelled grade.</>

@@ -179,8 +179,6 @@ export default function ContourPanel({
         // from the axis that labels it.
         const trial: Levers = {
           ...levers,
-          flowEndpoint: undefined,
-          stockEndpoint: undefined,
           popTilt: 0,
           gdppcTilt: 0,
         };

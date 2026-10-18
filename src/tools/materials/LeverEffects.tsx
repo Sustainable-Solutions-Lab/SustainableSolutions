@@ -26,8 +26,6 @@ const pct = (v: number) => `${v >= 0 ? '+' : ''}${(100 * v).toFixed(2)}%`;
 function withIntensity(levers: Levers, keys: IntensityLever[], u: number): Levers {
   const next: Levers = {
     ...levers,
-    flowEndpoint: undefined,
-    stockEndpoint: undefined,
     flowIntensityU: { ...levers.flowIntensityU },
     stockIntensityU: { ...levers.stockIntensityU },
   };

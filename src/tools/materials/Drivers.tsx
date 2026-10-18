@@ -19,6 +19,7 @@
 import { useMemo } from 'react';
 import Slider, { type Tick } from '../magnets/Slider';
 import {
+  defaultLevers,
   driverGrowth,
   resolveSsp,
   runModel,
@@ -105,25 +106,17 @@ export default function Drivers({
    * result inverted — seven runs, a few milliseconds, and the slider can then
    * move in percent a year like the other two.
    */
-  const map = useMemo(() => {
-    const us = [-0.25, 0, 0.25, 0.5, 0.75, 1, 1.25];
-    const gs = us.map((u) => {
-      const trial: Levers = { ...levers };
-      setAllIntensity(trial, u);
-      const r = runModel(inputs, trial);
-      const n = r.years.length;
-      const yrs = r.years[n - 1] - r.years[0];
-      return Math.pow(
-        (r.primary.total[n - 1] / r.gdp[n - 1]) / (r.primary.total[0] / r.gdp[0]),
-        1 / yrs,
-      ) - 1;
-    });
-    return { us, gs };
-  }, [inputs, levers]);
+  const rateAt = (l: Levers, u: number): number => {
+    const trial: Levers = { ...l };
+    setAllIntensity(trial, u);
+    const r = runModel(inputs, trial);
+    const n = r.years.length;
+    const yrs = r.years[n - 1] - r.years[0];
+    return Math.pow((r.primary.total[n - 1] / r.gdp[n - 1]) / (r.primary.total[0] / r.gdp[0]), 1 / yrs) - 1;
+  };
 
-  /** Draw that lands on a given intensity growth rate, by interpolation. */
-  const drawFor = (target: number): number => {
-    const { us, gs } = map;
+  /** Piecewise-linear inverse of a monotone (u, rate) table. */
+  const invert = (us: number[], gs: number[], target: number): number => {
     if (target <= gs[0]) return us[0];
     for (let i = 1; i < gs.length; i++) {
       if (target <= gs[i]) {
@@ -134,10 +127,39 @@ export default function Drivers({
     return us[us.length - 1];
   };
 
+  /**
+   * How far the draw itself may travel, fixed once from the paper's ensemble
+   * at the central drivers. Bounding the DRAW rather than the rate matters:
+   * the rate a draw produces moves when population or income move, so a rail
+   * bounded in percent a year could be walked out of the sampled space
+   * sideways — and outside it the stock model answers a step change in
+   * intensity by not building at all, which is a corner nobody has proposed.
+   * The top of the rail is the sampling box itself.
+   */
+  const uBounds = useMemo(() => {
+    const ref = defaultLevers(inputs);
+    const us = [0, 0.25, 0.5, 0.75, 1];
+    const gs = us.map((u) => rateAt(ref, u));
+    const floor = inputs.intensityCagrRange?.min;
+    const lo = floor == null ? 0 : Math.min(1, Math.max(0, invert(us, gs, floor)));
+    return { lo, hi: 1 };
+  }, [inputs]);
+
+  const map = useMemo(() => {
+    const us = Array.from({ length: 7 }, (_, i) => uBounds.lo + (i * (uBounds.hi - uBounds.lo)) / 6);
+    return { us, gs: us.map((u) => rateAt(levers, u)) };
+  }, [inputs, levers, uBounds]);
+
+  /** Draw that lands on a given intensity growth rate, by interpolation. */
+  const drawFor = (target: number): number => invert(map.us, map.gs, target);
+
   const popValues = Object.fromEntries(Object.entries(drivers).map(([s, d]) => [s, d.pop]));
   const gdppcValues = Object.fromEntries(Object.entries(drivers).map(([s, d]) => [s, d.gdppc]));
-  const popLo = Math.min(-0.002, ...Object.values(popValues)) - 0.001;
-  const popHi = Math.max(...Object.values(popValues)) + 0.002;
+  // Both driver rails run four tenths of a point past the slowest and fastest
+  // SSP, which is enough to ask what a stalled population or a boom would do
+  // without leaving the territory the pathways actually cover.
+  const popLo = Math.min(...Object.values(popValues)) - 0.004;
+  const popHi = Math.max(...Object.values(popValues)) + 0.004;
   const gdppcLo = Math.max(0, Math.min(...Object.values(gdppcValues)) - 0.004);
   const gdppcHi = Math.max(...Object.values(gdppcValues)) + 0.004;
   const intLo = map.gs[0];
@@ -202,8 +224,11 @@ export default function Drivers({
         onChange={(v) => onChange((l) => setAllIntensity(l, drawFor(v)))}
         fmt={(v) => `${pct(v)}/yr`}
         aside="per $ of output, to 2060"
-        ticks={sspTicks(sspIntensity, intHi - intLo)}
-        desc="Kilograms of material per dollar of world output, as an average annual rate of change to 2060. One knob over all four efficiency rails; the advanced panel sets them apart, and is also where recycling, ore grade and lifetimes live — all of which show up here, since they change the kilograms a dollar of output needs."
+        ticks={sspTicks(
+          Object.fromEntries(Object.entries(sspIntensity).filter(([, v]) => v >= intLo && v <= intHi)),
+          intHi - intLo,
+        )}
+        desc="Kilograms of material per dollar of world output, as an average annual rate of change to 2060. One knob over all four efficiency rails; the advanced panel sets them apart, and is also where recycling, ore grade and lifetimes live — all of which show up here, since they change the kilograms a dollar of output needs. An SSP chip carries no efficiency assumption of its own: the ticks are what each SSP’s own ScenarioMIP range delivers at the central draw."
         note={
           <>
             {now.intensity < 0
@@ -211,8 +236,9 @@ export default function Drivers({
               : <>Rising: material per dollar does not improve at all here.</>}{' '}
             Over 1970–2024 it fell {(100 * Math.abs(past.intensity)).toFixed(2)}% a year, and
             material use still rose {Math.pow(1 + past.material, 54).toFixed(1)}-fold: the other
-            two terms rose faster. This rail runs a quarter past each end of the range the paper
-            sampled, so it can be asked for more than anyone has proposed.
+            two terms rose faster. The rail stops where the paper’s 1,000 runs stop — its fast end
+            is the most improving of them — and near that end the figure dips before it recovers,
+            which is the stock model and not a glitch.
           </>
         }
       />

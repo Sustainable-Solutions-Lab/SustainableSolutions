@@ -14,14 +14,13 @@
  * nothing is ever greyed out — a control that cannot bite says so in words.
  */
 import type { ReactNode } from 'react';
-import Slider, { type Tick } from '../magnets/Slider';
+import Slider from '../magnets/Slider';
 import {
   INTENSITY_LEVERS,
   INTENSITY_LEVER_KEYS,
   LIFETIME_GROUP_LABEL,
   defaultLevers,
   leverDraw,
-  leverSspValue,
   leverWorldValue,
   resolveSsp,
   type IntensityLever,
@@ -76,19 +75,12 @@ function IntensitySlider({
   const b = leverWorldValue(inputs, lever, 1, blend).value;
   const value = leverWorldValue(inputs, lever, draw, blend).value;
 
-  const marks = inputs.sspSampled
-    .map((ssp) => ({ ssp, v: leverSspValue(inputs, lever, ssp) }))
-    .filter((m): m is { ssp: string; v: number } => m.v != null)
-    .sort((x, y) => x.v - y.v);
-  const ends = [a, b, ...marks.map((m) => m.v), value];
+  // The rail is the sampled range for the SSP blend showing, and nothing
+  // else: the SSPs carry no intensity endpoint of their own in this model.
+  const ends = [a, b, value];
   const min = Math.min(...ends);
   const max = Math.max(...ends);
   const span = max - min || 1;
-  const ticks: Tick[] = marks.map((m, i) => ({
-    at: m.v,
-    label: m.ssp,
-    low: i > 0 && Math.abs(m.v - marks[i - 1].v) / span < 0.1,
-  }));
 
   const digits = Math.max(a, b) >= 1 ? 2 : 3;
   const fmt = (v: number) => v.toFixed(digits);
@@ -104,7 +96,6 @@ function IntensitySlider({
       onChange={(v) => onChange(leverDraw(inputs, lever, v, blend))}
       fmt={fmt}
       aside={spec.unit}
-      ticks={ticks}
       note={
         change == null ? undefined : (
           <>
@@ -143,8 +134,6 @@ export default function Controls({
 
   const resetIntensity = () =>
     onChange((l) => {
-      l.flowEndpoint = undefined;
-      l.stockEndpoint = undefined;
       l.flowIntensityU = {};
       l.stockIntensityU = {};
     });
@@ -166,8 +155,6 @@ export default function Controls({
             onChange={(u) =>
               onChange((l) => {
                 const spec = INTENSITY_LEVERS[lever];
-                l.flowEndpoint = undefined;
-                l.stockEndpoint = undefined;
                 l.flowIntensityU = { ...l.flowIntensityU };
                 l.stockIntensityU = { ...l.stockIntensityU };
                 for (const k of spec.flows) l.flowIntensityU[k] = u;
@@ -200,7 +187,7 @@ export default function Controls({
           onChange={(v) => onChange((l) => (l.recyclingFe = v))}
           fmt={(v) => `${(100 * v).toFixed(0)}%`}
           aside="of what retires"
-          note={`Today: ${(100 * worldRate(inputs, 'fe')).toFixed(0)}% across regions, from 45% in Latin America to 75% in Europe. The SSPs do not differentiate recovery, so there are no SSP marks here.`}
+          note={`Today: ${(100 * worldRate(inputs, 'fe')).toFixed(0)}% across regions, from 45% in Latin America to 75% in Europe.`}
           desc="Share of retiring iron and steel collected and used again, reached by the convergence year. Each region ramps from its own rate today."
         />
         <Slider

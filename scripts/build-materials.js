@@ -1173,6 +1173,25 @@ async function buildProjectionInputs() {
     intensityWorldBounds[r.param] = { min: cell(r.bound_min), max: cell(r.bound_max), base: cell(r.int_2024) };
   }
 
+  // How far world material intensity actually moves across the paper's 1,000
+  // runs, as an annual rate: material CAGR relative to GDP CAGR. The driver
+  // slider is bounded by this, because pushing every material's endpoint to
+  // its own bound at once is a corner the Latin hypercube never draws, and
+  // in that corner the stock model stops building for a decade.
+  let intensityCagrRange = null;
+  for (const r of await readCsv(sourceCsv('Figure5_Scatter.csv'))) {
+    const mat = Number(r.mat_cagr);
+    const gdp = Number(r.gdp_cagr);
+    if (!Number.isFinite(mat) || !Number.isFinite(gdp)) continue;
+    const v = (1 + mat) / (1 + gdp) - 1;
+    intensityCagrRange ??= { min: v, max: v };
+    intensityCagrRange.min = Math.min(intensityCagrRange.min, v);
+    intensityCagrRange.max = Math.max(intensityCagrRange.max, v);
+  }
+  if (intensityCagrRange) {
+    intensityCagrRange = { min: num(intensityCagrRange.min), max: num(intensityCagrRange.max) };
+  }
+
   // 2024 stock by end use, and the cohort age profile the dynamic stock model
   // starts from. Upstream reports the profile in 5-year bins; spreading each
   // bin evenly over the years it covers removes the staircase that would
@@ -1276,6 +1295,7 @@ async function buildProjectionInputs() {
     flowRatioBounds,
     stockRatioBounds,
     intensityWorldBounds,
+    intensityCagrRange,
     stock2024,
     ageProfile,
     stockGrowthHist,
@@ -1287,7 +1307,6 @@ async function buildProjectionInputs() {
     lifetimes,
     mcParams,
     gradeOre2024: { fe: 0.4, nonfe: 0.016 },
-    sspTargets: { flow: sspFlowTargets, stock: sspStockTargets },
   };
 }
 

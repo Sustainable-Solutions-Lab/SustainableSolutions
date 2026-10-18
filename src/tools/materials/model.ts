@@ -63,6 +63,13 @@ export interface ModelInputs {
   stockRatioBounds: Record<StockGroup, Record<SuperUse, Record<string, [number, number]>>>;
   /** World kg/USD equivalent of a draw, for sliders in real units. */
   intensityWorldBounds: Record<string, { min: number; max: number; base: number }>;
+  /**
+   * World material intensity, as an annual rate of change to 2060, across the
+   * paper's own 1,000 runs. The driver slider is bounded by this: driving every
+   * material's endpoint to its bound at once is a corner the Latin hypercube
+   * never draws, and in that corner the stock model stops building for a decade.
+   */
+  intensityCagrRange?: { min: number; max: number } | null;
   stock2024: Record<StockMaterial, Record<string, Partial<Record<SubUse, number>>>>;
   ageProfile: Record<StockMaterial, Record<string, Partial<Record<SubUse, { start: number; stocks: number[] }>>>>;
   stockGrowthHist: Record<StockMaterial, Record<string, Partial<Record<SubUse, number>>>>;
@@ -82,15 +89,6 @@ export interface ModelInputs {
   >;
   mcParams: Record<string, { min: number; central: number; max: number }>;
   gradeOre2024: { fe: number; nonfe: number };
-  /**
-   * Each SSP's own intensity target in kg/USD, by region — the assumption set
-   * behind the paper's SSP narratives, so an SSP scenario here is the paper's
-   * scenario rather than something close to it.
-   */
-  sspTargets: {
-    flow: Partial<Record<FlowKey, Record<string, Record<string, number>>>>;
-    stock: Record<StockGroup, Partial<Record<SuperUse, Record<string, Record<string, number>>>>>;
-  };
 }
 
 // ── Levers ──────────────────────────────────────────────────────────────────
@@ -135,13 +133,6 @@ export interface Levers {
    * product inside it. 0.5 reproduces the paper's central lifetimes exactly.
    */
   lifetimeU: Partial<Record<LifetimeGroup, { mean: number; k: number }>>;
-  /**
-   * Intensity endpoints in kg/USD per region, overriding the draw for that
-   * material. The SSP scenarios use this so each region gets the SSP's own
-   * target instead of one world-average draw stretched across every region.
-   */
-  flowEndpoint?: Partial<Record<FlowKey, Record<string, number>>>;
-  stockEndpoint?: Partial<Record<StockGroup, Partial<Record<SuperUse, Record<string, number>>>>>;
 }
 
 export function defaultLevers(inputs: ModelInputs): Levers {
@@ -744,9 +735,8 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
     for (const { key, group, fixed } of FLOW_MATERIALS) {
       const int2024 = inputs.flowInt2024[region]?.[key];
       if (int2024 == null) continue;
-      const override = levers.flowEndpoint?.[key]?.[region];
       let ratio = 1;
-      if (override == null && !fixed) {
+      if (!fixed) {
         const u = levers.flowIntensityU[key] ?? 0.5;
         const bLo = inputs.flowRatioBounds[key]?.[ssp.lo]?.[region];
         const bHi = inputs.flowRatioBounds[key]?.[ssp.hi]?.[region];
@@ -754,7 +744,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
         ratio =
           share * (bLo[0] + u * (bLo[1] - bLo[0])) + (1 - share) * (bHi[0] + u * (bHi[1] - bHi[0]));
       }
-      const idx = rampIndex(int2024, override ?? int2024 * ratio, alpha, group === 'fossil_fuels');
+      const idx = rampIndex(int2024, int2024 * ratio, alpha, group === 'fossil_fuels');
       flowIndex[key] = idx;
 
       const label = group === 'biomass' ? BIOMASS_LABEL[key] : FOSSIL_LABEL[key];
@@ -778,15 +768,14 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       const int2024 = inputs.stockInt2024[group]?.[region]?.[superUse];
       if (int2024 == null) return null;
       const fixed = group === 'nonmetallic_minerals' && FIXED_NONMET_SUPER.includes(superUse);
-      const override = levers.stockEndpoint?.[group]?.[superUse]?.[region];
       let ratio = 1;
-      if (override == null && !fixed) {
+      if (!fixed) {
         const u = levers.stockIntensityU[group]?.[superUse] ?? 0.5;
         const b = inputs.stockRatioBounds[group]?.[superUse]?.[region];
         if (!b) return null;
         ratio = b[0] + u * (b[1] - b[0]);
       }
-      return rampIndex(int2024, override ?? int2024 * ratio, alpha, false);
+      return rampIndex(int2024, int2024 * ratio, alpha, false);
     };
 
     /** Runs the DSM over one material's eight end uses in this region. */
@@ -1084,30 +1073,6 @@ export function leverDraw(inputs: ModelInputs, lever: IntensityLever, value: num
   return (value - lo) / (hi - lo);
 }
 
-/** The world intensity each SSP's own assumptions imply for a lever. */
-export function leverSspValue(inputs: ModelInputs, lever: IntensityLever, ssp: string): number | null {
-  const w = gdpWeights(inputs);
-  const spec = INTENSITY_LEVERS[lever];
-  let value = 0;
-  let any = false;
-  for (const key of spec.flows) {
-    for (const r of inputs.regions) {
-      const t = inputs.sspTargets.flow[key]?.[ssp]?.[r];
-      if (t == null) continue;
-      value += w[r] * t;
-      any = true;
-    }
-  }
-  for (const [group, superUse] of spec.stocks) {
-    for (const r of inputs.regions) {
-      const t = inputs.sspTargets.stock[group]?.[superUse]?.[ssp]?.[r];
-      if (t == null) continue;
-      value += w[r] * t;
-      any = true;
-    }
-  }
-  return any ? value : null;
-}
 
 /** Where each SSP sits on the socioeconomic slider. */
 export function sspPositions(inputs: ModelInputs): Record<string, number> {
@@ -1199,8 +1164,6 @@ export function tiltFor(pathwayRate: number, target: number): number {
  * number someone sets in percent a year.
  */
 export function setAllIntensity(l: Levers, u: number): void {
-  l.flowEndpoint = undefined;
-  l.stockEndpoint = undefined;
   l.flowIntensityU = {};
   l.stockIntensityU = {};
   for (const lever of INTENSITY_LEVER_KEYS) {
@@ -1211,55 +1174,31 @@ export function setAllIntensity(l: Levers, u: number): void {
 }
 
 /**
- * The paper's own scenario for one SSP: that SSP's population and income path,
- * and that SSP's intensity target in every region. Everything the SSPs do not
- * differentiate — recovery rates, ore grade, lifetimes — stays at its central
- * value, which is what the paper's deterministic runs do too.
+ * The SSP chips.
+ *
+ * An SSP here sets the socioeconomic position and nothing else: population,
+ * income per person, and — through them — the ScenarioMIP intensity bounds
+ * that belong to that SSP, which the central draw is then read off. Recovery
+ * rates, ore grade and lifetimes stay central. That is exactly what the
+ * paper's deterministic runs do, and it is the reason the SSP chips track
+ * Results/deterministic_results.csv.
+ *
+ * The per-SSP intensity endpoints in Inputs/MatIntensity_Assumptions.xlsx are
+ * NOT this. They are an earlier expert-judgement set; the published pipeline
+ * reads only that workbook's 2024 column (02-RunSimulations.R,
+ * read_intensity_sheet), and applying the SSP columns as endpoints drives the
+ * stock model into a corner where it stops building for a decade.
  */
 export function sspLevers(inputs: ModelInputs, ssp: string): Levers {
   const levers = defaultLevers(inputs);
   levers.sspU = sspPositions(inputs)[ssp] ?? 0.5;
-  const flow: NonNullable<Levers['flowEndpoint']> = {};
-  for (const [key, bySsp] of Object.entries(inputs.sspTargets.flow)) {
-    const byRegion = bySsp?.[ssp];
-    if (byRegion) flow[key as FlowKey] = byRegion;
-  }
-  levers.flowEndpoint = flow;
-  const stock: NonNullable<Levers['stockEndpoint']> = {};
-  for (const group of ['metal_ores', 'nonmetallic_minerals'] as StockGroup[]) {
-    const bySuper = inputs.sspTargets.stock[group] ?? {};
-    const acc: Partial<Record<SuperUse, Record<string, number>>> = {};
-    for (const [superUse, bySsp] of Object.entries(bySuper)) {
-      const byRegion = bySsp?.[ssp];
-      if (byRegion) acc[superUse as SuperUse] = byRegion;
-    }
-    stock[group] = acc;
-  }
-  levers.stockEndpoint = stock;
   return levers;
 }
 
 /**
- * Custom levers seeded from an SSP: the same socioeconomic position, and the
- * draw whose world intensity matches that SSP's. Used when someone starts from
- * an SSP and then moves a slider, so nothing jumps at the first drag.
+ * Custom levers seeded from an SSP, so nothing jumps at the first drag. The
+ * SSP chips carry no intensity assumption of their own, so this is the chip.
  */
 export function customLeversFromSsp(inputs: ModelInputs, ssp: string): Levers {
-  const levers = defaultLevers(inputs);
-  levers.sspU = sspPositions(inputs)[ssp] ?? 0.5;
-  const blend = resolveSsp(inputs, levers.sspU);
-  const flowU: Partial<Record<FlowKey, number>> = {};
-  const stockU: Levers['stockIntensityU'] = {};
-  for (const lever of INTENSITY_LEVER_KEYS) {
-    const target = leverSspValue(inputs, lever, ssp);
-    const u = target == null ? 0.5 : leverDraw(inputs, lever, target, blend);
-    const spec = INTENSITY_LEVERS[lever];
-    for (const key of spec.flows) flowU[key] = u;
-    for (const [group, superUse] of spec.stocks) {
-      (stockU[group] ??= {})[superUse] = u;
-    }
-  }
-  levers.flowIntensityU = flowU;
-  levers.stockIntensityU = stockU;
-  return levers;
+  return sspLevers(inputs, ssp);
 }

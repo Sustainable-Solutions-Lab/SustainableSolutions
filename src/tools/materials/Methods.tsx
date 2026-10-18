@@ -37,7 +37,7 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
           </button>
         </div>
         <h1 style={{ font: '600 32px/1.15 var(--font-serif)', letterSpacing: '-0.01em', color: 'var(--ink)', margin: '0 0 8px' }}>
-          Will material use keep growing?
+          What would it take to use less?
         </h1>
 
         <h2 style={h2}>One material, one place</h2>

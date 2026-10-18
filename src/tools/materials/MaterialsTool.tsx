@@ -540,7 +540,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
         <div>
           <p style={kicker}>Interactive model · material use to 2060</p>
           <h2 style={{ font: '600 clamp(24px, 3.4vw, 32px)/1.15 var(--font-serif)', margin: '4px 0 8px', color: 'var(--ink)' }}>
-            Will material use keep growing?
+            What would it take to use less?
           </h2>
           <p style={{ margin: 0, fontSize: 14.5, color: 'var(--ink-2)', maxWidth: '72ch', lineHeight: 1.55 }}>
             The world used about 110 billion tonnes of material in 2024, three times what it used
@@ -656,7 +656,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
         {/* ── 4 ─────────────────────────────────────────────────────────── */}
         <section aria-label="The recycling ceiling" style={sectionRule}>
           <p style={kicker}>The ceiling{ceilingGroups.length ? ` · ${ceilingGroups.map((g) => CEILING_NAME[g]).join(' and ')}, ${place}` : ''}</p>
-          <h3 style={figTitle}>Why recycling runs out of road before the problem does</h3>
+          <h3 style={figTitle}>The limits of circularity</h3>
           {!ceilingGroups.length ? (
             <p style={caption}>
               {group === 'biomass' ? 'Biomass is' : 'Fossil fuels are'} used up rather than kept in

@@ -26,7 +26,7 @@ import { Composition } from '../map/region-stats.jsx'
 const POS_COLOR = '#4393c3'
 const NEG_COLOR = '#d6604d'
 
-const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
+const FONT_MONO = "'Inter', system-ui, sans-serif"
 const FONT_SANS = "'Inter', sans-serif"
 
 // ── Mini histogram ────────────────────────────────────────────────────────────

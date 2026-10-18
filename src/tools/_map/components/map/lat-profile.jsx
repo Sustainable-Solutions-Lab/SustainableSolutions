@@ -192,7 +192,7 @@ export function LatProfile({ map, config, variable, isDark }) {
                 x={-4}
                 y={t.y + 3}
                 textAnchor="end"
-                style={{ font: '8px "JetBrains Mono", ui-monospace, monospace', fill: edge }}
+                style={{ font: '8px "Inter", system-ui, sans-serif', fill: edge }}
               >
                 {t.label}
               </text>

@@ -165,7 +165,7 @@ const styles = `
     flex: 0 0 auto;
   }
   .explorer-sidebar-eyebrow {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 10px;
     letter-spacing: 0.08em;
     color: var(--ink-3);
@@ -207,7 +207,7 @@ const styles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 13px;
     color: var(--ink-3);
   }
@@ -244,7 +244,7 @@ const styles = `
     gap: 8px;
   }
   .explorer-section-title {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -365,7 +365,7 @@ const styles = `
     display: flex;
     gap: 8px;
     align-items: center;
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 13px;
   }
   .explorer-year-dash { color: var(--ink-3); }
@@ -427,7 +427,7 @@ const styles = `
   .explorer-year-bounds {
     display: flex;
     justify-content: space-between;
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 10px;
     color: var(--ink-4);
   }

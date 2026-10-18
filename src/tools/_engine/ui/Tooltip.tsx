@@ -54,7 +54,7 @@ const styles = `
   }
   .explorer-tooltip dt {
     color: var(--ink-3);
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 11px;
   }
   .explorer-tooltip dd { margin: 0; color: var(--ink); }

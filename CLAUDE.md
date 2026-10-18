@@ -99,7 +99,8 @@ ColorBrewer Spectral (the lab's signature data palette)
 |------------------|----------------------------------------------------------|
 | Display, headlines | Source Serif 4 *(or Tiempos Headline if licensed)*     |
 | UI, body         | Inter                                                    |
-| Mono (chart labels, eyebrows, code, metadata) | JetBrains Mono             |
+| Labels (chart labels, eyebrows, metadata; the `--font-mono` token) | Inter, tabular figures |
+| Code             | system monospace (`--font-code`)                         |
 
 Scale (1.20 minor-third, anchored 16px): 11 / 13 / 16 / 19 / 23 / 28 / 34 / 41 / 56 / 72 px.
 Line heights: 1.12 (tight) / 1.28 (snug) / 1.5 (normal) / 1.7 (loose).

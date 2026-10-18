@@ -374,7 +374,7 @@ const styles = `
   }
   .explorer-chart-header { flex: 1 1 auto; min-width: 0; }
   .explorer-chart-title {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 15px;
     font-weight: 500;
     letter-spacing: 0.01em;
@@ -382,7 +382,7 @@ const styles = `
     margin: 0 0 2px 0;
   }
   .explorer-chart-subtitle {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 11px;
     letter-spacing: 0.04em;
     color: var(--ink-3);
@@ -395,7 +395,7 @@ const styles = `
     overflow: hidden;
   }
   .explorer-chart-note {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 11px;
     letter-spacing: 0.03em;
     color: var(--ink-3);
@@ -411,7 +411,7 @@ const styles = `
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 10px;
     letter-spacing: 0.03em;
     color: var(--ink-2);
@@ -428,7 +428,7 @@ const styles = `
     align-items: center;
     justify-content: center;
     color: var(--ink-3);
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 12px;
   }
 `;

@@ -15,7 +15,7 @@ import { TrendChart, CommodityTrendChart, PaleSeriesChart } from '../area-tool/t
 import { EfSection } from '../area-tool/stats-panel.jsx'
 import { useYearFactors } from '../../lib/year-factors.js'
 
-const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
+const FONT_MONO = "'Inter', system-ui, sans-serif"
 
 // Signed magnitudes: the management-attributable pilot layer is almost all
 // negative, and a bare `x < 10` test sent every one of those values down

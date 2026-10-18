@@ -757,7 +757,7 @@ export function AreaTool({ map, config, state, dispatch }) {
             padding: '2px 7px',
             borderRadius: 'var(--radius-sm)',
             fontSize: 11,
-            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+            fontFamily: "'Inter', system-ui, sans-serif",
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
             letterSpacing: '0.03em',

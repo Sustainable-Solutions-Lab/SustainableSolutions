@@ -21,7 +21,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
-const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
+const FONT_MONO = "'Inter', system-ui, sans-serif"
 
 // Module-level cache: one fetch per URL per session.
 const trendCache = new Map()

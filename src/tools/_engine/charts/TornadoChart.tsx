@@ -206,12 +206,12 @@ const styles = `
   }
   .chart-gridline { stroke: var(--rule); stroke-width: 1; shape-rendering: crispEdges; }
   .chart-tick {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 9px;
     fill: var(--ink-3);
   }
   .chart-axis-label {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 12px;
     fill: var(--ink-2);
   }
@@ -227,12 +227,12 @@ const styles = `
     fill: var(--ink-2);
   }
   .lever-group {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 8px;
     fill: var(--ink-3);
   }
   .lever-delta {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 8.5px;
     fill: var(--ink-3);
   }

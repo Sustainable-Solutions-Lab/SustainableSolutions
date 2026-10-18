@@ -273,7 +273,7 @@ export function RegionalLayer({ map, config, state, dispatch, isDark, suppressed
       pointerEvents: 'none', background: isDark ? 'rgba(12,12,28,0.94)' : 'rgba(248,248,232,0.96)',
       border: `1px solid ${isDark ? 'rgba(248,248,232,0.2)' : 'rgba(24,24,56,0.2)'}`,
       borderRadius: 4, padding: '4px 8px',
-      fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10,
+      fontFamily: "'Inter', system-ui, sans-serif", fontSize: 10,
       color: isDark ? '#F8F8E8' : '#181838',
     }}>
       <span style={{ fontWeight: 700 }}>{tip.p.name}</span>

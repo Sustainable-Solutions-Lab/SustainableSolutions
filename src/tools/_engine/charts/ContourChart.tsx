@@ -289,12 +289,12 @@ const styles = `
     shape-rendering: crispEdges;
   }
   .chart-tick {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 8px;
     fill: var(--ink-3);
   }
   .chart-axis-label {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 12px;
     fill: var(--ink-2);
   }

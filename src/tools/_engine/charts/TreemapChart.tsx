@@ -152,7 +152,7 @@ const styles = `
     pointer-events: none;
   }
   .chart-treemap-value {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 10px;
     pointer-events: none;
     opacity: 0.85;

@@ -106,7 +106,7 @@ const styles = `
     gap: 4px;
   }
   .explorer-tool-btn {
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, 'Inter', system-ui, sans-serif);
     font-size: 11px;
     letter-spacing: 0.04em;
     padding: 4px 10px;

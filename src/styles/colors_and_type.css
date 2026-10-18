@@ -8,7 +8,7 @@
 
 /* ---------- Fonts -------------------------------------------------------- */
 
-/* Google Fonts (Source Serif 4, Inter, JetBrains Mono) are loaded via <link>
+/* Google Fonts (Source Serif 4, Inter) are loaded via <link>
    in BaseLayout.astro for parallel fetching. If the lab licenses Tiempos
    Headline, drop .woff2 files in /public/fonts/tiempos/ and uncomment: */
 /*
@@ -111,7 +111,10 @@
   /* Type families */
   --font-serif:  'Tiempos Headline', 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
   --font-sans:   'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-  --font-mono:   'JetBrains Mono', 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* --font-mono keeps its name so existing classes keep working, but it is
+     Inter since Oct 2026. Labels and metadata use tabular figures instead. */
+  --font-mono:   'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  --font-code:   ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   /* Type scale (1.20 minor-third, anchored 16px) */
   --t-xs:   11px;   /* mono labels, captions */
@@ -364,10 +367,15 @@ p, .p {
   color: var(--ink-3);
 }
 
-code, kbd, samp, pre, .mono {
-  font-family: var(--font-mono);
+code, kbd, samp, pre {
+  font-family: var(--font-code);
   font-size: 0.92em;
 }
+
+.mono, .meta, .eyebrow, .font-mono {
+  font-variant-numeric: tabular-nums;
+}
+.mono { font-family: var(--font-mono); }
 
 code {
   background: var(--paper-2);

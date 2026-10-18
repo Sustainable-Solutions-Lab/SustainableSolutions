@@ -24,7 +24,7 @@ const AXIS = 14
 const BAR_W = 22
 const BAR_GAP = 12
 const GROUP_GAP = 28
-const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
+const FONT_MONO = "'Inter', system-ui, sans-serif"
 
 export function CityEquityChart({ stats, isDark, width = W_DEFAULT, variable }) {
   if (!stats) return null

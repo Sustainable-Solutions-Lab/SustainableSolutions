@@ -62,7 +62,7 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
         {config.eyebrow && (
           <p
             style={{
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontFamily: "'Inter', system-ui, sans-serif",
               fontSize: '11px',
               letterSpacing: '0.12em',
               textTransform: 'uppercase',

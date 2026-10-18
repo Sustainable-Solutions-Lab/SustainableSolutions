@@ -105,7 +105,7 @@ export function BenefitCostChart({ cell, config }) {
         y={benefitBarY + BAR_HEIGHT - 2}
         fontSize={10}
         fill={BENEFIT_COLOR}
-        fontFamily="'JetBrains Mono', ui-monospace, monospace"
+        fontFamily="'Inter', system-ui, sans-serif"
       >
         {formatValue(benefit, '$/km²')}
       </text>
@@ -133,7 +133,7 @@ export function BenefitCostChart({ cell, config }) {
         y={costBarY + BAR_HEIGHT - 2}
         fontSize={10}
         fill={COST_COLOR}
-        fontFamily="'JetBrains Mono', ui-monospace, monospace"
+        fontFamily="'Inter', system-ui, sans-serif"
       >
         {formatValue(cost, '$/km²')}
       </text>
@@ -155,7 +155,7 @@ export function BenefitCostChart({ cell, config }) {
         y={costBarY + BAR_HEIGHT + 14}
         fontSize={10}
         fill={netColor}
-        fontFamily="'JetBrains Mono', ui-monospace, monospace"
+        fontFamily="'Inter', system-ui, sans-serif"
         fontWeight='600'
       >
         {netLabel}

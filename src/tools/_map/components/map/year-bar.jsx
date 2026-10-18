@@ -81,7 +81,7 @@ export function YearBar({ config, state, dispatch, isDark , disableCompare = fal
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
       {rowLabel && (
         <span style={{
-          font: '10px "JetBrains Mono", ui-monospace, monospace',
+          font: '10px "Inter", system-ui, sans-serif',
           textTransform: 'uppercase', letterSpacing: '0.08em', color: inkFaint,
           width: 34, flexShrink: 0,
         }}>
@@ -99,7 +99,7 @@ export function YearBar({ config, state, dispatch, isDark , disableCompare = fal
         style={{ flex: 1, minWidth: 90, accentColor: ink, cursor: 'pointer', margin: 0 }}
       />
       <span style={{
-        font: '700 13px "JetBrains Mono", ui-monospace, monospace',
+        font: '700 13px "Inter", system-ui, sans-serif',
         fontVariantNumeric: 'tabular-nums', color: ink, flexShrink: 0,
       }}>
         {value}
@@ -150,7 +150,7 @@ export function YearBar({ config, state, dispatch, isDark , disableCompare = fal
         <label
           style={{
             display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
-            font: '10px "JetBrains Mono", ui-monospace, monospace',
+            font: '10px "Inter", system-ui, sans-serif',
             textTransform: 'uppercase', letterSpacing: '0.08em',
             color: compareOn ? ink : inkFaint, cursor: 'pointer', userSelect: 'none',
           }}

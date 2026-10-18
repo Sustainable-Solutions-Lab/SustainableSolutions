@@ -193,7 +193,7 @@ export function BusyOverlay({ busy, label = 'Working' }) {
 
       <span
         style={{
-          font: '10px "JetBrains Mono", ui-monospace, monospace',
+          font: '10px "Inter", system-ui, sans-serif',
           letterSpacing: '0.16em', textTransform: 'uppercase',
           color: 'currentColor', opacity: 0.6,
         }}

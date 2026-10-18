@@ -111,7 +111,7 @@ export function DevControls({ tuning, setTuning, mapInstance }) {
         border: '1px solid var(--rule-strong)',
         borderRadius: 4,
         padding: '8px 10px',
-        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+        fontFamily: "'Inter', system-ui, sans-serif",
         fontSize: 11,
         minWidth: open ? 280 : undefined,
         boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08)',

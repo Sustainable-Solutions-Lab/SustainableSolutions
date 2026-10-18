@@ -11,7 +11,7 @@
  * is printed under the slider, and is where "no effect in this scenario,
  * because ..." goes.
  */
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 /** Where a value sits under a slider, as a CSS length. A range input's thumb
  *  does not travel the whole track: its centre runs from half a thumb inside the
@@ -117,8 +117,91 @@ export type Tick = {
   strong?: boolean;
 };
 
+/** Width of a tick label in px: 8.5px mono runs about 0.6em a character. */
+const LABEL_CH = 5.2;
+const LABEL_GAP = 6;
+
+/**
+ * Where each label goes so none overlap: start under its tick, push right
+ * past the one before, then pull back inside the rail from the right end.
+ * Labels that did not have to move sit straight under their ticks.
+ */
+function spread(xs: number[], widths: number[], width: number): number[] {
+  const order = xs.map((_, i) => i).sort((a, b) => xs[a] - xs[b]);
+  const c = xs.slice();
+  for (let k = 0; k < order.length; k++) {
+    const i = order[k];
+    c[i] = Math.max(c[i], widths[i] / 2);
+    if (k > 0) {
+      const j = order[k - 1];
+      c[i] = Math.max(c[i], c[j] + (widths[j] + widths[i]) / 2 + LABEL_GAP);
+    }
+  }
+  for (let k = order.length - 1; k >= 0; k--) {
+    const i = order[k];
+    c[i] = Math.min(c[i], width - widths[i] / 2);
+    if (k < order.length - 1) {
+      const j = order[k + 1];
+      c[i] = Math.min(c[i], c[j] - (widths[j] + widths[i]) / 2 - LABEL_GAP);
+    }
+  }
+  return c;
+}
+
+/** Ticks whose labels fan out along one row, each joined to its tick by a line. */
+function LeaderTicks({ ticks, min, max, fmt }: { ticks: Tick[]; min: number; max: number; fmt: (v: number) => string }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [geom, setGeom] = useState({ width: 0, thumb: 19 });
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const measure = () => {
+      const thumb = parseFloat(getComputedStyle(el).getPropertyValue('--mag-thumb')) || 19;
+      setGeom({ width: el.clientWidth, thumb });
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const { width, thumb } = geom;
+  const xs = ticks.map((t) => thumb / 2 + (width - thumb) * Math.max(0, Math.min(1, (t.at - min) / (max - min))));
+  const widths = ticks.map((t) => t.label.length * LABEL_CH);
+  const cs = width ? spread(xs, widths, width) : xs;
+  const TOP = 11;
+  return (
+    <div ref={box} style={{ position: 'relative', height: 23,
+                            marginTop: 'calc((var(--mag-thumb, 19px) - var(--mag-hit, 22px)) / 2 + 1px)' }}>
+      {width > 0 && (
+        <svg width={width} height={TOP} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible' }} aria-hidden="true">
+          {ticks.map((t, i) => {
+            const moved = Math.abs(cs[i] - xs[i]) > 1;
+            return (
+              <path key={t.label}
+                d={moved ? `M${xs[i]},0 V3 L${cs[i]},${TOP - 1}` : `M${xs[i]},0 V${TOP - 1}`}
+                fill="none" stroke={t.strong ? 'var(--accent)' : 'var(--ink)'} strokeWidth={t.strong ? 1.5 : 1}
+                opacity={t.strong ? 1 : 0.4} />
+            );
+          })}
+        </svg>
+      )}
+      {width > 0 && ticks.map((t, i) => {
+        return (
+          <span key={t.label} title={`${t.label}: ${fmt(t.at)}`}
+            style={{ position: 'absolute', left: cs[i], top: TOP, transform: 'translateX(-50%)',
+                     font: `${t.strong ? 600 : 400} 8.5px/1.1 var(--font-mono)`, whiteSpace: 'nowrap',
+                     opacity: t.strong ? 1 : 0.55, color: t.strong ? 'var(--accent)' : undefined }}>
+            {t.label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Slider({ label, value, max, min = 0, onChange, onCommit, fmt, aside,
-                                 desc, note, ticks, readout, snap, step = 0.01 }: {
+                                 desc, note, ticks, readout, snap, leaders, step = 0.01 }: {
   label: string; value: number; max: number; min?: number; step?: number;
   onChange: (v: number) => void; fmt: (v: number) => string;
   /** Called with the value the slider is let go at (pointer up, key up). */
@@ -134,6 +217,8 @@ export default function Slider({ label, value, max, min = 0, onChange, onCommit,
   readout?: ReactNode;
   /** Pull the thumb onto a tick when it comes within this fraction of the rail of one. */
   snap?: number;
+  /** Fan crowded tick labels out along one row, each joined to its tick by a line. */
+  leaders?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // A RANGE INPUT STOPS AT THE LAST WHOLE STEP BELOW ITS MAXIMUM. When the
@@ -189,7 +274,9 @@ export default function Slider({ label, value, max, min = 0, onChange, onCommit,
         }}
         onPointerUp={commit} onKeyUp={commit}
         style={{ width: '100%' }} />
-      {ticks?.length ? (
+      {ticks?.length && leaders ? (
+        <LeaderTicks ticks={ticks} min={min} max={max} fmt={fmt} />
+      ) : ticks?.length ? (
         // pulled up under the thumb: the input is as tall as its touch target
         <div style={{ position: 'relative', height: twoRows ? 30 : 20,
                       marginTop: 'calc((var(--mag-thumb, 19px) - var(--mag-hit, 22px)) / 2 + 1px)' }}>

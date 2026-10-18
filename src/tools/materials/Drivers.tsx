@@ -88,21 +88,15 @@ export const PAST_TO = 2024;
 const PAST_LABEL = `${PAST_FROM}–${PAST_TO}`;
 
 /**
- * Ticks for each SSP's value plus the measured past, dropping a label to a
- * second row when it would collide with its neighbour. The past is drawn
- * strong: it is a reference to read the rail against, not a setting.
+ * Ticks for each SSP's value plus the measured past. Crowded labels fan out
+ * on leader lines (the sliders' `leaders`). The past is drawn strong: it is a
+ * reference to read the rail against, not a setting.
  */
 function railTicks(values: Record<string, number>, past: number | null, lo: number, hi: number): Tick[] {
   const marks = [...Object.entries(values), ...(past == null ? [] : [[PAST_LABEL, past] as [string, number]])]
     .filter(([, v]) => v >= lo && v <= hi)
     .sort((a, b) => a[1] - b[1]);
-  const span = hi - lo || 1;
-  return marks.map(([label, v], i) => ({
-    at: v,
-    label,
-    strong: label === PAST_LABEL,
-    low: i > 0 && Math.abs(v - marks[i - 1][1]) / span < 0.1,
-  }));
+  return marks.map(([label, v]) => ({ at: v, label, strong: label === PAST_LABEL }));
 }
 
 /**
@@ -282,6 +276,7 @@ export default function Drivers({
         max={popHi}
         step={0.0001}
         snap={SNAP}
+        leaders
         onChange={(v) => onChange((l) => (l.popTilt = tiltFor(pathwayPop, v)))}
         fmt={(v) => `${pct(v)}/yr`}
         readout={<Readout main={pct(now.pop)} unit="/yr" color={popColor}
@@ -296,6 +291,7 @@ export default function Drivers({
         max={gdppcHi}
         step={0.0001}
         snap={SNAP}
+        leaders
         onChange={(v) => onChange((l) => (l.gdppcTilt = tiltFor(pathwayGdppc, v)))}
         fmt={(v) => `${pct(v)}/yr`}
         readout={<Readout main={pct(now.gdppc)} unit="/yr" color={gdppcColor}
@@ -320,6 +316,7 @@ export default function Drivers({
             max={intHi}
             step={(intHi - intLo) / 300}
             snap={SNAP}
+            leaders
             onChange={(v) => onChange((l) => setIntensity(l, focus.levers, drawFor(v)))}
             fmt={(v) => `${pct(v)}/yr`}
             readout={<Readout main={pct(now.intensity)} unit="/yr" color={intColor} level={intensityLevel} />}

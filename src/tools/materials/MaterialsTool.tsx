@@ -348,8 +348,6 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const first = projection[0];
   const last = projection[projection.length - 1];
   const change = first > 0 && last > 0 ? Math.pow(last / first, 1 / 35) - 1 : null;
-  const worldGrowth = effects.now;
-  const percentile = envelope.worldGrowth.filter((g) => g < worldGrowth).length / envelope.worldGrowth.length;
 
   const sliceName = group === 'total' ? 'all four groups' : (activeLeaf ?? GROUP_LABEL[group]).toLowerCase();
 
@@ -522,51 +520,12 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
 
           <Drivers inputs={inputs} levers={shown} now={kayaNow} past={kayaPast}
             materialRange={[Math.min(...envelope.worldGrowth), Math.max(...envelope.worldGrowth)]}
-            onChange={edit} />
-
-          <p style={caption}>
-            {worldGrowth > 0 ? (
-              <>World use of all four groups <b>still grows, at +{(100 * worldGrowth).toFixed(2)}% a year</b> —{' '}
-                {percentile >= 0.5 ? 'faster' : 'slower'} than{' '}
-                {Math.round(100 * (percentile >= 0.5 ? percentile : 1 - percentile))}% of the paper’s{' '}
-                {envelope.runs.toLocaleString()} runs. The three sliders are the whole of it, and they
-                always describe the world and all four groups together, whatever the menus above
-                are showing.</>
-            ) : (
-              <>World use of all four groups <b>falls</b>, at {(100 * worldGrowth).toFixed(2)}% a year. Only{' '}
-                {Math.round(100 * (1 - envelope.growthShareAbove))}% of the paper’s{' '}
-                {envelope.runs.toLocaleString()} runs manage that.</>
-            )}
-          </p>
-
-          {/* The advanced panel, the way the magnet explorer opens its facility
-              detail under the demand slider: the summary slider stays in place
-              and the things that make it up appear underneath. */}
-          <div className="mat-advanced">
-            <div className="mat-advanced-row">
-              <button type="button" className="mat-advanced-toggle" aria-expanded={advanced}
-                onClick={() => setAdvanced((o) => !o)}>
-                <span aria-hidden="true">{advanced ? '▾' : '▸'}</span>{' '}
-                {advanced ? 'Hide the assumptions behind intensity' : 'Set efficiency, recycling, ore grade and lifetimes separately'}
-              </button>
-              <button type="button" className="mat-reset-all"
-                onClick={() => setScenario({ kind: 'custom', levers: defaultLevers(inputs) })}>
-                Reset to the paper’s central values
-              </button>
-            </div>
-            {advanced && (
-              <div className="mat-advanced-body">
-                <p style={caption}>
-                  The intensity slider is a summary of everything here. Material efficiency sets
-                  the target directly; recycling, ore grade and lifetimes reach it from the other
-                  side, by changing how much ore a tonne of material takes and how often it has to
-                  be replaced. Move any of them and the intensity slider above moves with it.
-                </p>
-                <Controls inputs={inputs} levers={shown} blend={blend}
-                  intensityDraw={intensityDraw} onChange={edit} />
-              </div>
-            )}
-          </div>
+            advanced={advanced} onAdvanced={() => setAdvanced((o) => !o)}
+            onReset={() => setScenario({ kind: 'custom', levers: defaultLevers(inputs) })}
+            onChange={edit}>
+            <Controls inputs={inputs} levers={shown} blend={blend}
+              intensityDraw={intensityDraw} onChange={edit} />
+          </Drivers>
         </section>
 
         {/* ── 2 ─────────────────────────────────────────────────────────── */}

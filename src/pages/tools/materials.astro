@@ -153,33 +153,38 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
   .mat-tool { --mat-cool: #3288BD; --mat-hot: #D53E4F; }
   [data-theme="dark"] .mat-tool { --mat-cool: #5EA9DB; --mat-hot: #F0606E; }
 
-  /* The identity sits on top of the sliders it adds up. */
-  .mat-tool .mat-identity {
+  /* The headline the three sliders add up to: world material use. */
+  .mat-tool .mat-kpi {
     grid-column: 1 / -1;
-    display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 7px;
-    margin: 0;
-    font: 400 14px/1.5 var(--font-mono); color: var(--ink-2);
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 12px;
+    padding-bottom: 10px; margin-bottom: 6px; border-bottom: 1px solid var(--rule);
   }
-  .mat-tool .mat-identity b { font-weight: 600; }
-  .mat-tool .mat-identity i { font-style: normal; color: var(--ink-3); }
-  .mat-tool .mat-identity-past {
-    margin: 0 0 10px; padding-bottom: 10px; border-bottom: 1px solid var(--rule);
-    font-size: 11.5px; color: var(--ink-3);
+  .mat-tool .mat-kpi-label { margin: 0; font: 600 14px/1.3 var(--font-sans); color: var(--ink); }
+  .mat-tool .mat-kpi-sub { margin: 2px 0 0; font: 400 11px/1.45 var(--font-mono); color: var(--ink-3); }
+  .mat-tool .mat-reset-link {
+    background: none; border: 0; padding: 0; cursor: pointer;
+    font: inherit; color: var(--accent); text-decoration: underline; text-underline-offset: 2px;
   }
 
-  /* A slider's own number: the rate large, the 2060 level beneath it. */
+  /* A number in its rail's heat colour, with a smaller line under it. */
   .mat-tool .mat-readout {
     display: flex; flex-direction: column; align-items: flex-end; text-align: right;
-    font-family: var(--font-mono); line-height: 1.1;
+    font-family: var(--font-mono); line-height: 1.1; white-space: nowrap;
   }
-  .mat-tool .mat-readout-rate { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
-  .mat-tool .mat-readout-rate small { font-size: 11px; font-weight: 500; opacity: 0.75; margin-left: 1px; }
+  .mat-tool .mat-readout-main { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+  .mat-tool .mat-readout-main small { font-size: 11px; font-weight: 500; opacity: 0.75; margin-left: 1px; }
   .mat-tool .mat-readout-level { font-size: 11.5px; font-weight: 500; margin-top: 2px; }
+  .mat-tool .mat-readout.lg .mat-readout-main { font-size: 30px; }
+  .mat-tool .mat-readout.lg .mat-readout-level { font-size: 13px; }
+  .mat-tool .mat-readout.sm .mat-readout-main { font-size: 15px; }
+  .mat-tool .mat-readout.sm .mat-readout-main small { font-size: 9.5px; }
+  .mat-tool .mat-readout.sm .mat-readout-level { font-size: 10px; opacity: 0.85; }
 
-  /* The advanced panel: closed by default, opens under the sliders it explains. */
-  .mat-tool .mat-advanced-row {
-    display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center;
-  }
+  .mat-tool .mat-intensity-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .mat-tool .mat-intensity-col .mat-advanced-toggle { align-self: flex-start; }
+
+  /* The panel behind the intensity slider: opens across the full width under
+     the three sliders, its own sliders two to a row on a phone. */
   .mat-tool .mat-advanced-toggle {
     font: 500 11.5px var(--font-mono); color: var(--ink);
     background: transparent; border: 1px solid var(--rule-strong); border-radius: 8px;
@@ -187,18 +192,27 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
   }
   .mat-tool .mat-advanced-toggle[aria-expanded="true"] { color: var(--accent); }
   .mat-tool .mat-advanced-body {
-    margin-top: 13px; padding: 15px 15px 6px;
-    border: 1px solid var(--rule); border-radius: 10px;
-    display: flex; flex-direction: column; gap: 14px;
+    grid-column: 1 / -1;
+    margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--rule);
   }
 
   /* Columns rather than a grid: the groups are different heights, and a grid
      leaves a hole under the short one. */
-  .mat-tool .mat-controls { columns: 260px 3; column-gap: 26px; }
-  .mat-tool .mat-controls > section {
-    break-inside: avoid; page-break-inside: avoid;
-    display: block; margin: 0 0 20px;
+  .mat-tool .mat-controls { display: flex; flex-direction: column; gap: 14px; }
+  .mat-tool .mat-group-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px;
   }
+  .mat-tool .mat-group-head h4 {
+    font: 600 11px var(--font-mono); text-transform: uppercase; letter-spacing: .05em;
+    color: var(--ink-3); margin: 0;
+  }
+  .mat-tool .mat-group-grid {
+    display: grid; gap: 6px 18px;
+    grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
+  }
+  /* Narrow columns: let the label and number share the header or stack. */
+  .mat-tool .mat-group-grid > div > div:first-child { flex-wrap: wrap; row-gap: 2px; }
+  .mat-tool .mat-group-grid .mat-readout { margin-left: auto; }
   .mat-tool .mat-reset {
     font: 500 10.5px var(--font-mono); color: var(--accent);
     background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline;

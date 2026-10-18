@@ -119,7 +119,7 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
         <p style={p}>
           Population growth, income growth and the change in material intensity, each as an
           average annual rate from 2025 to 2060. Measured over the same years, the three
-          multiply exactly to the growth in material use printed above them; nothing else in
+          multiply exactly to the growth in world material use shown above them; nothing else in
           the model can move world material use except through one of them.
         </p>
         <p style={p}>
@@ -139,9 +139,12 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
           moving population or income also moves the intensity readout.
         </p>
         <p style={p}>
-          The panel that opens beneath the sliders sets efficiency for each material group,
-          recycling, ore grade and lifetimes separately. All of them change the kilograms a
-          dollar of output needs, so moving any of them moves the intensity slider too.
+          The panel that opens under the intensity slider sets efficiency for each material
+          group, recycling, ore grade and lifetimes separately. All of them change the kilograms
+          a dollar of output needs, so moving any of them moves the intensity slider too. Each
+          efficiency slider carries a tick where its own 1988–2024 rate of change would put it by
+          the target year: consumption per dollar for biomass and fossil fuels, in-use stock per
+          dollar (MISO2) for metals and minerals. Thumbs snap onto ticks when dragged close.
         </p>
 
         <h2 style={h2}>Sources</h2>

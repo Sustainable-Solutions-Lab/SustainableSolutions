@@ -70,6 +70,11 @@ export interface ModelInputs {
    * never draws, and in that corner the stock model stops building for a decade.
    */
   intensityCagrRange?: { min: number; max: number } | null;
+  /**
+   * Measured world annual rate of change of each efficiency lever's intensity
+   * (flows: DMC per dollar; stocks: in-use stock per dollar), from..to.
+   */
+  intensityHistRate?: ({ from: number; to: number } & Partial<Record<IntensityLever, number | null>>) | null;
   stock2024: Record<StockMaterial, Record<string, Partial<Record<SubUse, number>>>>;
   ageProfile: Record<StockMaterial, Record<string, Partial<Record<SubUse, { start: number; stocks: number[] }>>>>;
   stockGrowthHist: Record<StockMaterial, Record<string, Partial<Record<SubUse, number>>>>;

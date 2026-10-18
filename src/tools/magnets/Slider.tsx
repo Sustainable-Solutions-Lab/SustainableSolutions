@@ -118,7 +118,7 @@ export type Tick = {
 };
 
 export default function Slider({ label, value, max, min = 0, onChange, onCommit, fmt, aside,
-                                 desc, note, ticks, readout, step = 0.01 }: {
+                                 desc, note, ticks, readout, snap, step = 0.01 }: {
   label: string; value: number; max: number; min?: number; step?: number;
   onChange: (v: number) => void; fmt: (v: number) => string;
   /** Called with the value the slider is let go at (pointer up, key up). */
@@ -132,6 +132,8 @@ export default function Slider({ label, value, max, min = 0, onChange, onCommit,
   ticks?: Tick[];
   /** Replaces the value and aside at the top right, for callers that format their own. */
   readout?: ReactNode;
+  /** Pull the thumb onto a tick when it comes within this fraction of the rail of one. */
+  snap?: number;
 }) {
   const [open, setOpen] = useState(false);
   // A RANGE INPUT STOPS AT THE LAST WHOLE STEP BELOW ITS MAXIMUM. When the
@@ -173,7 +175,18 @@ export default function Slider({ label, value, max, min = 0, onChange, onCommit,
         )}
       </div>
       <input type="range" min={min} max={max} step={step} value={Math.min(value, max)} aria-label={label}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          if (snap && ticks?.length) {
+            const reach = snap * (max - min);
+            let best: Tick | null = null;
+            for (const t of ticks) {
+              if (Math.abs(t.at - v) <= reach && (!best || Math.abs(t.at - v) < Math.abs(best.at - v))) best = t;
+            }
+            if (best) { onChange(best.at); return; }
+          }
+          onChange(v);
+        }}
         onPointerUp={commit} onKeyUp={commit}
         style={{ width: '100%' }} />
       {ticks?.length ? (

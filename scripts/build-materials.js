@@ -1343,6 +1343,59 @@ async function buildSspWarming() {
   return Object.keys(out).length ? out : null;
 }
 
+// ── Measured intensity trends ────────────────────────────────────────────────
+// The 1988-2024 annual rate of change of each efficiency lever's intensity at
+// world level, for the reference tick on its slider: 36 years, the span of the
+// projection. Flows are UNEP DMC of the lever's materials per dollar of world
+// GDP; stocks are MISO2 in-use stock of the lever's end uses per dollar.
+
+async function buildIntensityHistory(years, worldFlows, gdpPop) {
+  const FROM = 1988;
+  const TO = 2024;
+  const gy = gdpPop.years;
+  const gdp = gdpPop.gdp.World;
+  const g0 = gdp?.[gy.indexOf(FROM)];
+  const g1 = gdp?.[gy.indexOf(TO)];
+  if (!g0 || !g1) return null;
+  const rate = (a, b) => (a > 0 && b > 0 ? num(Math.pow(b / g1 / (a / g0), 1 / (TO - FROM)) - 1) : null);
+
+  const i0 = years.indexOf(FROM);
+  const i1 = years.indexOf(TO);
+  const flow = (names) => {
+    let a = 0;
+    let b = 0;
+    for (const n of names) {
+      a += worldFlows.materials[n]?.[i0] ?? 0;
+      b += worldFlows.materials[n]?.[i1] ?? 0;
+    }
+    return rate(a, b);
+  };
+
+  const stockRows = await readCsv(sourceCsv('stock_trajectory_1970_2024.csv'));
+  const stock = (material, uses) => {
+    let a = 0;
+    let b = 0;
+    for (const r of stockRows) {
+      if (r.material !== material || !uses.includes(r.end_use)) continue;
+      const y = Number(r.year);
+      const v = Number(r.stock_Mt);
+      if (!Number.isFinite(v)) continue;
+      if (y === FROM) a += v;
+      else if (y === TO) b += v;
+    }
+    return rate(a, b);
+  };
+
+  return {
+    from: FROM,
+    to: TO,
+    biomass: flow(['Crops', 'Grazed biomass and fodder crops', 'Wood']),
+    fossil: flow(['Coal', 'Natural Gas', 'Petroleum']),
+    metalStock: stock('Metal ores', ['buildings', 'civil_infrastructure', 'machinery', 'short_lived']),
+    mineralStock: stock('Non-metallic minerals', ['buildings', 'civil_infrastructure']),
+  };
+}
+
 // ── Monte Carlo envelope ─────────────────────────────────────────────────────
 // The paper's 1,000 published draws, run back through the same model the
 // explorer uses, so the spread drawn behind someone's own scenario is the
@@ -1576,6 +1629,7 @@ async function run() {
   const projections = await buildProjections();
   const sensitivity = await buildSensitivity();
   const modelInputs = await buildProjectionInputs();
+  if (modelInputs) modelInputs.intensityHistRate = await buildIntensityHistory(years, worldFlows, gdpPop);
   const envelope = await buildEnvelope(modelInputs);
   const sspWarming = await buildSspWarming();
 

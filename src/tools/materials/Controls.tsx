@@ -1,20 +1,15 @@
 /**
- * The advanced panel: every assumption the three driver sliders summarise.
+ * The panel behind the intensity slider: every assumption it summarises.
  *
- * It slides open under the first figure, the way the magnet explorer's facility
- * detail opens under its demand slider. The three sliders above are the whole
- * model at the level of the Kaya identity; everything here is one of the ways
- * the intensity term is actually made — by material, by end use, by what comes
- * back at end of life, by how long things last.
- *
- * The first version put these in a narrow rail as bare knobs. A knob with a
- * number on it is not an assumption anyone can judge, so every control here
- * carries three things: what it means in a sentence, where it starts from
- * today, and where each SSP would put it. Every group resets on its own, and
- * nothing is ever greyed out — a control that cannot bite says so in words.
+ * It opens under the intensity slider, the way the magnet explorer's facility
+ * detail opens under its demand slider. The sliders here are the main ones in
+ * small: a heat-coloured number with what it was in 2024 beneath it, and the
+ * explanation behind the (i). Two to a row on a phone, so the panel stays
+ * short. Every group resets on its own, and nothing is ever greyed out.
  */
 import type { ReactNode } from 'react';
-import Slider from '../magnets/Slider';
+import Slider, { type Tick } from '../magnets/Slider';
+import { Readout, SNAP, heat } from './Drivers';
 import {
   INTENSITY_LEVERS,
   INTENSITY_LEVER_KEYS,
@@ -30,28 +25,28 @@ import {
 
 export type SspBlend = ReturnType<typeof resolveSsp>;
 
-function Group({
-  title,
-  lede,
-  onReset,
-  children,
-}: {
-  title: string;
-  lede: ReactNode;
-  onReset: () => void;
-  children: ReactNode;
-}) {
+function Group({ title, onReset, children }: { title: string; onReset: () => void; children: ReactNode }) {
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-        <h4 style={{ font: '600 11px var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--ink-3)', margin: 0 }}>
-          {title}
-        </h4>
+    <section className="mat-group">
+      <div className="mat-group-head">
+        <h4>{title}</h4>
         <button type="button" onClick={onReset} className="mat-reset">reset</button>
       </div>
-      <p style={{ fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-2)', margin: '0 0 2px' }}>{lede}</p>
-      {children}
+      <div className="mat-group-grid">{children}</div>
     </section>
+  );
+}
+
+/** A compact slider in the main ones' style: heat-coloured value, a line under it. */
+function Small({ label, value, min, max, step, onChange, fmt, unit, level, desc, ticks }: {
+  label: string; value: number; min: number; max: number; step: number;
+  onChange: (v: number) => void; fmt: (v: number) => string; unit?: string; level?: ReactNode; desc?: string;
+  ticks?: Tick[];
+}) {
+  return (
+    <Slider label={label} value={value} min={min} max={max} step={step} onChange={onChange}
+      fmt={fmt} desc={desc} ticks={ticks} snap={ticks?.length ? SNAP : undefined}
+      readout={<Readout size="sm" main={fmt(value)} unit={unit} level={level} color={heat(value, min, max)} />} />
   );
 }
 
@@ -61,12 +56,14 @@ function IntensitySlider({
   inputs,
   draw,
   blend,
+  targetYear,
   onChange,
 }: {
   lever: IntensityLever;
   inputs: ModelInputs;
   draw: number;
   blend: SspBlend;
+  targetYear: number;
   onChange: (u: number) => void;
 }) {
   const spec = INTENSITY_LEVERS[lever];
@@ -86,8 +83,17 @@ function IntensitySlider({
   const fmt = (v: number) => v.toFixed(digits);
   const change = base > 0 ? (100 * (value - base)) / base : null;
 
+  // Where the measured trend would carry this intensity by the target year:
+  // the same 1988-2024 reference the main sliders tick, in this rail's units.
+  const hist = inputs.intensityHistRate;
+  const r = hist?.[lever];
+  const trend = r == null || !hist ? null : base * Math.pow(1 + r, targetYear - 2024);
+  const ticks: Tick[] = trend != null && trend >= min && trend <= max
+    ? [{ at: trend, label: `${hist!.from}–${hist!.to} trend`, strong: true }]
+    : [];
+
   return (
-    <Slider
+    <Small
       label={spec.label}
       value={value}
       min={min}
@@ -95,21 +101,14 @@ function IntensitySlider({
       step={span / 200}
       onChange={(v) => onChange(leverDraw(inputs, lever, v, blend))}
       fmt={fmt}
-      aside={spec.unit}
-      note={
-        change == null ? undefined : (
-          <>
-            <b>{fmt(base)}</b> today → <b>{fmt(value)}</b> by the target year
-            {' '}({change >= 0 ? '+' : ''}{change.toFixed(0)}%). Sets the target for{' '}
-            {spec.flows.length ? `${spec.flows.length} materials` : `${spec.stocks.length} end uses`};
-            each region keeps its own range.
-          </>
-        )
-      }
+      ticks={ticks}
+      unit={` ${spec.unit.replace(/ of GDP$/, '')}`}
+      level={change == null ? undefined : `from ${fmt(base)} (${change >= 0 ? '+' : ''}${change.toFixed(0)}%)`}
       desc={
-        spec.flows.length
+        (spec.flows.length
           ? 'Intensity of consumption: kilograms used per dollar of output. Left means a world that needs less of this material for the same output.'
-          : 'Intensity of stock: kilograms held in use per dollar of output. Consumption follows from it, since stock has to be built and then replaced as it retires.'
+          : 'Intensity of stock: kilograms held in use per dollar of output. Consumption follows from it, since stock has to be built and then replaced as it retires.')
+        + ` Reached by the target year from ${fmt(base)} in 2024. The strong tick is where the ${hist ? `${hist.from}–${hist.to}` : 'measured'} rate of change (${r == null ? 'n/a' : `${r >= 0 ? '+' : '−'}${Math.abs(100 * r).toFixed(2)}% a year`}) would carry it by then. Sets the target for ${spec.flows.length ? `${spec.flows.length} materials` : `${spec.stocks.length} end uses`}; each region keeps its own range.`
       }
     />
   );
@@ -142,7 +141,6 @@ export default function Controls({
     <div className="mat-controls">
       <Group
         title="Material efficiency"
-        lede="How much material a dollar of output needs. Flows are consumed outright; stocks stay in use and have to be replaced as they retire."
         onReset={resetIntensity}
       >
         {INTENSITY_LEVER_KEYS.map((lever) => (
@@ -152,6 +150,7 @@ export default function Controls({
             inputs={inputs}
             draw={intensityDraw(lever)}
             blend={blend}
+            targetYear={levers.targetYear}
             onChange={(u) =>
               onChange((l) => {
                 const spec = INTENSITY_LEVERS[lever];
@@ -169,7 +168,6 @@ export default function Controls({
 
       <Group
         title="Circularity"
-        lede="What comes back. Metal recycles without losing quality; concrete and aggregate come back as a lower grade of the same thing, and only where that grade can be used."
         onReset={() =>
           onChange((l) => {
             l.recyclingFe = d.recyclingFe;
@@ -178,7 +176,7 @@ export default function Controls({
           })
         }
       >
-        <Slider
+        <Small
           label="Iron and steel recovered"
           value={levers.recyclingFe}
           min={p('RECYCLING_RATE_FE').min}
@@ -186,11 +184,10 @@ export default function Controls({
           step={0.01}
           onChange={(v) => onChange((l) => (l.recyclingFe = v))}
           fmt={(v) => `${(100 * v).toFixed(0)}%`}
-          aside="of what retires"
-          note={`Today: ${(100 * worldRate(inputs, 'fe')).toFixed(0)}% across regions, from 45% in Latin America to 75% in Europe.`}
-          desc="Share of retiring iron and steel collected and used again, reached by the convergence year. Each region ramps from its own rate today."
+          level={`from ${(100 * worldRate(inputs, 'fe')).toFixed(0)}% today`}
+          desc="Share of retiring iron and steel collected and used again, reached by the convergence year. Each region ramps from its own rate today, from 45% in Latin America to 75% in Europe."
         />
-        <Slider
+        <Small
           label="Other metals recovered"
           value={levers.recyclingNonFe}
           min={p('RECYCLING_RATE_NONFE').min}
@@ -198,27 +195,24 @@ export default function Controls({
           step={0.01}
           onChange={(v) => onChange((l) => (l.recyclingNonFe = v))}
           fmt={(v) => `${(100 * v).toFixed(0)}%`}
-          aside="of what retires"
-          note={`Today: ${(100 * worldRate(inputs, 'nonfe')).toFixed(0)}%. A tonne of recycled metal displaces a tonne of mined metal, and far more than a tonne of ore, because the ore saved is the tonne divided by its grade.`}
-          desc="Aluminium, copper and the rest, pooled."
+          level={`from ${(100 * worldRate(inputs, 'nonfe')).toFixed(0)}% today`}
+          desc="Aluminium, copper and the rest, pooled. A tonne of recycled metal displaces a tonne of mined metal, and far more than a tonne of ore, because the ore saved is the tonne divided by its grade."
         />
-        <Slider
-          label="Minerals reused after demolition"
+        <Small
+          label="Minerals reused"
           value={levers.downcycling}
           min={p('DOWNCYCLING').min}
           max={p('DOWNCYCLING').max}
           step={0.01}
           onChange={(v) => onChange((l) => (l.downcycling = v))}
           fmt={(v) => `${(100 * v).toFixed(0)}%`}
-          aside="of what retires"
-          note={`Today: ${(100 * worldDown(inputs)).toFixed(0)}%. Capped by what roads and new concrete can absorb, so the top of this rail buys less than the top of the others.`}
-          desc="Concrete and aggregate recovered from demolition. It loses quality, so it can only re-enter buildings and civil works up to a capped share; the surplus has nowhere to go."
+          level={`from ${(100 * worldDown(inputs)).toFixed(0)}% today`}
+          desc="Concrete and aggregate recovered from demolition. It loses quality, so it can only re-enter buildings and civil works up to a capped share; the top of this rail buys less than the top of the others."
         />
       </Group>
 
       <Group
-        title="Ore grade"
-        lede="Metal per tonne of rock. This is the rock-to-metal ratio seen from the other side: as grade falls, the same metal takes more mining."
+        title="Ore grade in 2060"
         onReset={() =>
           onChange((l) => {
             l.gradeOreFe = d.gradeOreFe;
@@ -226,33 +220,32 @@ export default function Controls({
           })
         }
       >
-        <Slider
-          label="Iron ore grade in 2060"
+        <Small
+          label="Iron ore"
           value={levers.gradeOreFe}
           min={p('GRADE_ORE_FE').min}
           max={p('GRADE_ORE_FE').max}
           step={0.005}
           onChange={(v) => onChange((l) => (l.gradeOreFe = v))}
           fmt={(v) => `${(100 * v).toFixed(0)}%`}
-          aside={`from ${(100 * inputs.gradeOre2024.fe).toFixed(0)}% today`}
-          note="Left is depletion, right is better deposits or better recovery."
+          level={`from ${(100 * inputs.gradeOre2024.fe).toFixed(0)}% today`}
+          desc="Metal per tonne of rock. Left is depletion, right is better deposits or better recovery: as grade falls, the same metal takes more mining."
         />
-        <Slider
-          label="Other metal ore grade in 2060"
+        <Small
+          label="Other metal ores"
           value={levers.gradeOreNonFe}
           min={p('GRADE_ORE_NONFE').min}
           max={p('GRADE_ORE_NONFE').max}
           step={0.0005}
           onChange={(v) => onChange((l) => (l.gradeOreNonFe = v))}
           fmt={(v) => `${(100 * v).toFixed(1)}%`}
-          aside={`from ${(100 * inputs.gradeOre2024.nonfe).toFixed(1)}% today`}
-          note="At 1.6%, a tonne of copper or aluminium carries about 60 tonnes of ore. This is why most of the mass counted as metal ore is non-ferrous."
+          level={`from ${(100 * inputs.gradeOre2024.nonfe).toFixed(1)}% today`}
+          desc="At 1.6%, a tonne of copper or aluminium carries about 60 tonnes of ore. This is why most of the mass counted as metal ore is non-ferrous."
         />
       </Group>
 
       <Group
         title="Timing and lifetimes"
-        lede="How long things stay in use, and how fast the rest of these assumptions arrive."
         onReset={() =>
           onChange((l) => {
             l.lifetimeU = {};
@@ -261,7 +254,7 @@ export default function Controls({
           })
         }
       >
-        <Slider
+        <Small
           label="How long things last"
           value={levers.lifetimeU.buildings?.mean ?? 0.5}
           min={0}
@@ -278,27 +271,27 @@ export default function Controls({
             })
           }
           fmt={(v) => (v < 0.49 ? 'shorter' : v > 0.51 ? 'longer' : 'as published')}
-          note={`Moves every product's mean lifetime inside its published range at once: ${Object.values(LIFETIME_GROUP_LABEL).join(', ').toLowerCase()}. Longer lifetimes slow replacement — and slow the scrap supply recycling depends on.`}
+          desc={`Moves every product's mean lifetime inside its published range at once: ${Object.values(LIFETIME_GROUP_LABEL).join(', ').toLowerCase()}. Longer lifetimes slow replacement, and slow the scrap supply recycling depends on.`}
         />
-        <Slider
-          label="Efficiency targets reached by"
+        <Small
+          label="Efficiency reached by"
           value={levers.targetYear}
           min={p('TARGET_YEAR').min}
           max={p('TARGET_YEAR').max}
           step={1}
           onChange={(v) => onChange((l) => (l.targetYear = Math.round(v)))}
           fmt={(v) => String(Math.round(v))}
-          note="Intensity eases from its 2024 value to the target by this year, then holds."
+          desc="Intensity eases from its 2024 value to the target by this year, then holds."
         />
-        <Slider
-          label="Recovery rates reached by"
+        <Small
+          label="Recovery reached by"
           value={levers.convergenceYear}
           min={p('RECYC_CONVERGENCE_YR').min}
           max={p('RECYC_CONVERGENCE_YR').max}
           step={1}
           onChange={(v) => onChange((l) => (l.convergenceYear = Math.round(v)))}
           fmt={(v) => String(Math.round(v))}
-          note="Recycling and reuse ease from today's regional rates to the chosen ones by this year."
+          desc="Recycling and reuse ease from today's regional rates to the chosen ones by this year."
         />
       </Group>
     </div>

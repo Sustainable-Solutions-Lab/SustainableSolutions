@@ -45,6 +45,12 @@ export interface ProjectionChartProps {
   projectionYears: number[];
   series: StackSeries[];
   band: Band | null;
+  /**
+   * Measured domestic extraction of the same materials in the same place, one
+   * per history year, in the same measure: what the place dug up against what
+   * it used. Null to leave it out.
+   */
+  extraction?: (number | null)[] | null;
   unit: string;
   caption?: React.ReactNode;
   format: (v: number) => string;
@@ -85,6 +91,7 @@ export default function ProjectionChart({
   projectionYears,
   series,
   band,
+  extraction,
   unit,
   caption,
   format,
@@ -147,6 +154,7 @@ export default function ProjectionChart({
       lo = Math.min(lo, futureEdges[k][i]);
     }
   }
+  if (extraction) for (const v of extraction) if (v != null && Number.isFinite(v)) hi = Math.max(hi, v);
   // The 5th-95th of the paper's runs, not their full range: the extremes are a
   // handful of runs and they push the axis far enough to flatten everything.
   if (band) for (const v of band.p95) hi = Math.max(hi, v);
@@ -298,6 +306,13 @@ export default function ProjectionChart({
           <path d={edgeLine(series.length, 'future')} fill="none" stroke="var(--ink)" strokeWidth={1.6}
             opacity={0.75} />
 
+          {/* What was dug up here, against what was used here. */}
+          {extraction && (
+            <path d={extraction.reduce((d, v, i) => (v == null || !Number.isFinite(v) ? d
+              : `${d}${d && extraction[i - 1] != null ? 'L' : 'M'}${xScale(historyYears[i]).toFixed(2)},${yScale(v).toFixed(2)}`), '')}
+              fill="none" stroke="var(--accent)" strokeWidth={1.6} strokeDasharray="4 2.5" />
+          )}
+
           {/* 2024/2025 seam: everything left of it is measured. */}
           <line x1={xScale(2024.5)} x2={xScale(2024.5)} y1={MARGIN.top} y2={MARGIN.top + innerH}
             stroke="var(--rule-strong)" strokeWidth={0.8} strokeDasharray="2 3" />
@@ -329,6 +344,16 @@ export default function ProjectionChart({
           <span className="mat-key-item">
             <span className="mat-key-swatch mat-key-rule" aria-hidden="true" />
             Total<b>{totalAt == null ? '—' : format(totalAt)}</b>
+          </span>
+        )}
+        {extraction && (
+          <span className="mat-key-item">
+            <span className="mat-key-swatch mat-key-dash" style={{ borderTopColor: 'var(--accent)', borderTopWidth: 2, opacity: 1 }} aria-hidden="true" />
+            Extracted here{hIdx >= 0 ? '' : `, ${historyYears[historyYears.length - 1]}`}
+            <b>{(() => {
+              const v = extraction[hIdx >= 0 ? hIdx : extraction.length - 1];
+              return v == null ? '—' : format(v);
+            })()}</b>
           </span>
         )}
         {band && (

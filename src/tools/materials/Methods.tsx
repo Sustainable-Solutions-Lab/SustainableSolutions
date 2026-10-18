@@ -59,6 +59,13 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
           menu are the colours in the figure.
         </p>
         <p style={p}>
+          With a region chosen, a dashed line over the measured years is that region’s domestic
+          extraction of the same materials, from the same database. Consumption is extraction plus
+          imports minus exports, so where the line runs above the stack the region was a net
+          exporter, and below it a net importer. It stops at 2024: the model projects consumption,
+          not where the material is mined, so it says nothing about future trade.
+        </p>
+        <p style={p}>
           Per person and per dollar of GDP divide by measured population and GDP (2015 US
           dollars) in the measured years and by the model’s own in the projected ones. Both are
           linear in mass, so the stack stays a stack.

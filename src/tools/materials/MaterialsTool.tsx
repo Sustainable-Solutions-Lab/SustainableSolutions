@@ -72,6 +72,11 @@ interface Flows {
   materials?: Record<string, number[]>;
   regions?: Record<string, Record<string, number[]>>;
 }
+/** The other UNEP accounts by region (flows-extra.json): account -> region -> material -> series. */
+interface ExtraFlows {
+  years: number[];
+  regions: Record<string, Record<string, Record<string, number[]>>>;
+}
 interface GdpPop {
   years: number[];
   gdp: Record<string, number[]>;
@@ -212,10 +217,20 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     return [{ key: group, label: GROUP_LABEL[group], group, leaf: null }];
   }, [group, activeLeaf, leaves.join('|')]);
 
-  /** Measured mass for one component in the place showing, or nulls where the data has none. */
-  const pastMass = useMemo(() => {
+  /**
+   * Domestic extraction by region, for the line that sets what a region dug
+   * up against what it used. Fetched only when a region is chosen: for the
+   * world the two are the same thing.
+   */
+  const [extra, setExtra] = useState<ExtraFlows | null>(null);
+  useEffect(() => {
+    if (place === 'World' || extra) return;
+    fetchJson<ExtraFlows>('flows-extra.json').then(setExtra).catch(() => {});
+  }, [place, extra]);
+
+  /** Measured mass for one component, in the place showing, from one account. */
+  const massFrom = (source: Record<string, number[]> | undefined) => {
     const members = new Map(meta.groups.map((g) => [g.id, g.members]));
-    const source = place === 'World' ? world.materials : regions.regions?.[place];
     const years = world.years;
     return (c: Comp): (number | null)[] => {
       const all = members.get(HISTORY_GROUP[c.group]) ?? [];
@@ -235,7 +250,15 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
       } else add(c.leaf);
       return any ? mass : years.map(() => null);
     };
-  }, [meta, world, regions, place]);
+  };
+  const pastMass = useMemo(
+    () => massFrom(place === 'World' ? world.materials : regions.regions?.[place]),
+    [meta, world, regions, place],
+  );
+  const extractedMass = useMemo(() => {
+    const de = extra?.regions.DE?.[place];
+    return place === 'World' || !de ? null : massFrom(de);
+  }, [meta, world, extra, place]);
 
   /**
    * Stacking order: largest at the bottom, "other" categories on top. The
@@ -301,7 +324,9 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     };
 
     const raw = comps.map((c) => {
-      const pm = pastMass(c);
+      // A category a place does not report at all is nothing there, not a gap.
+      const got = pastMass(c);
+      const pm = got.some((v) => v != null) ? got : got.map(() => 0);
       const fm = futureMass(c);
       return {
         c,
@@ -326,6 +351,25 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     return { years, series, totalFuture, totalPast };
   }, [world, gdpPop, run, place, comps, measure, pastMass, palette]);
 
+  /** Extraction of the same materials in the same measure; null for the world. */
+  const extraction = useMemo(() => {
+    if (!extractedMass || extra?.years?.[0] !== world.years[0]) return null;
+    const hPop = gdpPop.population[place];
+    const hGdp = gdpPop.gdp[place];
+    const series = comps.map(extractedMass).filter((v) => v.some((x) => x != null));
+    if (!series.length) return null;
+    return world.years.map((_, i) => {
+      let m = 0;
+      for (const v of series) {
+        if (v[i] == null) return null;
+        m += v[i] as number;
+      }
+      if (measure === 'consumption') return m;
+      if (measure === 'perCapita') return hPop?.[i] ? (m * 1e6) / hPop[i] : null;
+      return hGdp?.[i] ? (m * 1e9) / hGdp[i] : null;
+    });
+  }, [extractedMass, extra, world, gdpPop, place, comps, measure]);
+
   // Bands exist per group, not per leaf: a leaf shows its own areas with none.
   const band = activeLeaf ? null : envelope.bands[place]?.[group]?.[measure] ?? null;
 
@@ -334,6 +378,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     ...projection,
     ...(band ? band.max : []),
     ...stack.totalPast.map((v) => v ?? 0),
+    ...(extraction ?? []).map((v) => v ?? 0),
   );
   const unit = measure === 'consumption' ? (peak >= 2000 ? 'Gt per year' : 'Mt per year')
     : measure === 'perCapita' ? 't per person per year'
@@ -506,6 +551,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
               historyYears={stack.years}
               projectionYears={run.years}
               series={scaled}
+              extraction={extraction?.map((v) => (v == null ? null : v * scale)) ?? null}
               band={band ? {
                 p05: band.p05.map((v) => v * scale), p25: band.p25.map((v) => v * scale),
                 p50: band.p50.map((v) => v * scale), p75: band.p75.map((v) => v * scale),
@@ -520,6 +566,8 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
             Historical and projected consumption of the selected material(s) in the selected region.
             {band && <> Dashed lines are the median, 5th and 95th percentiles of the paper’s 1,000
               projections for the same region and materials.</>}
+            {extraction && <> The red dashed line is what the region extracted itself: above the
+              stack, it exported more than it imported.</>}
             {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
           </p>
 

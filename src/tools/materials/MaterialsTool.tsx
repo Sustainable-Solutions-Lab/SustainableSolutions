@@ -18,7 +18,7 @@ import Drivers, { PAST_FROM, PAST_TO, Readout, heat, measureNow, type DriverPast
 import ContourPanel, { CONTOUR_AXES, axesFor, type ContourAxis, type ScatterData } from './ContourPanel';
 import Controls from './Controls';
 import { CEILING_NAME, LeverEffects, RecyclingCeiling, leverHeadline, useCeiling, useLeverEffects, type CeilingGroup } from './LeverEffects';
-import { fmtMass, focusPhrase, makeFocus } from './focus';
+import { METAL_NAME, fmtMass, focusPhrase, makeFocus, metalBasisApplies } from './focus';
 import {
   GROUP_KEYS,
   GROUP_LABEL,
@@ -91,6 +91,8 @@ interface ViewState {
   leaf: string | null;
   measure: Measure;
   axis: ContourAxis;
+  /** Metals counted as metal rather than ore. */
+  metal?: boolean;
 }
 
 const encodeState = (v: ViewState): string => {
@@ -161,6 +163,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const [leaf, setLeaf] = useState<string | null>(initial?.leaf ?? null);
   const [measure, setMeasure] = useState<Measure>(initial?.measure ?? 'consumption');
   const [axis, setAxis] = useState<ContourAxis>(initial?.axis ?? 'mineralStock');
+  const [metalBasis, setMetalBasis] = useState<boolean>(initial?.metal ?? false);
   const [advanced, setAdvanced] = useState(false);
   const [methods, setMethods] = useState(false);
   const page = useRef<HTMLDivElement>(null);
@@ -170,9 +173,9 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     return el ? followTouches(el) : undefined;
   }, []);
   useEffect(() => {
-    const next = `#${encodeState({ scenario, place, group, leaf, measure, axis })}`;
+    const next = `#${encodeState({ scenario, place, group, leaf, measure, axis, metal: metalBasis })}`;
     if (location.hash !== next) history.replaceState(null, '', next);
-  }, [scenario, place, group, leaf, measure, axis]);
+  }, [scenario, place, group, leaf, measure, axis, metalBasis]);
 
   const levers = useMemo<Levers>(
     () => (scenario.kind === 'ssp' ? sspLevers(inputs, scenario.ssp) : scenario.levers),
@@ -194,7 +197,8 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const activeLeaf = leaf && leaves.includes(leaf) ? leaf : null;
 
   // The menus at the top set what the whole page is about.
-  const focus = useMemo(() => makeFocus(place, group, activeLeaf), [place, group, activeLeaf]);
+  const metal = metalBasis && metalBasisApplies(group);
+  const focus = useMemo(() => makeFocus(place, group, activeLeaf, metal), [place, group, activeLeaf, metal]);
   const effects = useLeverEffects(inputs, shown, focus);
   const ceilingGroups: CeilingGroup[] = group === 'total' ? ['metal_ores', 'nonmetallic_minerals']
     : group === 'metal_ores' || group === 'nonmetallic_minerals' ? [group] : [];
@@ -209,13 +213,14 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   // is window.history in this scope.
   interface Comp { key: string; label: string; group: GroupKey; leaf: string | null }
   const comps = useMemo<Comp[]>(() => {
+    const name = (k: string, fallback: string) => (metal ? METAL_NAME[k] ?? fallback : fallback);
     if (group === 'total') {
-      return GROUP_KEYS.map((g) => ({ key: g, label: GROUP_LABEL[g], group: g, leaf: null }));
+      return GROUP_KEYS.map((g) => ({ key: g, label: name(g, GROUP_LABEL[g]), group: g, leaf: null }));
     }
-    if (activeLeaf) return [{ key: activeLeaf, label: activeLeaf, group, leaf: activeLeaf }];
-    if (leaves.length) return leaves.map((l) => ({ key: l, label: l, group, leaf: l }));
+    if (activeLeaf) return [{ key: activeLeaf, label: name(activeLeaf, activeLeaf), group, leaf: activeLeaf }];
+    if (leaves.length) return leaves.map((l) => ({ key: l, label: name(l, l), group, leaf: l }));
     return [{ key: group, label: GROUP_LABEL[group], group, leaf: null }];
-  }, [group, activeLeaf, leaves.join('|')]);
+  }, [group, activeLeaf, leaves.join('|'), metal]);
 
   /**
    * Domestic extraction by region, for the line that sets what a region dug
@@ -232,6 +237,10 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const massFrom = (source: Record<string, number[]> | undefined) => {
     const members = new Map(meta.groups.map((g) => [g.id, g.members]));
     const years = world.years;
+    // Measured metal ores, as metal: at the paper's 2024 grades, the same
+    // factor the model starts from, so the seam is the same step as in ore.
+    const factor = (c: Comp, key: string) => !metal || c.group !== 'metal_ores' ? 1
+      : key === 'Ferrous ores' ? inputs.gradeOre2024.fe : inputs.gradeOre2024.nonfe;
     return (c: Comp): (number | null)[] => {
       const all = members.get(HISTORY_GROUP[c.group]) ?? [];
       const mass = years.map(() => 0);
@@ -240,7 +249,8 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
         const t = source?.[key];
         if (!t) return;
         any = true;
-        for (let i = 0; i < years.length; i++) mass[i] += t[i] ?? 0;
+        const k = factor(c, key);
+        for (let i = 0; i < years.length; i++) mass[i] += (t[i] ?? 0) * k;
       };
       if (!c.leaf) all.forEach(add);
       else if (c.leaf.startsWith('Other')) {
@@ -253,12 +263,12 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   };
   const pastMass = useMemo(
     () => massFrom(place === 'World' ? world.materials : regions.regions?.[place]),
-    [meta, world, regions, place],
+    [meta, world, regions, place, metal],
   );
   const extractedMass = useMemo(() => {
     const de = extra?.regions.DE?.[place];
     return place === 'World' || !de ? null : massFrom(de);
-  }, [meta, world, extra, place]);
+  }, [meta, world, extra, place, metal]);
 
   /**
    * Stacking order: largest at the bottom, "other" categories on top. The
@@ -308,7 +318,15 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
         ? run.primary.byGroup[c.group]
         : run.primary.byRegionGroup[place]?.[c.group];
       const got = c.leaf ? detail?.[c.leaf] : whole;
-      return got ?? new Float64Array(n);
+      if (!metal || c.group !== 'metal_ores' || !got) return got ?? new Float64Array(n);
+      // Ore back to metal at the modelled grade, leaf by leaf.
+      const out = new Float64Array(n);
+      for (const leaf of c.leaf ? [c.leaf] : ['Ferrous ores', 'Non-ferrous ores']) {
+        const ore = detail?.[leaf];
+        const g = leaf === 'Ferrous ores' ? run.grade.Metal_Fe : run.grade.Metal_NonFe;
+        if (ore) for (let i = 0; i < n; i++) out[i] += ore[i] * g[i];
+      }
+      return out;
     };
 
     // Per person and per dollar are linear in mass, so a stack stays a stack.
@@ -349,7 +367,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
       series.some((t) => t.past[i] == null) ? null : series.reduce((a, t) => a + (t.past[i] as number), 0),
     );
     return { years, series, totalFuture, totalPast };
-  }, [world, gdpPop, run, place, comps, measure, pastMass, palette]);
+  }, [world, gdpPop, run, place, comps, measure, pastMass, palette, metal]);
 
   /** Extraction of the same materials in the same measure; null for the world. */
   const extraction = useMemo(() => {
@@ -371,7 +389,8 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   }, [extractedMass, extra, world, gdpPop, place, comps, measure]);
 
   // Bands exist per group, not per leaf: a leaf shows its own areas with none.
-  const band = activeLeaf ? null : envelope.bands[place]?.[group]?.[measure] ?? null;
+  // The runs are summarised in ore, so there is no band to draw in metal.
+  const band = activeLeaf || metal ? null : envelope.bands[place]?.[group]?.[measure] ?? null;
 
   const projection = stack.totalFuture;
   const peak = Math.max(
@@ -400,7 +419,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const last = projection[projection.length - 1];
   const change = first > 0 && last > 0 ? Math.pow(last / first, 1 / 35) - 1 : null;
 
-  const sliceName = group === 'total' ? 'all four groups' : (activeLeaf ?? GROUP_LABEL[group]).toLowerCase();
+  const sliceName = group === 'total' ? (metal ? 'all four groups, metals as metal' : 'all four groups') : focus.name.toLowerCase();
 
   // ── The four terms, measured, for whatever is in focus ─────────────────────
   // Over the 36 years to 2024: the strong reference tick on every rail.
@@ -446,13 +465,13 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
    */
   const headline = useMemo(() => {
     const now = measureNow(focus, run);
-    const b = envelope.bands[place]?.[group]?.consumption;
+    const b = metal ? undefined : envelope.bands[place]?.[group]?.consumption;
     const n = b?.p50.length ?? 0;
     const yrs = n ? envelope.years[n - 1] - envelope.years[0] : 1;
     const g = (a: number, z: number) => (a > 0 && z > 0 ? Math.pow(z / a, 1 / yrs) - 1 : 0);
     const [lo, hi] = b ? [g(b.p50[0], b.min[n - 1]), g(b.p50[0], b.max[n - 1])] : [-0.02, 0.04];
     return { rate: now.material, mass: now.material1, color: heat(now.material, lo, hi) };
-  }, [focus, run, envelope, place, group]);
+  }, [focus, run, envelope, place, group, metal]);
 
   // Recent conditions, for the contour's star: 2019–2024 income growth and
   // today's level of each lever.
@@ -527,6 +546,11 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           <Picker label="Where" value={place}
             options={[{ id: 'World', label: 'World' }, ...meta.regions.map((r) => ({ id: r, label: r }))]}
             onChange={setPlace} />
+          {metalBasisApplies(group) && (
+            <Chips label="Metals as" value={metal ? 'metal' : 'ore'}
+              options={[{ id: 'ore', label: 'Ore' }, { id: 'metal', label: 'Metal' }]}
+              onChange={(id) => setMetalBasis(id === 'metal')} />
+          )}
           <div className="mat-pin" aria-live="polite">
             <span className="mat-pin-label">{focus.name}, {place}, 2025–2060</span>
             <Readout size="md" color={headline.color}

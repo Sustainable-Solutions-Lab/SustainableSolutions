@@ -71,6 +71,22 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
           linear in mass, so the stack stays a stack.
         </p>
 
+        <h2 style={h2}>Ore or metal</h2>
+        <p style={p}>
+          The paper counts metals as the ore mined for them, and so does this page by default. The
+          “Metals as” switch counts them as the metal they contain instead, everywhere on the page:
+          the figure, the headline, the sliders, the bars and the contour. The model works out
+          metal first and divides by the modelled ore grade, so multiplying back by the same grade
+          is exact. Measured years are converted at the paper’s 2024 grades, 40% for iron and 1.6%
+          for non-ferrous metals together, so the step between 2024 and 2025 is the same proportion
+          as in ore. Counted as metal, iron and steel dominate; counted as ore, low-grade copper,
+          aluminium and the rest do. Ore grade then has no effect, so it drops out of the bars. The
+          paper’s runs are summarised in ore, so no dashed lines are drawn in metal, and the
+          recycling figure stays in ore terms. Non-ferrous metals are one pool in the model, with
+          one grade, one recycling rate and one stock, so copper and aluminium cannot be shown
+          apart.
+        </p>
+
         <h2 style={h2}>The model</h2>
         <p style={p}>
           This is the model behind Busch, Caldeira and Davis, ported from the paper’s R pipeline

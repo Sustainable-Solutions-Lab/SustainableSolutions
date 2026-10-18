@@ -61,8 +61,8 @@ const SOURCES = [
   // Standard treats them inside categories 1/2, not as a category of
   // their own, so the differentiation lives here in Specific sources.
   ['soil', 'Soil carbon CO₂ — cropland', 20],
-  // Rangeland SOC (Ren et al. 2024 response refit on 61 of his 84
-  // covariates, Gridded LM v5). 2020 LOSSES count, gains display only, as
+  // Rangeland SOC (Ren et al. 2024 response refit on 78 of his 84
+  // covariates, Gridded LM v6). 2020 LOSSES count, gains display only, as
   // for cropland soil. Varies by year through national gross-loss series.
   // Not attributed to livestock commodities yet.
   ['rsoil', 'Soil carbon CO₂ — rangeland', 60],

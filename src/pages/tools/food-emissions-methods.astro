@@ -29,7 +29,7 @@ const totals: Array<{ n: string; d: string; s: Status; label?: string }> = [
   { n: 'FAOSTAT GLE', s: 'built', d: 'Livestock Tier 1 national series, gas-native, 2000–2023' },
   { n: 'SPAM 2000 / 2005 / 2010 / 2020', s: 'built', d: 'Crop production and physical area, 42 crops' },
   { n: 'EDGAR', s: 'built', d: 'Envelope for liming CO₂' },
-  { n: 'Cornerstone jdLUC event grids', s: 'wait', d: 'Land-use conversion — the whole of LSRS category 1. Handoff pending.' },
+  { n: 'Cornerstone jdLUC event grids', s: 'wait', d: 'Land-use conversion — the whole of LSRS category 1. We are running Cornerstone’s open pipeline (v202610) ourselves; how its conversions join our layers is being settled with Cornerstone.' },
   { n: 'Herrero-extension Tier 2 livestock', s: 'wait', d: 'Replaces the FAOSTAT envelope with gridded intensities. Same API.' },
 ];
 
@@ -43,12 +43,13 @@ const pattern: Array<{ n: string; d: string; s: Status }> = [
 ];
 
 const cat2: Array<{ n: string; d: string; s: Status }> = [
-  { n: 'Cropland soil carbon', s: 'built', d: 'IPCC Tier 2 management term (+14.9 Tg C/yr) plus a Sanderman legacy-decay term (−15.0). They near-cancel globally, but the map changes completely: 96% of gain cells flip.' },
+  { n: 'Cropland soil carbon', s: 'built', d: 'On the map: the IPCC Tier 2 management term, a net sink of +14.9 Tg C/yr; losing cells (about 9 Mt CO₂e/yr) count, gaining cells are not credited. Observation-side products put the net at or below zero (Sanderman −15.0, OpenLandMap −41.5), and LUCAS re-measurements are near neutral with 45% of points losing.' },
+  { n: 'Cropland legacy decay', s: 'aspire', d: 'A Sanderman legacy-decay term (−15.0 Tg C/yr) cancels the Tier 2 sink globally and flips 96% of gain cells. Research layer only: across 15 LUCAS countries observed change follows the management term (r = 0.51), not the legacy term (r = −0.05).' },
   { n: 'Peatland', s: 'built', d: 'Cornerstone steady-state occupation floor, 37.3 t CO₂e/ha/yr, perpetual while drained. Malaysia, empty in the upstream drained-peat map, is patched from PEATMAP extent × crop maps (1.5 Mha of crops on peat, ~56 Mt CO₂e/yr).' },
   { n: 'Peat split by land use', s: 'aspire', d: 'IPCC rates span 13× within tropical peat — acacia 20.0, oil palm 11.0, forest 5.3 t CO₂-C/ha/yr. The single rate is, to 8%, the oil-palm value.' },
   { n: 'Peat as an exhaustible stock', s: 'aspire', d: 'A 0.5 m profile is gone in about 23 years at the current rate. Needs gridded depth, which we lack globally.' },
-  { n: 'Rangeland soil carbon', s: 'built', d: 'Preliminary, on the map. The Ren et al. (2024) grazing response, refit on 78 of its 84 covariates (all but elevation from the authors’ own layers), is primary: about 2.3 Gt CO₂e cumulative 2000–2022. Powell et al. (2026) is a cross-check on well-conditioned cells. Still open: the present-day grazing-intensity level, where the other global product gives 2.7 Gt. The herd time axis follows FAOSTAT stocks: a seam in the 2010 livestock grid had given South Sudan the whole former-Sudan herd.' },
-  { n: 'Forest soil carbon', s: 'built', d: 'On the map, not in any total. Mineral forest soil is held at the IPCC default of steady state, which national inventories support: Annex I parties report a net gain of +0.03 t C/ha/yr across 1,665 Mha. The drained organic soil that had fallen between the peat and forest layers is now its own layer: CO₂, CH₄ and N₂O as 22 Annex I parties report them (38 Mt CO₂e/yr in 2020), placed on forest over PEATMAP peat.' },
+  { n: 'Rangeland soil carbon', s: 'built', d: 'Preliminary, on the map. The Ren et al. (2024) grazing response, refit on 78 of its 84 covariates (all but elevation from the authors’ own layers), is primary: about 2.3 Gt CO₂e cumulative 2000–2022. Powell et al. (2026) is a cross-check on well-conditioned cells. Still open: the present-day grazing-intensity level, where the other global product gives 2.7 Gt. Refitting on every layer the authors supplied does not close that gap, so it is the grazing-intensity map, not the covariates. The herd time axis follows FAOSTAT stocks: a seam in the 2010 livestock grid had given South Sudan the whole former-Sudan herd.' },
+  { n: 'Forest soil carbon', s: 'built', d: 'On the map, not in any total. Mineral forest soil is held at the IPCC default of steady state, which national inventories support: Annex I parties report a net gain of +0.03 t C/ha/yr across 1,665 Mha. The drained organic soil that had fallen between the peat and forest layers is now its own layer: CO₂, CH₄ and N₂O as 22 Annex I parties report them (38 Mt CO₂e/yr on 10.4 Mha in 2020), placed on forest over PEATMAP peat.' },
   { n: 'Tropical drained forest peat', s: 'gap', d: 'Non-Annex I parties report no drained forest area, so drained peat-swamp forest in Southeast Asia is not yet on the map.' },
   { n: 'Forest soil re-measurement', s: 'aspire', d: 'ICP Forests BioSoil, Germany’s BZE I–III and the Nordic forest soil inventories: the forest analogue of LUCAS, and the only direct test of the steady-state default.' },
 ];
@@ -151,8 +152,9 @@ const cat3 = ['Fertilizer', 'Manure applied', 'Manure mgmt', 'Pasture N₂O', 'R
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div class="out">
           <h3>Category 1 <span class="st wait">waiting</span></h3>
-          <div class="p-3.5 text-[12.5px] text-ink-3">Land-use conversion. Blocked
-          entirely on the jdLUC handoff; there is no interim version.</div>
+          <div class="p-3.5 text-[12.5px] text-ink-3">Land-use conversion. Not yet
+          on the map: Cornerstone&rsquo;s pipeline is running on our side, and the
+          join to our layers is still being settled.</div>
         </div>
         <div class="out">
           <h3>Category 2 <span class="st built">partly built</span></h3>
@@ -224,7 +226,7 @@ const cat3 = ['Fertilizer', 'Manure applied', 'Manure mgmt', 'Pasture N₂O', 'R
 
     <p class="mt-11 border-t border-rule pt-4 text-[12px] text-ink-3">
       Companion to the <a href="/tools/food-emissions">food-emissions explorer</a> and to
-      DeAngelo et al., in preparation. <strong>Status as of 9 October 2026.</strong>
+      DeAngelo et al., in preparation. <strong>Status as of 18 October 2026.</strong>
       This page and the explorer's Methods describe a model under active development;
       both are maintained to reflect its current state, and the date above moves when
       they do. If the date looks stale against a published result, say so —

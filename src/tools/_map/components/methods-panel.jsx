@@ -394,9 +394,10 @@ function FoodEmissionsMethods() {
         use. Forest soil is on the map under category 2 but in no total:
         mineral forest soil follows the IPCC default of steady state, which
         Annex I inventories support (a net gain of +0.03 t C/ha/yr across
-        1,665 Mha), so the layer is drained forest organic soil, CO₂, CH₄
-        and N₂O as 22 Annex I parties report it (about 38 Mt CO₂e/yr in
-        2020), placed on forest over PEATMAP peat. Non-Annex I parties
+        1,665 Mha), as do European woodland re-measurements (LUCAS), so the
+        layer is drained forest organic soil, CO₂, CH₄ and N₂O as 22 Annex I
+        parties report it (about 38 Mt CO₂e/yr on 10.4 Mha in 2020), placed
+        on forest over PEATMAP peat. Non-Annex I parties
         report no drained forest area, so tropical drained peat-swamp
         forest is not yet included. We
         are piloting the forest methods now: two
@@ -455,6 +456,20 @@ function FoodEmissionsMethods() {
         change accounting). No claim of removals is made or supported:
         crediting soil-carbon removals requires multi-year field
         measurement under the GHG Protocol's land standard.
+        The Tier 2 sink may overstate. Two observation-side products put
+        net change on stable cropland at or below zero: the soil-carbon
+        debt reconstruction of{' '}
+        <a href="https://doi.org/10.1073/pnas.1706103114" target="_blank" rel="noopener noreferrer" style={linkStyle}>Sanderman et al. (2017)</a>{' '}
+        gives about −15 Tg C per year for 1990–2010, and the machine-learned
+        stock epochs of OpenLandMap-soildb (Hengl et al., 2026) about −42.
+        Repeated European measurements sit near neutral: 45% of 5,952
+        re-sampled LUCAS cropland points lost carbon between 2009 and 2018.
+        Adding Sanderman&rsquo;s rate as a legacy-decay term cancels the
+        sink globally and turns 96% of gaining cells to net loss, but that
+        term is a research layer, not on the map: across 15 LUCAS countries
+        the observed changes follow the management term (r = 0.51) and not
+        the legacy term (r = −0.05). About 9 Mt CO₂e per year of cropland
+        soil loss is counted in the totals.
         A separate, preliminary rangeland layer (Soil carbon CO₂ —
         rangeland) gives first historical estimates of soil-carbon change
         from changing grazing intensity, evaluated along the observed
@@ -479,7 +494,10 @@ function FoodEmissionsMethods() {
         preliminary: it is sensitive to the present-day level of grazing
         intensity, which two independent global products place quite
         differently (on the other product the cumulative total is about
-        2.7 Gt), more than to how herds changed over time. Herd trends
+        2.7 Gt), more than to how herds changed over time. Refitting with
+        every covariate layer the authors supplied does not close that gap
+        (it lowers our total slightly), so the difference lies in the
+        grazing-intensity map, not the model inputs. Herd trends
         follow FAOSTAT national stocks rather than the gridded livestock
         products, whose 2010 release assigned the whole former-Sudan herd
         to both successor states. Rangeland losses are not yet attributed

@@ -214,9 +214,20 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
           ores are counted at their own grades and, for minerals, reuse is capped. The model pools
           scrap region by region, so a region’s lines are its own retiring stock against its own
           demand: it assumes no trade in scrap, which is the paper’s assumption too. The grey
-          dashed diagonal, labelled “with no growth”, is what each collection rate would give if everything needed that year
-          were retiring, as it would be with no growth; the gap between it and the red line is
-          growth.
+          dashed diagonal, labelled “with no demand growth”, is what each collection rate would
+          give if everything needed that year were retiring, as it would be if demand did not
+          grow; the gap between it and each line is growth.
+        </p>
+        <p style={p}>
+          The open circles relax the no-trade assumption. With everything collected, some regions
+          are left with scrap their own end uses cannot take, and others with room their own scrap
+          does not fill. A circle is the share reached if that unused scrap from elsewhere fills
+          the room here, material by material: an upper bound for this place alone. Only minerals
+          ever show one, because reuse of demolition material is capped, so slow-growing regions
+          such as East Asia, Europe and North America end up with more than they can reuse. No
+          region retires more metal than it needs, even with everything collected, so trade in
+          metal scrap cannot raise any region’s ceiling; it can only move scrap that would have
+          been used at home.
         </p>
         <p style={p}>
           For non-metallic minerals the rate is the share of demolition waste reused. Reused

@@ -16,9 +16,11 @@ import {
   INTENSITY_LEVERS,
   INTENSITY_LEVER_KEYS,
   runModel,
+  type EolMaterial,
   type IntensityLever,
   type Levers,
   type ModelInputs,
+  type ModelRun,
 } from './model';
 import { focusGrowth, type Focus } from './focus';
 
@@ -259,23 +261,60 @@ const CEILING_COLOR: Record<CeilingGroup, string> = { metal_ores: 'var(--cardina
 export function useCeiling(inputs: ModelInputs, levers: Levers, place: string, groups: CeilingGroup[], year = 2050) {
   return useMemo(() => {
     const rates = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
-    const shareOf = (l: Levers, group: CeilingGroup) => {
-      const run = runModel(inputs, l);
+    const regions = place === 'World' ? inputs.regions : [place];
+    const share = (run: ModelRun, group: CeilingGroup, extra = 0) => {
       const i = run.years.indexOf(year);
-      const p = place === 'World' ? run.primary.byGroup[group][i] : run.primary.byRegionGroup[place]?.[group][i] ?? 0;
-      const s = place === 'World' ? run.secondary[group][i] : run.secondaryByRegion[place]?.[group][i] ?? 0;
-      return p + s > 0 ? s / (p + s) : 0;
+      let p = 0;
+      let s = 0;
+      for (const r of regions) {
+        p += run.primary.byRegionGroup[r]?.[group][i] ?? 0;
+        s += run.secondaryByRegion[r]?.[group][i] ?? 0;
+      }
+      return p + s > 0 ? (s + extra) / (p + s) : 0;
     };
+
+    /**
+     * What trade in scrap could add on top, with everything collected: the
+     * room here that local scrap left empty, filled from collected scrap
+     * that had nowhere to go elsewhere, material by material, in ore terms.
+     * For the world it is the same sum across all regions at once.
+     */
+    const traded = (run: ModelRun, group: CeilingGroup): number => {
+      const i = run.years.indexOf(year);
+      const materials: EolMaterial[] = group === 'metal_ores' ? ['Metal_Fe', 'Metal_NonFe'] : ['Non-metallic minerals'];
+      let extra = 0;
+      for (const m of materials) {
+        let spare = 0;
+        let surplus = 0;
+        for (const r of inputs.regions) {
+          const e = run.eolByRegion[r]?.[m];
+          if (!e) continue;
+          if (regions.includes(r)) spare += e.spare[i];
+          // A region's own surplus can fill its own room only if the room
+          // is in a different end use; the model has already done that.
+          if (place === 'World' || r !== place) surplus += e.surplus[i];
+        }
+        const grade = m === 'Non-metallic minerals' ? 1 : run.grade[m][i];
+        extra += Math.min(spare, surplus) / grade;
+      }
+      return share(run, group, extra);
+    };
+
     const lines = groups.map((group) => {
       const metal = group === 'metal_ores';
       const set = (rate: number): Levers =>
         metal ? { ...levers, recyclingFe: rate, recyclingNonFe: rate } : { ...levers, downcycling: rate };
-      const points = rates.map((rate) => ({ rate, share: shareOf(set(rate), group) }));
+      const runs = rates.map((rate) => runModel(inputs, set(rate)));
+      const points = runs.map((run, k) => ({ rate: rates[k], share: share(run, group) }));
+      const ceiling = points[points.length - 1].share;
+      const withTrade = traded(runs[runs.length - 1], group);
       return {
         group,
         points,
-        now: { rate: metal ? (levers.recyclingFe + levers.recyclingNonFe) / 2 : levers.downcycling, share: shareOf(levers, group) },
-        ceiling: points[points.length - 1].share,
+        now: { rate: metal ? (levers.recyclingFe + levers.recyclingNonFe) / 2 : levers.downcycling, share: share(runModel(inputs, levers), group) },
+        ceiling,
+        // Only worth drawing where it differs from the line's own end.
+        withTrade: withTrade - ceiling > 0.005 ? withTrade : null,
       };
     });
     return { year, place, lines };
@@ -283,22 +322,23 @@ export function useCeiling(inputs: ModelInputs, levers: Levers, place: string, g
 }
 
 export function RecyclingCeiling({ data }: { data: ReturnType<typeof useCeiling> }) {
-  const W = 440;
+  const W = 460;
   const H = 220;
-  const M = { l: 46, r: 84, t: 12, b: 36 };
+  const M = { l: 46, r: 104, t: 12, b: 36 };
   const pw = W - M.l - M.r;
   const ph = H - M.t - M.b;
   const x = (v: number) => M.l + v * pw;
   const y = (v: number) => M.t + ph - v * ph;
   const halo = { stroke: 'var(--paper)', strokeWidth: 4, paintOrder: 'stroke' as const };
-  // End labels, pushed apart when two lines finish close together.
-  const ends = data.lines.map((l) => y(l.ceiling));
-  if (ends.length === 2 && Math.abs(ends[0] - ends[1]) < 24) {
-    const mid = (ends[0] + ends[1]) / 2;
-    const up = ends[0] < ends[1] ? 0 : 1;
-    ends[up] = mid - 12;
-    ends[1 - up] = mid + 12;
-  }
+  // End labels: each line's own end, and where trade in scrap would take it
+  // when that is higher. Pushed apart when they finish close together.
+  const labels = data.lines.flatMap((l) => [
+    { key: l.group, at: l.ceiling, text: `${(100 * l.ceiling).toFixed(0)}% ${CEILING_NAME[l.group]}`, color: CEILING_COLOR[l.group], trade: false },
+    ...(l.withTrade == null ? [] : [{ key: `${l.group}-trade`, at: l.withTrade, text: `${(100 * l.withTrade).toFixed(0)}% with trade`, color: CEILING_COLOR[l.group], trade: true }]),
+  ]).sort((a, b) => b.at - a.at);
+  const ys = labels.map((l) => y(l.at));
+  for (let k = 1; k < ys.length; k++) ys[k] = Math.max(ys[k], ys[k - 1] + 13);
+  for (let k = ys.length - 1; k >= 0; k--) ys[k] = Math.min(ys[k], M.t + ph + (k - ys.length + 1) * 13);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', maxWidth: 500, height: 'auto' }}
@@ -311,26 +351,34 @@ export function RecyclingCeiling({ data }: { data: ReturnType<typeof useCeiling>
         </g>
       ))}
       {/* One-for-one reference: the share a collection rate would give if
-          everything needed each year were retiring, i.e. with no growth. */}
+          everything needed each year were retiring, i.e. with no demand growth. */}
       <line x1={x(0)} x2={x(1)} y1={y(0)} y2={y(1)} stroke="var(--ink-3)" strokeWidth={1} strokeDasharray="3 3" />
-      <text transform={`translate(${x(0.22)},${y(0.22) - 5}) rotate(${(Math.atan2(-ph, pw) * 180) / Math.PI})`}
+      <text transform={`translate(${x(0.26)},${y(0.26) - 5}) rotate(${(Math.atan2(-ph, pw) * 180) / Math.PI})`}
         textAnchor="middle" style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-3)', ...halo }}>
-        with no growth
+        with no demand growth
       </text>
-      {data.lines.map((l, k) => {
+      {data.lines.map((l) => {
         const d = l.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.rate).toFixed(1)},${y(p.share).toFixed(1)}`).join('');
         const c = CEILING_COLOR[l.group];
         return (
           <g key={l.group}>
             <path d={d} fill="none" stroke={c} strokeWidth={2.2} />
             <circle cx={x(l.now.rate)} cy={y(l.now.share)} r={4} fill={c} stroke="var(--paper)" strokeWidth={1.5} />
-            <text x={x(1) + 6} y={ends[k]} dominantBaseline="middle"
-              style={{ font: '600 10.5px var(--font-mono)', fill: c }}>
-              {(100 * l.ceiling).toFixed(0)}% {CEILING_NAME[l.group]}
-            </text>
+            {l.withTrade != null && (
+              <>
+                <line x1={x(1)} x2={x(1)} y1={y(l.ceiling)} y2={y(l.withTrade)} stroke={c} strokeWidth={1.2} strokeDasharray="2 2" />
+                <circle cx={x(1)} cy={y(l.withTrade)} r={3.5} fill="var(--paper)" stroke={c} strokeWidth={1.5} />
+              </>
+            )}
           </g>
         );
       })}
+      {labels.map((l, k) => (
+        <text key={l.key} x={x(1) + 7} y={ys[k]} dominantBaseline="middle"
+          style={{ font: `${l.trade ? 400 : 600} 10.5px var(--font-mono)`, fill: l.color }}>
+          {l.text}
+        </text>
+      ))}
       {[0, 0.5, 1].map((t) => (
         <text key={t} x={x(t)} y={M.t + ph + 15} textAnchor="middle"
           style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-3)' }}>{(100 * t).toFixed(0)}%</text>

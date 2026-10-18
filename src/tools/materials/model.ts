@@ -550,7 +550,7 @@ interface EolRow {
   room: number;
 }
 
-function allocateEol(rows: EolRow[]): { secondary: number[]; primary: number[] } {
+function allocateEol(rows: EolRow[]): { secondary: number[]; primary: number[]; surplus: number; spare: number } {
   let pool = 0;
   let roomTotal = 0;
   for (const r of rows) {
@@ -559,7 +559,13 @@ function allocateEol(rows: EolRow[]): { secondary: number[]; primary: number[] }
   }
   const secondaryTotal = Math.min(pool, roomTotal);
   const secondary = rows.map((r) => (roomTotal > 0 ? (secondaryTotal * r.room) / roomTotal : 0));
-  return { secondary, primary: rows.map((r, i) => r.demand - secondary[i]) };
+  return {
+    secondary,
+    primary: rows.map((r, i) => r.demand - secondary[i]),
+    // Collected scrap with nowhere to go here, and room here that local scrap left empty.
+    surplus: Math.max(0, pool - roomTotal),
+    spare: Math.max(0, roomTotal - pool),
+  };
 }
 
 // ── Output ──────────────────────────────────────────────────────────────────
@@ -596,6 +602,15 @@ export interface ModelRun {
    */
   secondaryByRegion: Record<string, Record<StockGroup, Float64Array>>;
   /**
+   * Per region and stock material, in material mass: collected scrap the
+   * region's own end uses could not absorb, and room they left that its own
+   * scrap did not fill. Neither moves in the model; they are what a trade in
+   * scrap would have to work with.
+   */
+  eolByRegion: Record<string, Record<EolMaterial, { surplus: Float64Array; spare: Float64Array }>>;
+  /** Metal per tonne of ore, by year, to put scrap mass into ore terms. */
+  grade: { Metal_Fe: Float64Array; Metal_NonFe: Float64Array };
+  /**
    * The end-of-life pool and the demand it is measured against, both in
    * material mass rather than ore. Their ratio is the ceiling on secondary
    * supply: collect everything and you still only get this share.
@@ -610,6 +625,8 @@ export interface ModelRun {
 }
 
 const zeros = (n: number) => new Float64Array(n);
+
+export type EolMaterial = 'Metal_Fe' | 'Metal_NonFe' | 'Non-metallic minerals';
 
 function emptyGroupRecord(n: number): Record<GroupKey, Float64Array> {
   return {
@@ -681,6 +698,8 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
     },
     secondary: emptyGroupRecord(n),
     secondaryByRegion: {},
+    eolByRegion: {},
+    grade: { Metal_Fe: gradeFe, Metal_NonFe: gradeNonFe },
     scrap: {
       metal_ores: { retired: zeros(n), demand: zeros(n) },
       nonmetallic_minerals: { retired: zeros(n), demand: zeros(n) },
@@ -690,6 +709,11 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
     gdp: zeros(n),
     popByRegion: {},
     gdpByRegion: {},
+  };
+
+  const eolSlot = (region: string, material: EolMaterial) => {
+    const r = (out.eolByRegion[region] ??= {} as ModelRun['eolByRegion'][string]);
+    return (r[material] ??= { surplus: zeros(n), spare: zeros(n) });
   };
 
   const addPrimary = (region: string, group: GroupKey, detail: string, series: Float64Array) => {
@@ -875,6 +899,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       const stockTotal = out.stock.metal_ores;
       const scrap = out.scrap.metal_ores;
       const endUse = out.primary.byEndUse.metal_ores;
+      const left = eolSlot(region, material);
       for (let i = 0; i < n; i++) {
         const eol = allocateEol(
           rows.map((r) => {
@@ -882,6 +907,8 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
             return { demand, waste: Math.max(0, r.res.waste[i]), rate: rate[i], room: demand };
           }),
         );
+        left.surplus[i] = eol.surplus;
+        left.spare[i] = eol.spare;
         for (let j = 0; j < rows.length; j++) {
           primaryByRow[j][i] = eol.primary[j] / grade[i];
           secondaryTotal[i] += eol.secondary[j] / grade[i];
@@ -927,6 +954,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       const stockTotal = out.stock.nonmetallic_minerals;
       const scrap = out.scrap.nonmetallic_minerals;
       const endUse = out.primary.byEndUse.nonmetallic_minerals;
+      const left = eolSlot(region, 'Non-metallic minerals');
       for (let i = 0; i < n; i++) {
         const eol = allocateEol(
           mineralRows.map((r, j) => {
@@ -939,6 +967,8 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
             };
           }),
         );
+        left.surplus[i] = eol.surplus;
+        left.spare[i] = eol.spare;
         for (let j = 0; j < mineralRows.length; j++) {
           primaryByRow[j][i] = eol.primary[j];
           secondaryTotal[i] += eol.secondary[j];

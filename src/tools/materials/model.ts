@@ -590,6 +590,12 @@ export interface ModelRun {
   /** Secondary supply (recycled or downcycled), Mt/yr, ore-equivalent. */
   secondary: Record<GroupKey, Float64Array>;
   /**
+   * The same by region. Scrap is pooled region by region (allocateEol), so a
+   * region's recycled supply comes from its own retiring stock: the model
+   * already assumes no trade in scrap.
+   */
+  secondaryByRegion: Record<string, Record<StockGroup, Float64Array>>;
+  /**
    * The end-of-life pool and the demand it is measured against, both in
    * material mass rather than ore. Their ratio is the ceiling on secondary
    * supply: collect everything and you still only get this share.
@@ -674,6 +680,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       total: zeros(n),
     },
     secondary: emptyGroupRecord(n),
+    secondaryByRegion: {},
     scrap: {
       metal_ores: { retired: zeros(n), demand: zeros(n) },
       nonmetallic_minerals: { retired: zeros(n), demand: zeros(n) },
@@ -864,6 +871,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       const grade = isFe ? gradeFe : gradeNonFe;
       const primaryByRow = rows.map(() => new Float64Array(n));
       const secondaryTotal = out.secondary.metal_ores;
+      const secondaryRegion = (out.secondaryByRegion[region] ??= { metal_ores: zeros(n), nonmetallic_minerals: zeros(n) }).metal_ores;
       const stockTotal = out.stock.metal_ores;
       const scrap = out.scrap.metal_ores;
       const endUse = out.primary.byEndUse.metal_ores;
@@ -877,6 +885,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
         for (let j = 0; j < rows.length; j++) {
           primaryByRow[j][i] = eol.primary[j] / grade[i];
           secondaryTotal[i] += eol.secondary[j] / grade[i];
+          secondaryRegion[i] += eol.secondary[j] / grade[i];
           stockTotal[i] += rows[j].res.totalStock[i] / grade[i];
           scrap.retired[i] += Math.max(0, rows[j].res.waste[i]);
           scrap.demand[i] += Math.max(0, rows[j].res.production[i]);
@@ -914,6 +923,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       );
       const primaryByRow = mineralRows.map(() => new Float64Array(n));
       const secondaryTotal = out.secondary.nonmetallic_minerals;
+      const secondaryRegion = (out.secondaryByRegion[region] ??= { metal_ores: zeros(n), nonmetallic_minerals: zeros(n) }).nonmetallic_minerals;
       const stockTotal = out.stock.nonmetallic_minerals;
       const scrap = out.scrap.nonmetallic_minerals;
       const endUse = out.primary.byEndUse.nonmetallic_minerals;
@@ -932,6 +942,7 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
         for (let j = 0; j < mineralRows.length; j++) {
           primaryByRow[j][i] = eol.primary[j];
           secondaryTotal[i] += eol.secondary[j];
+          secondaryRegion[i] += eol.secondary[j];
           stockTotal[i] += mineralRows[j].res.totalStock[i];
           scrap.retired[i] += Math.max(0, mineralRows[j].res.waste[i]);
           scrap.demand[i] += Math.max(0, mineralRows[j].res.production[i]);

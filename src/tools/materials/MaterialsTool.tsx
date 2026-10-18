@@ -17,7 +17,7 @@ import Methods from './Methods';
 import Drivers, { PAST_FROM, PAST_TO, Readout, heat, measureNow, type DriverPast } from './Drivers';
 import ContourPanel, { CONTOUR_AXES, axesFor, type ContourAxis, type ScatterData } from './ContourPanel';
 import Controls from './Controls';
-import { LeverEffects, RecyclingCeiling, leverHeadline, useCeiling, useLeverEffects } from './LeverEffects';
+import { CEILING_NAME, LeverEffects, RecyclingCeiling, leverHeadline, useCeiling, useLeverEffects, type CeilingGroup } from './LeverEffects';
 import { fmtMass, focusPhrase, makeFocus } from './focus';
 import {
   GROUP_KEYS,
@@ -26,7 +26,6 @@ import {
   INTENSITY_LEVERS,
   INTENSITY_LEVER_KEYS,
   customLeversFromSsp,
-  defaultLevers,
   leverWorldValue,
   resolveSsp,
   runModel,
@@ -151,7 +150,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     () => (typeof location === 'undefined' ? null : decodeState(location.hash.slice(1))),
     [],
   );
-  const [scenario, setScenario] = useState<Scenario>(initial?.scenario ?? { kind: 'ssp', ssp: 'SSP2' });
+  const [scenario, setScenario] = useState<Scenario>(initial?.scenario ?? { kind: 'ssp', ssp: 'SSP1' });
   const [place, setPlace] = useState(initial?.place ?? 'World');
   const [group, setGroup] = useState<GroupKey | 'total'>(initial?.group ?? 'total');
   const [leaf, setLeaf] = useState<string | null>(initial?.leaf ?? null);
@@ -192,8 +191,9 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   // The menus at the top set what the whole page is about.
   const focus = useMemo(() => makeFocus(place, group, activeLeaf), [place, group, activeLeaf]);
   const effects = useLeverEffects(inputs, shown, focus);
-  const ceilingGroup = group === 'nonmetallic_minerals' ? 'nonmetallic_minerals' : 'metal_ores';
-  const ceiling = useCeiling(inputs, shown, ceilingGroup);
+  const ceilingGroups: CeilingGroup[] = group === 'total' ? ['metal_ores', 'nonmetallic_minerals']
+    : group === 'metal_ores' || group === 'nonmetallic_minerals' ? [group] : [];
+  const ceiling = useCeiling(inputs, shown, place, ceilingGroups);
   const axes = axesFor(group);
   const axisShown = axes.includes(axis) ? axis : axes[0];
 
@@ -525,7 +525,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
 
           <Drivers inputs={inputs} levers={shown} run={run} focus={focus} past={kayaPast}
             advanced={advanced} onAdvanced={() => setAdvanced((o) => !o)}
-            onReset={() => setScenario({ kind: 'custom', levers: defaultLevers(inputs) })}
+            onReset={() => setScenario({ kind: 'ssp', ssp: 'SSP1' })}
             onChange={edit}>
             <Controls inputs={inputs} levers={shown} blend={blend}
               intensityDraw={intensityDraw} group={group} leaf={activeLeaf} onChange={edit} />
@@ -559,9 +559,9 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
 
         {/* ── 4 ─────────────────────────────────────────────────────────── */}
         <section aria-label="The recycling ceiling" style={sectionRule}>
-          <p style={kicker}>The ceiling{group === 'biomass' || group === 'fossil_fuels' ? '' : ` · ${ceilingGroup === 'metal_ores' ? 'metal ores' : 'non-metallic minerals'}, world`}</p>
+          <p style={kicker}>The ceiling{ceilingGroups.length ? ` · ${ceilingGroups.map((g) => CEILING_NAME[g]).join(' and ')}, ${place}` : ''}</p>
           <h3 style={figTitle}>Why recycling runs out of road before the problem does</h3>
-          {group === 'biomass' || group === 'fossil_fuels' ? (
+          {!ceilingGroups.length ? (
             <p style={caption}>
               {group === 'biomass' ? 'Biomass is' : 'Fossil fuels are'} used up rather than kept in
               use, so there is nothing to recycle. Choose metal ores or non-metallic minerals above to see this for them.
@@ -570,10 +570,11 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
             <>
               <RecyclingCeiling data={ceiling} />
               <p style={caption}>
-                Collect everything that retires and recycled supply still reaches only{' '}
-                <b>{(100 * ceiling.ceiling).toFixed(0)}%</b> of {ceilingGroup === 'metal_ores' ? 'metal' : 'mineral'} supply
-                in {ceiling.year}, because that is all of the year’s demand that is retiring. Yours:{' '}
-                <b>{(100 * ceiling.now.share).toFixed(0)}%</b>.
+                Each line ends where everything that retires in {ceiling.year} is recycled:{' '}
+                {ceiling.lines.map((l, k) => (
+                  <span key={l.group}>{k ? ' and ' : ''}<b>{(100 * l.ceiling).toFixed(0)}%</b> of {CEILING_NAME[l.group].replace(/s$/, '')} supply</span>
+                ))}{place === 'World' ? '' : ` in ${place}`}, because so little of what is needed that year is retiring.
+                Dots are yours.
                 {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
               </p>
             </>

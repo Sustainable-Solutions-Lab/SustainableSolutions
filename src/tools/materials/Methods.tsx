@@ -45,8 +45,8 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
           The material and place menus at the top set the subject of the whole page. The headline
           and the three sliders measure that material in that place; the bars and the contour
           report its growth; the panel under the intensity slider holds only the assumptions that
-          act on it. The “As” chips change only the first figure. Recycled supply is modelled for
-          the world as a whole, so the recycling figure is always the world’s.
+          act on it; the recycling figure shows metals, minerals or both for that place. The “As”
+          chips change only the first figure.
         </p>
 
         <h2 style={h2}>What the first figure shows</h2>
@@ -207,6 +207,16 @@ export default function Methods({ targetYear, onClose }: { targetYear: number; o
           from a stock built when the world was smaller. This is why a 40% recycled share for a
           particular metal and a paper saying material use keeps growing are not in disagreement:
           they are the two terms of the same product.
+        </p>
+        <p style={p}>
+          In the figure, each line ends at the recycled share if everything that retires in 2050
+          is collected and recycled. That sits below the ratio of retired stock to demand, because
+          ores are counted at their own grades and, for minerals, reuse is capped. The model pools
+          scrap region by region, so a region’s lines are its own retiring stock against its own
+          demand: it assumes no trade in scrap, which is the paper’s assumption too. The grey
+          dashed diagonal, labelled “with no growth”, is what each collection rate would give if everything needed that year
+          were retiring, as it would be with no growth; the gap between it and the red line is
+          growth.
         </p>
         <p style={p}>
           For non-metallic minerals the rate is the share of demolition waste reused. Reused

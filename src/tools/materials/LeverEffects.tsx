@@ -244,53 +244,65 @@ export function leverHeadline(bars: Bar[]): string {
   return top && top[1] > 0 ? `${NAME[top[0]]} the biggest lever` : 'What each assumption is worth';
 }
 
-type CeilingGroup = 'metal_ores' | 'nonmetallic_minerals';
+export type CeilingGroup = 'metal_ores' | 'nonmetallic_minerals';
+
+export const CEILING_NAME: Record<CeilingGroup, string> = { metal_ores: 'metals', nonmetallic_minerals: 'minerals' };
+const CEILING_COLOR: Record<CeilingGroup, string> = { metal_ores: 'var(--cardinal)', nonmetallic_minerals: 'var(--mat-cool)' };
 
 /**
- * Secondary share of supply across the whole range of collection rates, and
- * where the scenario sits. Metals by default; for minerals the "collection
- * rate" is the share of demolition waste reused.
+ * Recycled share of supply across the whole range of collection rates, and
+ * where the scenario sits, for each stock group asked for, in one place. For
+ * minerals the "collection rate" is the share of demolition waste reused.
+ * The model pools scrap region by region, so a region's line is its own
+ * retiring stock against its own demand.
  */
-export function useCeiling(inputs: ModelInputs, levers: Levers, group: CeilingGroup, year = 2050) {
+export function useCeiling(inputs: ModelInputs, levers: Levers, place: string, groups: CeilingGroup[], year = 2050) {
   return useMemo(() => {
-    const metal = group === 'metal_ores';
-    const set = (rate: number): Levers =>
-      metal ? { ...levers, recyclingFe: rate, recyclingNonFe: rate } : { ...levers, downcycling: rate };
-    const at = (l: Levers) => {
+    const rates = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
+    const shareOf = (l: Levers, group: CeilingGroup) => {
       const run = runModel(inputs, l);
       const i = run.years.indexOf(year);
-      const p = run.primary.byGroup[group][i];
-      const s = run.secondary[group][i];
-      return s / (p + s);
+      const p = place === 'World' ? run.primary.byGroup[group][i] : run.primary.byRegionGroup[place]?.[group][i] ?? 0;
+      const s = place === 'World' ? run.secondary[group][i] : run.secondaryByRegion[place]?.[group][i] ?? 0;
+      return p + s > 0 ? s / (p + s) : 0;
     };
-    const rates = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
-    const points = rates.map((rate) => ({ rate, share: at(set(rate)) }));
-    return {
-      group,
-      year,
-      points,
-      now: { rate: metal ? (levers.recyclingFe + levers.recyclingNonFe) / 2 : levers.downcycling, share: at(levers) },
-      ceiling: Math.max(...points.map((p) => p.share)),
-    };
-  }, [inputs, levers, year, group]);
+    const lines = groups.map((group) => {
+      const metal = group === 'metal_ores';
+      const set = (rate: number): Levers =>
+        metal ? { ...levers, recyclingFe: rate, recyclingNonFe: rate } : { ...levers, downcycling: rate };
+      const points = rates.map((rate) => ({ rate, share: shareOf(set(rate), group) }));
+      return {
+        group,
+        points,
+        now: { rate: metal ? (levers.recyclingFe + levers.recyclingNonFe) / 2 : levers.downcycling, share: shareOf(levers, group) },
+        ceiling: points[points.length - 1].share,
+      };
+    });
+    return { year, place, lines };
+  }, [inputs, levers, place, groups.join('|'), year]);
 }
 
 export function RecyclingCeiling({ data }: { data: ReturnType<typeof useCeiling> }) {
-  const { year } = data;
-  const metal = data.group === 'metal_ores';
-  const W = 420;
-  const H = 210;
-  const M = { l: 46, r: 12, t: 12, b: 36 };
+  const W = 440;
+  const H = 220;
+  const M = { l: 46, r: 84, t: 12, b: 36 };
   const pw = W - M.l - M.r;
   const ph = H - M.t - M.b;
   const x = (v: number) => M.l + v * pw;
   const y = (v: number) => M.t + ph - v * ph;
-  const d = data.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.rate).toFixed(1)},${y(p.share).toFixed(1)}`).join('');
-  const noun = metal ? 'metal' : 'minerals';
+  const halo = { stroke: 'var(--paper)', strokeWidth: 4, paintOrder: 'stroke' as const };
+  // End labels, pushed apart when two lines finish close together.
+  const ends = data.lines.map((l) => y(l.ceiling));
+  if (ends.length === 2 && Math.abs(ends[0] - ends[1]) < 24) {
+    const mid = (ends[0] + ends[1]) / 2;
+    const up = ends[0] < ends[1] ? 0 : 1;
+    ends[up] = mid - 12;
+    ends[1 - up] = mid + 12;
+  }
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', maxWidth: 460, height: 'auto' }}
-      aria-label={`Secondary share of ${noun} supply in ${year} against the share collected`}>
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', maxWidth: 500, height: 'auto' }}
+      aria-label={`Recycled share of supply in ${data.year} against the share of retiring material collected`}>
       {[0, 0.25, 0.5, 0.75, 1].map((t) => (
         <g key={t}>
           <line x1={M.l} x2={M.l + pw} y1={y(t)} y2={y(t)} stroke="var(--rule)" strokeWidth={0.6} />
@@ -298,26 +310,38 @@ export function RecyclingCeiling({ data }: { data: ReturnType<typeof useCeiling>
             style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-3)' }}>{(100 * t).toFixed(0)}%</text>
         </g>
       ))}
-      {/* one-for-one reference: what a rate would give if every tonne were available */}
+      {/* One-for-one reference: the share a collection rate would give if
+          everything needed each year were retiring, i.e. with no growth. */}
       <line x1={x(0)} x2={x(1)} y1={y(0)} y2={y(1)} stroke="var(--ink-3)" strokeWidth={1} strokeDasharray="3 3" />
-      <line x1={M.l} x2={M.l + pw} y1={y(data.ceiling)} y2={y(data.ceiling)} stroke="#1B7837" strokeWidth={1.2} strokeDasharray="5 3" />
-      <path d={d} fill="none" stroke="var(--cardinal)" strokeWidth={2.2} />
-      <circle cx={x(data.now.rate)} cy={y(data.now.share)} r={4} fill="var(--cardinal)" stroke="var(--paper)" strokeWidth={1.5} />
-      <text x={M.l + pw} y={y(data.ceiling) - 6} textAnchor="end"
-        style={{ font: '400 10.5px var(--font-mono)', fill: '#1B7837' }}>
-        ceiling {(100 * data.ceiling).toFixed(0)}%
+      <text transform={`translate(${x(0.22)},${y(0.22) - 5}) rotate(${(Math.atan2(-ph, pw) * 180) / Math.PI})`}
+        textAnchor="middle" style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-3)', ...halo }}>
+        with no growth
       </text>
+      {data.lines.map((l, k) => {
+        const d = l.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.rate).toFixed(1)},${y(p.share).toFixed(1)}`).join('');
+        const c = CEILING_COLOR[l.group];
+        return (
+          <g key={l.group}>
+            <path d={d} fill="none" stroke={c} strokeWidth={2.2} />
+            <circle cx={x(l.now.rate)} cy={y(l.now.share)} r={4} fill={c} stroke="var(--paper)" strokeWidth={1.5} />
+            <text x={x(1) + 6} y={ends[k]} dominantBaseline="middle"
+              style={{ font: '600 10.5px var(--font-mono)', fill: c }}>
+              {(100 * l.ceiling).toFixed(0)}% {CEILING_NAME[l.group]}
+            </text>
+          </g>
+        );
+      })}
       {[0, 0.5, 1].map((t) => (
         <text key={t} x={x(t)} y={M.t + ph + 15} textAnchor="middle"
           style={{ font: '400 10px var(--font-mono)', fill: 'var(--ink-3)' }}>{(100 * t).toFixed(0)}%</text>
       ))}
       <text x={M.l + pw / 2} y={H - 4} textAnchor="middle"
         style={{ font: '400 10.5px var(--font-sans)', fill: 'var(--ink-2)' }}>
-        {metal ? 'Share of retiring metal collected' : 'Share of demolished minerals reused'}
+        Share of retiring material collected
       </text>
       <text transform={`translate(11,${M.t + ph / 2}) rotate(-90)`} textAnchor="middle"
         style={{ font: '400 10.5px var(--font-sans)', fill: 'var(--ink-2)' }}>
-        Secondary share of supply
+        Recycled share of supply
       </text>
     </svg>
   );

@@ -120,7 +120,7 @@ const path = Astro.url.pathname;
     opacity: 0.75;
   }
   .lab-logo {
-    height: 40px;
+    height: 45px;
     max-width: 62vw;   /* the wordmark is about 7:1, so on a phone it
                           shrinks rather than crowding the controls */
     width: auto;
@@ -128,6 +128,11 @@ const path = Astro.url.pathname;
     object-position: left center;
     display: block;
     flex: none;
+  }
+  /* Between the md breakpoint, where the full link list appears, and
+     lg, 45px pushes the wordmark into "Research". */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .lab-logo { height: 36px; }
   }
   .lab-logo-dark {
     display: none;

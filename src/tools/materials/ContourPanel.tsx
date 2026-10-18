@@ -174,7 +174,16 @@ export default function ContourPanel({
     let iy = 0;
     const row = () => {
       for (let ix = 0; ix < N; ix++) {
-        const trial: Levers = { ...levers, flowEndpoint: undefined, stockEndpoint: undefined };
+        // The horizontal axis IS income growth, so a scenario's own tilt on it
+        // is dropped here: otherwise the surface would be shifted sideways
+        // from the axis that labels it.
+        const trial: Levers = {
+          ...levers,
+          flowEndpoint: undefined,
+          stockEndpoint: undefined,
+          popTilt: 0,
+          gdppcTilt: 0,
+        };
         trial.sspU = frame.xs[ix];
         const blend = resolveSsp(inputs, trial.sspU);
         const y = frame.ys[iy];
@@ -264,8 +273,14 @@ export default function ContourPanel({
         : (levers.stockIntensityU[s.stocks[0][0]]?.[s.stocks[0][1]] ?? 0.5);
       y = leverWorldValue(inputs, axis, u, blend).value;
     }
-    return { x: blend.gdppcGrowth, y };
-  }, [inputs, levers, axis]);
+    // Where the scenario sits on the income axis, tilt included, kept inside
+    // the frame so a tilt beyond the SSPs still shows which edge it is past.
+    const x = Math.max(
+      frame.xGrowthLo,
+      Math.min(frame.xGrowthHi, (1 + blend.gdppcGrowth) * (1 + (levers.gdppcTilt ?? 0)) - 1),
+    );
+    return { x, y };
+  }, [inputs, levers, axis, frame]);
 
   const star = { x: history.gdpGrowth, y: history.lever[axis] };
 

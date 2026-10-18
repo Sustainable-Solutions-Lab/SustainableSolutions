@@ -102,6 +102,15 @@ export interface ModelInputs {
 export interface Levers {
   /** Socioeconomic position, 0 = slowest-growth SSP, 1 = fastest. */
   sspU: number;
+  /**
+   * Departures from the chosen pathway's own drivers, as a rate added to
+   * annual growth: 0 leaves the pathway alone. World population and world
+   * income per person scale by exactly (1 + tilt)^years, because every region
+   * is scaled by the same factor — which is what lets a slider move in %/yr
+   * and be inverted in closed form. The regional spread is untouched.
+   */
+  popTilt?: number;
+  gdppcTilt?: number;
   /** Per-material intensity draws; omitted keys sit at their central value. */
   flowIntensityU: Partial<Record<FlowKey, number>>;
   stockIntensityU: Partial<Record<StockGroup, Partial<Record<SuperUse, number>>>>;
@@ -139,6 +148,8 @@ export function defaultLevers(inputs: ModelInputs): Levers {
   const p = (name: string) => inputs.mcParams[name]?.central ?? 0;
   return {
     sspU: 0.5,
+    popTilt: 0,
+    gdppcTilt: 0,
     flowIntensityU: {},
     stockIntensityU: {},
     recyclingFe: p('RECYCLING_RATE_FE'),
@@ -706,6 +717,17 @@ export function runModel(inputs: ModelInputs, levers: Levers): ModelRun {
       popI[i] = share * inputs.popIndex[ssp.lo][region][i] + (1 - share) * inputs.popIndex[ssp.hi][region][i];
       gdppcI[i] = share * inputs.gdppcIndex[ssp.lo][region][i] + (1 - share) * inputs.gdppcIndex[ssp.hi][region][i];
     }
+    // A tilt bends the whole index by a constant annual rate, every region by
+    // the same factor, so the world rate moves by exactly that much.
+    const popTilt = levers.popTilt ?? 0;
+    const gdppcTilt = levers.gdppcTilt ?? 0;
+    if (popTilt !== 0 || gdppcTilt !== 0) {
+      for (let i = 0; i < n; i++) {
+        const t = inputs.years[i] - base;
+        if (popTilt !== 0) popI[i] *= Math.pow(1 + popTilt, t);
+        if (gdppcTilt !== 0) gdppcI[i] *= Math.pow(1 + gdppcTilt, t);
+      }
+    }
     const popR = new Float64Array(n);
     const gdpR = new Float64Array(n);
     for (let i = 0; i < n; i++) {
@@ -1094,6 +1116,98 @@ export function sspPositions(inputs: ModelInputs): Record<string, number> {
   const out: Record<string, number> = {};
   for (const r of rank) out[r.scenario] = span === 0 ? 0.5 : (r.growth - rank[0].growth) / span;
   return out;
+}
+
+/**
+ * The world's population and income path, over the model's own years.
+ *
+ * Deliberately separate from worldGrowth() above, which measures from 2024
+ * because that is how the SSP database defines its pathways. This one measures
+ * over exactly the years the model's series cover, by exactly the arithmetic
+ * runModel uses, so that the three terms a reader sets on the sliders multiply
+ * to the material growth the figure shows — not approximately, exactly.
+ */
+export interface DriverPath {
+  pop: number;
+  gdppc: number;
+  pop0: number;
+  pop1: number;
+  gdppc0: number;
+  gdppc1: number;
+}
+
+function worldPath(
+  inputs: ModelInputs,
+  lo: string,
+  hi: string,
+  shareLo: number,
+  popTilt: number,
+  gdppcTilt: number,
+): DriverPath {
+  const n = inputs.years.length;
+  const pop = new Float64Array(n);
+  const gdp = new Float64Array(n);
+  for (const r of inputs.regions) {
+    const pop0 = inputs.pop2024[r];
+    const gdp0 = inputs.gdp2024[r];
+    for (let i = 0; i < n; i++) {
+      const t = inputs.years[i] - inputs.baseYear;
+      const pI =
+        (shareLo * inputs.popIndex[lo][r][i] + (1 - shareLo) * inputs.popIndex[hi][r][i]) *
+        Math.pow(1 + popTilt, t);
+      const yI =
+        (shareLo * inputs.gdppcIndex[lo][r][i] + (1 - shareLo) * inputs.gdppcIndex[hi][r][i]) *
+        Math.pow(1 + gdppcTilt, t);
+      pop[i] += pop0 * pI;
+      gdp[i] += gdp0 * pI * yI;
+    }
+  }
+  const yrs = inputs.years[n - 1] - inputs.years[0];
+  return {
+    pop: Math.pow(pop[n - 1] / pop[0], 1 / yrs) - 1,
+    gdppc: Math.pow((gdp[n - 1] / pop[n - 1]) / (gdp[0] / pop[0]), 1 / yrs) - 1,
+    pop0: pop[0],
+    pop1: pop[n - 1],
+    gdppc0: gdp[0] / pop[0],
+    gdppc1: gdp[n - 1] / pop[n - 1],
+  };
+}
+
+/** What each SSP's own pathway does to world population and world income. */
+export function sspDrivers(inputs: ModelInputs): Record<string, DriverPath> {
+  const out: Record<string, DriverPath> = {};
+  for (const s of inputs.sspSampled) out[s] = worldPath(inputs, s, s, 1, 0, 0);
+  return out;
+}
+
+/** World driver growth a lever set actually produces, tilts included. */
+export function driverGrowth(inputs: ModelInputs, levers: Levers): DriverPath {
+  const b = resolveSsp(inputs, levers.sspU);
+  return worldPath(inputs, b.lo, b.hi, b.shareLo, levers.popTilt ?? 0, levers.gdppcTilt ?? 0);
+}
+
+/** The tilt that moves a driver from the pathway's own rate to `target`. */
+export function tiltFor(pathwayRate: number, target: number): number {
+  return (1 + target) / (1 + pathwayRate) - 1;
+}
+
+/**
+ * Put every intensity rail on one draw.
+ *
+ * The four rails below the figure are the detail; this is the one knob that
+ * moves them together, so that "material per dollar of output" can be a single
+ * number someone sets in percent a year.
+ */
+export function setAllIntensity(l: Levers, u: number): void {
+  l.flowEndpoint = undefined;
+  l.stockEndpoint = undefined;
+  l.flowIntensityU = {};
+  l.stockIntensityU = {};
+  for (const lever of INTENSITY_LEVER_KEYS) {
+    const spec = INTENSITY_LEVERS[lever];
+    for (const k of spec.flows) l.flowIntensityU[k] = u;
+    for (const [g, su] of spec.stocks) (l.stockIntensityU[g] ??= {})[su] = u;
+  }
 }
 
 /**

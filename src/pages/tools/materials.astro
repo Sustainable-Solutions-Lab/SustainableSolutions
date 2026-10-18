@@ -105,6 +105,48 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
     border: 1px solid var(--rule); border-radius: 10px;
   }
 
+  /* The three driver sliders, side by side under the figure they move. */
+  .mat-tool .mat-drivers {
+    display: grid; gap: 4px 26px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    padding: 13px 15px 11px;
+    border: 1px solid var(--rule); border-radius: 10px;
+  }
+  .mat-tool .mat-identity {
+    grid-column: 1 / -1;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 7px;
+    margin: 8px 0 0; padding-top: 9px;
+    border-top: 1px solid var(--rule);
+    font: 400 12.5px/1.5 var(--font-mono); color: var(--ink);
+  }
+  .mat-tool .mat-identity b { font-weight: 600; }
+  .mat-tool .mat-identity .good { color: #1B7837; }
+  .mat-tool .mat-identity-past {
+    border-top: 0; padding-top: 0; margin-top: 1px;
+    font-size: 11.5px; color: var(--ink-3);
+  }
+  .mat-tool .mat-drivers-note {
+    grid-column: 1 / -1;
+    margin: 6px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--ink-2);
+  }
+  [data-theme="dark"] .mat-tool .mat-identity .good { color: #6FD08C; }
+
+  /* The advanced panel: closed by default, opens under the sliders it explains. */
+  .mat-tool .mat-advanced-row {
+    display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center;
+  }
+  .mat-tool .mat-advanced-toggle {
+    font: 500 11.5px var(--font-mono); color: var(--ink);
+    background: transparent; border: 1px solid var(--rule-strong); border-radius: 8px;
+    padding: 5px 11px; cursor: pointer; text-align: left;
+  }
+  .mat-tool .mat-advanced-toggle[aria-expanded="true"] { color: var(--accent); }
+  .mat-tool .mat-advanced-body {
+    margin-top: 13px; padding: 15px 15px 6px;
+    border: 1px solid var(--rule); border-radius: 10px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+
   /* Columns rather than a grid: the groups are different heights, and a grid
      leaves a hole under the short one. */
   .mat-tool .mat-controls { columns: 260px 3; column-gap: 26px; }

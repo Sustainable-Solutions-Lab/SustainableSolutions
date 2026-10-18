@@ -11,8 +11,9 @@
  * has been set rather than for one precomputed case.
  */
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { followTouches, type Tick } from '../magnets/Slider';
-import ProjectionChart, { type Band } from './ProjectionChart';
+import { followTouches } from '../magnets/Slider';
+import ProjectionChart, { spectral, type Band, type StackSeries } from './ProjectionChart';
+import Drivers, { type DriverNow, type DriverPast } from './Drivers';
 import ContourPanel, { CONTOUR_AXES, type ContourAxis, type ScatterData } from './ContourPanel';
 import Controls from './Controls';
 import { LeverEffects, RecyclingCeiling, leverVerdict, useLeverEffects } from './LeverEffects';
@@ -24,6 +25,7 @@ import {
   INTENSITY_LEVER_KEYS,
   customLeversFromSsp,
   defaultLevers,
+  driverGrowth,
   leverDraw,
   leverSspValue,
   leverWorldValue,
@@ -157,6 +159,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const [leaf, setLeaf] = useState<string | null>(initial?.leaf ?? null);
   const [measure, setMeasure] = useState<Measure>(initial?.measure ?? 'consumption');
   const [axis, setAxis] = useState<ContourAxis>(initial?.axis ?? 'mineralStock');
+  const [advanced, setAdvanced] = useState(false);
   const page = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -191,62 +194,115 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const activeLeaf = leaf && leaves.includes(leaf) ? leaf : null;
 
   // ── Series ────────────────────────────────────────────────────────────────
-  // `past` rather than `history`: the latter is window.history in this scope.
-  const past = useMemo(() => {
+  // The figure is stacked, so everything below is per component rather than
+  // per total: one component for each material group, or for each material
+  // inside the chosen group. `past` rather than `history`, because the latter
+  // is window.history in this scope.
+  interface Comp { key: string; label: string; group: GroupKey; leaf: string | null }
+  const comps = useMemo<Comp[]>(() => {
+    if (group === 'total') {
+      return GROUP_KEYS.map((g) => ({ key: g, label: GROUP_LABEL[g], group: g, leaf: null }));
+    }
+    if (activeLeaf) return [{ key: activeLeaf, label: activeLeaf, group, leaf: activeLeaf }];
+    if (leaves.length) return leaves.map((l) => ({ key: l, label: l, group, leaf: l }));
+    return [{ key: group, label: GROUP_LABEL[group], group, leaf: null }];
+  }, [group, activeLeaf, leaves.join('|')]);
+
+  const stack = useMemo(() => {
     const members = new Map(meta.groups.map((g) => [g.id, g.members]));
     const source = place === 'World' ? world.materials : regions.regions?.[place];
     const years = world.years;
-    const mass = years.map(() => 0);
-    let any = false;
-    const add = (key: string) => {
-      const s = source?.[key];
-      if (!s) return;
-      any = true;
-      for (let i = 0; i < years.length; i++) mass[i] += s[i] ?? 0;
-    };
-    for (const g of groups) {
-      const all = members.get(HISTORY_GROUP[g]) ?? [];
-      if (!activeLeaf) all.forEach(add);
-      else if (activeLeaf.startsWith('Other')) {
-        const named = new Set(GROUP_LEAVES[g].filter((l) => !l.startsWith('Other')));
+    const hPop = gdpPop.population[place];
+    const hGdp = gdpPop.gdp[place];
+    const rPop = place === 'World' ? run.population : run.popByRegion[place];
+    const rGdp = place === 'World' ? run.gdp : run.gdpByRegion[place];
+
+    /** Measured mass for one component, or nulls where the data has none. */
+    const pastMass = (c: Comp): (number | null)[] => {
+      const all = members.get(HISTORY_GROUP[c.group]) ?? [];
+      const mass = years.map(() => 0);
+      let any = false;
+      const add = (key: string) => {
+        const t = source?.[key];
+        if (!t) return;
+        any = true;
+        for (let i = 0; i < years.length; i++) mass[i] += t[i] ?? 0;
+      };
+      if (!c.leaf) all.forEach(add);
+      else if (c.leaf.startsWith('Other')) {
+        // "Other X" is the model's bucket for whatever the data names separately.
+        const named = new Set(GROUP_LEAVES[c.group].filter((l) => !l.startsWith('Other')));
         all.filter((m) => !named.has(m)).forEach(add);
-      } else add(activeLeaf);
-    }
-    if (!any) return { years, values: years.map(() => null as number | null) };
-    const pop = gdpPop.population[place];
-    const gdp = gdpPop.gdp[place];
-    const values = years.map((_, i) =>
-      measure === 'consumption' ? mass[i]
-        : measure === 'perCapita' ? (pop?.[i] ? (mass[i] * 1e6) / pop[i] : null)
-        : (gdp?.[i] ? (mass[i] * 1e9) / gdp[i] : null),
+      } else add(c.leaf);
+      return any ? mass : years.map(() => null);
+    };
+
+    const futureMass = (c: Comp): Float64Array => {
+      const n = run.years.length;
+      const detail = place === 'World'
+        ? run.primary.byGroupDetail[c.group]
+        : run.primary.byRegionGroupDetail[place]?.[c.group];
+      const whole = place === 'World'
+        ? run.primary.byGroup[c.group]
+        : run.primary.byRegionGroup[place]?.[c.group];
+      const got = c.leaf ? detail?.[c.leaf] : whole;
+      return got ?? new Float64Array(n);
+    };
+
+    // Per person and per dollar are linear in mass, so a stack stays a stack.
+    const asMeasure = (v: number | null, i: number, measured: boolean): number | null => {
+      if (v == null) return null;
+      if (measure === 'consumption') return v;
+      if (measure === 'perCapita') {
+        const p = measured ? hPop?.[i] : rPop?.[i];
+        return p ? (v * 1e6) / p : null;
+      }
+      const g = measured ? hGdp?.[i] : rGdp?.[i];
+      return g ? (v * 1e9) / g : null;
+    };
+
+    const raw = comps.map((c) => {
+      const pm = pastMass(c);
+      const fm = futureMass(c);
+      return {
+        c,
+        past: pm.map((v, i) => asMeasure(v, i, true)),
+        future: Array.from(fm, (v, i) => asMeasure(v, i, false) ?? 0),
+        last: pm[pm.length - 1] ?? 0,
+      };
+    });
+
+    // Largest at the bottom, "other" categories on top, and a spectral ramp
+    // from bottom to top so adjacent bands never share a colour.
+    const ordered = [...raw].sort((a, b) => {
+      const ao = a.c.label.startsWith('Other') ? 1 : 0;
+      const bo = b.c.label.startsWith('Other') ? 1 : 0;
+      if (ao !== bo) return ao - bo;
+      return (b.last ?? 0) - (a.last ?? 0);
+    });
+    const series: StackSeries[] = ordered.map((r, k) => ({
+      key: r.c.key,
+      label: r.c.label,
+      color: spectral(k, ordered.length),
+      past: r.past,
+      future: r.future,
+    }));
+    const totalFuture = run.years.map((_, i) => series.reduce((a, t) => a + t.future[i], 0));
+    const totalPast = years.map((_, i) =>
+      series.some((t) => t.past[i] == null) ? null : series.reduce((a, t) => a + (t.past[i] as number), 0),
     );
-    return { years, values };
-  }, [meta, world, regions, gdpPop, place, group, activeLeaf, measure]);
+    return { years, series, totalFuture, totalPast };
+  }, [meta, world, regions, gdpPop, run, place, comps, measure]);
 
-  const projection = useMemo(() => {
-    const n = run.years.length;
-    const mass = new Float64Array(n);
-    for (const g of groups) {
-      const detail = place === 'World' ? run.primary.byGroupDetail[g] : run.primary.byRegionGroupDetail[place]?.[g];
-      const whole = place === 'World' ? run.primary.byGroup[g] : run.primary.byRegionGroup[place]?.[g];
-      const s = activeLeaf ? detail?.[activeLeaf] : whole;
-      if (s) for (let i = 0; i < n; i++) mass[i] += s[i];
-    }
-    const pop = place === 'World' ? run.population : run.popByRegion[place];
-    const gdp = place === 'World' ? run.gdp : run.gdpByRegion[place];
-    const out = new Array<number>(n);
-    for (let i = 0; i < n; i++) {
-      out[i] = measure === 'consumption' ? mass[i]
-        : measure === 'perCapita' ? (mass[i] * 1e6) / pop[i]
-        : (mass[i] * 1e9) / gdp[i];
-    }
-    return out;
-  }, [run, place, group, activeLeaf, measure]);
-
-  // Bands exist per group, not per leaf: a leaf shows its own line with no band.
+  // Bands exist per group, not per leaf: a leaf shows its own areas with none.
   const band = activeLeaf ? null : envelope.bands[place]?.[group]?.[measure] ?? null;
 
-  const peak = Math.max(...projection, ...(band ? band.max : []), ...past.values.map((v) => v ?? 0));
+  const projection = stack.totalFuture;
+  const peak = Math.max(
+    ...projection,
+    ...(band ? band.max : []),
+    ...stack.totalPast.map((v) => v ?? 0),
+  );
   const unit = measure === 'consumption' ? (peak >= 2000 ? 'Gt per year' : 'Mt per year')
     : measure === 'perCapita' ? 't per person per year'
     : 'kg per $ of GDP';
@@ -254,6 +310,14 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const top = peak * scale;
   const digits = top >= 100 ? 0 : top >= 10 ? 1 : top >= 1 ? 2 : 3;
   const format = (x: number) => x.toFixed(digits);
+  const scaled = useMemo<StackSeries[]>(
+    () => (scale === 1 ? stack.series : stack.series.map((t) => ({
+      ...t,
+      past: t.past.map((v) => (v == null ? null : v * scale)),
+      future: t.future.map((v) => v * scale),
+    }))),
+    [stack, scale],
+  );
 
   const first = projection[0];
   const last = projection[projection.length - 1];
@@ -263,6 +327,58 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const percentile = envelope.worldGrowth.filter((g) => g < worldGrowth).length / envelope.worldGrowth.length;
 
   const sliceName = group === 'total' ? 'all four groups' : (activeLeaf ?? GROUP_LABEL[group]).toLowerCase();
+
+  // ── The three terms the first figure answers to ───────────────────────────
+  // Measured over exactly the years the model's series cover, so that the
+  // product of the three is the fourth to the last decimal place.
+  const kayaNow = useMemo<DriverNow>(() => {
+    const n = run.years.length;
+    const yrs = run.years[n - 1] - run.years[0];
+    const g = (a: number, b: number) => Math.pow(b / a, 1 / yrs) - 1;
+    const d = driverGrowth(inputs, shown);
+    return {
+      pop: d.pop,
+      gdppc: d.gdppc,
+      intensity: g(run.primary.total[0] / run.gdp[0], run.primary.total[n - 1] / run.gdp[n - 1]),
+      material: g(run.primary.total[0], run.primary.total[n - 1]),
+      pop0: d.pop0,
+      pop1: d.pop1,
+      gdppc0: d.gdppc0,
+      gdppc1: d.gdppc1,
+    };
+  }, [inputs, shown, run]);
+
+  /** The same four terms as measured over 1970–2024, for the row underneath. */
+  const kayaPast = useMemo<DriverPast>(() => {
+    const ids = new Set(Object.values(HISTORY_GROUP));
+    const years = world.years;
+    const i0 = years.indexOf(1970);
+    const i1 = years.indexOf(2024);
+    const gy = gdpPop.years;
+    const j0 = gy.indexOf(1970);
+    const j1 = gy.indexOf(2024);
+    const gdp = gdpPop.gdp.World;
+    const pop = gdpPop.population.World;
+    if (i0 < 0 || i1 < 0 || j0 < 0 || j1 < 0 || !gdp || !pop) {
+      return { pop: 0, gdppc: 0, intensity: 0, material: 0 };
+    }
+    const mass = (i: number) => {
+      let acc = 0;
+      for (const grp of meta.groups) {
+        if (!ids.has(grp.id)) continue;
+        for (const m of grp.members) acc += world.materials?.[m]?.[i] ?? 0;
+      }
+      return acc;
+    };
+    const k = years[i1] - years[i0];
+    const g = (a: number, b: number) => Math.pow(b / a, 1 / k) - 1;
+    return {
+      pop: g(pop[j0], pop[j1]),
+      gdppc: g(gdp[j0] / pop[j0], gdp[j1] / pop[j1]),
+      intensity: g(mass(i0) / gdp[j0], mass(i1) / gdp[j1]),
+      material: g(mass(i0), mass(i1)),
+    };
+  }, [meta, world, gdpPop]);
 
   // Recent conditions, for the contour's star: 2019–2024 income growth and
   // today's level of each lever.
@@ -288,13 +404,6 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     lever.mineralDowncycling = den > 0 ? downNum / den : 0;
     return { gdpGrowth, lever };
   }, [gdpPop, inputs, blend]);
-
-  const sspTicks: Tick[] = useMemo(() => {
-    const entries = Object.entries(sspAt).sort((a, b) => a[1] - b[1]);
-    return entries.map(([ssp, at], i) => ({
-      at, label: ssp, low: i > 0 && at - entries[i - 1][1] < 0.1,
-    }));
-  }, [sspAt]);
 
   const intensityDraw = (lever: IntensityLever): number => {
     if (scenario.kind === 'ssp') {
@@ -376,10 +485,9 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           </h3>
           <div style={{ height: 'clamp(300px, 46vh, 460px)' }}>
             <ProjectionChart
-              historyYears={past.years}
-              history={past.values.map((v) => (v == null ? null : v * scale))}
+              historyYears={stack.years}
               projectionYears={run.years}
-              scenario={projection.map((v) => v * scale)}
+              series={scaled}
               band={band ? {
                 p05: band.p05.map((v) => v * scale), p25: band.p25.map((v) => v * scale),
                 p50: band.p50.map((v) => v * scale), p75: band.p75.map((v) => v * scale),
@@ -387,61 +495,78 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
                 max: band.max.map((v) => v * scale),
               } : null}
               unit={unit}
-              scenarioLabel={scenario.kind === 'ssp' ? `${scenario.ssp} as the paper sets it` : 'Your assumptions'}
               format={format}
             />
           </div>
           <p style={caption}>
-            Measured domestic material consumption to 2024 (UNEP IRP), then the model from 2025.
+            Measured domestic material consumption to 2024 (UNEP IRP) at full strength, then the
+            model from 2025 in the same colours, lightened.
             {ratio != null && (
               <> Your scenario ends {ratio.toFixed(2)}× its 2025 level, {change != null && `${change >= 0 ? '+' : ''}${(100 * change).toFixed(2)}% a year`}.</>
             )}
+            {' '}The first years are not smooth, and should not be. Stock-heavy materials carry
+            2024’s own building rate for three years before the modelled path takes over, and the
+            intensity ramp leaves 2024 at the slope it was already on, steepens through the 2030s
+            and flattens again at the target year ({shown.targetYear}). Consumption follows the
+            slope of those paths rather than their level, so a bend in the assumption shows up
+            here as a dip.
             {(group === 'total' || group === 'metal_ores') && (
               <> Metal ores step up at the seam: history reports ore as consumed, the projection
                 reports the ore that has to be mined at the modelled grade.</>
             )}
+            {band && <> Dashed lines are the paper’s own 1,000 runs — median, 5th and 95th — for this total.</>}
             {activeLeaf && <> No band is drawn for a single material: the paper’s runs are summarised by group.</>}
-            {scenario.kind === 'ssp' && (
-              <> An SSP sets every assumption to that narrative at once, which the band’s runs almost
-                never do, so an SSP line can sit outside the band.</>
-            )}
           </p>
-        </section>
 
-        {/* ── 2 ─────────────────────────────────────────────────────────── */}
-        <section aria-label="The assumptions" style={sectionRule}>
-          <p style={kicker}>The assumptions</p>
-          <h3 style={figTitle}>Set them yourself</h3>
-          <div className="mat-verdict">
-            <Readout label={`${cap(sliceName)}${place === 'World' ? '' : `, ${place}`} in 2060`}
-              value={ratio == null ? '—' : `${ratio.toFixed(2)}×`} sub="2025" />
-            <Readout label="World material growth" value={`${worldGrowth >= 0 ? '+' : ''}${(100 * worldGrowth).toFixed(2)}%`} sub="per year" good={worldGrowth < 0} />
-            <Readout label="World GDP per person" value={`+${(100 * blend.gdppcGrowth).toFixed(2)}%`} sub="per year" />
-            <Readout label="World population" value={`${blend.popGrowth >= 0 ? '+' : ''}${(100 * blend.popGrowth).toFixed(2)}%`} sub="per year" />
-          </div>
+          <Drivers inputs={inputs} levers={shown} now={kayaNow} past={kayaPast}
+            warming={warming} onChange={edit} />
+
           <p style={caption}>
             {worldGrowth > 0 ? (
               <>World use of all four groups <b>still grows, at +{(100 * worldGrowth).toFixed(2)}% a year</b> —{' '}
                 {percentile >= 0.5 ? 'faster' : 'slower'} than{' '}
                 {Math.round(100 * (percentile >= 0.5 ? percentile : 1 - percentile))}% of the paper’s{' '}
-                {envelope.runs.toLocaleString()} runs.</>
+                {envelope.runs.toLocaleString()} runs. The three sliders are the whole of it, and they
+                always describe the world and all four groups together, whatever the chips above
+                are showing.</>
             ) : (
               <>World use of all four groups <b>falls</b>, at {(100 * worldGrowth).toFixed(2)}% a year. Only{' '}
                 {Math.round(100 * (1 - envelope.growthShareAbove))}% of the paper’s{' '}
                 {envelope.runs.toLocaleString()} runs manage that.</>
             )}
           </p>
-          <Controls inputs={inputs} levers={shown} blend={blend} sspTicks={sspTicks}
-            intensityDraw={intensityDraw} warming={warming} onChange={edit} />
-          <div>
-            <button type="button" className="mat-reset-all"
-              onClick={() => setScenario({ kind: 'custom', levers: defaultLevers(inputs) })}>
-              Reset everything to the paper’s central values
-            </button>
+
+          {/* The advanced panel, the way the magnet explorer opens its facility
+              detail under the demand slider: the summary slider stays in place
+              and the things that make it up appear underneath. */}
+          <div className="mat-advanced">
+            <div className="mat-advanced-row">
+              <button type="button" className="mat-advanced-toggle" aria-expanded={advanced}
+                onClick={() => setAdvanced((o) => !o)}>
+                <span aria-hidden="true">{advanced ? '▾' : '▸'}</span>{' '}
+                {advanced ? 'Hide the assumptions behind intensity' : 'Set efficiency, recycling, ore grade and lifetimes separately'}
+              </button>
+              <button type="button" className="mat-reset-all"
+                onClick={() => setScenario({ kind: 'custom', levers: defaultLevers(inputs) })}>
+                Reset to the paper’s central values
+              </button>
+            </div>
+            {advanced && (
+              <div className="mat-advanced-body">
+                <p style={caption}>
+                  The intensity slider is a summary of everything here. Material efficiency sets
+                  the target directly; recycling, ore grade and lifetimes reach it from the other
+                  side, by changing how much ore a tonne of material takes and how often it has to
+                  be replaced. Move any of them and the intensity slider above moves with it.
+                </p>
+                <Controls inputs={inputs} levers={shown} blend={blend}
+                  intensityDraw={intensityDraw} onChange={edit} />
+              </div>
+            )}
           </div>
         </section>
 
-        {/* ── 3 ─────────────────────────────────────────────────────────── */}
+        {/* ── 2 ─────────────────────────────────────────────────────────── */}
         <section aria-label="What each assumption is worth" style={sectionRule}>
           <p style={kicker}>Efficiency against circularity</p>
           <h3 style={figTitle}>What each assumption is actually worth</h3>
@@ -455,7 +580,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           </p>
         </section>
 
-        {/* ── 4 ─────────────────────────────────────────────────────────── */}
+        {/* ── 3 ─────────────────────────────────────────────────────────── */}
         <section aria-label="Where consumption would fall" style={sectionRule}>
           <p style={kicker}>Where the line is</p>
           <h3 style={figTitle}>What it would take for a material to stop growing</h3>
@@ -472,7 +597,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           </p>
         </section>
 
-        {/* ── 5 ─────────────────────────────────────────────────────────── */}
+        {/* ── 4 ─────────────────────────────────────────────────────────── */}
         <section aria-label="The recycling ceiling" style={sectionRule}>
           <p style={kicker}>The ceiling</p>
           <h3 style={figTitle}>Why recycling runs out of road before the problem does</h3>
@@ -540,17 +665,6 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-function Readout({ label, value, sub, good }: { label: string; value: string; sub: string; good?: boolean }) {
-  return (
-    <div>
-      <div style={{ fontSize: 11.5, color: 'var(--ink-2)', lineHeight: 1.3 }}>{label}</div>
-      <div style={{ font: '600 17px var(--font-mono)', color: good ? '#1B7837' : 'var(--ink)' }}>
-        {value} <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--ink-3)' }}>{sub}</span>
-      </div>
-    </div>
-  );
-}
 
 function Chips({ label, value, options, onChange }: {
   label: string; value: string; options: { id: string; label: string }[]; onChange: (id: string) => void;

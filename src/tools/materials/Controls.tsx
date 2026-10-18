@@ -1,5 +1,11 @@
 /**
- * The assumptions, laid out so each one says what it is and where it sits.
+ * The advanced panel: every assumption the three driver sliders summarise.
+ *
+ * It slides open under the first figure, the way the magnet explorer's facility
+ * detail opens under its demand slider. The three sliders above are the whole
+ * model at the level of the Kaya identity; everything here is one of the ways
+ * the intensity term is actually made — by material, by end use, by what comes
+ * back at end of life, by how long things last.
  *
  * The first version put these in a narrow rail as bare knobs. A knob with a
  * number on it is not an assumption anyone can judge, so every control here
@@ -122,18 +128,14 @@ export default function Controls({
   inputs,
   levers,
   blend,
-  sspTicks,
   intensityDraw,
-  warming,
   onChange,
 }: {
   inputs: ModelInputs;
   levers: Levers;
   blend: SspBlend;
-  sspTicks: Tick[];
   /** The draw each intensity rail should show, scenario-aware. */
   intensityDraw: (lever: IntensityLever) => number;
-  warming: Record<string, { min: number; median: number; max: number }> | null;
   onChange: (change: (l: Levers) => void) => void;
 }) {
   const d = defaultLevers(inputs);
@@ -147,47 +149,8 @@ export default function Controls({
       l.stockIntensityU = {};
     });
 
-  const warmingNote = () => {
-    if (!warming) return null;
-    const parts = inputs.sspSampled
-      .map((s) => (warming[s] ? `${s} ${warming[s].min.toFixed(1)}–${warming[s].max.toFixed(1)}°C` : null))
-      .filter(Boolean);
-    return parts.length ? parts.join(' · ') : null;
-  };
-
   return (
     <div className="mat-controls">
-      <Group
-        title="Growth and incomes"
-        lede="How rich the world gets, and how many people share it. One control moves both, because the SSPs move them together."
-        onReset={() => onChange((l) => (l.sspU = d.sspU))}
-      >
-        <Slider
-          label="Population and income pathway"
-          value={levers.sspU}
-          min={0}
-          max={1}
-          step={0.005}
-          onChange={(v) => onChange((l) => (l.sspU = v))}
-          fmt={() => `${(100 * blend.gdppcGrowth).toFixed(2)}%/yr`}
-          aside="GDP per person"
-          ticks={sspTicks}
-          desc="Slides between the slowest- and fastest-growing SSP, blending the two it falls between so world income per person grows at the rate shown. Population follows the same blend."
-          note={
-            <>
-              World population {blend.popGrowth >= 0 ? 'grows' : 'shrinks'}{' '}
-              {(100 * Math.abs(blend.popGrowth)).toFixed(2)}% a year here.
-              {warmingNote() && (
-                <>
-                  {' '}Warming in 2100 across each SSP’s scenarios: {warmingNote()}. The SSP sets the
-                  economy, not the energy policy, so each spans a wide range.
-                </>
-              )}
-            </>
-          }
-        />
-      </Group>
-
       <Group
         title="Material efficiency"
         lede="How much material a dollar of output needs. Flows are consumed outright; stocks stay in use and have to be replaced as they retire."

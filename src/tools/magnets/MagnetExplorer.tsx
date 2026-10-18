@@ -270,7 +270,7 @@ export default function MagnetExplorer() {
   // at any restriction below 85%, so the actor panel opened empty and the
   // tool's own argument, that what is optimal and what gets funded differ, had
   // nothing to show. A half US-made mandate at the reference restriction is
-  // the smallest honest change: the planner then asks for one magnet plant (MP
+  // the smallest correct change: the planner then asks for one magnet plant (MP
   // Fort Worth's expansion) which does not clear at the competitive spread, so
   // the first screen shows the gap and what closes it. The do-nothing deltas
   // still read against make=0, so nothing is hidden by starting here.

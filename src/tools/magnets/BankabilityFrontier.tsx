@@ -2,7 +2,7 @@
  * Where does US capacity stop being bankable?
  *
  * A single verdict at one calibration invites the reader to believe the
- * calibration. The honest object is the FRONTIER: sweep the two assumptions the
+ * calibration. The object worth reporting is the FRONTIER: sweep the two assumptions the
  * US conclusion actually turns on and show the line they cross.
  *
  *   x  the premium — what a buyer pays extra per kilogram of a plant's product

@@ -40,7 +40,7 @@ UX/grid-budget call from you. Details below.
    allied-import HHI is now computed per stage from real + announced project capacities. Reality is
    far more concentrated than the fudge assumed: **allied alloy ≈ Japan-only (HHI 1.0), magnet ≈ 0.79,
    separation ≈ 0.63** — so the old TRI *understated* allied concentration. This raises allied-import
-   risk honestly.
+   risk accurately.
 
 6. **Real-world projects panel.** New selectable overlay (all / none / realistic-2026 presets,
    per-project scale, grouped by stage). The active **allied** set drives the country HHI live.

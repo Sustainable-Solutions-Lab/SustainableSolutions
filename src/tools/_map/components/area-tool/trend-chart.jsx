@@ -11,7 +11,7 @@
  *                         × nat(country, source, year) / nat(country, source, refYear)
  *
  * This is exact when a country is entirely inside the circle and a
- * proportional approximation otherwise — honest for the panel's purpose and
+ * proportional approximation otherwise — adequate for the panel's purpose and
  * cheap enough to run on every drag. Data: config.areaTool.trend.url, a JSON
  * of { years: number[], countries: { [id]: { [prop]: number[] } } } produced
  * by the analysis repo (values in kt CO2e).

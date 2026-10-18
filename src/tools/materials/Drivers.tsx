@@ -5,8 +5,8 @@
  *
  *     M  =  P  x  GDP/P  x  M/GDP
  *
- * so there are exactly three ways for it to fall. The headline is M; the
- * three sliders are the terms, for whatever material and place the menus at
+ * so there are exactly three ways for it to fall. The headline pinned at the
+ * top of the page is M; the three sliders are the terms, for whatever material and place the menus at
  * the top have put in focus. Measured over the model's own years they
  * multiply to the headline exactly.
  *
@@ -142,7 +142,6 @@ export default function Drivers({
   run,
   focus,
   past,
-  materialRange,
   advanced,
   onAdvanced,
   onReset,
@@ -155,8 +154,6 @@ export default function Drivers({
   run: ModelRun;
   focus: Focus;
   past: DriverPast | null;
-  /** The spread of the focus's growth across the paper's runs, to colour the result on. */
-  materialRange: [number, number] | null;
   advanced: boolean;
   onAdvanced: () => void;
   onReset: () => void;
@@ -260,14 +257,9 @@ export default function Drivers({
   // follows population and income alone, and its rail has nowhere to go.
   const intFixed = intHi - intLo < 1e-5;
 
-  const [matLo, matHi] = materialRange ?? [
-    (1 + now.pop) * (1 + now.gdppc) * (1 + intLo) - 1,
-    (1 + now.pop) * (1 + now.gdppc) * (1 + intHi) - 1,
-  ];
   const popColor = heat(now.pop, popLo, popHi);
   const gdppcColor = heat(now.gdppc, gdppcLo, gdppcHi);
   const intColor = intFixed ? 'var(--ink)' : heat(now.intensity, intLo, intHi);
-  const matColor = heat(now.material, matLo, matHi);
   const intensityLevel = `${fmtPerDollar(now.intensity1)} per $ in 2060`;
   const intensityLabel = focus.group === 'total' ? 'Material intensity' : `${focus.name} intensity`;
 
@@ -281,8 +273,6 @@ export default function Drivers({
             {' · '}<button type="button" className="mat-reset-link" onClick={onReset}>reset all</button>
           </p>
         </div>
-        <Readout size="lg" color={matColor} main={pct(now.material)} unit="/yr"
-          level={`${fmtMass(now.material1)} in 2060`} />
       </div>
 
       <Slider

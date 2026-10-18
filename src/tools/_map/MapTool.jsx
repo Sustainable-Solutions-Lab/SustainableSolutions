@@ -396,7 +396,7 @@ export default function MapTool({ projectId = 'fuel-treatment', companion = null
     // nobody asked for, and one that does not settle should show it while
     // there is still something to wait through. Tile decode and upload
     // happen off the blocked-main-thread path, so `idle` is the only
-    // honest signal that the new map is actually on screen.
+    // reliable signal that the new map is actually on screen.
     let idle = false, shown = false, minElapsed = false
     let minTimer = 0
     const clear = () => setMapBusy(false)

@@ -100,6 +100,11 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
 
   /* Dropdowns for material and place. Custom rather than <select> because the
      material menu carries the figure's colours, which iOS will not draw. */
+  /* The headline, pinned in the sticky bar so it stays in view down the page. */
+  .mat-tool .mat-pin { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .mat-tool .mat-pin-label { font: 500 10.5px/1.3 var(--font-mono); color: var(--ink-3); text-align: right; max-width: 30ch; }
+  @media (max-width: 640px) { .mat-tool .mat-pin-label { display: none; } }
+
   .mat-tool .mat-pick { position: relative; display: flex; align-items: center; gap: 6px; }
   .mat-tool .mat-pick-label {
     font: 500 10px var(--font-mono); color: var(--ink-3);

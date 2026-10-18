@@ -27,7 +27,7 @@ const HORIZON = 10;
  *  the cell carries. The precompute emits recycled flows at two snapshot years
  *  (2030 and 2035), not per year, so the trajectory is approximated: held at
  *  the 2030 rate through 2030, then linear to 2035. Until the precompute emits
- *  the per-year series this is the honest shape of what the grid knows. */
+ *  the per-year series this is the true shape of what the grid knows. */
 export function collectedKtNPV(sc: Scenario, region?: string): number {
   const by = sc.flows_by_year ?? {};
   const tot = (yr: string) => (by[yr]?.recycled ?? [])

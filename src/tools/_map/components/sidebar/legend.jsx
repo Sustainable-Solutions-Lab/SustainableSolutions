@@ -83,7 +83,7 @@ function ContinuousLegend({ variable, allValues = [], colorRange = null, isDark 
   let effectiveDomain = variable.domain
   // The range the cells are actually painted with wins: a legend that
   // disagrees with the ramp beside it is worse than no legend. Difference
-  // variables have no value sample at all, so this is the only honest
+  // variables have no value sample at all, so this is the only accurate
   // source for them.
   if (colorRange && (colorRange.maxPosDev > 0 || colorRange.maxNegDev > 0)) {
     const z = variable.domain?.zero ?? 0
@@ -196,7 +196,7 @@ function MobileContinuousLegend({ variable, allValues = [], colorRange = null, i
   let effectiveDomain = variable.domain
   // The range the cells are actually painted with wins: a legend that
   // disagrees with the ramp beside it is worse than no legend. Difference
-  // variables have no value sample at all, so this is the only honest
+  // variables have no value sample at all, so this is the only accurate
   // source for them.
   if (colorRange && (colorRange.maxPosDev > 0 || colorRange.maxNegDev > 0)) {
     const z = variable.domain?.zero ?? 0

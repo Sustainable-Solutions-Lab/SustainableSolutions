@@ -430,7 +430,7 @@ export default function DemandCeilingsTool() {
               </p>
             </div>
             <div>
-              <h3 style={{ ...mono11, fontWeight: 500, margin: '0 0 6px' }}>Honest caveats</h3>
+              <h3 style={{ ...mono11, fontWeight: 500, margin: '0 0 6px' }}>Caveats</h3>
               <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: 0, lineHeight: 1.55 }}>
                 One economy-wide model: total employment is fixed, so industry changes are shifts in
                 shares of jobs, not unemployment. Elasticities are measured 1959–2025 and

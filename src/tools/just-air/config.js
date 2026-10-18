@@ -215,7 +215,7 @@ const config = {
     },
     // Mortality difference: sequential MagmaR to match the scenario maps.
     // The high − low difference is generally positive, so a sequential
-    // (rather than diverging) ramp reads more clearly than blue/red anchors.
+    // (rather than diverging) ramp reads better than blue/red anchors.
     {
       id: 'mort_diff',
       label: 'Δ Mortality (High − Low)',

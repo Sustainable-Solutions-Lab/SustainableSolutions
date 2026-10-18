@@ -14,11 +14,11 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEv
 import { followTouches } from '../magnets/Slider';
 import ProjectionChart, { spectral, type Band, type StackSeries } from './ProjectionChart';
 import Methods from './Methods';
-import Drivers, { PAST_FROM, PAST_TO, type DriverPast } from './Drivers';
+import Drivers, { PAST_FROM, PAST_TO, Readout, heat, measureNow, type DriverPast } from './Drivers';
 import ContourPanel, { CONTOUR_AXES, axesFor, type ContourAxis, type ScatterData } from './ContourPanel';
 import Controls from './Controls';
 import { LeverEffects, RecyclingCeiling, leverHeadline, useCeiling, useLeverEffects } from './LeverEffects';
-import { focusPhrase, makeFocus } from './focus';
+import { fmtMass, focusPhrase, makeFocus } from './focus';
 import {
   GROUP_KEYS,
   GROUP_LABEL,
@@ -394,15 +394,20 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     };
   }, [world, gdpPop, place, comps, pastMass]);
 
-  /** The spread of the focus's growth across the paper's runs, to colour the headline on. */
-  const materialRange = useMemo<[number, number] | null>(() => {
-    const b = activeLeaf ? null : envelope.bands[place]?.[group]?.consumption;
-    if (!b) return null;
-    const n = b.p50.length;
-    const yrs = envelope.years[n - 1] - envelope.years[0];
+  /**
+   * The headline, pinned to the top of the page: growth of the focus to 2060,
+   * coloured against the spread of the paper's runs for it (its group's
+   * spread, for a single material, which the runs are not summarised by).
+   */
+  const headline = useMemo(() => {
+    const now = measureNow(focus, run);
+    const b = envelope.bands[place]?.[group]?.consumption;
+    const n = b?.p50.length ?? 0;
+    const yrs = n ? envelope.years[n - 1] - envelope.years[0] : 1;
     const g = (a: number, z: number) => (a > 0 && z > 0 ? Math.pow(z / a, 1 / yrs) - 1 : 0);
-    return [g(b.p50[0], b.min[n - 1]), g(b.p50[0], b.max[n - 1])];
-  }, [envelope, place, group, activeLeaf]);
+    const [lo, hi] = b ? [g(b.p50[0], b.min[n - 1]), g(b.p50[0], b.max[n - 1])] : [-0.02, 0.04];
+    return { rate: now.material, mass: now.material1, color: heat(now.material, lo, hi) };
+  }, [focus, run, envelope, place, group]);
 
   // Recent conditions, for the contour's star: 2019–2024 income growth and
   // today's level of each lever.
@@ -450,12 +455,10 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
             Will material use keep growing?
           </h2>
           <p style={{ margin: 0, fontSize: 14.5, color: 'var(--ink-2)', maxWidth: '72ch', lineHeight: 1.55 }}>
-            The world used about 110 billion tonnes of material last year, three times what it used
+            The world used about 110 billion tonnes of material in 2024, three times what it used
             in 1970. Efficiency and circularity are the usual answers to that. This tool runs the
-            model behind Busch et al. in your browser so you can set those answers as high as you
-            like and watch what happens. In the paper’s{' '}
-            {envelope.runs.toLocaleString()} runs, <b>{Math.round(envelope.runs * envelope.growthShareAbove).toLocaleString()} still grow</b>;
-            the rest of this page is about why, and what it would take to be one of the other six.
+            model behind Busch et al. in your browser so you can explore what it would take to
+            reduce future demands for different materials in different regions.
           </p>
         </div>
 
@@ -479,9 +482,12 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           <Picker label="Where" value={place}
             options={[{ id: 'World', label: 'World' }, ...meta.regions.map((r) => ({ id: r, label: r }))]}
             onChange={setPlace} />
-          <Chips label="As" value={measure}
-            options={(Object.keys(MEASURE_LABEL) as Measure[]).map((m) => ({ id: m, label: MEASURE_LABEL[m] }))}
-            onChange={(id) => setMeasure(id as Measure)} />
+          <div className="mat-pin" aria-live="polite">
+            <span className="mat-pin-label">{focus.name}, {place}, 2025–2060</span>
+            <Readout size="md" color={headline.color}
+              main={`${headline.rate >= 0 ? '+' : '−'}${Math.abs(100 * headline.rate).toFixed(2)}%`} unit="/yr"
+              level={`${fmtMass(headline.mass)} in 2060`} />
+          </div>
         </div>
 
         {/* ── 1 ─────────────────────────────────────────────────────────── */}
@@ -492,6 +498,9 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
               : change > 0 ? 'Still rising in 2060'
               : 'Falling by 2060'}
           </h3>
+          <Chips label="As" value={measure}
+            options={(Object.keys(MEASURE_LABEL) as Measure[]).map((m) => ({ id: m, label: MEASURE_LABEL[m] }))}
+            onChange={(id) => setMeasure(id as Measure)} />
           <div style={{ height: 'clamp(300px, 46vh, 460px)' }}>
             <ProjectionChart
               historyYears={stack.years}
@@ -515,7 +524,6 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           </p>
 
           <Drivers inputs={inputs} levers={shown} run={run} focus={focus} past={kayaPast}
-            materialRange={materialRange}
             advanced={advanced} onAdvanced={() => setAdvanced((o) => !o)}
             onReset={() => setScenario({ kind: 'custom', levers: defaultLevers(inputs) })}
             onChange={edit}>

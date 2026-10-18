@@ -52,7 +52,7 @@ export function tranchesAt(unlock: number): Tranche[] {
 
 /**
  * Share of Dy/Tb thrifted out at this premium: every option cheaper than the
- * price you would otherwise pay. A STEP function, which is the honest shape —
+ * price you would otherwise pay. A STEP function, which is the true shape —
  * thrifting options are discrete technologies, not a smooth response.
  */
 export function abatedShare(premium: number, costFactor = 1, unlock = 0): number {

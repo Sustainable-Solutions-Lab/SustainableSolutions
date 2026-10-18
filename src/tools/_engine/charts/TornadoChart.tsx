@@ -95,7 +95,7 @@ export default function TornadoChart({ data }: Props) {
                 onMouseLeave={() => setHover(null)}
               >
                 <rect x={-MARGIN.left} y={y} width={size.w} height={rowH} fill="transparent" />
-                {/* delimit each family block, so a group label clearly heads
+                {/* delimit each family block, so a group label visibly heads
                     its own rows rather than floating between two */}
                 {i > 0 && b.group !== data.bars[i - 1]?.group && (
                   <line x1={-MARGIN.left + 8} x2={innerW} y1={y} y2={y} className="lever-divider" />

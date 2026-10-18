@@ -530,7 +530,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
                 {percentile >= 0.5 ? 'faster' : 'slower'} than{' '}
                 {Math.round(100 * (percentile >= 0.5 ? percentile : 1 - percentile))}% of the paper’s{' '}
                 {envelope.runs.toLocaleString()} runs. The three sliders are the whole of it, and they
-                always describe the world and all four groups together, whatever the chips above
+                always describe the world and all four groups together, whatever the menus above
                 are showing.</>
             ) : (
               <>World use of all four groups <b>falls</b>, at {(100 * worldGrowth).toFixed(2)}% a year. Only{' '}

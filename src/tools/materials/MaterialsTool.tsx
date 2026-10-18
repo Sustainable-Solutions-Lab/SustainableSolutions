@@ -10,7 +10,7 @@
  * The model runs here, in the browser, so every figure answers for whatever
  * has been set rather than for one precomputed case.
  */
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { followTouches } from '../magnets/Slider';
 import ProjectionChart, { spectral, type Band, type StackSeries } from './ProjectionChart';
 import Drivers, { type DriverNow, type DriverPast } from './Drivers';
@@ -30,7 +30,6 @@ import {
   resolveSsp,
   runModel,
   sspLevers,
-  sspPositions,
   type GroupKey,
   type IntensityLever,
   type Levers,
@@ -176,7 +175,6 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
   const shown = useDeferredValue(levers);
   const run = useMemo(() => runModel(inputs, shown), [inputs, shown]);
   const blend = useMemo(() => resolveSsp(inputs, shown.sspU), [inputs, shown.sspU]);
-  const sspAt = useMemo(() => sspPositions(inputs), [inputs]);
   const effects = useLeverEffects(inputs, shown);
 
   const edit = (change: (l: Levers) => void) => {
@@ -206,17 +204,12 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
     return [{ key: group, label: GROUP_LABEL[group], group, leaf: null }];
   }, [group, activeLeaf, leaves.join('|')]);
 
-  const stack = useMemo(() => {
+  /** Measured mass for one component in the place showing, or nulls where the data has none. */
+  const pastMass = useMemo(() => {
     const members = new Map(meta.groups.map((g) => [g.id, g.members]));
     const source = place === 'World' ? world.materials : regions.regions?.[place];
     const years = world.years;
-    const hPop = gdpPop.population[place];
-    const hGdp = gdpPop.gdp[place];
-    const rPop = place === 'World' ? run.population : run.popByRegion[place];
-    const rGdp = place === 'World' ? run.gdp : run.gdpByRegion[place];
-
-    /** Measured mass for one component, or nulls where the data has none. */
-    const pastMass = (c: Comp): (number | null)[] => {
+    return (c: Comp): (number | null)[] => {
       const all = members.get(HISTORY_GROUP[c.group]) ?? [];
       const mass = years.map(() => 0);
       let any = false;
@@ -234,6 +227,46 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
       } else add(c.leaf);
       return any ? mass : years.map(() => null);
     };
+  }, [meta, world, regions, place]);
+
+  /**
+   * Stacking order: largest at the bottom, "other" categories on top. The
+   * spectral ramp follows the same order, bottom to top, so adjacent bands
+   * never share a colour.
+   */
+  const rank = (cs: Comp[]): Comp[] => cs
+    .map((c) => ({ c, last: pastMass(c).at(-1) ?? 0 }))
+    .sort((a, b) => {
+      const ao = a.c.label.startsWith('Other') ? 1 : 0;
+      const bo = b.c.label.startsWith('Other') ? 1 : 0;
+      if (ao !== bo) return ao - bo;
+      return b.last - a.last;
+    })
+    .map((r) => r.c);
+
+  /**
+   * One colour per material for the place showing, shared by the figure and
+   * the material menu so the two can never disagree: groups are ranked against
+   * each other (the "All four" stack), and each group's materials against each
+   * other (that group's own stack).
+   */
+  const palette = useMemo(() => {
+    const ramp = (cs: Comp[]) => new Map(rank(cs).map((c, k, all) => [c.key, spectral(k, all.length)]));
+    const group = ramp(GROUP_KEYS.map((g) => ({ key: g, label: GROUP_LABEL[g], group: g, leaf: null })));
+    const leaf = Object.fromEntries(GROUP_KEYS.map((g) => [
+      g, ramp(GROUP_LEAVES[g].map((l) => ({ key: l, label: l, group: g, leaf: l }))),
+    ])) as Record<GroupKey, Map<string, string>>;
+    return { group, leaf };
+  }, [pastMass]);
+  const colourOf = (c: Comp): string =>
+    (c.leaf ? palette.leaf[c.group].get(c.leaf) : palette.group.get(c.group)) ?? spectral(0, 1);
+
+  const stack = useMemo(() => {
+    const years = world.years;
+    const hPop = gdpPop.population[place];
+    const hGdp = gdpPop.gdp[place];
+    const rPop = place === 'World' ? run.population : run.popByRegion[place];
+    const rGdp = place === 'World' ? run.gdp : run.gdpByRegion[place];
 
     const futureMass = (c: Comp): Float64Array => {
       const n = run.years.length;
@@ -266,22 +299,15 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
         c,
         past: pm.map((v, i) => asMeasure(v, i, true)),
         future: Array.from(fm, (v, i) => asMeasure(v, i, false) ?? 0),
-        last: pm[pm.length - 1] ?? 0,
       };
     });
 
-    // Largest at the bottom, "other" categories on top, and a spectral ramp
-    // from bottom to top so adjacent bands never share a colour.
-    const ordered = [...raw].sort((a, b) => {
-      const ao = a.c.label.startsWith('Other') ? 1 : 0;
-      const bo = b.c.label.startsWith('Other') ? 1 : 0;
-      if (ao !== bo) return ao - bo;
-      return (b.last ?? 0) - (a.last ?? 0);
-    });
-    const series: StackSeries[] = ordered.map((r, k) => ({
+    const order = new Map(rank(comps).map((c, k) => [c.key, k]));
+    const ordered = [...raw].sort((a, b) => (order.get(a.c.key) ?? 0) - (order.get(b.c.key) ?? 0));
+    const series: StackSeries[] = ordered.map((r) => ({
       key: r.c.key,
       label: r.c.label,
-      color: spectral(k, ordered.length),
+      color: colourOf(r.c),
       past: r.past,
       future: r.future,
     }));
@@ -290,7 +316,7 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
       series.some((t) => t.past[i] == null) ? null : series.reduce((a, t) => a + (t.past[i] as number), 0),
     );
     return { years, series, totalFuture, totalPast };
-  }, [meta, world, regions, gdpPop, run, place, comps, measure]);
+  }, [world, gdpPop, run, place, comps, measure, pastMass, palette]);
 
   // Bands exist per group, not per leaf: a leaf shows its own areas with none.
   const band = activeLeaf ? null : envelope.bands[place]?.[group]?.[measure] ?? null;
@@ -418,11 +444,6 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
       : (shown.stockIntensityU[spec.stocks[0][0]]?.[spec.stocks[0][1]] ?? 0.5);
   };
 
-  const warmingLabel = (ssp: string) => {
-    const w = warming?.[ssp];
-    return w ? `${w.min.toFixed(1)}–${w.max.toFixed(1)}°C` : null;
-  };
-
   const kicker = { font: '500 11px var(--font-mono)', letterSpacing: '.06em', textTransform: 'uppercase' as const, color: 'var(--ink-3)', margin: 0 };
   const figTitle = { font: '600 clamp(17px, 2.1vw, 21px)/1.25 var(--font-serif)', color: 'var(--ink)', margin: 0 };
   const caption = { fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-2)', margin: 0 };
@@ -447,29 +468,23 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
         </div>
 
         <div className="mat-bar">
-          <Chips label="Scenario" value={scenario.kind === 'ssp' ? scenario.ssp : 'custom'}
+          <Picker label="Material"
+            value={group === 'total' ? 'total' : activeLeaf ? `${group}|${activeLeaf}` : group}
             options={[
-              ...inputs.sspSampled.map((s) => ({ id: s, label: warmingLabel(s) ? `${s} · ${warmingLabel(s)}` : s })),
-              { id: 'custom', label: 'Yours' },
+              { id: 'total', label: 'All four', colors: GROUP_KEYS.map((g) => palette.group.get(g) ?? '') },
+              ...GROUP_KEYS.flatMap((g) => [
+                { id: g, label: GROUP_LABEL[g], colors: [palette.group.get(g) ?? ''] },
+                ...GROUP_LEAVES[g].map((l) => ({
+                  id: `${g}|${l}`, label: l, colors: [palette.leaf[g].get(l) ?? ''], depth: 1,
+                })),
+              ]),
             ]}
-            onChange={(id) => setScenario(id === 'custom'
-              ? { kind: 'custom', levers: scenario.kind === 'ssp' ? customLeversFromSsp(inputs, scenario.ssp) : scenario.levers }
-              : { kind: 'ssp', ssp: id })} />
-          <Chips label="Material" value={group}
-            options={[{ id: 'total', label: 'All four' }, ...GROUP_KEYS.map((g) => ({ id: g, label: GROUP_LABEL[g] }))]}
-            onChange={(id) => { setGroup(id as GroupKey | 'total'); setLeaf(null); }} />
-          {leaves.length > 0 && (
-            <label style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 12, color: 'var(--ink-3)' }}>
-              which
-              <select value={activeLeaf ?? ''} onChange={(e) => setLeaf(e.target.value || null)}
-                aria-label={`Which ${GROUP_LABEL[group as GroupKey]}`}
-                style={{ font: '400 12.5px/1.3 var(--font-sans)', color: 'var(--ink)', background: 'var(--paper)', border: '1px solid var(--rule-strong)', borderRadius: 2, padding: '2px 5px' }}>
-                <option value="">All {GROUP_LABEL[group as GroupKey].toLowerCase()}</option>
-                {leaves.map((l) => <option key={l} value={l}>{l}</option>)}
-              </select>
-            </label>
-          )}
-          <Chips label="Where" value={place}
+            onChange={(id) => {
+              const [g, l] = id.split('|');
+              setGroup(g as GroupKey | 'total');
+              setLeaf(l ?? null);
+            }} />
+          <Picker label="Where" value={place}
             options={[{ id: 'World', label: 'World' }, ...meta.regions.map((r) => ({ id: r, label: r }))]}
             onChange={setPlace} />
           <Chips label="As" value={measure}
@@ -674,6 +689,84 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+interface PickOption { id: string; label: string; colors?: string[]; depth?: number }
+
+/**
+ * A dropdown that can carry colour. A native <select> cannot: iOS draws its
+ * own menu and ignores option styling, and the material menu has to show the
+ * same colours as the stack it controls.
+ */
+function Picker({ label, value, options, onChange }: {
+  label: string; value: string; options: PickOption[]; onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [focus, setFocus] = useState(0);
+  const [shift, setShift] = useState(0);
+  const wrap = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLUListElement>(null);
+  const current = options.find((o) => o.id === value) ?? options[0];
+  const id = `pick-${label.toLowerCase()}`;
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('pointerdown', close);
+    // Keep the menu inside the viewport on a phone.
+    const r = wrap.current?.getBoundingClientRect();
+    const width = Math.min(300, window.innerWidth - 32);
+    setShift(r ? Math.min(0, window.innerWidth - 16 - r.left - width) : 0);
+    const i = Math.max(0, options.findIndex((o) => o.id === value));
+    setFocus(i);
+    requestAnimationFrame(() => (list.current?.children[i] as HTMLElement | undefined)?.scrollIntoView({ block: 'nearest' }));
+    return () => document.removeEventListener('pointerdown', close);
+  }, [open]);
+
+  const choose = (i: number) => { onChange(options[i].id); setOpen(false); };
+  const onKey = (e: KeyboardEvent) => {
+    if (!open && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(true); return; }
+    if (!open) return;
+    if (e.key === 'Escape') { e.preventDefault(); setOpen(false); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const next = Math.max(0, Math.min(options.length - 1, focus + (e.key === 'ArrowDown' ? 1 : -1)));
+      setFocus(next);
+      (list.current?.children[next] as HTMLElement | undefined)?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(focus); }
+  };
+
+  const swatch = (colors?: string[]) => colors?.length ? (
+    <span className="mat-pick-swatch" aria-hidden="true">
+      {colors.map((c, i) => <span key={i} style={{ background: c }} />)}
+    </span>
+  ) : null;
+
+  return (
+    <div className="mat-pick" ref={wrap}>
+      <span className="mat-pick-label" id={`${id}-label`}>{label}</span>
+      <button type="button" className="mat-pick-button" aria-haspopup="listbox" aria-expanded={open}
+        aria-labelledby={`${id}-label ${id}-value`} onClick={() => setOpen((o) => !o)} onKeyDown={onKey}
+        aria-activedescendant={open ? `${id}-${focus}` : undefined} aria-controls={open ? `${id}-list` : undefined}>
+        {swatch(current.colors)}
+        <span id={`${id}-value`}>{current.label}</span>
+        <span className="mat-pick-caret" aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <ul className="mat-pick-list" role="listbox" id={`${id}-list`} ref={list} aria-labelledby={`${id}-label`}
+          style={{ left: shift }}>
+          {options.map((o, i) => (
+            <li key={o.id} id={`${id}-${i}`} role="option" aria-selected={o.id === value}
+              className={`mat-pick-option${o.depth ? ' sub' : ''}${i === focus ? ' focus' : ''}`}
+              onPointerEnter={() => setFocus(i)} onClick={() => choose(i)}>
+              {swatch(o.colors)}
+              <span>{o.label}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 function Chips({ label, value, options, onChange }: {
   label: string; value: string; options: { id: string; label: string }[]; onChange: (id: string) => void;

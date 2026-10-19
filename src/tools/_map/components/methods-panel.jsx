@@ -175,7 +175,19 @@ function FoodEmissionsMethods() {
         drained-peat map carries no peat at all in Malaysia; we fill it
         from PEATMAP peat extent overlaid on our crop maps (1.5 Mha of
         crops on peat, 1.05 Mha of it oil palm), which adds roughly 73 Mt
-        CO₂e a year to Malaysia. The associated
+        CO₂e a year to Malaysia. Two checks are in progress and not yet in
+        the totals. Drained peat is a finite stock: with the PEATGRIDS
+        v2.0.1 peat carbon map (Widyastuti et al.), letting emissions stop
+        where the peat runs out, and treating the land afterwards as any
+        other cropland soil (the IPCC mineral-soil change over 20 years),
+        lowers 2020 cropland peat by 0 to 4% depending on whether the map
+        shows peat as it is today or before drainage, and less than 1% in
+        the tropics; it replaces the steady rate once validated against
+        measured depths on drained farmland. And our drained area matches
+        national inventories across most of Annex I, but not Canada, where
+        the upstream map has 1.07 Mha of drained cropland peat against
+        0.016 Mha reported (about 40 Mt CO₂e a year); a fix is being
+        decided. The associated
         land-use-change pulse at drainage joins the dataset with the
         Cornerstone integration. We also extend the boundary with CO₂ from
         agricultural liming — a source outside the original model — using

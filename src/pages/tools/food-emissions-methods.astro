@@ -18,10 +18,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 // Status is carried by a left rail AND a text label, never colour alone,
 // so it survives greyscale printing and colour-blind readers.
 
-type Status = 'built' | 'wait' | 'aspire' | 'gap' | 'research';
+type Status = 'built' | 'progress' | 'wait' | 'aspire' | 'gap' | 'research';
 
 const STATUS_LABEL: Record<Status, string> = {
-  built: 'built', wait: 'waiting', aspire: 'aspire', gap: 'gap', research: 'research only',
+  built: 'built', progress: 'in progress', wait: 'waiting', aspire: 'aspire', gap: 'gap', research: 'research only',
 };
 
 const totals: Array<{ n: string; d: string; s: Status; label?: string }> = [
@@ -47,7 +47,9 @@ const cat2: Array<{ n: string; d: string; s: Status }> = [
   { n: 'Cropland legacy decay', s: 'research', d: 'Not planned for the dataset. A Sanderman legacy-decay term (−15.0 Tg C/yr) would cancel the Tier 2 sink globally and flip 96% of gain cells, but across 15 LUCAS countries observed change follows the management term (r = 0.51), not the legacy term (r = −0.05).' },
   { n: 'Peatland', s: 'built', d: 'Two-part model: a pulse at drainage (land-use change), then a steady occupation flux at IPCC Tier 1 rates by land use and climate zone, all gases, perpetual while drained: 951 Mt CO₂e/yr on 21.5 Mha. Malaysia, empty in the upstream drained-peat map, is patched from PEATMAP extent × crop maps (1.5 Mha of crops on peat, ~73 Mt CO₂e/yr).' },
   { n: 'Peat split by land use', s: 'built', d: 'Now the main peat term. The single 37.3 t CO₂e/ha/yr rate used before is IPCC’s temperate cropland value to 0.2%; in the tropics IPCC runs 34% higher (oil palm 45, tree crops 60, other cropland 58), and its tropical factors come from sites drained more than six years, so they pair with the drainage pulse without double counting. The single rate stays on the map as a comparison view (802 Mt CO₂e/yr). To be discussed with the land-use-change lead.' },
-  { n: 'Peat as an exhaustible stock', s: 'aspire', d: 'A 0.5 m profile is gone in about 23 years at the current rate. Needs gridded depth, which we lack globally.' },
+  { n: 'Peat as an exhaustible stock', s: 'progress', d: 'Drained peat is a finite carbon stock, so its emissions should stop when it runs out. Built as a test with the PEATGRIDS v2.0.1 global peat carbon-stock map (Widyastuti et al.), keeping the spread of its 1 km pixels within each cell: median 1,400 t C/ha under drained cropland. Where peat runs out the hectare is then treated like any other cropland soil: the IPCC mineral-soil change over 20 years, then zero. For 2020 this lowers cropland peat by 0 to 4% (951 to 913 Mt CO₂e/yr), depending on whether the map shows peat as it is today or before drainage; the tropics move under 1%. By 2120, 6 to 38% of drained hectares have run out. It replaces the steady rate in the totals once three things are settled: which reading of the map holds in each country, a check of the map against measured depths on drained farmland, and the year each area was drained.' },
+  { n: 'Drainage pulse checked against peat depth', s: 'progress', d: 'The land-use-change charge for first drainage is 621 t CO₂e/ha (about 169 t C) on every conversion on peat, 8.0 Mha in 2001–2020. Depth never limits it where peat is mapped: the shallowest cell holds 181 t C/ha. Two larger questions came out instead, now with the land-use-change lead: about a quarter of those hectares are not peat on the Global Peatland Map 2.0, more than half of them in Canada, and about a third are pasture converted to cropland, on peat already drained as pasture.' },
+  { n: 'Drained peat area checked against national inventories', s: 'progress', label: 'under review', d: 'Our drained cropland peat matches what Annex I countries report to the UNFCCC for most of them (Germany 0.34 vs 0.33 Mha, United States 0.82 vs 0.71, Belarus 1.17 vs 1.00). Canada is the exception: the upstream map has 1.07 Mha, mostly wheat, canola and barley, about 40 Mt CO₂e/yr, against 0.016 Mha of cultivated organic soil in Canada’s inventory. Russia runs low (1.46 vs 2.50). A fix is being decided.' },
   { n: 'Rangeland soil carbon', s: 'built', d: 'Preliminary, on the map. The Ren et al. (2024) grazing response, refit on 78 of its 84 covariates (all but elevation from the authors’ own layers), is primary: about 2.3 Gt CO₂e cumulative 2000–2022. Powell et al. (2026) is a cross-check on well-conditioned cells. Still open: the present-day grazing-intensity level, where the other global product gives 2.7 Gt. Refitting on every layer the authors supplied does not close that gap, so it is the grazing-intensity map, not the covariates. A scope control lets readers choose which grazing land counts under the LSRS: all of it, cultivated grassland only, or natural grassland too above a grazing-intensity threshold. The herd time axis follows FAOSTAT stocks: a seam in the 2010 livestock grid had given South Sudan the whole former-Sudan herd.' },
   { n: 'Forest soil carbon', s: 'built', d: 'On the map, not in any total. Mineral forest soil is held at the IPCC default of steady state, which national inventories support: Annex I parties report a net gain of +0.03 t C/ha/yr across 1,665 Mha. The drained organic soil that had fallen between the peat and forest layers is now its own layer: CO₂, CH₄ and N₂O as 22 Annex I parties report them (38 Mt CO₂e/yr on 10.4 Mha in 2020), placed on forest over PEATMAP peat.' },
   { n: 'Tropical drained forest peat', s: 'built', d: 'Non-Annex I parties report no drained forest area, so Sumatra, Borneo and Peninsular Malaysia use IPCC Tier 1 (2013 Wetlands Supplement) on 2015 areas of degraded peat-swamp forest, secondary forest and acacia pulpwood from Miettinen et al. (2017), placed with the Lesiv et al. (2022) forest-management map: about 170 Mt CO₂e/yr on 6.2 Mha, about half of it from acacia. On the map, not in any total. Papua and other tropical peat, largely undrained, are not included.' },
@@ -89,6 +91,7 @@ const cat3 = ['Fertilizer', 'Manure applied', 'Manure mgmt', 'Pasture N₂O', 'R
     <!-- legend -->
     <div class="mt-6 flex flex-wrap gap-x-5 gap-y-2 rounded border border-rule bg-paper-2 px-4 py-3.5">
       <span class="lg"><i class="sw built"></i>Built and running</span>
+      <span class="lg"><i class="sw progress"></i>In progress — built and tested, not yet in totals</span>
       <span class="lg"><i class="sw wait"></i>Waiting on others</span>
       <span class="lg"><i class="sw aspire"></i>Aspire / planned</span>
       <span class="lg"><i class="sw gap"></i>Known gap — counted nowhere</span>
@@ -242,6 +245,7 @@ const cat3 = ['Fertilizer', 'Manure applied', 'Manure mgmt', 'Pasture N₂O', 'R
   .lg { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
   .sw { width: 22px; border-top-width: 3px; flex: none; border-radius: 2px; }
   .sw.built { border-top-style: solid; border-top-color: var(--brand-green); }
+  .sw.progress { border-top-style: dotted; border-top-color: var(--brand-green); }
   .sw.wait { border-top-style: dashed; border-top-color: var(--brand-orange); }
   .sw.aspire { border-top-style: dotted; border-top-color: var(--ink-3); }
   .sw.gap { border-top-style: solid; border-top-color: var(--cardinal); }
@@ -268,6 +272,7 @@ const cat3 = ['Fertilizer', 'Manure applied', 'Manure mgmt', 'Pasture N₂O', 'R
     border-radius: 3px; padding: 9px 11px; background: var(--paper); margin-bottom: 7px; }
   .card:last-child { margin-bottom: 0; }
   .card.built { border-left-color: var(--brand-green); }
+  .card.progress { border-left-color: var(--brand-green); border-left-style: dotted; }
   .card.wait { border-left-color: var(--brand-orange); border-left-style: dashed; }
   .card.aspire { border-left-color: var(--ink-3); border-left-style: dotted; }
   .card.gap { border-left-color: var(--cardinal); }
@@ -277,7 +282,7 @@ const cat3 = ['Fertilizer', 'Manure applied', 'Manure mgmt', 'Pasture N₂O', 'R
   .card .d { color: var(--ink-3); font-size: 12px; margin-top: 2px; }
   .st { font-family: 'Inter', system-ui, sans-serif; font-size: 9.5px;
     letter-spacing: .09em; text-transform: uppercase; flex: none; }
-  .st.built { color: var(--brand-green); } .st.wait { color: var(--brand-orange); }
+  .st.built { color: var(--brand-green); } .st.progress { color: var(--brand-green); } .st.wait { color: var(--brand-orange); }
   .st.aspire { color: var(--ink-3); } .st.gap { color: var(--cardinal); }
   .st.research { color: var(--ink-3); }
 

@@ -156,22 +156,26 @@ function FoodEmissionsMethods() {
         scaling factors for organic amendments and pre-season water regimes
         are parameterized with the IPCC 2019 reference values, which lowers
         rice CH₄ relative to the published figures by roughly a fifth.
-        Drained-peatland emissions follow the <strong>Cornerstone
-        steady-state model</strong> — a persistent occupation emission per
-        hectare of cultivated drained peat, grounded in process-model decay
-        curves — in place of flat climate-zone factors, whose calibration
-        mixes sites of very different drainage ages. The upstream
+        Drained-peatland emissions keep the <strong>Cornerstone
+        two-part structure</strong> (a one-off pulse when peat is first
+        drained, booked as land-use change, then a steady occupation
+        emission for as long as it stays drained), with the steady rate
+        taken from the IPCC 2013 Wetlands Supplement Tier 1 factors by land
+        use and climate zone, all gases: 37.25 t CO₂e/ha/yr on temperate and
+        boreal cropland, and in the tropics 45 for oil palm, 60 for tree
+        crops such as rubber and coconut, 39 for paddy rice and 58 for other
+        cropland. The single 37.3 t CO₂e/ha/yr rate the model used before is
+        IPCC&rsquo;s temperate cropland value; IPCC&rsquo;s tropical factors
+        come only from sites drained for more than six years and exclude
+        the fast early loss, and subsidence records show the rate is steady
+        after about five years (Hooijer et al., 2012), so they pair with
+        the drainage pulse without counting it twice. Cropland peat totals
+        951 Mt CO₂e a year, against 802 at the single rate, which remains
+        on the map as a comparison view. The upstream
         drained-peat map carries no peat at all in Malaysia; we fill it
         from PEATMAP peat extent overlaid on our crop maps (1.5 Mha of
-        crops on peat, 1.05 Mha of it oil palm), which adds roughly 56 Mt
-        CO₂e a year to Malaysia. A comparison view (Peatland — IPCC rates
-        by land use) puts the same hectares at IPCC 2013 Wetlands
-        Supplement Tier 1 rates by land use and climate zone, all gases.
-        Outside the tropics it reproduces the single rate, which matches
-        IPCC&rsquo;s temperate cropland total to 0.2%; in the tropics it
-        runs about a third higher (oil palm 45, tree crops 60, other
-        cropland 58 t CO₂e/ha/yr), 951 against 802 Mt CO₂e a year globally.
-        It is not in any total. The associated
+        crops on peat, 1.05 Mha of it oil palm), which adds roughly 73 Mt
+        CO₂e a year to Malaysia. The associated
         land-use-change pulse at drainage joins the dataset with the
         Cornerstone integration. We also extend the boundary with CO₂ from
         agricultural liming — a source outside the original model — using

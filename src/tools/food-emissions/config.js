@@ -11,8 +11,9 @@
  *
  * One canonical dataset (no variants): our updated Cao-lineage model
  * (IPCC 2019 reference rice parameters; updates coordinated with the
- * original authors) with drained-peatland emissions from the Cornerstone
- * steady-state occupation floor.
+ * original authors) with drained-peatland occupation emissions at IPCC
+ * Tier 1 rates by land use and climate zone (Gridded LM D17; the Cornerstone
+ * 37.3 floor is kept as the peatv comparison view).
  *
  * Feature model (Gridded LM/pipeline/export_explorer_cells.py): 0.25-degree
  * cell centroids with per-source 2020 emissions (kt CO2e: fer man res rice
@@ -235,19 +236,19 @@ function makeVariable({ source, crop }) {
   // as Annex I parties report it (CRF 4.A.1 + table 4(II)), plus IPCC Tier 1
   // for insular Southeast Asia (Gridded LM build_forest_soil_tropical.py). Map only, not
   // in any total: forest land is not a food commodity's land.
-  // Cropland peat at IPCC Tier 1 rates by land use and climate zone (Gridded
-  // LM D16): the same hectares as the peat source, as a map-only comparison
-  // to the Cornerstone floor. Not in any total (D4: one canonical dataset).
+  // Cropland peat at the Cornerstone 37.3 floor: the same hectares as the
+  // peat source, which since Gridded LM D17 uses IPCC rates by land use.
+  // Map-only comparison, not in any total (D4: one canonical dataset).
   if (source === 'peatv') {
     return {
       ...shared,
       id: 'peatv',
-      label: 'Peatland — IPCC rates by land use (comparison)',
+      label: 'Peatland — single 37.3 rate (comparison)',
       domain: { min: 0, max: 150 },
       yearTerms: [{ prop: 'peatv', src: 'peatv' }],
       constantInTime: true,
-      note: 'The same drained cropland hectares as the Peatland source, at IPCC 2013 Wetlands Supplement Tier 1 rates by land use and climate zone, all gases (on-site CO₂, dissolved organic carbon, CH₄ from land and ditches, N₂O). Outside the tropics the rate is 37.25 t CO₂e/ha/yr, which is the single 37.3 floor the Peatland source uses, to 0.2%. In the tropics it depends on the crop: oil palm 45, tree crops such as rubber and coconut 60, paddy rice 39, other cropland 58. Global cropland peat: 951 Mt CO₂e/yr against 802 at the single rate, all of the difference in the tropics. Rice CH₄ is left to the rice source. 2020; does not vary with the year slider. A comparison only, not counted in any total.',
-      description: 'Drained cropland peat at IPCC Tier 1 rates by land use and climate zone, kt CO₂e per quarter-degree cell (comparison, not in totals).',
+      note: 'The same drained cropland hectares as the Peatland source, at the single rate of 37.3 t CO₂e/ha/yr the dataset used before October 2026 (the Cornerstone occupation floor). That rate is IPCC’s temperate cropland value, so outside the tropics this view matches the Peatland source; in the tropics it is about a quarter lower, because the Peatland source now uses IPCC’s tropical rates by land use (oil palm 45, tree crops 60, other cropland 58, paddy rice 39). Global cropland peat: 802 Mt CO₂e/yr here against 951 in the Peatland source. 2020; does not vary with the year slider. A comparison only, not counted in any total.',
+      description: 'Drained cropland peat at the single 37.3 t CO₂e/ha/yr rate, kt CO₂e per quarter-degree cell (comparison, not in totals).',
     }
   }
   if (FSOIL_OWNERS[source]) {
@@ -432,7 +433,7 @@ const config = {
         // mineral = 0, IPCC default; map only, not in totals) sits with the
         // other soil carbon sources, right after rangeland.
         ...SOURCES.flatMap(([id, label]) => id === 'peat'
-          ? [{ id, label }, { id: 'peatv', label: 'Peatland — IPCC rates by land use (comparison · map only)', cat: 'cat2' }]
+          ? [{ id, label }, { id: 'peatv', label: 'Peatland — single 37.3 rate (comparison · map only)', cat: 'cat2' }]
           : id === 'rsoil'
           ? [{ id, label }, { id: 'fsoil', label: 'Soil carbon — forest (drained organic, all owners · map only)', cat: 'cat2' },
             ...Object.entries(FSOIL_OWNERS).map(([oid, o]) => ({ id: oid, label: o.menu, cat: o.cat }))]

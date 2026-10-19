@@ -9,9 +9,9 @@
 //   DemandScenario/<scen>/{Base,Water_EpsNN}{,_Metrics}.csv
 //       31 demand levels (the three IEA cases and the variants between and
 //       around them), each solved at 14 cost ceilings.
-//   BioDScenario/NZE/<FIxx|none>/…
-//       Net-zero demand with basins above a fish-index threshold closed to
-//       mining, at the same cost ceilings.
+//   BioDScenario/<SPS|APS|NZE>/<FIxx|none>/…
+//       Each IEA demand case with basins above a fish-index threshold closed
+//       to mining, at the same cost ceilings.
 //   FW_FISH_Basin_FishIndex_Global.csv
 //       Fish biodiversity index per AWARE basin, 0–100.
 //
@@ -107,19 +107,22 @@ async function main() {
   }
   sweep.sort((a, b) => a.demand - b.demand)
 
-  // Fish protection, Net-zero demand.
-  const fish = { levels: [], series: {}, producing: {} }
-  for (const [key, fi] of FISH) {
-    const dir = join(SRC, 'BioDScenario', 'NZE', key)
-    const k = fi == null ? 'none' : String(fi)
-    fish.levels.push(fi)
-    fish.series[k] = []
-    fish.producing[k] = []
-    for (let i = 0; i < FILES.length; i++) {
-      const [cost, water, consumed, unmetCo] = await metrics(dir, FILES[i])
-      fish.series[k].push({ step: STEPS[i], cost, water, consumed, unmetCo })
-      fish.producing[k].push(bits(ids, await producing(dir, FILES[i])))
+  // Fish protection, for each IEA demand case.
+  const fish = { levels: FISH.map(([, fi]) => fi), byScenario: {} }
+  for (const [scen, name] of Object.entries(NAMED)) {
+    const series = {}, prod = {}
+    for (const [key, fi] of FISH) {
+      const dir = join(SRC, 'BioDScenario', scen, key)
+      const k = fi == null ? 'none' : String(fi)
+      series[k] = []
+      prod[k] = []
+      for (let i = 0; i < FILES.length; i++) {
+        const [cost, water, consumed, unmetCo] = await metrics(dir, FILES[i])
+        series[k].push({ step: STEPS[i], cost, water, consumed, unmetCo })
+        prod[k].push(bits(ids, await producing(dir, FILES[i])))
+      }
     }
+    fish.byScenario[name] = { series, producing: prod }
   }
 
   // Basin fish index, only where it reaches the lowest threshold offered.
@@ -133,7 +136,7 @@ async function main() {
   const out = { steps: STEPS, ids, sweep, producing: producingBy, fish, fishIndex }
   await writeFile(join(OUT, 'runs.json'), JSON.stringify(out))
   console.log(`runs.json: ${sweep.length} demand levels, ${Object.keys(producingBy).length} named, ` +
-    `${fish.levels.length} fish levels, ${Object.keys(fishIndex).length} fish-rich basins, ${ids.length} deposits`)
+    `${fish.levels.length} fish levels × ${Object.keys(fish.byScenario).length} scenarios, ${Object.keys(fishIndex).length} fish-rich basins, ${ids.length} deposits`)
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

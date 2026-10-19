@@ -19,7 +19,7 @@
  *
  * Model runs. runs.json (scripts/build-mining-water-runs.mjs) adds the
  * paper's demand sweep, the fish-protection runs and, for each run, which
- * deposits the model mines. While the water vs. cost panel is open the map
+ * deposits the model mines. While the trade-offs panel is open the map
  * follows its point: deposits mined, added and dropped against the
  * reference solution. Without runs.json the tool falls back to the
  * published figure data.
@@ -81,7 +81,7 @@ const STEER = {
 // "moderate" threshold).
 const STRESSED = 0.1
 
-// Fish-protection thresholds offered in the panel (runs.json fish.series).
+// Fish-protection thresholds offered in the panel (runs.json fish.byScenario).
 const FISH_LEVELS = ['none', '95', '90', '80', '70', '60', '50']
 
 // runs.json stores, per run, one bit per deposit (ids order): does the
@@ -388,7 +388,7 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
       filter: ['==', ['get', 'id'], -1],
       paint: { 'line-color': outline, 'line-width': 1.4 },
     })
-    // Run state (feature-state `st`, set while the water vs. cost panel is
+    // Run state (feature-state `st`, set while the trade-offs panel is
     // open): mined deposits as usual, added ones ringed in ink, dropped ones
     // hollow with a cardinal ring, unmined ones faint.
     const st = ['coalesce', ['feature-state', 'st'], 0]
@@ -397,13 +397,16 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
       paint: {
         'circle-color': ['match', ['get', 'mineral'], ...MINERALS.flat(), '#888'],
         // Area ∝ resources; grows with zoom so clusters separate.
+        // Changed deposits grow a little so they read at world zoom.
         'circle-radius': ['interpolate', ['linear'], ['zoom'],
-          1, ['+', 1.2, ['*', 0.85, ['sqrt', ['get', 'res']]]],
-          6, ['+', 2.5, ['*', 2.2, ['sqrt', ['get', 'res']]]]],
-        'circle-opacity': ['match', st, 3, 0, 4, 0.14, 0.85],
-        'circle-stroke-color': ['match', st, 2, dark ? '#F8F8E8' : '#181838', 3, '#8C1515', depStroke],
-        'circle-stroke-width': ['match', st, 2, 1.6, 3, 1.5, 0.5],
-        'circle-stroke-opacity': ['match', st, 4, 0.25, 1],
+          1, ['+', ['match', st, 2, 3, 3, 3, 1.2], ['*', 0.85, ['sqrt', ['get', 'res']]]],
+          6, ['+', ['match', st, 2, 5, 3, 5, 2.5], ['*', 2.2, ['sqrt', ['get', 'res']]]]],
+        // While a run is shown, unchanged mines recede and unmined deposits
+        // nearly vanish, so what the point moved is what stands out.
+        'circle-opacity': ['match', st, 1, 0.45, 2, 1, 3, 0, 4, 0.06, 0.85],
+        'circle-stroke-color': ['match', st, 2, dark ? '#F8F8E8' : '#181838', 3, dark ? '#E0533D' : '#8C1515', depStroke],
+        'circle-stroke-width': ['match', st, 2, 2.2, 3, 2.2, 0.5],
+        'circle-stroke-opacity': ['match', st, 1, 0.4, 4, 0.12, 1],
       },
     })
     map.addLayer({
@@ -577,7 +580,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [isDark, setIsDark] = useState(isDarkNow())
-  // Water vs. cost opens as a panel over the map rather than replacing it.
+  // Trade-offs opens as a panel over the map rather than replacing it.
   const [panelOpen, setPanelOpen] = useState(false)
   const [minerals, setMinerals] = useState(MINERALS.map(([m]) => m))
   const [stressedOnly, setStressedOnly] = useState(false)
@@ -621,10 +624,10 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
   const run = useMemo(() => {
     const r = data?.runs
     if (!r || !panelOpen || step == null) return null
-    const arr = fishView ? r.fish.producing[fishLevel] : r.producing[scenario]
+    const arr = fishView ? r.fish.byScenario[scenario]?.producing[fishLevel] : r.producing[scenario]
     if (!arr) return null
     const now = decodeBits(arr[step])
-    const ref = decodeBits(fishView ? r.fish.producing.none[0] : arr[0])
+    const ref = decodeBits(fishView ? r.fish.byScenario[scenario].producing.none[0] : arr[0])
     const state = new Map()
     r.ids.forEach((id, i) => {
       const a = hasBit(now, i), b = hasBit(ref, i)
@@ -637,7 +640,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
   const mineStats = useMemo(() => {
     const r = data?.runs
     if (!r || !panelOpen) return null
-    const arr = fishView ? r.fish.producing[fishLevel] : r.producing[scenario]
+    const arr = fishView ? r.fish.byScenario[scenario]?.producing[fishLevel] : r.producing[scenario]
     if (!arr) return null
     const mat = fishView ? 'All' : material
     const idx = []
@@ -646,7 +649,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
       const pos = new Map(r.ids.map((id, i) => [id, i]))
       for (const f of data.deposits.features) if (f.properties.mineral === mat) idx.push(pos.get(f.properties.id))
     }
-    const ref = decodeBits(fishView ? r.fish.producing.none[0] : arr[0])
+    const ref = decodeBits(fishView ? r.fish.byScenario[scenario].producing.none[0] : arr[0])
     return arr.map((b64) => {
       const now = decodeBits(b64)
       let n = 0, added = 0, dropped = 0
@@ -697,7 +700,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
 
       <div className="mb-4">
         <Eyebrow>View</Eyebrow>
-        <ToggleRow value={panelOpen ? 'tradeoff' : 'map'} onChange={(v) => { setPanelOpen(v === 'tradeoff'); setDrawerOpen(false) }} options={[['map', 'Map'], ['tradeoff', 'Water vs. cost']]} />
+        <ToggleRow value={panelOpen ? 'tradeoff' : 'map'} onChange={(v) => { setPanelOpen(v === 'tradeoff'); setDrawerOpen(false) }} options={[['map', 'Map'], ['tradeoff', 'Trade-offs']]} />
       </div>
 
       {(
@@ -825,42 +828,41 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
           </p>
         </>
       )}
-      {/* Water vs. cost panel: a floating card over the map on desktop, a
+      {/* Trade-offs panel: a floating card over the map on desktop, a
           bottom sheet on a phone. The map stays live behind it, filtered to
           the chosen mineral. */}
       {data && panelOpen && (
         <div
           className="absolute z-20 flex flex-col border border-rule bg-paper overflow-hidden mw-panel"
           role="dialog"
-          aria-label="Water vs. cost"
+          aria-label="Trade-offs"
         >
           <div className="flex items-center justify-between shrink-0 px-3 pt-2.5 pb-1">
-            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none m-0">Water vs. cost</p>
+            <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none m-0">Trade-offs</p>
             <button
               type="button"
               onClick={() => setPanelOpen(false)}
-              aria-label="Close water vs. cost"
+              aria-label="Close trade-offs"
               className="bg-transparent border-0 cursor-pointer p-1 text-ink-3 hover:text-ink inline-flex"
             >
               <X size={16} strokeWidth={1.5} />
             </button>
           </div>
           {/* Scenario and minerals live here too, so a phone needs no drawer.
-              The fish view is Net-zero, all minerals: the only runs made. */}
+              The fish runs cover all minerals together, so the fish view drops
+              the mineral row. */}
           <div className="shrink-0 px-3 pb-2 flex flex-col" style={{ gap: 6 }}>
             {data.runs && (
               <WordRow value={impact} onChange={setImpact} options={[['water', 'Water stress'], ['fish', 'Fish biodiversity']]} />
             )}
+            <WordRow value={scenario} onChange={setScenario} options={data.scenarios.map((x) => [x, x])} />
             {fishView ? (
               <div className="flex flex-wrap items-baseline" style={{ gap: '6px 14px' }}>
                 <span className="font-sans text-ink-3" style={{ fontSize: 12 }}>Close basins with fish index above</span>
                 <WordRow value={fishLevel} onChange={setFishLevel} options={FISH_LEVELS.map((k) => [k, k === 'none' ? 'None' : k])} />
               </div>
             ) : (
-              <>
-                <WordRow value={scenario} onChange={setScenario} options={data.scenarios.map((x) => [x, x])} />
-                <WordRow value={material} onChange={setMaterial} options={[['All', 'All'], ...MINERALS.map(([mi]) => [mi, mi])]} />
-              </>
+              <WordRow value={material} onChange={setMaterial} options={[['All', 'All'], ...MINERALS.map(([mi]) => [mi, mi])]} />
             )}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto border-t border-rule" style={{ paddingTop: 8 }}>

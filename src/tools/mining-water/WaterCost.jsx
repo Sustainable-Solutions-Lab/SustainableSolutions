@@ -1,7 +1,7 @@
 /**
  * mining-water/WaterCost.jsx
  *
- * The "Water vs. cost" view: what it costs to cut the stress-weighted water
+ * The "Trade-offs" view: what it costs to cut the stress-weighted water
  * use of mining, after the paper's Figure 2a.
  *
  * Contours. As in the paper, bands between frontiers solved for many
@@ -10,7 +10,7 @@
  * mineral curves exist only for the three IEA cases, so for one mineral the
  * bands are interpolated between those three by demand.
  *
- * Fish biodiversity. With impact = 'fish' the curves are Net-zero demand
+ * Fish biodiversity. With impact = 'fish' the curves are the chosen scenario's demand
  * with basins above a fish-index threshold closed to mining (Extended Data
  * Fig. 6). Deltas are then measured from the least-cost solution with no
  * protection, so the cost of protection shows.
@@ -95,9 +95,9 @@ export default function WaterCost({ data, scenario, material, compact = false, i
 
   const fish = impact === 'fish' && data.runs?.fish
   const curves = fish
-    ? Object.keys(data.runs.fish.series).map((k) => ({ s: k, label: fishLabel(k), pts: data.runs.fish.series[k] }))
+    ? Object.keys(data.runs.fish.byScenario[scenario].series).map((k) => ({ s: k, label: fishLabel(k), pts: data.runs.fish.byScenario[scenario].series[k] }))
     : data.scenarios.map((s) => ({ s, label: s, pts: data.series[s][material], d: data.demandMt[s][material] }))
-  const sel = fish ? data.runs.fish.series[fishLevel] : data.series[scenario][material]
+  const sel = fish ? data.runs.fish.byScenario[scenario].series[fishLevel] : data.series[scenario][material]
   const selKey = fish ? fishLevel : scenario
   const n = sel.length
 
@@ -142,7 +142,7 @@ export default function WaterCost({ data, scenario, material, compact = false, i
 
   // Deltas from the least-cost point; in the fish view, the least-cost point
   // with no protection.
-  const base = fish ? data.runs.fish.series.none[0] : sel[0]
+  const base = fish ? data.runs.fish.byScenario[scenario].series.none[0] : sel[0]
   const cur = at(sel, t)
   const ms = mineStats?.[stepIdx]
 
@@ -223,7 +223,7 @@ export default function WaterCost({ data, scenario, material, compact = false, i
   return (
     <div className={compact ? '' : 'h-full overflow-y-auto'}>
       <div className={compact ? 'px-3 pb-3' : 'mx-auto px-4 py-4 md:px-8 md:py-6'} style={compact ? null : { maxWidth: 1000 }}>
-        {!compact && <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Water vs. cost · {fish ? `Net-zero · ${fishLabel(fishLevel)}` : `${scenario} · ${material === 'All' ? 'all minerals' : material}`}</p>}
+        {!compact && <p className={eyebrowCls} style={{ margin: '0 0 3px' }}>Trade-offs · {fish ? `${scenario} · ${fishLabel(fishLevel)}` : `${scenario} · ${material === 'All' ? 'all minerals' : material}`}</p>}
         <p className="font-serif text-ink" style={{ fontSize: compact ? 17 : 23, fontWeight: 600, lineHeight: 1.2, margin: '2px 0 6px' }}>
           {fish
             ? 'What it costs to protect fish-rich rivers as well'
@@ -398,7 +398,7 @@ export default function WaterCost({ data, scenario, material, compact = false, i
           Costs are discounted US dollars; water is weighted by AWARE 2.0 basin scarcity (m³ world-equivalent).
           {bands && sweep && ' Shading shows how the curve moves with cumulative metal demand (colour bar, Mt of metal, 2025–2050): each band lies between two of the model’s 31 demand levels.'}
           {bands && !sweep && ' Shading shows how the curve moves with cumulative metal demand (colour bar, Mt of metal, 2025–2050), interpolated between the three IEA scenarios, the only demand levels solved mineral by mineral.'}
-          {fish && ' Net-zero demand. Each dotted curve closes basins above a fish biodiversity index (0–100, from IUCN fish ranges) to mining, along with basins that drain into them; the tighter the threshold, the higher the curve. Shortfalls are cobalt, much of which lies in fish-rich basins; where demand goes unmet, total cost includes the model’s penalty for the shortfall.'}
+          {fish && ` ${{ 'Current policies': 'Current-policies', Pledges: 'Pledged-policies', 'Net-zero': 'Net-zero' }[scenario] ?? scenario} demand. Each dotted curve closes basins above a fish biodiversity index (0–100, from IUCN fish ranges) to mining, along with basins that drain into them; the tighter the threshold, the higher the curve. Shortfalls are cobalt, much of which lies in fish-rich basins; where demand goes unmet, total cost includes the model’s penalty for the shortfall.`}
           {' The map behind follows the point: deposits the model mines at that cost ceiling, those it adds and those it drops.'}
           {!fish && material !== 'All' && ' Single-mineral curves are the paper’s per-kilogram results times that mineral’s demand; the cost ceiling applies to all four minerals together, so one mineral’s cost can move either way.'}
         </p>

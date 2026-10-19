@@ -235,6 +235,21 @@ function makeVariable({ source, crop }) {
   // as Annex I parties report it (CRF 4.A.1 + table 4(II)), plus IPCC Tier 1
   // for insular Southeast Asia (Gridded LM build_forest_soil_tropical.py). Map only, not
   // in any total: forest land is not a food commodity's land.
+  // Cropland peat at IPCC Tier 1 rates by land use and climate zone (Gridded
+  // LM D16): the same hectares as the peat source, as a map-only comparison
+  // to the Cornerstone floor. Not in any total (D4: one canonical dataset).
+  if (source === 'peatv') {
+    return {
+      ...shared,
+      id: 'peatv',
+      label: 'Peatland — IPCC rates by land use (comparison)',
+      domain: { min: 0, max: 150 },
+      yearTerms: [{ prop: 'peatv', src: 'peatv' }],
+      constantInTime: true,
+      note: 'The same drained cropland hectares as the Peatland source, at IPCC 2013 Wetlands Supplement Tier 1 rates by land use and climate zone, all gases (on-site CO₂, dissolved organic carbon, CH₄ from land and ditches, N₂O). Outside the tropics the rate is 37.25 t CO₂e/ha/yr, which is the single 37.3 floor the Peatland source uses, to 0.2%. In the tropics it depends on the crop: oil palm 45, tree crops such as rubber and coconut 60, paddy rice 39, other cropland 58. Global cropland peat: 951 Mt CO₂e/yr against 802 at the single rate, all of the difference in the tropics. Rice CH₄ is left to the rice source. 2020; does not vary with the year slider. A comparison only, not counted in any total.',
+      description: 'Drained cropland peat at IPCC Tier 1 rates by land use and climate zone, kt CO₂e per quarter-degree cell (comparison, not in totals).',
+    }
+  }
   if (FSOIL_OWNERS[source]) {
     const o = FSOIL_OWNERS[source]
     return {
@@ -416,7 +431,9 @@ const config = {
         // Forest soil (drained organic soil from national inventories;
         // mineral = 0, IPCC default; map only, not in totals) sits with the
         // other soil carbon sources, right after rangeland.
-        ...SOURCES.flatMap(([id, label]) => id === 'rsoil'
+        ...SOURCES.flatMap(([id, label]) => id === 'peat'
+          ? [{ id, label }, { id: 'peatv', label: 'Peatland — IPCC rates by land use (comparison · map only)', cat: 'cat2' }]
+          : id === 'rsoil'
           ? [{ id, label }, { id: 'fsoil', label: 'Soil carbon — forest (drained organic, all owners · map only)', cat: 'cat2' },
             ...Object.entries(FSOIL_OWNERS).map(([oid, o]) => ({ id: oid, label: o.menu, cat: o.cat }))]
           : [{ id, label }]),
@@ -598,7 +615,7 @@ const config = {
     // Forest pilot and forest soil views ignore the commodity dropdown: alias every crop
     // selection to the same signed layer so no source x crop combination
     // is left without a variable.
-    ...['fmlp', 'fab', 'fsoil', ...Object.keys(FSOIL_OWNERS)].flatMap((source) => [
+    ...['fmlp', 'fab', 'fsoil', 'peatv', ...Object.keys(FSOIL_OWNERS)].flatMap((source) => [
       makeVariable({ source, crop: 'all' }),
       ...[...CROPS, ...LIVESTOCK_COMMODITIES, ['feed']].map(([crop]) => ({
         ...makeVariable({ source, crop: 'all' }),

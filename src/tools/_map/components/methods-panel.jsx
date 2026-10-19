@@ -164,7 +164,14 @@ function FoodEmissionsMethods() {
         drained-peat map carries no peat at all in Malaysia; we fill it
         from PEATMAP peat extent overlaid on our crop maps (1.5 Mha of
         crops on peat, 1.05 Mha of it oil palm), which adds roughly 56 Mt
-        CO₂e a year to Malaysia. The associated
+        CO₂e a year to Malaysia. A comparison view (Peatland — IPCC rates
+        by land use) puts the same hectares at IPCC 2013 Wetlands
+        Supplement Tier 1 rates by land use and climate zone, all gases.
+        Outside the tropics it reproduces the single rate, which matches
+        IPCC&rsquo;s temperate cropland total to 0.2%; in the tropics it
+        runs about a third higher (oil palm 45, tree crops 60, other
+        cropland 58 t CO₂e/ha/yr), 951 against 802 Mt CO₂e a year globally.
+        It is not in any total. The associated
         land-use-change pulse at drainage joins the dataset with the
         Cornerstone integration. We also extend the boundary with CO₂ from
         agricultural liming — a source outside the original model — using
@@ -487,8 +494,8 @@ function FoodEmissionsMethods() {
         Repeated European measurements sit near neutral: 45% of 5,952
         re-sampled LUCAS cropland points lost carbon between 2009 and 2018.
         Adding Sanderman&rsquo;s rate as a legacy-decay term cancels the
-        sink globally and turns 96% of gaining cells to net loss, but that
-        term is a research layer, not on the map: across 15 LUCAS countries
+        sink globally and turns 96% of gaining cells to net loss, but we do
+        not use that term: across 15 LUCAS countries
         the observed changes follow the management term (r = 0.51) and not
         the legacy term (r = −0.05). About 9 Mt CO₂e per year of cropland
         soil loss is counted in the totals.

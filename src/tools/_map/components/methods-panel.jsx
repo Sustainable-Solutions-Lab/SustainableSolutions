@@ -178,8 +178,8 @@ function FoodEmissionsMethods() {
         CO₂e a year to Malaysia. Two checks are in progress and not yet in
         the totals. Drained peat is a finite stock: with the PEATGRIDS
         v2.0.1 peat carbon map (Widyastuti et al.), letting emissions stop
-        where the peat runs out, and treating the land afterwards as any
-        other cropland soil (the IPCC mineral-soil change over 20 years),
+        where the peat runs out, and moving that land, still cropland, to
+        the same IPCC Tier 2 cropland soil model used everywhere else,
         lowers 2020 cropland peat by 0 to 4% depending on whether the map
         shows peat as it is today or before drainage, and less than 1% in
         the tropics; it replaces the steady rate once validated against

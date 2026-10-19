@@ -44,6 +44,39 @@ const RANGELAND_SCOPE_TOTALS = {
 // Forest soil colour cap, t CO2e/yr per 0.25° cell (p95 of fsoil).
 const FSOIL_COLOR_MAX = 12000
 
+// Forest soil split by who would own it under the GHG Protocol LSRS
+// (Gridded LM D15). v1 of the standard covers CH4 and N2O on forest land
+// (production emissions) but leaves forest-land CO2 to a forest decision
+// the Independent Standards Board has not made (LSRS Box 1.1, Box 9.1).
+// Colour caps are each layer's p95 per 0.25° cell, except the no-product
+// layer (543 cells, all Southeast Asian), capped at its p90.
+const FSOIL_OWNERS = {
+  fsw1: {
+    label: 'Forest soil → wood products · LSRS v1 (CH₄ + N₂O)',
+    menu: 'Forest soil → wood products, v1 rule (CH₄ + N₂O · map only)',
+    cat: 'cat3',
+    colorMax: 3000,
+    note: 'Methane and nitrous oxide from drained peat under forest that produces wood: drained managed forest in 22 Annex I countries (8 Mt CO₂e/yr, as they report it) and acacia pulpwood on peat in Sumatra, Borneo and Peninsular Malaysia (3 Mt, IPCC Tier 1). About 11 Mt CO₂e/yr. Version 1 of the GHG Protocol Land Sector and Removals Standard does cover these: CH₄ and N₂O from activities on forest land are land management production emissions, so a company sourcing the timber, pulp or paper reports them. Annex I drained forest is taken to be managed for wood, as national inventories treat it. Not counted in any food total.',
+    description: 'Drained forest peat CH₄ + N₂O that LSRS v1 allocates to the wood products sourced from that forest.',
+  },
+  fswp: {
+    label: 'Forest soil → wood products · pending LSRS forest decision (CO₂)',
+    menu: 'Forest soil → wood products, pending forest decision (CO₂ · map only)',
+    cat: 'cat2',
+    colorMax: FSOIL_COLOR_MAX,
+    note: 'Carbon dioxide from the same drained wood-producing forest: Annex I drained managed forest (30 Mt CO₂/yr, as reported) and acacia pulpwood on peat in Southeast Asia (86 Mt, IPCC Tier 1, including dissolved organic carbon). About 116 Mt CO₂/yr. ALLOCATION PENDING: these would go to the timber, pulp and paper sourced from the forest, but version 1 of the GHG Protocol Land Sector and Removals Standard does not apply to forestry. Its Independent Standards Board has not decided how companies account for CO₂ on forest land, and a request for information on forest carbon accounting is due in 2026 (LSRS Box 1.1, Box 9.1). The clearing of natural peat-swamp forest for acacia within the last 20 years is a separate land-use change charge, covered in v1, and is not part of this layer. Not counted in any food total.',
+    description: 'Drained forest peat CO₂ that would go to wood products once the LSRS forest decision is made.',
+  },
+  fsnp: {
+    label: 'Forest soil → no product (not allocated)',
+    menu: 'Forest soil → no product, not allocated (map only)',
+    cat: 'cat2',
+    colorMax: 400000,
+    note: 'Drained peat under degraded peat-swamp forest and secondary forest or shrub in Sumatra, Borneo and Peninsular Malaysia (2015 areas, Miettinen et al. 2017; IPCC Tier 1, all gases). About 83 Mt CO₂e/yr. This land produces nothing a company sources, so no rule in the GHG Protocol Land Sector and Removals Standard assigns it to a product; it appears only in national inventories. Much of it is drained by canals dug for neighbouring oil palm and acacia, but the standard has no rule that makes a plantation responsible for peat its drainage dries out next door. Its one route, Requirement 7 (non-productive land inside a plantation boundary), is optional, aimed at buffer strips and set-asides, and cannot be implemented until the forest decision is made (LSRS Box 5.1). Some degraded peat-swamp forest may still be logged for timber, which would move that share to wood products. Colour scale tops out at 400,000 t per cell. Not counted in any total.',
+    description: 'Drained forest peat with no product to allocate it to under the LSRS.',
+  },
+}
+
 const YEARS = Array.from({ length: 25 }, (_, i) => 2000 + i)
 
 // Sources: [id, label, 2020 domain max kt/cell]. The id is the tile prop.
@@ -202,16 +235,30 @@ function makeVariable({ source, crop }) {
   // as Annex I parties report it (CRF 4.A.1 + table 4(II)), plus IPCC Tier 1
   // for insular Southeast Asia (Gridded LM build_forest_soil_tropical.py). Map only, not
   // in any total: forest land is not a food commodity's land.
+  if (FSOIL_OWNERS[source]) {
+    const o = FSOIL_OWNERS[source]
+    return {
+      ...shared,
+      id: source,
+      label: o.label,
+      unit: 't CO₂e/yr',
+      domain: { min: 0, max: o.colorMax },
+      yearTerms: [{ prop: source, src: source }],
+      constantInTime: true,
+      note: `${o.note} Does not vary with the year slider.`,
+      description: o.description,
+    }
+  }
   if (source === 'fsoil') {
     return {
       ...shared,
       id: 'fsoil',
-      label: 'Soil carbon — forest (drained organic soil)',
+      label: 'Soil carbon — forest (drained organic soil, all owners)',
       unit: 't CO₂e/yr',
       domain: { min: 0, max: FSOIL_COLOR_MAX },
       yearTerms: [{ prop: 'fsoil', src: 'fsoil' }],
       constantInTime: true,
-      note: 'Forest remaining forest. Mineral forest soil is held at the IPCC default of steady state (no flux absent a management change), which national inventories support: Annex I parties report a net mineral-soil gain of +0.03 t C/ha/yr across 1,665 Mha. What remains is drained organic (peat) soil under forest: CO₂, CH₄ and N₂O as 22 Annex I parties report it, 2020 (38 Mt CO₂e/yr), placed on forest over PEATMAP peat. Non-Annex I countries report no drained forest area, so Sumatra, Borneo and Peninsular Malaysia add an IPCC Tier 1 estimate: 2015 areas of degraded peat-swamp forest, secondary forest and acacia pulpwood on peat (Miettinen et al. 2017), about 170 Mt CO₂e/yr. The colour scale tops out at 12,000 t per cell so the Annex I pattern stays readable; most Southeast Asian cells exceed it, many by 10 to 100 times. Does not vary with the year slider; not counted in any total.',
+      note: 'Forest remaining forest. Mineral forest soil is held at the IPCC default of steady state (no flux absent a management change), which national inventories support: Annex I parties report a net mineral-soil gain of +0.03 t C/ha/yr across 1,665 Mha. What remains is drained organic (peat) soil under forest: CO₂, CH₄ and N₂O as 22 Annex I parties report it, 2020 (38 Mt CO₂e/yr), placed on forest over PEATMAP peat. Non-Annex I countries report no drained forest area, so Sumatra, Borneo and Peninsular Malaysia add an IPCC Tier 1 estimate: 2015 areas of degraded peat-swamp forest, secondary forest and acacia pulpwood on peat (Miettinen et al. 2017), about 170 Mt CO₂e/yr. Three views under Specific sources split this layer by who would own it under the GHG Protocol LSRS: wood products under the v1 rule (CH₄ + N₂O, about 11 Mt), wood products pending the standard\u2019s forest decision (CO₂, about 116 Mt), and no product (about 83 Mt). The colour scale tops out at 12,000 t per cell so the Annex I pattern stays readable; most Southeast Asian cells exceed it, many by 10 to 100 times. Does not vary with the year slider; not counted in any total.',
       description: 'Drained forest organic-soil emissions: national inventories (Annex I, 2020) and IPCC Tier 1 for insular Southeast Asia (2015 areas).',
     }
   }
@@ -370,7 +417,8 @@ const config = {
         // mineral = 0, IPCC default; map only, not in totals) sits with the
         // other soil carbon sources, right after rangeland.
         ...SOURCES.flatMap(([id, label]) => id === 'rsoil'
-          ? [{ id, label }, { id: 'fsoil', label: 'Soil carbon CO₂ — forest (drained organic · map only)', cat: 'cat2' }]
+          ? [{ id, label }, { id: 'fsoil', label: 'Soil carbon — forest (drained organic, all owners · map only)', cat: 'cat2' },
+            ...Object.entries(FSOIL_OWNERS).map(([oid, o]) => ({ id: oid, label: o.menu, cat: o.cat }))]
           : [{ id, label }]),
         // Forest carbon pilot: the two GHG Protocol accounting options as
         // selectable signed views (research preview, not in totals).
@@ -550,7 +598,7 @@ const config = {
     // Forest pilot and forest soil views ignore the commodity dropdown: alias every crop
     // selection to the same signed layer so no source x crop combination
     // is left without a variable.
-    ...['fmlp', 'fab', 'fsoil'].flatMap((source) => [
+    ...['fmlp', 'fab', 'fsoil', ...Object.keys(FSOIL_OWNERS)].flatMap((source) => [
       makeVariable({ source, crop: 'all' }),
       ...[...CROPS, ...LIVESTOCK_COMMODITIES, ['feed']].map(([crop]) => ({
         ...makeVariable({ source, crop: 'all' }),

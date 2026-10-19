@@ -411,7 +411,17 @@ function FoodEmissionsMethods() {
         forest-management map. That adds about 170 Mt CO₂e/yr on 6.2 Mha
         (about 215 Mt if all degraded peat-swamp forest is drained), more
         than four times the Annex I total, about half of it from acacia. Papua and other
-        tropical peat, largely undrained, are not included. We
+        tropical peat, largely undrained, are not included. Three further
+        views split the layer by who would own it under the LSRS. CH₄ and
+        N₂O from drained peat under wood-producing forest (Annex I managed
+        forest and acacia, about 11 Mt CO₂e/yr) are production emissions
+        that v1 already assigns to the timber, pulp and paper sourced. The
+        CO₂ from the same forest (about 116 Mt) would go to those products
+        too, but that allocation is pending: v1 does not apply to
+        forestry, and the Independent Standards Board has yet to decide how
+        companies account for forest-land CO₂. The remaining 83 Mt, under
+        degraded peat-swamp forest and secondary forest in Southeast Asia,
+        has no product and so no owner under any LSRS rule. We
         are piloting the forest methods now: two
         research-preview layers under category 2 show forest biomass
         carbon flux for 44 US states, France, and Spain from ~334,000

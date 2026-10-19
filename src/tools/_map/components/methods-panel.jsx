@@ -585,7 +585,10 @@ function FoodEmissionsMethods() {
         the 2020 emissions pattern; production and agricultural land are
         national series apportioned to units by their share of national
         emissions, so those two terms are proportional attributions rather
-        than independent subnational observations. Production is measured
+        than independent subnational observations. A spatially explicit
+        crop-yield layer, in development in the lab, would make the
+        production term subnational; the plan is to test the approach first
+        with the SPAM 2020 production maps. Production is measured
         in calories, using per-commodity factors checked against FAO Food
         Balance Sheets. Where Hong et al. worked at the national scale and
         over six decades, the aim here is to carry the same decomposition

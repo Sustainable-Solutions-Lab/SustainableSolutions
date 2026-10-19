@@ -403,9 +403,15 @@ function FoodEmissionsMethods() {
         1,665 Mha), as do European woodland re-measurements (LUCAS), so the
         layer is drained forest organic soil, CO₂, CH₄ and N₂O as 22 Annex I
         parties report it (about 38 Mt CO₂e/yr on 10.4 Mha in 2020), placed
-        on forest over PEATMAP peat. Non-Annex I parties
-        report no drained forest area, so tropical drained peat-swamp
-        forest is not yet included. We
+        on forest over PEATMAP peat. Non-Annex I parties report no drained
+        forest area, so for Sumatra, Borneo and Peninsular Malaysia we add an
+        IPCC Tier 1 estimate (2013 Wetlands Supplement): 2015 areas of
+        degraded peat-swamp forest, secondary forest and acacia pulpwood on
+        peat from Miettinen et al. (2017), placed with the Lesiv et al. (2022)
+        forest-management map. That adds about 170 Mt CO₂e/yr on 6.2 Mha
+        (about 215 Mt if all degraded peat-swamp forest is drained), more
+        than four times the Annex I total, about half of it from acacia. Papua and other
+        tropical peat, largely undrained, are not included. We
         are piloting the forest methods now: two
         research-preview layers under category 2 show forest biomass
         carbon flux for 44 US states, France, and Spain from ~334,000

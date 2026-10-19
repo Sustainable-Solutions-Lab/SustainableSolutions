@@ -199,7 +199,8 @@ function makeVariable({ source, crop }) {
   // Forest soil (Gridded LM cat2 plan steps 1-2): forest remaining forest.
   // Mineral soil follows the IPCC default (steady state, zero absent a
   // management change), so the layer is drained forest organic soil only,
-  // as Annex I parties report it (CRF 4.A.1 + table 4(II)). Map only, not
+  // as Annex I parties report it (CRF 4.A.1 + table 4(II)), plus IPCC Tier 1
+  // for insular Southeast Asia (Gridded LM build_forest_soil_tropical.py). Map only, not
   // in any total: forest land is not a food commodity's land.
   if (source === 'fsoil') {
     return {
@@ -210,8 +211,8 @@ function makeVariable({ source, crop }) {
       domain: { min: 0, max: FSOIL_COLOR_MAX },
       yearTerms: [{ prop: 'fsoil', src: 'fsoil' }],
       constantInTime: true,
-      note: 'Forest remaining forest. Mineral forest soil is held at the IPCC default of steady state (no flux absent a management change), which national inventories support: Annex I parties report a net mineral-soil gain of +0.03 t C/ha/yr across 1,665 Mha. What remains is drained organic (peat) soil under forest: CO₂, CH₄ and N₂O as 22 Annex I parties report it, 2020 (38 Mt CO₂e/yr), placed on forest over PEATMAP peat. Non-Annex I countries report no drained forest area, so tropical drained peat-swamp forest is not yet shown. Does not vary with the year slider; not counted in any total.',
-      description: 'Drained forest organic-soil emissions from national inventories, 2020.',
+      note: 'Forest remaining forest. Mineral forest soil is held at the IPCC default of steady state (no flux absent a management change), which national inventories support: Annex I parties report a net mineral-soil gain of +0.03 t C/ha/yr across 1,665 Mha. What remains is drained organic (peat) soil under forest: CO₂, CH₄ and N₂O as 22 Annex I parties report it, 2020 (38 Mt CO₂e/yr), placed on forest over PEATMAP peat. Non-Annex I countries report no drained forest area, so Sumatra, Borneo and Peninsular Malaysia add an IPCC Tier 1 estimate: 2015 areas of degraded peat-swamp forest, secondary forest and acacia pulpwood on peat (Miettinen et al. 2017), about 170 Mt CO₂e/yr. The colour scale tops out at 12,000 t per cell so the Annex I pattern stays readable; most Southeast Asian cells exceed it, many by 10 to 100 times. Does not vary with the year slider; not counted in any total.',
+      description: 'Drained forest organic-soil emissions: national inventories (Annex I, 2020) and IPCC Tier 1 for insular Southeast Asia (2015 areas).',
     }
   }
   if (source === 'all' || source === 'cat2' || source === 'cat3') {

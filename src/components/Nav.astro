@@ -14,7 +14,7 @@ const path = Astro.url.pathname;
 <header class="sticky top-0 z-50 backdrop-blur-md border-b border-rule bg-paper/70" data-nav>
   <nav
     aria-label="Primary"
-    class="container-content flex items-center justify-between h-14"
+    class="nav-bar flex items-center h-14"
   >
     <a href="/" class="lab-wordmark no-rule" aria-label="Sustainable Solutions Lab, home">
       <img class="lab-logo lab-logo-light" src="/logos/lab/wordmark-dark.svg" alt="Sustainable Solutions Lab" />
@@ -22,7 +22,7 @@ const path = Astro.url.pathname;
     </a>
 
     {/* Desktop link list */}
-    <ul class="hidden md:flex items-center gap-6 text-sm">
+    <ul class="hidden md:flex items-center gap-6 text-sm ml-10 lg:ml-12">
       {
         links.map(({ href, label }) => {
           const active = href === '/' ? path === '/' : path.startsWith(href);
@@ -45,7 +45,7 @@ const path = Astro.url.pathname;
     </ul>
 
     {/* Right-side controls: theme toggle (always) + hamburger (mobile only) */}
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 ml-auto">
       <button
         type="button"
         data-theme-toggle
@@ -83,7 +83,7 @@ const path = Astro.url.pathname;
     class="md:hidden hidden border-t border-rule bg-paper"
     data-mobile-menu
   >
-    <ul class="container-content py-3 flex flex-col gap-1 text-sm">
+    <ul class="nav-bar py-3 flex flex-col gap-1 text-sm">
       {
         links.map(({ href, label }) => {
           const active = href === '/' ? path === '/' : path.startsWith(href);
@@ -108,6 +108,16 @@ const path = Astro.url.pathname;
 </header>
 
 <style>
+  /* The bar runs the full window width, with the logo and links flush
+     left at the page gutter rather than centred in the content column,
+     so on wide pages and full-width tools they line up with the left edge. */
+  .nav-bar {
+    width: 100%;
+    padding-inline: var(--gutter-mobile);
+  }
+  @media (min-width: 768px) {
+    .nav-bar { padding-inline: var(--gutter); }
+  }
   .lab-wordmark {
     display: inline-flex;
     align-items: center;

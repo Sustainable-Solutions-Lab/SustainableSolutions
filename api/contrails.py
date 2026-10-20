@@ -263,15 +263,12 @@ def _reasons(feats, aircraft, dep_utc, o_ap, d_ap, pct):
                        "of their warming"))
     if aircraft in _CLEAN_TYPES:
         tagged.append(("-", f"The model predicts less contrail warming "
-                       f"for the {aircraft} than for most aircraft, mainly "
-                       "because many of its engines emit little soot (an "
-                       "advantage recent measurements suggest may be smaller "
-                       "than modeled)"))
+                       f"for the {aircraft} than other aircraft given the "
+                       "soot and volatile particulates its engines emit"))
     else:
         tagged.append(("+", f"The model predicts more contrail warming for "
-                       f"the {aircraft} than for aircraft whose engines emit "
-                       "little soot (a gap recent measurements suggest may be "
-                       "smaller than modeled)"))
+                       f"the {aircraft} than other aircraft given the soot "
+                       "and volatile particulates its engines emit"))
     mid_lat = abs((o_ap["lat"] + d_ap["lat"]) / 2)
     month = dep_utc.month
     nh = (o_ap["lat"] + d_ap["lat"]) / 2 >= 0

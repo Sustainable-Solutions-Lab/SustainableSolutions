@@ -594,10 +594,13 @@ function FoodEmissionsMethods() {
         terms are therefore proportional attributions that vary between
         countries but not within them, while the emissions term and the net
         change carry the within-country detail. A spatially explicit
-        crop-yield layer, in development in the lab, would make the
-        production term subnational, and the companion paper carries the
-        decomposition from Hong et al.&rsquo;s national, six-decade scale to
-        subnational units on spatially explicit data.
+        crop-yield layer, in development in the lab, would make both
+        subnational: a first test on SPAM&rsquo;s 2000–2020 crop maps,
+        moving production and cropland within each country, shifts about
+        0.7 Gt of the global land-per-calorie gain to the other terms, most
+        strongly in Indonesia. The companion paper carries the decomposition
+        from Hong et al.&rsquo;s national, six-decade scale to subnational
+        units on spatially explicit data.
       </p>
 
       <h2 style={h2Style}>Caveats</h2>

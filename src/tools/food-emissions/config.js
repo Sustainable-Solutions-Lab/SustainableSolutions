@@ -183,6 +183,9 @@ function makeVariable({ source, crop }) {
     diverging: false,
     alphaFloor: 0.02,
     alphaPower: 0.35,
+    // Colour tops out at the 96th percentile rather than the 99th, so the
+    // high end saturates a little and the middle of the ramp reads stronger.
+    colorPercentile: 0.96,
     layer: 'map',
     dimensionValues: { source, crop },
   }
@@ -390,7 +393,7 @@ const config = {
     mobileCenter: [-79.5, 24],
     mobileZoom: 2.35,
     minZoom: 1.2,
-    maxZoom: 10,
+    maxZoom: 8,
     // Poles truncated ~300 km beyond the highest-latitude plotted cells
     // (data spans -51.9 to 68.4): the land layer is clipped to [-55, 71.5]
     // and the viewport edges are hard-locked to the same band, so dragging
@@ -400,6 +403,8 @@ const config = {
     useWorldOverlay: true,
     // Subtle national + admin-1 reference lines (Natural Earth 10m).
     boundariesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/boundaries.pmtiles',
+    // Natural Earth 1:10m land (public domain), tippecanoe z0-8, layer 'land'.
+    landUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/land10m.pmtiles',
   },
 
   // ── Layers ───────────────────────────────────────────────────────────────
@@ -594,6 +599,7 @@ const config = {
       domain: { min: 0, max: 60 },
       alphaFloor: 0.02,
       alphaPower: 0.35,
+      colorPercentile: 0.96,
       layer: 'map',
       dimensionValues: { source: 'all', crop: 'feed' },
       yearTerms: [{ prop: 'feed', src: 'fer' }],
@@ -799,8 +805,8 @@ const config = {
   // `rclone copy build/tiles/food-emissions/food-emissions.pmtiles r2:ssl-data/food-emissions/`.
   // A tiling change that the deployed client cannot read goes up under a
   // new name and the URL switches with the site deploy (2026-10-20: the
-  // 5' tier, food-emissions-5min.pmtiles; the 0.25° tier now ends at z6).
-  tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/food-emissions-5min.pmtiles',
+  // 5' tier; 2026-10-21 it starts at z5, food-emissions-5min-z5.pmtiles).
+  tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/food-emissions-5min-z5.pmtiles',
   sourceLayer: 'food-emissions',
   // The Cornerstone initiative (cornerstonedata.org) — this project is part
   // of it, and the jurisdictional land-use-change framework the explorer
@@ -820,9 +826,8 @@ const config = {
   latProfileUrl: '/tools/food-emissions/lat-profiles.json',
   // Three cell tiers: 0.5° aggregates carry the low zooms (~4x fewer
   // circles per frame — the 0.25° cells are sub-pixel there anyway), 0.25°
-  // cells the middle, and the native 5' grid (~9 km, _scale 9) from z6, where
-  // a 0.25° cell is already ~11 px across. Crossfades at z 2.75-3.0 and
-  // 6.0-6.25. Radii grow with zoom to stay contiguous. Every tier carries
+  // cells the middle, and the native 5' grid (~9 km, _scale 9) from z5.
+  // Crossfades at z 2.75-3.0 and 5.0-5.25. Radii grow with zoom to stay contiguous. Every tier carries
   // the same props, and the area tool sums the finest tier on screen.
   // fill: circle diameter relative to the cell pitch — a zoom ramp. A hair
   // under 1 at overview (heavy overlap there stacks alpha and reads
@@ -830,8 +835,8 @@ const config = {
   // gaps stop washing the field out.
   scales: [
     { value: 56, maxZoom: 3.0, radiusMode: 'cell', fill: [[1, 1.1], [3, 1.25]] },
-    { value: 28, minZoom: 2.99, maxZoom: 6.25, radiusMode: 'cell', fill: [[3, 0.9], [5, 1.05], [8, 1.35]] },
-    { value: 9, minZoom: 6.24, radiusMode: 'cell', fill: [[6, 1.0], [8, 1.2], [10, 1.35]] },
+    { value: 28, minZoom: 2.99, maxZoom: 5.25, radiusMode: 'cell', fill: [[3, 0.9], [5, 1.05]] },
+    { value: 9, minZoom: 5.24, radiusMode: 'cell', fill: [[5, 1.0], [8, 1.3]] },
   ],
 }
 

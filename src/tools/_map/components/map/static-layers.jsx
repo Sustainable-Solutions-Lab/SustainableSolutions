@@ -422,12 +422,16 @@ export function addStaticLayers(map, scheme, opts = {}) {
   }
 
   // ── 2e. World land (global projects) ─────────────────────────────────────
+  // Land: Natural Earth 1:10m as vector tiles when the project supplies
+  // them (opts.landUrl), sharp at every zoom; the 1:110m GeoJSON otherwise,
+  // which is fine at overview but visibly rough past z5.
+  const landTiled = Boolean(opts.landUrl)
   if (worldOverlays && !map.getSource('world-land')) {
-    map.addSource('world-land', {
-      type: 'geojson',
-      data: '/tools/food-emissions/ne110m-land.json',
-    })
+    map.addSource('world-land', landTiled
+      ? { type: 'vector', url: `pmtiles://${opts.landUrl}` }
+      : { type: 'geojson', data: '/tools/food-emissions/ne110m-land.json' })
   }
+  const landLayer = landTiled ? { 'source-layer': 'land' } : {}
   if (worldOverlays) {
     const landFill = scheme === 'dark' ? '#14142A' : '#F1F1DF'
     const coastColor = scheme === 'dark' ? 'rgba(248,248,232,0.25)' : 'rgba(24,24,56,0.25)'
@@ -439,6 +443,7 @@ export function addStaticLayers(map, scheme, opts = {}) {
         id: 'world-land-fill',
         type: 'fill',
         source: 'world-land',
+        ...landLayer,
         paint: { 'fill-color': landFill, 'fill-opacity': 1 },
       }, firstDataLayer)
     } else {
@@ -449,7 +454,9 @@ export function addStaticLayers(map, scheme, opts = {}) {
         id: 'world-coastline',
         type: 'line',
         source: 'world-land',
-        paint: { 'line-color': coastColor, 'line-width': 0.75 },
+        ...landLayer,
+        paint: { 'line-color': coastColor,
+                 'line-width': ['interpolate', ['linear'], ['zoom'], 2, 0.6, 5, 0.8, 8, 1.1] },
       }, firstDataLayer)
     } else {
       map.setPaintProperty('world-coastline', 'line-color', coastColor)
@@ -461,8 +468,10 @@ export function addStaticLayers(map, scheme, opts = {}) {
   // (opts.boundariesUrl). Kept above the data layers by the render hook's
   // enforceOverlayOrder so they read over the cells and choropleths.
   if (worldOverlays && opts.boundariesUrl) {
-    const adm0Color = scheme === 'dark' ? 'rgba(248,248,232,0.22)' : 'rgba(24,24,56,0.22)'
-    const adm1Color = scheme === 'dark' ? 'rgba(248,248,232,0.11)' : 'rgba(24,24,56,0.11)'
+    // Slightly heavier than first set (2026-10-21): state lines were hard to
+    // read over the cells. Width grows with zoom so overview stays quiet.
+    const adm0Color = scheme === 'dark' ? 'rgba(248,248,232,0.30)' : 'rgba(24,24,56,0.30)'
+    const adm1Color = scheme === 'dark' ? 'rgba(248,248,232,0.20)' : 'rgba(24,24,56,0.20)'
     if (!map.getSource('boundaries')) {
       map.addSource('boundaries', { type: 'vector', url: `pmtiles://${opts.boundariesUrl}` })
     }
@@ -470,7 +479,8 @@ export function addStaticLayers(map, scheme, opts = {}) {
       map.addLayer({
         id: 'adm1-lines', type: 'line', source: 'boundaries', 'source-layer': 'adm1',
         minzoom: 2.5,
-        paint: { 'line-color': adm1Color, 'line-width': 0.5 },
+        paint: { 'line-color': adm1Color,
+                 'line-width': ['interpolate', ['linear'], ['zoom'], 2.5, 0.5, 5, 0.8, 8, 1.2] },
       })
     } else {
       map.setPaintProperty('adm1-lines', 'line-color', adm1Color)
@@ -478,7 +488,8 @@ export function addStaticLayers(map, scheme, opts = {}) {
     if (!map.getLayer('adm0-lines')) {
       map.addLayer({
         id: 'adm0-lines', type: 'line', source: 'boundaries', 'source-layer': 'adm0',
-        paint: { 'line-color': adm0Color, 'line-width': 0.7 },
+        paint: { 'line-color': adm0Color,
+                 'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.7, 5, 1.0, 8, 1.5] },
       })
     } else {
       map.setPaintProperty('adm0-lines', 'line-color', adm0Color)

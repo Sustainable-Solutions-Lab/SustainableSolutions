@@ -606,7 +606,7 @@ function FoodEmissionsMethods() {
 
       <h2 style={h2Style}>Caveats</h2>
       <p style={pStyle}>
-        Cells are 0.25° (~28 km), and from zoom 6 the model&rsquo;s native 5′
+        Cells are 0.25° (~28 km), and from zoom 5 the model&rsquo;s native 5′
         grid (~9 km); placement at 5′ rests on SPAM&rsquo;s modelled crop
         allocation and gridded animal densities, so read it at landscape
         scale, not field scale. Commodity views cover eighteen crops (the twelve largest

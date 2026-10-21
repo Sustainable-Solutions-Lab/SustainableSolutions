@@ -295,10 +295,12 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       const yTop = mc.fromLngLat({ lng: 0, lat: latN }).y
       const yBot = mc.fromLngLat({ lng: 0, lat: latS }).y
       // North is hard (the arctic land cut must never show); the south gets
-      // slack — up to SOUTH_SLACK of the viewport height may be empty ocean
-      // below the southern cut, so Patagonia and New Zealand can clear the
-      // bottom-of-screen UI (year bar, phone browser chrome).
-      const SOUTH_SLACK = 0.40
+      // a little slack — SOUTH_SLACK of the viewport height may be empty
+      // below the southern cut, enough for Cape Horn to clear the
+      // attribution line. It also sets how far out a tall screen can zoom,
+      // so it stays small (was 0.40, which let zoom-out open a band of
+      // blank map at the bottom; 0.04 matches the mining-water tool).
+      const SOUTH_SLACK = config.region.southSlack ?? 0.04
       transformCameraUpdate = ({ center, zoom }) => {
         const h = containerRef.current?.clientHeight
         if (!h || center == null || zoom == null) return {}
@@ -359,7 +361,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
           // the allowed southern slack exactly fills the viewport, so the
           // full latitude range (incl. Patagonia / New Zealand) is
           // reachable above bottom-of-screen UI.
-          const bandMin = Math.log2((h * 0.6) / (512 * (yBot - yTop)))
+          const bandMin = Math.log2((h * (1 - (config.region.southSlack ?? 0.04))) / (512 * (yBot - yTop)))
           map.setMinZoom(Math.max(config.region?.minZoom ?? 0, bandMin))
           map.jumpTo({ center: map.getCenter() })
         }
@@ -380,6 +382,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         usOverlays: config.region?.useUsOverlay === true,
         worldOverlays: config.region?.useWorldOverlay === true,
         boundariesUrl: config.region?.boundariesUrl,
+        landUrl: config.region?.landUrl,
       })
       if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, schemeRef.current)
       setMapReady(true)
@@ -418,6 +421,8 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         californiaOverlays: config.region?.useCaliforniaOverlay !== false,
         usOverlays: config.region?.useUsOverlay === true,
         worldOverlays: config.region?.useWorldOverlay === true,
+        boundariesUrl: config.region?.boundariesUrl,
+        landUrl: config.region?.landUrl,
       })
       if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, state.colorScheme)
       // Restore graticule visibility

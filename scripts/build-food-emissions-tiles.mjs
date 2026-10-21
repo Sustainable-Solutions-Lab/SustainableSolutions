@@ -53,9 +53,9 @@ async function main() {
 
   const mbt = resolve(OUT_DIR, 'food-emissions.mbtiles');
   // Three cell tiers, one layer. The 0.5° and 0.25° tiers (this file) end
-  // at z6; the native 5' tier (export_explorer_cells.py --fine, _scale 9)
-  // takes over there and is tiled at z6-7 only - points lose nothing to
-  // overzoom, so the map runs on to z10 from the z7 tiles.
+  // at z5; the native 5' tier (export_explorer_cells.py --fine, _scale 9)
+  // takes over there and is tiled at z5-7 only - points lose nothing to
+  // overzoom, so the map's z8 runs off the z7 tiles.
   const fine = resolve(SRC, 'food_emissions_cells_5min.geojsonl');
   const hasFine = existsSync(fine);
   console.log('Tiling…');
@@ -63,7 +63,7 @@ async function main() {
   run('tippecanoe', [
     '-o', mbtCoarse, '--force',
     '-l', 'food-emissions',
-    '-Z', '0', '-z', hasFine ? '6' : '8',
+    '-Z', '0', '-z', hasFine ? '5' : '8',
     '-r1', '--no-feature-limit', '--no-tile-size-limit',
     src,
   ]);
@@ -73,7 +73,7 @@ async function main() {
     run('tippecanoe', [
       '-o', mbtFine, '--force',
       '-l', 'food-emissions',
-      '-Z', '6', '-z', '7',
+      '-Z', '5', '-z', '7',
       '-r1', '--no-feature-limit', '--no-tile-size-limit',
       fine,
     ]);

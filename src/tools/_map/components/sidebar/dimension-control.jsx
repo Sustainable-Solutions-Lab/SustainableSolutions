@@ -142,7 +142,7 @@ function SliderControl({ dimension, value, onChange, playing, onTogglePlay }) {
  * source ids are specific. Category labels follow the Standard's terms
  * verbatim (both cat 2 and 3 begin "land management..."); Requirement 32
  * requires the subcategories to stay separable. Cat 1 (land use change
- * emissions) comes from the jdLUC partner dataset — listed but disabled
+ * emissions) comes from our jdLUC product (in development) — listed but disabled
  * until those factors are displayable here.
  */
 export function SourceCategoryControls({ config, state, dispatch, compact = false }) {
@@ -191,8 +191,8 @@ export function SourceCategoryControls({ config, state, dispatch, compact = fals
           className={selectCls} style={{ borderRadius: 'var(--radius-sm)' }}>
           <option value="all">Total (all categories)</option>
           <option value="cat1" disabled
-            title="Land use change factors come from the next-generation jdLUC product being co-developed with AdAstra; not yet shown in this map">
-            1 · Land use change (partner data, coming)
+            title="Land use change factors come from our next-generation jurisdictional land-use-change product, pending final release; not yet shown in this map">
+            1 · Land use change (in development)
           </option>
           <option value="cat2">2 · {cat2.label}</option>
           <option value="cat3">3 · {cat3.label}</option>

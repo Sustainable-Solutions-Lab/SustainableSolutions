@@ -114,7 +114,7 @@ const SOURCE_IDS = SOURCES.map(([id]) => id)
 // GHG Protocol LSRS accounting subcategories (terms verified against the
 // Land Sector and Removals Standard and Guidance v1.0, June 2026):
 //   1 "land use change emissions"                 - not in this dataset
-//                                                   (jdLUC partner data)
+//                                                   (jdLUC, in development)
 //   2 "land management net biogenic CO2 emissions" - stock changes on
 //     managed land: SOC losses (soil) AND drained organic soils (peat)
 //   3 "land management production emissions"       - the non-CO2 gases

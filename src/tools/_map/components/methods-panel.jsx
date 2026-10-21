@@ -404,9 +404,9 @@ function FoodEmissionsMethods() {
         stock changes on managed land, which here means drained peatland
         CO₂ and soil-carbon losses on stable cropland and grazed
         rangeland; <em>land use
-        change emissions</em> are not part of this dataset; we are
-        co-developing a next-generation jurisdictional land-use-change
-        product with our partner AdAstra to supply them. The LSRS category selector in the sidebar renders each
+        change emissions</em> are not yet shown; they will come from
+        our next-generation jurisdictional land-use-change product,
+        now in development and pending final release. The LSRS category selector in the sidebar renders each
         grouping directly; the emission-factor downloads keep every
         source in its own column so any grouping can be reconstructed,
         and a companion table (ef_lsrs_categories.csv) maps each source

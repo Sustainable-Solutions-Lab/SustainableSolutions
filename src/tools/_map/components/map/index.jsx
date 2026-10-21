@@ -439,6 +439,9 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       // to its branch and bail out so the Firefuels-shaped filters below
       // don't try to mutate layers that don't exist.
       if (config.scales && config.scales.length > 0) {
+        // Intensity projects filter inside useJustAirLayers, on the painted
+        // quantity and the chart's own sample.
+        if (config.intensity) return
         applyJustAirFilter(map, config, variable, state.percentileRange, onFilterStats)
         return
       }

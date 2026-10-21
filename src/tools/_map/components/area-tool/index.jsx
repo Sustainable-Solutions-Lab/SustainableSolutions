@@ -254,9 +254,14 @@ export function AreaTool({ map, config, state, dispatch }) {
     // Multi-tier cell projects render two resolutions in the crossfade zoom
     // band — keep one tier or every sum double-counts. Prefer the fine tier.
     if (config.scales && config.scales.length > 1) {
-      const fineScale = Math.min(...config.scales.map((sc) => sc.value))
-      const fine = filtered.filter((f) => f.properties?._scale === fineScale)
-      if (fine.length > 0) filtered = fine
+      // The finest tier actually on screen: with three tiers the finest
+      // configured one is absent below its zoom band.
+      let fineScale = null
+      for (const f of filtered) {
+        const v = f.properties?._scale
+        if (typeof v === 'number' && (fineScale == null || v < fineScale)) fineScale = v
+      }
+      if (fineScale != null) filtered = filtered.filter((f) => f.properties?._scale === fineScale)
     }
 
     // Stats for preset aggregate variables
@@ -380,7 +385,18 @@ export function AreaTool({ map, config, state, dispatch }) {
     ]
     const activeLayers = dataLayerIds(config).filter((id) => map.getLayer(id))
     const features = map.queryRenderedFeatures(bbox, { layers: activeLayers })
-    const filtered = featuresWithinPolygon(features, geometry)
+    let filtered = featuresWithinPolygon(features, geometry)
+    // As for circles: one tier only, or the crossfade band double-counts.
+    if (config.scales && config.scales.length > 1) {
+      // The finest tier actually on screen: with three tiers the finest
+      // configured one is absent below its zoom band.
+      let fineScale = null
+      for (const f of filtered) {
+        const v = f.properties?._scale
+        if (typeof v === 'number' && (fineScale == null || v < fineScale)) fineScale = v
+      }
+      if (fineScale != null) filtered = filtered.filter((f) => f.properties?._scale === fineScale)
+    }
     const maskSfx = activeMaskSuffixes(config, state)
     const stats = computeAggregateStats(filtered, config.areaTool.aggregateVariableIds)
     if (config.areaTool.trend) {

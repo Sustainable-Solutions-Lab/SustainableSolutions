@@ -22,11 +22,42 @@
 import { useEffect, useRef, useState } from 'react'
 import { buildColorScale, INTERPOLATORS } from './colormap.js'
 import { readVarValue, varHasExpr } from './variable-value.js'
-import { cellIntensityExpr, toIntensityVariable, toIntensityRange } from './intensity.js'
+import { cellIntensityExpr, toIntensityVariable, toIntensityRange, toIntensityValues } from './intensity.js'
 import { getActiveVariable } from './get-active-variable.js'
 import { useYearFactors } from './year-factors.js'
 import { loadColorSamples, peekColorSamples, fixedColorRange } from './fixed-color-range.js'
 import { levelFor } from './analysis-levels.js'
+
+// Percentile ("Showing top X%") filter for intensity projects. The cutoffs
+// come from the same per-cell sample the distribution chart draws
+// (distributions.json, 0.25° cells, already per km²), restated in the
+// map's units, and are compared against the same expression the map paints
+// - so the cutoff line in the chart and the cells left on the map agree.
+// The sample is the reference year; the painted value carries the selected
+// year's national factors, so in other years the share kept is approximate.
+// (map/index.jsx's sample-the-loaded-tiles path stays for Just Air: there
+// it mixed tiers holding different amounts and compared raw cell totals.)
+function percentileCut(config, variable, dist, range) {
+  const low = range?.low ?? 0
+  const high = range?.high ?? 100
+  if (low <= 0 && high >= 100) return null
+  if (!variable || variable.type === 'categorical') return null
+  const raw = dist?.dist?.[variable.id]
+  if (!Array.isArray(raw) || raw.length < 10) return null
+  const vals = toIntensityValues(config, variable, raw).slice().sort((a, b) => a - b)
+  const pick = (p) => vals[Math.min(vals.length - 1, Math.max(0, Math.round((p / 100) * (vals.length - 1))))]
+  return { lo: low > 0 ? pick(low) : null, hi: high < 100 ? pick(high) : null }
+}
+
+function cellFilter(config, variable, scaleEntry, cut) {
+  const base = ['==', ['coalesce', ['to-number', ['get', '_scale']], 0], scaleEntry.value]
+  if (!cut || (cut.lo == null && cut.hi == null)) return base
+  const v = cellIntensityExpr(config, variable)
+  const parts = ['all', base]
+  if (cut.lo != null) parts.push(['>=', v, cut.lo])
+  if (cut.hi != null) parts.push(['<=', v, cut.hi])
+  return parts
+}
 
 // Tiling-exact base radius for a 1 km cell — the natural Mercator-derived
 // pixel size of a 1 km × 1 km cell, scaled by FILL_FACTOR so cells visibly
@@ -259,6 +290,10 @@ export function useJustAirLayers(map, config, state, tuning) {
   // ended up at near-zero alpha and the map looked blank).
   const colorRangeRef = useRef(null)
   const colorRangeLockedRef = useRef(false)
+  // Intensity projects own their percentile filter here (see percentileCut).
+  const ownsFilter = Boolean(config.intensity)
+  const cutRef = useRef(null)
+  cutRef.current = ownsFilter ? percentileCut(config, variable, dist, state.percentileRange) : null
 
   // ── Source + layer lifecycle ────────────────────────────────────────────
   useEffect(() => {
@@ -325,7 +360,9 @@ export function useJustAirLayers(map, config, state, tuning) {
             source: SOURCE_ID,
             'source-layer': sourceLayer,
             minzoom: s.minZoom ?? 0,
-            filter: ['==', ['coalesce', ['to-number', ['get', '_scale']], 0], s.value],
+            filter: ownsFilter
+              ? cellFilter(config, variableRef.current, s, cutRef.current)
+              : ['==', ['coalesce', ['to-number', ['get', '_scale']], 0], s.value],
             paint: (() => {
               const stroke = buildStrokeExprs(variableRef.current, isDarkRef.current, colorRangeRef.current, config)
               return {
@@ -457,6 +494,28 @@ export function useJustAirLayers(map, config, state, tuning) {
     return () => clearTimeout(settle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, state.activeLayer, state.activeDimensions, state.colorScheme, yearFactors, dist, state.mapView, state.analysis, state.analysisDriver])
+
+  // ── Percentile filter (intensity projects) ─────────────────────────────
+  const cutKey = cutRef.current ? `${cutRef.current.lo}|${cutRef.current.hi}` : 'none'
+  useEffect(() => {
+    if (!map || !scales || !ownsFilter) return undefined
+    if (!map.getStyle?.()) return undefined
+    function applyFilters() {
+      for (const s of scales) {
+        const layerId = `just-air-cells-${s.value}`
+        if (!map.getLayer(layerId)) continue
+        try {
+          map.setFilter(layerId, cellFilter(config, variableRef.current, s, cutRef.current))
+        } catch (err) {
+          console.error('[useJustAirLayers] setFilter', layerId, err)
+        }
+      }
+    }
+    applyFilters()
+    const settle = setTimeout(applyFilters, 300)
+    return () => clearTimeout(settle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, cutKey, state.activeLayer, state.activeDimensions, yearFactors])
 
   // ── Paint repaint when only the tuning sliders move ───────────────────
   // Re-emits circle-color / circle-radius using the EXISTING colorRange,

@@ -92,17 +92,17 @@ function FoodEmissionsMethods() {
     <>
       <h2 style={h2Style}>About this map</h2>
       <p style={pStyle}>
-        This map shows greenhouse-gas emissions from global food
-        production on a quarter-degree grid (reference year 2020): cropland
-        management — fertilizer and manure N₂O, rice paddy CH₄, drained
-        peatland CO₂, crop residues, residue burning, urea and liming CO₂ —
-        for 46 crops, together with direct livestock emissions from enteric
-        fermentation, manure management, and manure on pasture. Draw a
+        This map shows greenhouse-gas emissions from global food production
+        on a quarter-degree grid, reference year 2020. It covers cropland
+        management for 46 crops (fertilizer and manure N₂O, rice CH₄,
+        drained peatland CO₂, crop residues, residue burning, urea and
+        liming CO₂) and direct livestock emissions from enteric
+        fermentation, manure management and manure on pasture. Draw a
         circle, or switch to the regional view and click a jurisdiction, to
         see the enclosed total, the source and commodity mix, and a
-        2000–2024 trend composed from national series. A companion paper
-        in preparation will evaluate trends and drivers in the combined and
-        gridded land-use change and land management dataset.
+        2000–2024 trend. A companion paper in preparation will evaluate
+        trends and drivers in the combined and gridded land-use change and
+        land management dataset.
       </p>
 
       {/* Orientation before detail: the sections below are a long list of
@@ -115,7 +115,9 @@ function FoodEmissionsMethods() {
           links to, must be updated whenever the model changes - new layer,
           new data vintage, changed method. The schematic footer carries the
           status date; move it when you touch either surface. Rule recorded
-          in Gridded LM docs/decisions.md. */}
+          in Gridded LM docs/decisions.md.
+
+          Keep paragraphs to three or four sentences (Steve, 2026-10-20). */}
       <p style={calloutStyle}>
         <a href="/tools/food-emissions-methods" style={linkStyle}>
           <strong>Schematic: what we are building, and what it rests on</strong>
@@ -141,48 +143,56 @@ function FoodEmissionsMethods() {
 
       <h2 style={h2Style}>Updates to the published model</h2>
       <p style={pStyle}>
-        This map incorporates updates we developed in the course of the
-        replication, in coordination with the original authors. The rice CH₄
-        scaling factors for organic amendments and pre-season water regimes
-        are parameterized with the IPCC 2019 reference values, which lowers
-        rice CH₄ relative to the published figures by roughly a fifth.
-        Drained-peatland emissions keep the <strong>Cornerstone
-        two-part structure</strong> (a one-off pulse when peat is first
-        drained, booked as land-use change, then a steady occupation
-        emission for as long as it stays drained), with the steady rate
-        taken from the IPCC 2013 Wetlands Supplement Tier 1 factors by land
-        use and climate zone, all gases: 37.25 t CO₂e/ha/yr on temperate and
-        boreal cropland, and in the tropics 45 for oil palm, 60 for tree
-        crops such as rubber and coconut, 39 for paddy rice and 58 for other
-        cropland. The single 37.3 t CO₂e/ha/yr rate the model used before is
-        IPCC&rsquo;s temperate cropland value; IPCC&rsquo;s tropical factors
-        come only from sites drained for more than six years and exclude
-        the fast early loss, and subsidence records show the rate is steady
-        after about five years (Hooijer et al., 2012), so they pair with
-        the drainage pulse without counting it twice. Cropland peat totals
-        951 Mt CO₂e a year, against 802 at the single rate, which remains
-        on the map as a comparison view. The upstream
-        drained-peat map carries no peat at all in Malaysia; we fill it
-        from PEATMAP peat extent overlaid on our crop maps (1.5 Mha of
-        crops on peat, 1.05 Mha of it oil palm), which adds roughly 73 Mt
-        CO₂e a year to Malaysia. Two checks are in progress and not yet in
-        the totals. Drained peat is a finite stock: with the PEATGRIDS
-        v2.0.1 peat carbon map (Widyastuti et al.), letting emissions stop
-        where the peat runs out, and moving that land, still cropland, to
-        the same IPCC Tier 2 cropland soil model used everywhere else,
-        lowers 2020 cropland peat by 0 to 4% depending on whether the map
-        shows peat as it is today or before drainage, and less than 1% in
-        the tropics; it replaces the steady rate once validated against
-        measured depths on drained farmland. And our drained area matches
-        national inventories across most of Annex I, but not Canada, where
-        the upstream map has 1.07 Mha of drained cropland peat against
-        0.016 Mha reported (about 40 Mt CO₂e a year); a fix is being
-        decided. The associated
-        land-use-change pulse at drainage joins the dataset with the
-        Cornerstone integration. We also extend the boundary with CO₂ from
-        agricultural liming — a source outside the original model — using
-        EDGAR national estimates (IPCC category 3.C.2) distributed across
-        each country's cropland.
+        We made several updates in the course of the replication, in
+        coordination with the original authors. The rice CH₄ scaling factors
+        for organic amendments and pre-season water regimes use the IPCC
+        2019 reference values, which lowers rice CH₄ by roughly a fifth
+        relative to the published figures. We also extend the boundary with
+        CO₂ from agricultural liming, a source outside the original model,
+        using EDGAR national estimates (IPCC category 3.C.2) spread across
+        each country&rsquo;s cropland.
+      </p>
+
+      <h2 style={h2Style}>Drained peat</h2>
+      <p style={pStyle}>
+        Drained-peatland emissions keep the <strong>Cornerstone two-part
+        structure</strong>: a one-off pulse when peat is first drained,
+        booked as land-use change, then a steady emission for as long as it
+        stays drained. The steady rate is the IPCC 2013 Wetlands Supplement
+        Tier 1 factor by land use and climate zone, all gases: 37.25 t
+        CO₂e/ha/yr on temperate and boreal cropland and, in the tropics, 45
+        for oil palm, 60 for tree crops such as rubber and coconut, 39 for
+        paddy rice and 58 for other cropland. IPCC&rsquo;s tropical factors
+        come only from sites drained for more than six years, and
+        subsidence records show the rate is steady after about five
+        (Hooijer et al., 2012), so they pair with the pulse without counting
+        it twice. Cropland peat totals 951 Mt CO₂e a year, against 802 at
+        the single 37.3 rate the model used before (IPCC&rsquo;s temperate
+        cropland value), which stays on the map as a comparison view.
+      </p>
+      <p style={pStyle}>
+        The upstream drained-peat map carries no peat in Malaysia, so we
+        fill it from PEATMAP peat extent overlaid on our crop maps. That
+        places 1.5 Mha of crops on peat, 1.05 Mha of it oil palm, and adds
+        about 73 Mt CO₂e a year to Malaysia. The pulse at drainage joins the
+        dataset with land-use change.
+      </p>
+      <p style={pStyle}>
+        Two checks are in progress and not yet in the totals. Drained peat
+        is a finite stock: with the PEATGRIDS v2.0.1 peat carbon map
+        (Widyastuti et al.), letting emissions stop where the peat runs out,
+        and moving that land, still cropland, to the same IPCC Tier 2
+        cropland soil model used everywhere else, lowers 2020 cropland peat
+        by 0 to 4% (less than 1% in the tropics), depending on whether the
+        map shows peat as it is today or before drainage. It replaces the
+        steady rate once validated against measured depths on drained
+        farmland.
+      </p>
+      <p style={pStyle}>
+        Our drained area also matches national inventories across most of
+        Annex I, but not Canada. There the upstream map has 1.07 Mha of
+        drained cropland peat against 0.016 Mha reported (about 40 Mt CO₂e
+        a year), and a fix is being decided.
       </p>
 
       <h2 style={h2Style}>Livestock (provisional)</h2>
@@ -191,116 +201,114 @@ function FoodEmissionsMethods() {
         al., <em>Biomass use, production, feed efficiencies, and greenhouse
         gas emissions from global livestock systems</em>, PNAS
         (2013)</strong></a>, which resolves enteric fermentation and manure
-        emissions by species, production system, and region for a period
-        centered on 2000. Two things have to change for that framework to
-        sit alongside the cropland maps here: it has to run annually rather
-        than as one snapshot, and it has to resolve individual animal
-        commodities rather than species aggregates.
+        emissions by species, production system and region for a period
+        centred on 2000. To sit alongside the cropland maps here, that
+        framework has to run annually rather than as one snapshot, and
+        resolve individual animal commodities rather than species
+        aggregates.
       </p>
       <p style={pStyle}>
-        This version takes an interim route to both. Enteric fermentation
-        CH₄, manure-management CH₄ and N₂O, and N₂O from manure deposited on
-        pasture are taken from FAO's national Tier 1 series by species and
-        year, then distributed within each country by gridded animal
-        densities. Grazing animals (cattle, sheep, goats and horses) follow
-        Global Pasture Watch&rsquo;s annual 1 km livestock maps (Parente et
-        al., 2026), which are built as one consistent 2000–2022 series;
-        buffalo, which Global Pasture Watch does not map, follow its cattle
-        pattern within each country. Pigs and poultry follow Gridded
-        Livestock of the World, interpolated between its 2010, 2015 and
-        2020 editions. Both are census downscalings rather than
-        observations of animals. National totals therefore match FAOSTAT exactly for
-        every year 2000–2023, and each species group carries its own
-        primary product — raw milk, carcass meat, eggs — so emissions per
-        kilogram can be reported per commodity. What it does not yet carry
-        is Herrero's Tier 2 detail: feed baskets, digestibility, and
-        manure-management shares that vary by production system. An update
-        of the Herrero assessment to circa 2020 is in preparation by its
-        original authors; when those grids are available they replace the
-        intensity layer used here, leaving the annual and commodity
-        structure intact.
+        This version takes an interim route to both. Enteric CH₄,
+        manure-management CH₄ and N₂O, and N₂O from manure on pasture come
+        from FAO&rsquo;s national Tier 1 series by species and year,
+        distributed within each country by gridded animal densities: Global
+        Pasture Watch&rsquo;s annual 1 km maps (Parente et al., 2026) for
+        cattle, sheep, goats and horses, with buffalo following its cattle
+        pattern, and Gridded Livestock of the World, interpolated between
+        its 2010, 2015 and 2020 editions, for pigs and poultry. Both are
+        census downscalings rather than observations of animals. National
+        totals match FAOSTAT for every year 2000–2023, and each species
+        group carries its own primary product (raw milk, carcass meat,
+        eggs), so emissions per kilogram are reported per commodity.
+      </p>
+      <p style={pStyle}>
+        What this does not yet carry is Herrero&rsquo;s Tier 2 detail: feed
+        baskets, digestibility, and manure-management shares that vary by
+        production system. An update of the Herrero assessment to circa 2020
+        is in preparation by its original authors, and its grids will
+        replace the intensity layer used here, leaving the annual and
+        commodity structure intact.
       </p>
       <p style={pStyle}>
         Manure applied to cropland is counted once, on the cropland side.
-        Livestock factors are direct emissions only — the emissions of
+        Livestock factors are direct emissions only: the emissions of
         growing feed stay with the feed crop, so animal and crop figures
-        can be added without double counting, but a livestock emission
-        factor here is not a full life-cycle footprint.
+        can be added without double counting, but a livestock factor here
+        is not a full life-cycle footprint.
       </p>
 
       <h2 style={h2Style}>Production and yields</h2>
       <p style={pStyle}>
-        Per-cell production — behind the calorie totals, the land-intensity
-        views, and every per-kilogram emission factor — is spatially
-        explicit in yield, not just in area. National production totals
-        from FAOSTAT are distributed within each country according to SPAM
-        2020's gridded production, which carries the yield differences
-        between irrigated and rainfed systems and between prime and
-        marginal land. Totals therefore always match the national
-        statistics, while a tonne of grain is placed where it is actually
-        grown rather than spread evenly over the crop's area. Crops
-        without a SPAM production layer fall back to allocation by
-        harvested area, which amounts to assuming the national average
-        yield for that crop.
+        Per-cell production, behind the calorie totals, the land-intensity
+        views and every per-kilogram factor, distributes FAOSTAT national
+        totals within each country by SPAM 2020&rsquo;s gridded production.
+        SPAM carries the yield differences between irrigated and rainfed
+        systems and between prime and marginal land, so a tonne of grain is
+        placed where it is grown while totals still match the national
+        statistics. Crops without a SPAM production layer fall back to
+        harvested area, which assumes the national average yield. That
+        pattern is SPAM&rsquo;s modelled 2020 snapshot; a spatially explicit
+        crop-yield layer in development in the lab would make it observed
+        and annual.
       </p>
 
       <h2 style={h2Style}>Crop maps and masks</h2>
       <p style={pStyle}>
-        Crop locations and allocation rest on SPAM 2020, the standard
-        global crop-distribution model. Where more detailed public maps
-        exist we are incorporating them through a conservative,
-        total-preserving refinement: within each jurisdiction the finer
-        map redistributes that jurisdiction's emissions and production,
-        so country and admin-1 totals — and every per-source figure —
-        are conserved exactly while placement sharpens. The registry of
-        candidate maps includes the USDA Cropland Data Layer (United
-        States, 30 m annual), MapBiomas (Brazil, 30 m annual), Agriculture
-        Canada's Annual Crop Inventory, JRC's EUCROPMAP (EU, 10 m), ESA
-        WorldCereal, and commodity-specific maps such as the global
-        oil-palm extent and planting-year layers of <a href="https://doi.org/10.5194/essd-16-5111-2024" target="_blank" rel="noopener noreferrer" style={linkStyle}>Descals et al.
-        (2024)</a>. Two tracks are kept strictly separate: a reproducible
-        core built only from open, versioned, redistributable data, and
-        an enhanced track that may add restrictively-licensed or
-        model-derived masks, always with a frozen copy and provenance.
-        SPAM 2020 remains the default allocation everywhere; finer
-        core-track masks arrive one by one as opt-in toggles under
-        <em> Improved crop maps</em> in the sidebar. The first is the oil-palm
-        extent of Descals et al. (2024): switching it on reallocates
-        each country's palm-attributed emissions and production to the
-        mapped 10 m extent — national and per-source totals are
-        conserved exactly; only within-country placement changes. Where
-        SPAM misplaces a crop entirely (Cameroon's oil palm, which SPAM
-        scatters into the northern savanna rather than the coastal
-        estates), the toggle is the difference between a blank map and
-        the right one.
-        The enhanced track's first entries are the cocoa and coffee
+        Crop locations and allocation rest on SPAM 2020, the standard global
+        crop-distribution model. Where finer public maps exist we add them
+        through a total-preserving refinement: within each jurisdiction the
+        finer map redistributes that jurisdiction&rsquo;s emissions and
+        production, so country, admin-1 and per-source totals are conserved
+        exactly while placement sharpens. Candidates include the USDA
+        Cropland Data Layer (US, 30 m annual), MapBiomas (Brazil, 30 m
+        annual), Agriculture Canada&rsquo;s Annual Crop Inventory, JRC&rsquo;s
+        EUCROPMAP (EU, 10 m), ESA WorldCereal, and commodity maps such as
+        the oil-palm extent and planting-year layers of <a href="https://doi.org/10.5194/essd-16-5111-2024" target="_blank" rel="noopener noreferrer" style={linkStyle}>Descals et al.
+        (2024)</a>.
+      </p>
+      <p style={pStyle}>
+        Two tracks are kept strictly separate: a reproducible core built
+        only from open, versioned, redistributable data, and an enhanced
+        track that may add restrictively licensed or model-derived masks,
+        always with a frozen copy and provenance. SPAM stays the default
+        everywhere, and finer masks arrive one by one as opt-in toggles
+        under <em>Improved crop maps</em> in the sidebar. The first is the
+        Descals et al. oil-palm extent, which reallocates each
+        country&rsquo;s palm emissions and production to the mapped 10 m
+        extent. Where SPAM misplaces a crop entirely, as with
+        Cameroon&rsquo;s oil palm, scattered into the northern savanna
+        rather than the coastal estates, the toggle is the difference
+        between a blank map and the right one.
+      </p>
+      <p style={pStyle}>
+        The enhanced track&rsquo;s first entries are the cocoa and coffee
         presence models produced by Google for the{' '}
         <a href="https://www.forestdatapartnership.org" target="_blank" rel="noopener noreferrer" style={linkStyle}>Forest Data
-        Partnership</a> (2026a release, CC-BY): mean 10 m model
-        probability is read as fractional cover at 1 km, with a
-        per-crop probability floor calibrated so global expected area
-        matches FAOSTAT harvested area (a threshold-then-aggregate
-        re-export that keeps partial-cover cells is in progress). These
-        are model-derived rather than directly observed maps, which is
-        why they live on the enhanced track; a rubber layer follows.
-        For Ghana and Côte d'Ivoire a further toggle constrains cocoa to
-        the district totals that Trase derives from the peer-reviewed
-        10 m map of Kalischek et al. (<em>Nature Food</em>, 2023), using
-        the FDaP layer only as the within-district weight. That toggle
-        also sets Ghana's national cocoa area to Kalischek's 2.71 Mha in
-        place of FAOSTAT's 1.49 Mha, the one place where a mask changes
-        a national total rather than only placement; production stays at
-        FAOSTAT, so per-tonne intensities rise accordingly.
+        Partnership</a> (2026a release, CC-BY). Mean 10 m model probability
+        is read as fractional cover at 1 km, with a per-crop probability
+        floor calibrated so global expected area matches FAOSTAT harvested
+        area. They are model-derived rather than observed, which is why they
+        sit on the enhanced track; a re-export that keeps partial-cover
+        cells is in progress, and a rubber layer follows.
+      </p>
+      <p style={pStyle}>
+        For Ghana and Côte d&rsquo;Ivoire a further toggle constrains cocoa
+        to the district totals that Trase derives from the peer-reviewed
+        10 m map of Kalischek et al. (<em>Nature Food</em>, 2023), using the
+        Forest Data Partnership layer only within districts. It also sets
+        Ghana&rsquo;s national cocoa area to Kalischek&rsquo;s 2.71 Mha in
+        place of FAOSTAT&rsquo;s 1.49 Mha, the one place where a mask
+        changes a national total rather than only placement. Production
+        stays at FAOSTAT, so per-tonne intensities rise accordingly.
       </p>
 
       <h2 style={h2Style}>Download the emission factors</h2>
       <p style={pStyle}>
         The full factor tables are downloadable as CSV: kilograms of CO₂e
-        per kilogram of primary product for 2024, the most recent year the inputs support, given both
-        as a total and broken out by source, so a user can take the whole
-        set rather than reading values off the map. Livestock rows
-        additionally carry the feed-crop emissions attributed to each
-        animal group and a with-feed factor.
+        per kilogram of primary product for 2024, the most recent year the
+        inputs support, as a total and by source. Livestock rows also carry
+        the feed-crop emissions attributed to each animal group and a
+        with-feed factor.
       </p>
       <div style={{
         border: '1px solid var(--rule)', borderRadius: 'var(--radius-sm)',
@@ -323,231 +331,239 @@ function FoodEmissionsMethods() {
       </div>
       <p style={pStyle}>
         The two tables share a column layout, so they concatenate or join
-        without reshaping, and cover 18 crops and 8 livestock commodities. Factors for an arbitrary area, including an
-        uploaded sourcing polygon, download from the Region Focus panel
-        instead, and those follow whichever year is selected on the map.
-        Both the emissions and the production denominator here are moved
-        from the 2020 reference to 2024 on the same national trajectories
-        the map uses, so numerator and denominator share a vintage. Admin-1 assignment comes from the
-        jurisdiction grid sampled at cell centres, so units are
-        approximate at borders, and rows below one kilotonne of
-        production are omitted because the ratio is unstable there.
+        without reshaping, and cover 18 crops and 8 livestock commodities.
+        Factors for any other area, including an uploaded sourcing polygon,
+        download from the Region Focus panel and follow the year selected on
+        the map. Emissions and production are both moved from the 2020
+        reference to 2024 on the same national trajectories, so numerator
+        and denominator share a vintage. Admin-1 units are assigned at cell
+        centres, so they are approximate at borders, and rows below one
+        kilotonne of production are omitted because the ratio is unstable
+        there.
       </p>
 
       <h2 style={h2Style}>Area statistics and trends</h2>
       <p style={pStyle}>
-        While the map displays gridded cells and admin-1 × biome units,
-        the underlying gridded data supports aggregation over{' '}
-        <em>any</em> custom polygon — a company's sourcing area, a supply
-        shed, a watershed. The Region Focus tool offers drawn circles,
-        ZIP-code polygons (US tools), and — via <em>Upload sourcing
-        area</em> — your own GeoJSON or KML polygons; statistics,
-        trends, and emission factors are computed the same way for any
-        boundary, from the quarter-degree cells inside it.
+        The gridded data supports aggregation over <em>any</em> polygon: a
+        company&rsquo;s sourcing area, a supply shed, a watershed. The
+        Region Focus tool offers drawn circles, ZIP-code polygons (US tools)
+        and, via <em>Upload sourcing area</em>, your own GeoJSON or KML;
+        statistics, trends and emission factors are computed the same way
+        for any boundary, from the quarter-degree cells whose centres fall
+        inside it.
       </p>
       <p style={pStyle}>
-        Statistics for a drawn circle aggregate the quarter-degree cells
-        whose centers fall inside it. The trend chart composes each
-        country's national per-source series (2000–2024, from our annual
-        extension driven by FAOSTAT activity data) weighted by that
-        country's emissions inside the circle — exact for areas that
-        contain whole countries, and a proportional approximation
-        otherwise.
+        The trend chart composes each country&rsquo;s national per-source
+        series (2000–2024, from our annual extension driven by FAOSTAT
+        activity data), weighted by that country&rsquo;s emissions inside
+        the area. That is exact for areas containing whole countries and a
+        proportional approximation otherwise.
       </p>
 
       <h2 style={h2Style}>Feed</h2>
       <p style={pStyle}>
         Choosing <em>Crops grown for feed</em> shows the share of cropland
         emissions grown to feed animals, on the land where the crop grows.
-        For each country and crop, FAO Food Balance Sheets give the quantity
-        used as feed against domestic supply; that ratio is applied to the
-        crop's gridded emissions. Oilseeds count a share of processing as
-        well, since they are crushed before the cake is fed — taking
-        reported feed alone would put US soy at 2.5%. About 7% of the
-        emissions on this map are attributable to feed.
+        For each country and crop, FAO Food Balance Sheets give feed use
+        against domestic supply, and that ratio is applied to the
+        crop&rsquo;s gridded emissions. Oilseeds also count a share of
+        processing, since they are crushed before the cake is fed; reported
+        feed alone would put US soy at 2.5%. About 7% of the emissions on
+        this map are attributable to feed.
       </p>
       <p style={pStyle}>
         The downloadable factors add a feed column for each livestock
-        commodity, splitting a country's feed pool across animal groups in
-        proportion to concentrate demand (production times a feed-conversion
-        ratio). The effect is largest where it should be: US poultry rises
-        from 0.14 to 0.65 kg CO₂e per kg and pigs from 2.1 to 2.9, while
-        beef moves from 13.0 to 13.7 because its emissions are dominated by
-        enteric fermentation rather than feed. Two caveats: feed is located
-        where it is grown, so exported feed stays with the exporting
-        country rather than the herd that eats it, and the split between
-        animal groups uses literature feed-conversion ratios rather than a
-        calibrated feed-basket model.
+        commodity, splitting a country&rsquo;s feed pool across animal
+        groups in proportion to concentrate demand (production times a
+        feed-conversion ratio). The effect is largest where it should be: US
+        poultry rises from 0.14 to 0.65 kg CO₂e per kg and pigs from 2.1 to
+        2.9, while beef moves only from 13.0 to 13.7 because enteric
+        fermentation dominates it.
+      </p>
+      <p style={pStyle}>
+        Two caveats. Feed is located where it is grown, so exported feed
+        stays with the exporting country rather than the herd that eats it.
+        And the split between animal groups uses literature feed-conversion
+        ratios rather than a calibrated feed-basket model.
       </p>
 
       <h2 style={h2Style}>GHG Protocol land-sector categories</h2>
       <p style={pStyle}>
         The <a href="https://ghgprotocol.org/land-sector-and-removals-guidance" target="_blank" rel="noopener noreferrer" style={linkStyle}>GHG Protocol Land Sector and Removals Standard (2026)</a> requires
-        emissions to be accounted and reported by subcategory, and its
-        Requirement 32 obliges emission-factor providers to keep the
-        subcategories separable. This map's sources group as follows,
-        using the standard's own terms: <em>land management production
-        emissions</em> — fertilizer and manure N₂O, residue N₂O, rice
-        CH₄, residue burning, enteric CH₄, manure management, pasture
-        manure, and the non-biogenic CO₂ from urea and liming;
-        <em> land management net biogenic CO₂ emissions</em> — carbon
-        stock changes on managed land, which here means drained peatland
-        CO₂ and soil-carbon losses on stable cropland and grazed
-        rangeland; <em>land use
-        change emissions</em> are not yet shown; they will come from
-        our next-generation jurisdictional land-use-change product,
-        now in development and pending final release. The LSRS category selector in the sidebar renders each
-        grouping directly; the emission-factor downloads keep every
-        source in its own column so any grouping can be reconstructed,
-        and a companion table (ef_lsrs_categories.csv) maps each source
-        to its subcategory.
-        Removals are out of scope entirely: the standard requires
-        field-measured evidence, uncertainty deductions, and reversal
-        buffers before soil-carbon gains may be claimed, which no
-        map-based dataset can provide.
-        Finally, the LSRS defers carbon stock changes in forestry and
-        non-productive lands to future versions of the Standard — but
-        structurally they belong inside categories 1 and 2, not in a
-        category of their own, so that is where they will surface here:
-        the specific-sources list differentiates soil carbon by land
-        use. Forest soil is on the map under category 2 but in no total:
-        mineral forest soil follows the IPCC default of steady state, which
-        Annex I inventories support (a net gain of +0.03 t C/ha/yr across
-        1,665 Mha), as do European woodland re-measurements (LUCAS), so the
-        layer is drained forest organic soil, CO₂, CH₄ and N₂O as 22 Annex I
-        parties report it (about 38 Mt CO₂e/yr on 10.4 Mha in 2020), placed
-        on forest over PEATMAP peat. Non-Annex I parties report no drained
-        forest area, so for Sumatra, Borneo and Peninsular Malaysia we add an
-        IPCC Tier 1 estimate (2013 Wetlands Supplement): 2015 areas of
-        degraded peat-swamp forest, secondary forest and acacia pulpwood on
-        peat from Miettinen et al. (2017), placed with the Lesiv et al. (2022)
-        forest-management map. That adds about 170 Mt CO₂e/yr on 6.2 Mha
-        (about 215 Mt if all degraded peat-swamp forest is drained), more
-        than four times the Annex I total, about half of it from acacia. Papua and other
-        tropical peat, largely undrained, are not included. Three further
-        views split the layer by who would own it under the LSRS. CH₄ and
-        N₂O from drained peat under wood-producing forest (Annex I managed
-        forest and acacia, about 11 Mt CO₂e/yr) are production emissions
-        that v1 already assigns to the timber, pulp and paper sourced. The
-        CO₂ from the same forest (about 116 Mt) would go to those products
-        too, but that allocation is pending: v1 does not apply to
-        forestry, and the Independent Standards Board has yet to decide how
-        companies account for forest-land CO₂. The remaining 83 Mt, under
-        degraded peat-swamp forest and secondary forest in Southeast Asia,
-        has no product and so no owner under any LSRS rule. We
-        are piloting the forest methods now: two
-        research-preview layers under category 2 show forest biomass
-        carbon flux for 44 US states, France, and Spain from ~334,000
-        paired national forest inventory re-measurements (USDA FIA;
-        France's IGN, whose revisits record each stem's fate and
-        re-measured girth, so growth rides IGN's own volumes; Spain's
-        IFN, which re-measures diameter and height directly), one for
-        each accounting option the GHG Protocol is weighing — the
-        managed-land proxy (net stock change, including regrowth) and
-        activity-based accounting (harvest-attributed flux only). The
-        two options disagree in sign in both countries — about −490 vs
-        +401 Mt CO₂e/yr across the US states, −42 vs +65 in France, and
-        −56 vs +23 in Spain — which is the crux of the deferral debate; within
-        the US, the interior West flips to a net source even under the
-        managed-land proxy, where beetle kill and fire dominate. These layers are never counted in
-        any total and will graduate from pilot to source when the
-        Standard&rsquo;s forestry language is final.
+        emissions to be reported by subcategory, and its Requirement 32
+        obliges emission-factor providers to keep the subcategories
+        separable. In the standard&rsquo;s own terms, <em>land management
+        production emissions</em> here are fertilizer and manure N₂O,
+        residue N₂O, rice CH₄, residue burning, enteric CH₄, manure
+        management, pasture manure, and the non-biogenic CO₂ from urea and
+        liming. <em>Land management net biogenic CO₂ emissions</em> are
+        carbon stock changes on managed land: drained peatland CO₂ and
+        soil-carbon losses on stable cropland and grazed rangeland.{' '}
+        <em>Land use change emissions</em> are not yet shown; they will come
+        from our next-generation jurisdictional land-use-change product, now
+        in development and pending final release.
+      </p>
+      <p style={pStyle}>
+        The LSRS category selector in the sidebar renders each grouping
+        directly. The downloads keep every source in its own column so any
+        grouping can be rebuilt, and a companion table
+        (ef_lsrs_categories.csv) maps each source to its subcategory.
+        Removals are out of scope: the standard requires field-measured
+        evidence, uncertainty deductions and reversal buffers before
+        soil-carbon gains may be claimed, which no map-based dataset can
+        provide.
       </p>
 
-      <h2 style={h2Style}>Soil carbon</h2>
+      <h2 style={h2Style}>Forest land</h2>
       <p style={pStyle}>
-        Selecting Soil carbon CO₂ as the source shows the mean annual
-        change in mineral-soil organic carbon on stable cropland over
-        2000–2023 as a diverging map, from the IPCC
-        2019 Refinement's Tier 2 steady-state model (three carbon pools,
-        globally calibrated parameters) driven by the same activity data
-        as the rest of the map: our gridded residue and manure carbon
-        inputs scaled by national trajectories, tillage systems from
-        <a href="https://doi.org/10.5194/essd-11-823-2019" target="_blank" rel="noopener noreferrer" style={linkStyle}>Porwollik et al. (2019)</a>, soil texture, and monthly CRU TS
-        climate. Blue cells are accumulating soil carbon (a sink), red
-        cells are losing it. Globally the model finds a small net sink
-        (~15 Tg C per year), robust to the climate treatment; it is shown
-        separately from the emissions total because soil-carbon change is
-        a different accounting category (land management net CO₂) from
-        production emissions, and because model-based soil-carbon
-        estimates carry different uncertainty than inventory fluxes.
-        Asymmetrically — and deliberately — cells that are <em>losing</em>
-        soil carbon (red) contribute to the emissions totals and factors
-        (losses are inventory-grade emissions), while cells gaining
-        carbon (blue) are displayed for context but never netted against
-        emissions or credited (removals require field evidence under the
-        GHG Protocol land standard). Commodity-filtered soil views show
-        only the counted losses, since gains are not attributable to
-        individual crops. In time, the layer carries three period rates
-        (2000–08, 2008–16, 2016–23): the year slider shows the selected
-        year's period rate, and compare mode integrates the rates into
-        the cumulative change between the selected years, labeled as
-        such. Period boundaries are exact; within-period years are a
-        piecewise approximation of the model's annual series (median
-        deviation 23% of a cell's final cumulative change, larger where
-        that change is near zero). The
-        estimate covers management effects under IPCC scope; erosion and
-        land-use conversion are excluded (conversion belongs to land-use
-        change accounting). No claim of removals is made or supported:
-        crediting soil-carbon removals requires multi-year field
-        measurement under the GHG Protocol's land standard.
-        The Tier 2 sink may overstate. Two observation-side products put
-        net change on stable cropland at or below zero: the soil-carbon
-        debt reconstruction of{' '}
-        <a href="https://doi.org/10.1073/pnas.1706103114" target="_blank" rel="noopener noreferrer" style={linkStyle}>Sanderman et al. (2017)</a>{' '}
-        gives about −15 Tg C per year for 1990–2010, and the machine-learned
-        stock epochs of OpenLandMap-soildb (Hengl et al., 2026) about −42.
-        Repeated European measurements sit near neutral: 45% of 5,952
+        The LSRS defers carbon stock changes in forestry and non-productive
+        land to future versions, but structurally they belong in categories
+        1 and 2, so that is where they surface here, with soil carbon split
+        by land use. Forest soil is on the map under category 2 but in no
+        total. Mineral forest soil follows the IPCC default of steady state,
+        which Annex I inventories (a net +0.03 t C/ha/yr across 1,665 Mha)
+        and European woodland re-measurements (LUCAS) support, so the layer
+        is drained forest organic soil: CO₂, CH₄ and N₂O as 22 Annex I
+        parties report it, about 38 Mt CO₂e/yr on 10.4 Mha in 2020, placed
+        on forest over PEATMAP peat.
+      </p>
+      <p style={pStyle}>
+        Non-Annex I parties report no drained forest area, so for Sumatra,
+        Borneo and Peninsular Malaysia we add an IPCC Tier 1 estimate (2013
+        Wetlands Supplement) from the 2015 areas of degraded peat-swamp
+        forest, secondary forest and acacia pulpwood on peat in Miettinen et
+        al. (2017), placed with the Lesiv et al. (2022) forest-management
+        map. That adds about 170 Mt CO₂e/yr on 6.2 Mha (about 215 Mt if all
+        degraded peat-swamp forest is drained), more than four times the
+        Annex I total and about half of it from acacia. Papua and other
+        tropical peat, largely undrained, are not included.
+      </p>
+      <p style={pStyle}>
+        Three further views split the layer by who would own it under the
+        LSRS. CH₄ and N₂O from drained peat under wood-producing forest
+        (Annex I managed forest and acacia, about 11 Mt CO₂e/yr) are
+        production emissions that v1 already assigns to the timber, pulp
+        and paper sourced. The CO₂ from the same forest (about 116 Mt) would
+        go to those products too, but that is pending: v1 does not apply to
+        forestry, and the Independent Standards Board has yet to decide how
+        companies account for forest-land CO₂. The remaining 83 Mt, under
+        degraded peat-swamp and secondary forest in Southeast Asia, has no
+        product and so no owner under any LSRS rule.
+      </p>
+      <p style={pStyle}>
+        We are piloting forest methods with two research-preview layers
+        under category 2: forest biomass carbon flux for 44 US states,
+        France and Spain from about 334,000 paired national forest inventory
+        re-measurements (USDA FIA; France&rsquo;s IGN, whose revisits record
+        each stem&rsquo;s fate and re-measured girth; Spain&rsquo;s IFN,
+        which re-measures diameter and height). One layer follows each
+        accounting option the GHG Protocol is weighing: the managed-land
+        proxy (net stock change, including regrowth) and activity-based
+        accounting (harvest-attributed flux only). They disagree in sign in
+        all three (about −490 vs +401 Mt CO₂e/yr across the US states, −42
+        vs +65 in France, −56 vs +23 in Spain), which is the crux of the
+        deferral debate, and the US interior West is a net source even
+        under the managed-land proxy, where beetle kill and fire dominate.
+        These layers are never counted in any total and will become sources
+        when the Standard&rsquo;s forestry language is final.
+      </p>
+
+      <h2 style={h2Style}>Soil carbon: cropland</h2>
+      <p style={pStyle}>
+        Selecting Soil carbon CO₂ as the source shows the mean annual change
+        in mineral-soil organic carbon on stable cropland over 2000–2023,
+        from the IPCC 2019 Refinement&rsquo;s Tier 2 steady-state model
+        (three carbon pools, globally calibrated parameters). It is driven
+        by the same activity data as the rest of the map: gridded residue
+        and manure carbon inputs scaled by national trajectories, tillage
+        systems from{' '}
+        <a href="https://doi.org/10.5194/essd-11-823-2019" target="_blank" rel="noopener noreferrer" style={linkStyle}>Porwollik et al. (2019)</a>,
+        soil texture, and monthly CRU TS climate. Blue cells are
+        accumulating soil carbon and red cells losing it; globally the model
+        finds a small net sink, about 15 Tg C a year, robust to the climate
+        treatment.
+      </p>
+      <p style={pStyle}>
+        The treatment is deliberately asymmetric. Cells losing soil carbon
+        count in the emissions totals and factors, since losses are
+        inventory-grade emissions, while gaining cells are shown for context
+        but never netted or credited, since the GHG Protocol land standard
+        requires multi-year field evidence for removals. Commodity-filtered
+        views show only the counted losses, because gains are not
+        attributable to individual crops. The estimate covers management
+        effects under IPCC scope; erosion and land-use conversion are
+        excluded.
+      </p>
+      <p style={pStyle}>
+        Over time the layer carries three period rates (2000–08, 2008–16,
+        2016–23): the year slider shows the selected year&rsquo;s period
+        rate, and compare mode integrates the rates into the cumulative
+        change between the selected years. Period boundaries are exact;
+        years within a period are a piecewise approximation of the
+        model&rsquo;s annual series (median deviation 23% of a cell&rsquo;s
+        final cumulative change, larger where that change is near zero).
+      </p>
+      <p style={pStyle}>
+        The Tier 2 sink may overstate. Observation-side products put net
+        change on stable cropland at or below zero: about −15 Tg C a year
+        for 1990–2010 in the soil-carbon debt reconstruction of{' '}
+        <a href="https://doi.org/10.1073/pnas.1706103114" target="_blank" rel="noopener noreferrer" style={linkStyle}>Sanderman et al. (2017)</a>,
+        about −42 in OpenLandMap-soildb (Hengl et al., 2026), and near
+        neutral in repeated European measurements, where 45% of 5,952
         re-sampled LUCAS cropland points lost carbon between 2009 and 2018.
-        Adding Sanderman&rsquo;s rate as a legacy-decay term cancels the
-        sink globally and turns 96% of gaining cells to net loss, but we do
-        not use that term: across 15 LUCAS countries
-        the observed changes follow the management term (r = 0.51) and not
-        the legacy term (r = −0.05). About 9 Mt CO₂e per year of cropland
-        soil loss is counted in the totals.
-        A separate, preliminary rangeland layer (Soil carbon CO₂ —
-        rangeland) gives first historical estimates of soil-carbon change
-        from changing grazing intensity, evaluated along the observed
-        2000–2022 grazing-intensity trajectory with two grazing-response
-        models: a meta-analysis model refit from Ren et al.,{' '}
-        <em>Nature Climate Change</em> (2024), and the response
-        functions and random-forest ensemble of{' '}
-<a href="https://doi.org/10.1126/science.adz4320" target="_blank" rel="noopener noreferrer" style={linkStyle}><strong>Powell et al., <em>Assessing the net-climate benefits of
+        Adding Sanderman&rsquo;s rate as a legacy-decay term would cancel
+        the sink, but across 15 LUCAS countries the observed changes follow
+        the management term (r = 0.51) and not the legacy term (r = −0.05),
+        so we do not use it. About 9 Mt CO₂e a year of cropland soil loss
+        is counted in the totals.
+      </p>
+
+      <h2 style={h2Style}>Soil carbon: rangeland (preliminary)</h2>
+      <p style={pStyle}>
+        A separate layer (Soil carbon CO₂ — rangeland) gives first
+        historical estimates of soil-carbon change from changing grazing
+        intensity along the observed 2000–2022 trajectory. The primary model
+        is a meta-analysis model refit from Ren et al., <em>Nature Climate
+        Change</em> (2024); the response functions and random-forest
+        ensemble of{' '}
+        <a href="https://doi.org/10.1126/science.adz4320" target="_blank" rel="noopener noreferrer" style={linkStyle}><strong>Powell et al., <em>Assessing the net-climate benefits of
         improved grazing intensity in global rangelands</em>, Science
-        (2026)</strong></a>. The Ren response, refit on public covariates,
-        is the primary model for the paper and the Powell ensemble a
-        cross-check on cells where its response is well conditioned. The
-        map shows the Ren response refit on 78 of its 84 covariates, all
-        but elevation from the authors&rsquo; own gridded layers, as a 100-member
-        bootstrap ensemble scaled to its median: about 2.3 Gt CO₂e
-        cumulative over 2000–2022 (range 1.7–3.2), or roughly 0.2 Gt per
-        year of gross loss by 2020. It follows the cropland rule: losing
-        cells count in the totals, gaining cells are shown but not
-        credited. The year slider shows period-mean rates (2001–05,
-        2006–10, 2011–15, 2016–22) for the signed view, and national
-        gross-loss trajectories for the totals. The estimate is
-        preliminary: it is sensitive to the present-day level of grazing
+        (2026)</strong></a> are a cross-check where that response is well
+        conditioned. The map shows the Ren response refit on 78 of its 84
+        covariates, all but elevation from the authors&rsquo; own gridded
+        layers, as a 100-member bootstrap ensemble scaled to its median:
+        about 2.3 Gt CO₂e over 2000–2022 (range 1.7–3.2), or roughly 0.2 Gt
+        a year of gross loss by 2020.
+      </p>
+      <p style={pStyle}>
+        It follows the cropland rule: losing cells count in the totals and
+        gaining cells are shown but not credited. The year slider shows
+        period-mean rates (2001–05, 2006–10, 2011–15, 2016–22) for the
+        signed view and national gross-loss trajectories for the totals.
+        Rangeland losses are not yet attributed to livestock commodities, so
+        they appear only in all-commodity views.
+      </p>
+      <p style={pStyle}>
+        The estimate is more sensitive to the present-day level of grazing
         intensity, which two independent global products place quite
-        differently (on the other product the cumulative total is about
-        2.7 Gt), more than to how herds changed over time. Refitting with
-        every covariate layer the authors supplied does not close that gap
-        (it lowers our total slightly), so the difference lies in the
-        grazing-intensity map, not the model inputs. Herd trends
-        follow FAOSTAT national stocks rather than the gridded livestock
-        products, whose 2010 release assigned the whole former-Sudan herd
-        to both successor states. Rangeland losses are not yet attributed
-        to livestock commodities, so they appear in all-commodity views
-        only. Which grazing land counts is left to the reader, because the
-        Standard and its Guidance read differently: the Standard treats any
-        land used for livestock as productive land, while the Guidance
-        leaves natural grassland out of version 1 &ldquo;as long as animal
-        stocking rates are not intensively managed&rdquo;. The Rangeland
-        scope control counts all grazing land, cultivated grassland only,
-        or cultivated grassland plus natural grassland and shrubland where
-        2020 grazing intensity reaches a threshold the reader sets, using
-        each cell&rsquo;s Global Pasture Watch grassland classes (2018–2022
-        mean). It applies to the gridded view; national trend charts and
-        regional units count all grazing land.
+        differently (about 2.7 Gt on the other product), than to how herds
+        changed. Refitting with every covariate the authors supplied does
+        not close that gap, so it lies in the grazing-intensity map, not
+        the model inputs. Herd trends follow FAOSTAT national stocks rather
+        than the gridded livestock products, whose 2010 release assigned the
+        whole former-Sudan herd to both successor states.
+      </p>
+      <p style={pStyle}>
+        Which grazing land counts is left to the reader, because the
+        Standard treats any land used for livestock as productive while the
+        Guidance leaves natural grassland out of version 1 &ldquo;as long as
+        animal stocking rates are not intensively managed&rdquo;. The
+        Rangeland scope control counts all grazing land, cultivated
+        grassland only, or cultivated grassland plus natural grassland and
+        shrubland where 2020 grazing intensity reaches a threshold the
+        reader sets, using each cell&rsquo;s Global Pasture Watch grassland
+        classes (2018–2022 mean). It applies to the gridded view; national
+        trend charts and regional units count all grazing land.
       </p>
 
       <h2 style={h2Style}>Drivers of change</h2>
@@ -557,54 +573,48 @@ function FoodEmissionsMethods() {
         emissions in 1961–2017</em>, Nature (2021)</strong></a>: emissions are
         the product of population, production per person, land used per unit
         of production, and emissions per unit of land. Written that way, a
-        region's change separates into how many people it feeds, how much
-        each of them consumes, how efficiently land delivers that
+        region&rsquo;s change separates into how many people it feeds, how
+        much each of them consumes, how efficiently land delivers that
         production, and how much each hectare emits.
       </p>
       <p style={pStyle}>
         We evaluate the four terms for every admin-1 × biome unit and split
         the 2000–2023 change between them with a log-mean Divisia (LMDI)
         decomposition, so the contributions sum exactly to the net change.
-        The same decomposition runs on the gridded cells, where population
-        has no per-cell series: the identity drops it and works with total
-        production instead, giving three terms. There, production and
-        agricultural land follow national trajectories, so those two terms
-        vary between countries but not within them, while the emissions
-        term and the net change carry the within-country detail.
-        Population is gridded (HYDE 3.3 annual population), as is
-        the 2020 emissions pattern; production and agricultural land are
-        national series apportioned to units by their share of national
-        emissions, so those two terms are proportional attributions rather
-        than independent subnational observations. A spatially explicit
+        On the gridded cells, where population has no per-cell series, the
+        identity works with total production instead, giving three terms.
+        Production is measured in calories, using per-commodity factors
+        checked against FAO Food Balance Sheets.
+      </p>
+      <p style={pStyle}>
+        Population (HYDE 3.3) and the 2020 emissions pattern are gridded,
+        but production and agricultural land are national series
+        apportioned to units by their share of national cropland. Those two
+        terms are therefore proportional attributions that vary between
+        countries but not within them, while the emissions term and the net
+        change carry the within-country detail. A spatially explicit
         crop-yield layer, in development in the lab, would make the
-        production term subnational; the plan is to test the approach first
-        with the SPAM 2020 production maps. Production is measured
-        in calories, using per-commodity factors checked against FAO Food
-        Balance Sheets. Where Hong et al. worked at the national scale and
-        over six decades, the aim here is to carry the same decomposition
-        to subnational units on spatially explicit data — the analysis the
-        companion paper develops.
+        production term subnational, and the companion paper carries the
+        decomposition from Hong et al.&rsquo;s national, six-decade scale to
+        subnational units on spatially explicit data.
       </p>
 
       <h2 style={h2Style}>Caveats</h2>
       <p style={pStyle}>
         Cells are ~28 km and should be read at landscape scale, not field
-        scale. Commodity views cover eighteen crops — the twelve largest
-        emitters plus six selectable for supply-chain relevance (cocoa,
-        arabica and robusta coffee, rubber, cassava, beans) — and eight
-        livestock groups. The underlying dataset resolves all 46 SPAM
-        crop classes; the crops not exposed in the menus are still
-        counted in every all-commodity total and are available as data
-        on request. Dominance maps rank contributors on 2020 values
-        rather than the displayed year; in compare mode they instead show
-        where the leader changed between the two selected years, with each
-        contributor scaled by its national source trajectory (commodities
-        ride a representative source — enteric CH₄ for livestock groups,
-        fertilizer for crops). Land-use-change emissions
-        (deforestation, grassland conversion, the peat-drainage pulse) are
-        not yet included; they join via the Cornerstone jurisdictional
-        framework.
-        Replication code and tests:{' '}
+        scale. Commodity views cover eighteen crops (the twelve largest
+        emitters plus cocoa, arabica and robusta coffee, rubber, cassava and
+        beans) and eight livestock groups; the other SPAM crop classes are
+        counted in every all-commodity total and available as data on
+        request. Dominance maps rank contributors on 2020 values; in compare
+        mode they show where the leader changed between the two selected
+        years, with each contributor scaled by its national source
+        trajectory (enteric CH₄ for livestock groups, fertilizer for crops).
+      </p>
+      <p style={pStyle}>
+        Land-use-change emissions (deforestation, grassland conversion, the
+        peat-drainage pulse) are not yet shown; they are in development and
+        pending final release. Replication code and tests:{' '}
         <a
           href="https://github.com/Sustainable-Solutions-Lab/gridded-land-sector-emissions"
           target="_blank"

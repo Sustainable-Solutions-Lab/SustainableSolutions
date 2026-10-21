@@ -4,7 +4,7 @@
  * Configuration for: Food Emissions — greenhouse-gas emissions from managing
  * the world's croplands, by source, crop, and over time.
  *
- * Companion paper: DeAngelo et al., "Mapped drivers of global land-use
+ * Companion paper (in preparation): "Mapped drivers of global land-use
  * emissions 2000–2024" (in preparation) — an annual, corrected extension of
  * Cao et al. (2026, Nature Climate Change), merged with Cornerstone's
  * jurisdictional land-use-change framework.

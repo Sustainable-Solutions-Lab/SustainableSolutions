@@ -393,7 +393,10 @@ const config = {
     mobileCenter: [-79.5, 24],
     mobileZoom: 2.35,
     minZoom: 1.2,
-    maxZoom: 8,
+    maxZoom: 7,
+    // Share of the viewport that may sit below the southern cut, so Tierra
+    // del Fuego clears the year bar (map/index.jsx; 0.04 was too tight).
+    southSlack: 0.10,
     // Poles truncated ~300 km beyond the highest-latitude plotted cells
     // (data spans -51.9 to 68.4): the land layer is clipped to [-55, 71.5]
     // and the viewport edges are hard-locked to the same band, so dragging

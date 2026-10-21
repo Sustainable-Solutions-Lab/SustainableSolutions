@@ -126,7 +126,8 @@ export function Sidebar({ config, state, dispatch, allValues = [], companion = n
             <p className="font-mono text-xs uppercase tracking-wider text-ink-3 leading-none" style={{ margin: '0 0 3px' }}>
               Map view
             </p>
-            <div className="flex gap-4">
+            {/* Indented under the header so the two links read as its options. */}
+            <div className="flex gap-4 pl-3" style={{ marginTop: 6 }}>
               {[['gridded', 'Gridded'], ['regional', 'Regional']].map(([v, label]) => (
                 <button
                   key={v}

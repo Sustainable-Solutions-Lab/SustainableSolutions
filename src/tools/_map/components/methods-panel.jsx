@@ -136,9 +136,7 @@ function FoodEmissionsMethods() {
         harvested areas, IFA fertilizer rates, gridded livestock, RiceAtlas
         seasons, hybrid peatland maps). We reimplemented the model
         independently and validated it module-by-module against the
-        published grids: the deterministic pathways reproduce the original
-        bit-for-bit, and the Monte Carlo pathways match within sampling
-        tolerance.
+        published grids.
       </p>
 
       <h2 style={h2Style}>Updates to the published model</h2>

@@ -100,17 +100,9 @@ function FoodEmissionsMethods() {
         fermentation, manure management, and manure on pasture. Draw a
         circle, or switch to the regional view and click a jurisdiction, to
         see the enclosed total, the source and commodity mix, and a
-        2000–2024 trend composed from national series. The
-        companion paper (<strong>DeAngelo et al., in
-        preparation</strong>) will extend the dataset annually and merge it
-        with jurisdictional land-use-change emissions being developed by
-        the{' '}
-        <a
-          href="https://cornerstonedata.org"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={linkStyle}
-        >Cornerstone Open Sustainability Data Initiative</a>.
+        2000–2024 trend composed from national series. A companion paper
+        in preparation will evaluate trends and drivers in the combined and
+        gridded land-use change and land management dataset.
       </p>
 
       {/* Orientation before detail: the sections below are a long list of

@@ -19,7 +19,7 @@ const MODES = [
 const EXPLAIN = {
   all: 'The Standard: any land used for livestock is productive land, so every grazed cell counts.',
   cult: 'The Guidance: natural grassland is “not covered in v1”, so only sown or managed (cultivated) grassland counts.',
-  gi: 'Cultivated grassland counts, and natural grassland and shrubland count where grazing intensity reaches the threshold: one way to apply “as long as stocking rates are not intensively managed”. The text sets no threshold.',
+  gi: 'Cultivated grassland counts, and natural grassland and shrubland count where grazing intensity (share of the year’s above-ground plant growth eaten) reaches the threshold: one way to apply “as long as stocking rates are not intensively managed”. The text sets no threshold.',
 }
 
 export function RangelandScopeControl({ config, state, dispatch }) {
@@ -51,16 +51,16 @@ export function RangelandScopeControl({ config, state, dispatch }) {
       </select>
       {mode === 'gi' && !regional && (
         <label className="block font-sans text-[11px] text-ink-2" style={{ marginTop: 6 }}>
-          Natural grassland counts where grazing intensity ≥ <strong className="tabular-nums">{threshold}</strong>
+          Natural grassland counts where livestock eat ≥ <strong className="tabular-nums">{threshold}%</strong> of plant growth
           <input
             type="range" min={rs.thresholdMin} max={rs.thresholdMax} step={rs.thresholdStep}
             value={threshold}
             onChange={(e) => set(rs.thresholdDimensionId, e.target.value)}
             className="w-full accent-cardinal"
-            aria-label="Grazing-intensity threshold"
+            aria-label="Grazing-intensity threshold, percent of above-ground plant growth eaten by livestock"
           />
           <span className="flex justify-between text-ink-3" style={{ fontSize: 10 }}>
-            <span>{rs.thresholdMin} (all grazed)</span><span>{rs.thresholdMax} (heaviest only)</span>
+            <span>{rs.thresholdMin}% (all grazed)</span><span>{rs.thresholdMax}% (heaviest only)</span>
           </span>
         </label>
       )}

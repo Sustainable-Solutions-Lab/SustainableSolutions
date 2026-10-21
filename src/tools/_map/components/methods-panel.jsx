@@ -560,7 +560,8 @@ function FoodEmissionsMethods() {
         animal stocking rates are not intensively managed&rdquo;. The
         Rangeland scope control counts all grazing land, cultivated
         grassland only, or cultivated grassland plus natural grassland and
-        shrubland where 2020 grazing intensity reaches a threshold the
+        shrubland where 2020 grazing intensity (the share of above-ground
+        net primary production eaten by livestock) reaches a threshold the
         reader sets, using each cell&rsquo;s Global Pasture Watch grassland
         classes (2018–2022 mean). It applies to the gridded view; national
         trend charts and regional units count all grazing land.

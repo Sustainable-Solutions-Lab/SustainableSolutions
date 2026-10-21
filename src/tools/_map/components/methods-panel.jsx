@@ -93,7 +93,8 @@ function FoodEmissionsMethods() {
       <h2 style={h2Style}>About this map</h2>
       <p style={pStyle}>
         This map shows greenhouse-gas emissions from global food production
-        on a quarter-degree grid, reference year 2020. It covers cropland
+        on a quarter-degree grid, down to the native 5′ (~9 km) grid when
+        zoomed in, reference year 2020. It covers cropland
         management for 46 crops (fertilizer and manure N₂O, rice CH₄,
         drained peatland CO₂, crop residues, residue burning, urea and
         liming CO₂) and direct livestock emissions from enteric
@@ -605,8 +606,10 @@ function FoodEmissionsMethods() {
 
       <h2 style={h2Style}>Caveats</h2>
       <p style={pStyle}>
-        Cells are ~28 km and should be read at landscape scale, not field
-        scale. Commodity views cover eighteen crops (the twelve largest
+        Cells are 0.25° (~28 km), and from zoom 6 the model&rsquo;s native 5′
+        grid (~9 km); placement at 5′ rests on SPAM&rsquo;s modelled crop
+        allocation and gridded animal densities, so read it at landscape
+        scale, not field scale. Commodity views cover eighteen crops (the twelve largest
         emitters plus cocoa, arabica and robusta coffee, rubber, cassava and
         beans) and eight livestock groups; the other SPAM crop classes are
         counted in every all-commodity total and available as data on

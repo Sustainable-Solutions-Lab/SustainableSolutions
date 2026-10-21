@@ -390,7 +390,7 @@ const config = {
     mobileCenter: [-79.5, 24],
     mobileZoom: 2.35,
     minZoom: 1.2,
-    maxZoom: 8,
+    maxZoom: 10,
     // Poles truncated ~300 km beyond the highest-latitude plotted cells
     // (data spans -51.9 to 68.4): the land layer is clipped to [-55, 71.5]
     // and the viewport edges are hard-locked to the same band, so dragging
@@ -797,7 +797,10 @@ const config = {
   // Tiles on R2 like the other map tools; rebuild via
   // scripts/build-food-emissions-tiles.mjs, upload with
   // `rclone copy build/tiles/food-emissions/food-emissions.pmtiles r2:ssl-data/food-emissions/`.
-  tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/food-emissions.pmtiles',
+  // A tiling change that the deployed client cannot read goes up under a
+  // new name and the URL switches with the site deploy (2026-10-20: the
+  // 5' tier, food-emissions-5min.pmtiles; the 0.25° tier now ends at z6).
+  tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/food-emissions-5min.pmtiles',
   sourceLayer: 'food-emissions',
   // The Cornerstone initiative (cornerstonedata.org) — this project is part
   // of it, and the jurisdictional land-use-change framework the explorer
@@ -815,17 +818,20 @@ const config = {
   colorLaddersUrl: '/tools/food-emissions/distributions-by-country.json',
   // Vertical emissions-by-latitude marginal along the map's right edge.
   latProfileUrl: '/tools/food-emissions/lat-profiles.json',
-  // Two cell tiers (crossfading at z 2.75-3.0): 0.5° aggregates carry the
-  // low zooms (~4x fewer circles per frame — the 0.25° cells are sub-pixel
-  // there anyway), 0.25° cells the rest. Radii grow with zoom to stay
-  // contiguous.
+  // Three cell tiers: 0.5° aggregates carry the low zooms (~4x fewer
+  // circles per frame — the 0.25° cells are sub-pixel there anyway), 0.25°
+  // cells the middle, and the native 5' grid (~9 km, _scale 9) from z6, where
+  // a 0.25° cell is already ~11 px across. Crossfades at z 2.75-3.0 and
+  // 6.0-6.25. Radii grow with zoom to stay contiguous. Every tier carries
+  // the same props, and the area tool sums the finest tier on screen.
   // fill: circle diameter relative to the cell pitch — a zoom ramp. A hair
   // under 1 at overview (heavy overlap there stacks alpha and reads
   // over-saturated), growing past touching when zoomed in so the diagonal
   // gaps stop washing the field out.
   scales: [
     { value: 56, maxZoom: 3.0, radiusMode: 'cell', fill: [[1, 1.1], [3, 1.25]] },
-    { value: 28, minZoom: 2.99, radiusMode: 'cell', fill: [[3, 0.9], [5, 1.05], [8, 1.35]] },
+    { value: 28, minZoom: 2.99, maxZoom: 6.25, radiusMode: 'cell', fill: [[3, 0.9], [5, 1.05], [8, 1.35]] },
+    { value: 9, minZoom: 6.24, radiusMode: 'cell', fill: [[6, 1.0], [8, 1.2], [10, 1.35]] },
   ],
 }
 

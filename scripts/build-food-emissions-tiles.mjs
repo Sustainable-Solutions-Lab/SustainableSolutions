@@ -3,7 +3,8 @@
 // Build PMTiles for the Food Emissions map tool.
 //
 // Input (produced by the analysis repo — heavy data stays in its Dropbox tree):
-//   {SRC}/food_emissions_cells.geojsonl   0.25° cell centroids, one Feature/line
+//   {SRC}/food_emissions_cells.geojsonl   0.25° and 0.5° cell centroids, one Feature/line
+//   {SRC}/food_emissions_cells_5min.geojsonl   optional native 5' tier (_scale 9), z6+
 //   {SRC}/meta.json
 // See "Gridded LM/pipeline/export_explorer_cells.py" for the feature model
 // (per-source kt CO₂e, per-variant totals + intensities, ha, m49, km2, _scale=28).
@@ -51,14 +52,35 @@ async function main() {
     `reference ${meta.reference_year}`);
 
   const mbt = resolve(OUT_DIR, 'food-emissions.mbtiles');
+  // Three cell tiers, one layer. The 0.5° and 0.25° tiers (this file) end
+  // at z6; the native 5' tier (export_explorer_cells.py --fine, _scale 9)
+  // takes over there and is tiled at z6-7 only - points lose nothing to
+  // overzoom, so the map runs on to z10 from the z7 tiles.
+  const fine = resolve(SRC, 'food_emissions_cells_5min.geojsonl');
+  const hasFine = existsSync(fine);
   console.log('Tiling…');
+  const mbtCoarse = hasFine ? resolve(OUT_DIR, 'food-emissions-coarse.mbtiles') : mbt;
   run('tippecanoe', [
-    '-o', mbt, '--force',
+    '-o', mbtCoarse, '--force',
     '-l', 'food-emissions',
-    '-Z', '0', '-z', '8',
+    '-Z', '0', '-z', hasFine ? '6' : '8',
     '-r1', '--no-feature-limit', '--no-tile-size-limit',
     src,
   ]);
+  if (hasFine) {
+    const mbtFine = resolve(OUT_DIR, 'food-emissions-fine.mbtiles');
+    console.log("Tiling the 5' tier…");
+    run('tippecanoe', [
+      '-o', mbtFine, '--force',
+      '-l', 'food-emissions',
+      '-Z', '6', '-z', '7',
+      '-r1', '--no-feature-limit', '--no-tile-size-limit',
+      fine,
+    ]);
+    run('tile-join', ['-o', mbt, '--force', '--no-tile-size-limit', mbtCoarse, mbtFine]);
+  } else {
+    console.log("No 5' tier input; building the 0.25°/0.5° tiers only.");
+  }
 
   console.log('Converting → PMTiles…');
   const pmt = mbt.replace(/\.mbtiles$/, '.pmtiles');

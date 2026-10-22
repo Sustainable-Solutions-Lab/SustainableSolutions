@@ -1413,10 +1413,7 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
               weather forecast. Percentile is relative to 22M scheduled commercial
               flights flown in 2021. Warming figures are per passenger, using
               typical passenger counts for each leg's aircraft; connecting
-              itineraries sum their legs. Differences between aircraft types
-              are less certain than those from timing and route: they rest on
-              how the underlying contrail model treats engine soot, which recent
-              measurements suggest overstates the advantage of low-soot engines.
+              itineraries sum their legs.
             </p>
           </>
         )}

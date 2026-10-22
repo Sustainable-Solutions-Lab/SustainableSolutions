@@ -615,45 +615,8 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           </div>
         </div>
 
-        {/* ── 1 ─────────────────────────────────────────────────────────── */}
-        <section aria-label="Past and future consumption" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <p style={kicker}>Past and future · {sliceName}{place === 'World' ? '' : `, ${place}`}</p>
-          <h3 style={figTitle}>
-            {change == null ? 'Consumption to 2060'
-              : change > 0 ? 'Still rising in 2060'
-              : 'Falling by 2060'}
-          </h3>
-          <Chips label="As" value={measure}
-            options={(Object.keys(MEASURE_LABEL) as Measure[]).map((m) => ({ id: m, label: MEASURE_LABEL[m] }))}
-            onChange={(id) => setMeasure(id as Measure)} />
-          <div style={{ height: 'clamp(300px, 46vh, 460px)' }}>
-            <ProjectionChart
-              historyYears={stack.years}
-              projectionYears={run.years}
-              series={scaled}
-              extraction={extraction?.map((v) => (v == null ? null : v * scale)) ?? null}
-              recycled={scaledRecycled}
-              band={band ? {
-                p05: band.p05.map((v) => v * scale), p25: band.p25.map((v) => v * scale),
-                p50: band.p50.map((v) => v * scale), p75: band.p75.map((v) => v * scale),
-                p95: band.p95.map((v) => v * scale), min: band.min.map((v) => v * scale),
-                max: band.max.map((v) => v * scale),
-              } : null}
-              unit={unit}
-              format={format}
-            />
-          </div>
-          <p style={caption}>
-            Historical and projected consumption of the selected material(s) in the selected region.
-            {stack.recycled.length > 0 && <> Hatched above the stack: recycled and reused supply,
-              which the paper does not count as consumption.</>}
-            {band && <> Dashed lines are the median, 5th and 95th percentiles of the paper’s 1,000
-              projections for the same region and materials.</>}
-            {extraction && <> The red dashed line is what the region extracted itself: above the
-              stack, it exported more than it imported.</>}
-            {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
-          </p>
-
+        {/* ── Sliders ─────────────────────────────────────────────────── */}
+        <section aria-label="Your scenario" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <Drivers inputs={inputs} levers={shown} run={run} focus={focus} past={kayaPast}
             advanced={advanced} onAdvanced={() => setAdvanced((o) => !o)}
             onReset={() => setScenario({ kind: 'ssp', ssp: 'SSP1' })}
@@ -663,17 +626,60 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           </Drivers>
         </section>
 
-        {/* ── 2 ─────────────────────────────────────────────────────────── */}
-        <section aria-label="What each assumption is worth" style={sectionRule}>
-          <p style={kicker}>What each assumption is worth · {sliceName}{place === 'World' ? '' : `, ${place}`}</p>
-          <h3 style={figTitle}>{leverHeadline(effects.bars)}</h3>
-          <LeverEffects bars={effects.bars} now={effects.now} />
-          <p style={caption}>
-            Growth in {focusPhrase(focus)}, 2025–2060, from one end of each assumption’s range to
-            the other. The dark line is your scenario; green is zero.
-            {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
-          </p>
-        </section>
+        {/* 1 and 2 sit side by side on a wide screen */}
+        <div className="mat-pair">
+          {/* ── 1 ─────────────────────────────────────────────────────────── */}
+          <section aria-label="Past and future consumption" style={sectionRule}>
+            <p style={kicker}>Past and future · {sliceName}{place === 'World' ? '' : `, ${place}`}</p>
+            <h3 style={figTitle}>
+              {change == null ? 'Consumption to 2060'
+                : change > 0 ? 'Still rising in 2060'
+                : 'Falling by 2060'}
+            </h3>
+            <Chips label="As" value={measure}
+              options={(Object.keys(MEASURE_LABEL) as Measure[]).map((m) => ({ id: m, label: MEASURE_LABEL[m] }))}
+              onChange={(id) => setMeasure(id as Measure)} />
+            <div style={{ height: 'clamp(280px, 40vh, 380px)' }}>
+              <ProjectionChart
+                historyYears={stack.years}
+                projectionYears={run.years}
+                series={scaled}
+                extraction={extraction?.map((v) => (v == null ? null : v * scale)) ?? null}
+                recycled={scaledRecycled}
+                band={band ? {
+                  p05: band.p05.map((v) => v * scale), p25: band.p25.map((v) => v * scale),
+                  p50: band.p50.map((v) => v * scale), p75: band.p75.map((v) => v * scale),
+                  p95: band.p95.map((v) => v * scale), min: band.min.map((v) => v * scale),
+                  max: band.max.map((v) => v * scale),
+                } : null}
+                unit={unit}
+                format={format}
+              />
+            </div>
+            <p style={caption}>
+              Historical and projected consumption of the selected material(s) in the selected region.
+              {stack.recycled.length > 0 && <> Hatched above the stack: recycled and reused supply,
+                which the paper does not count as consumption.</>}
+              {band && <> Dashed lines are the median, 5th and 95th percentiles of the paper’s 1,000
+                projections for the same region and materials.</>}
+              {extraction && <> The red dashed line is what the region extracted itself: above the
+                stack, it exported more than it imported.</>}
+              {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
+            </p>
+          </section>
+
+          {/* ── 2 ─────────────────────────────────────────────────────────── */}
+          <section aria-label="What each assumption is worth" style={sectionRule}>
+            <p style={kicker}>What each assumption is worth · {sliceName}{place === 'World' ? '' : `, ${place}`}</p>
+            <h3 style={figTitle}>{leverHeadline(effects.bars)}</h3>
+            <LeverEffects bars={effects.bars} now={effects.now} />
+            <p style={caption}>
+              Growth in {focusPhrase(focus)}, 2025–2060, from one end of each assumption’s range to
+              the other. The dark line is your scenario; green is zero.
+              {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
+            </p>
+          </section>
+        </div>
 
         {/* 3 and 4 sit side by side on a wide screen */}
         <div className="mat-pair">

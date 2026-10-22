@@ -372,7 +372,7 @@ export function RecyclingCeiling({ data, onDrag }: {
 }) {
   const [dragging, setDragging] = useState<CeilingGroup | null>(null);
   const W = 460;
-  const H = 220;
+  const H = 330;
   const M = { l: 46, r: 104, t: 12, b: 36 };
   const pw = W - M.l - M.r;
   const ph = H - M.t - M.b;
@@ -390,7 +390,7 @@ export function RecyclingCeiling({ data, onDrag }: {
   for (let k = ys.length - 1; k >= 0; k--) ys[k] = Math.min(ys[k], M.t + ph + (k - ys.length + 1) * 13);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', maxWidth: 500, height: 'auto' }}
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" style={{ display: 'block', width: '100%', height: 'auto' }}
       aria-label={`Recycled share of supply in ${data.year} against the share of retiring material collected`}>
       {[0, 0.25, 0.5, 0.75, 1].map((t) => (
         <g key={t}>

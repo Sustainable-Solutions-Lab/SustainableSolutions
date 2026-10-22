@@ -675,42 +675,45 @@ function Tool({ meta, inputs, envelope, world, regions, gdpPop, warming }: {
           </p>
         </section>
 
-        {/* ── 3 ─────────────────────────────────────────────────────────── */}
-        <section aria-label="Where consumption would fall" style={sectionRule}>
-          <p style={kicker}>Where the line is · {sliceName}{place === 'World' ? '' : `, ${place}`}</p>
-          <h3 style={figTitle}>What it would take for {group === 'total' ? 'material use' : focus.name.toLowerCase()} to stop growing</h3>
-          <ContourPanel inputs={inputs} levers={shown} focus={focus} axis={axisShown} onAxis={setAxis} onMove={onContourMove}
-            scatter={envelope.scatter} history={historyPoint} />
-          <p style={caption}>
-            Growth in {focusPhrase(focus)}, 2025–2060, across world income growth and{' '}
-            {CONTOUR_AXES[axisShown].label.toLowerCase()}, with everything else as you set it.
-            {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
-          </p>
-        </section>
-
-        {/* ── 4 ─────────────────────────────────────────────────────────── */}
-        <section aria-label="The recycling ceiling" style={sectionRule}>
-          <p style={kicker}>The ceiling{ceilingGroups.length ? ` · ${ceilingGroups.map((g) => CEILING_NAME[g]).join(' and ')}, ${place}` : ''}</p>
-          <h3 style={figTitle}>The limits of circularity</h3>
-          {!ceilingGroups.length ? (
+        {/* 3 and 4 sit side by side on a wide screen */}
+        <div className="mat-pair">
+          {/* ── 3 ─────────────────────────────────────────────────────────── */}
+          <section aria-label="Where consumption would fall" style={sectionRule}>
+            <p style={kicker}>Where the line is · {sliceName}{place === 'World' ? '' : `, ${place}`}</p>
+            <h3 style={figTitle}>What it would take for {group === 'total' ? 'material use' : focus.name.toLowerCase()} to stop growing</h3>
+            <ContourPanel inputs={inputs} levers={shown} focus={focus} axis={axisShown} onAxis={setAxis} onMove={onContourMove}
+              scatter={envelope.scatter} history={historyPoint} />
             <p style={caption}>
-              {group === 'biomass' ? 'Biomass is' : 'Fossil fuels are'} used up rather than kept in
-              use, so there is nothing to recycle. Choose metal ores or non-metallic minerals above to see this for them.
+              Growth in {focusPhrase(focus)}, 2025–2060, across world income growth and{' '}
+              {CONTOUR_AXES[axisShown].label.toLowerCase()}, with everything else as you set it.
+              {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
             </p>
-          ) : (
-            <>
-              <RecyclingCeiling data={ceiling} onDrag={onCeilingDrag} />
+          </section>
+
+          {/* ── 4 ─────────────────────────────────────────────────────────── */}
+          <section aria-label="The recycling ceiling" style={sectionRule}>
+            <p style={kicker}>The ceiling{ceilingGroups.length ? ` · ${ceilingGroups.map((g) => CEILING_NAME[g]).join(' and ')}, ${place}` : ''}</p>
+            <h3 style={figTitle}>The limits of circularity</h3>
+            {!ceilingGroups.length ? (
               <p style={caption}>
-                Each line ends where everything that retires in {ceiling.year} is recycled:{' '}
-                {ceiling.lines.map((l, k) => (
-                  <span key={l.group}>{k ? ' and ' : ''}<b>{(100 * l.ceiling).toFixed(0)}%</b> of {CEILING_NAME[l.group].replace(/s$/, '')} supply</span>
-                ))}{place === 'World' ? '' : ` in ${place}`}, because so little of what is needed that year is retiring.
-                Dots are yours, labelled with the average lifetime of what retires in {ceiling.year}: drag one sideways to set collection, up or down to set how long things last{ceiling.lines.some((l) => l.withTrade != null) ? '; open circles add trade in scrap that would otherwise go unused elsewhere' : ''}.
-                {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
+                {group === 'biomass' ? 'Biomass is' : 'Fossil fuels are'} used up rather than kept in
+                use, so there is nothing to recycle. Choose metal ores or non-metallic minerals above to see this for them.
               </p>
-            </>
-          )}
-        </section>
+            ) : (
+              <>
+                <RecyclingCeiling data={ceiling} onDrag={onCeilingDrag} />
+                <p style={caption}>
+                  Each line ends where everything that retires in {ceiling.year} is recycled:{' '}
+                  {ceiling.lines.map((l, k) => (
+                    <span key={l.group}>{k ? ' and ' : ''}<b>{(100 * l.ceiling).toFixed(0)}%</b> of {CEILING_NAME[l.group].replace(/s$/, '')} supply</span>
+                  ))}{place === 'World' ? '' : ` in ${place}`}, because so little of what is needed that year is retiring.
+                  Dots are yours, labelled with the average lifetime of what retires in {ceiling.year}: drag one sideways to set collection, up or down to set how long things last{ceiling.lines.some((l) => l.withTrade != null) ? '; open circles add trade in scrap that would otherwise go unused elsewhere' : ''}.
+                  {' '}<button type="button" className="mat-methods-link" onClick={() => setMethods(true)}>Methods →</button>
+                </p>
+              </>
+            )}
+          </section>
+        </div>
 
         <footer className="mat-footer">
           <a href={meta.source.repo} target="_blank" rel="noopener noreferrer" className="mat-footer-link">

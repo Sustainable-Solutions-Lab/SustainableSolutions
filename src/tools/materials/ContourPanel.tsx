@@ -149,7 +149,7 @@ export default function ContourPanel({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const H = Math.round(Math.max(280, Math.min(420, W * 0.6)));
+  const H = Math.round(Math.max(280, Math.min(420, W * 0.75)));
   const PW = W - M.l - M.r;
   const PH = H - M.t - M.b;
 

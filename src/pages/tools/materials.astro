@@ -155,6 +155,9 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'materials') ?? null;
     border: 1px solid var(--rule); border-radius: 10px;
   }
   /* Heat colours for the driver numbers: Spectral's ends, through ink. */
+  .mat-tool .mat-pair { display: grid; grid-template-columns: 1fr; gap: 22px 32px; align-items: start; }
+  .mat-tool .mat-pair > section { min-width: 0; }
+  @media (min-width: 820px) { .mat-tool .mat-pair { grid-template-columns: 1fr 1fr; } }
   .mat-tool { --mat-cool: #3288BD; --mat-hot: #D53E4F; }
   [data-theme="dark"] .mat-tool { --mat-cool: #5EA9DB; --mat-hot: #F0606E; }
 

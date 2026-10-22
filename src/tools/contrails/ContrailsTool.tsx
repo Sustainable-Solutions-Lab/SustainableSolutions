@@ -1170,16 +1170,6 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
                     </span>
                   ))}
                 </div>
-                {result.aircraft_comparison[result.aircraft_comparison.length - 1].percentile -
-                  result.aircraft_comparison[0].percentile >= 30 && (
-                  <p className="mt-2 max-w-[640px] text-sm opacity-80">
-                    Aircraft choice matters a lot on this route in our model,
-                    which credits engines that emit little soot with much weaker
-                    contrails. Recent in-flight measurements suggest that
-                    advantage may be smaller than modeled, so differences in
-                    timing and route are the more reliable guide.
-                  </p>
-                )}
               </div>
             )}
 

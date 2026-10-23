@@ -14,15 +14,22 @@
 //      Berger & Boulay; Zenodo 10.5281/zenodo.15133241, CC BY 4.0), the same
 //      geometry the paper's Figure 1 draws.
 //
-// Deposit names, grades and costs come from S&P Global under a licence that
-// does not allow redistribution, so the repo (and this tool) carry only an
-// ID, mineral, coordinates and contained resources per deposit.
+// Deposit data come from S&P Global under a licence that allows summary
+// statistics and charts based on them, nothing more. So no deposit leaves
+// this script: deposits are counted into basin×mineral cells, and a cell's
+// contained resources are published only when it holds at least MIN_CELL
+// deposits. No IDs, coordinates or per-deposit values are written.
 //
 // Output, written to public/tools/mining-water/ (small enough to commit, as
 // food-emissions and materials do):
-//   basins.json     GeoJSON, simplified AWARE basins with stress + CF
-//   deposits.json   GeoJSON points, one per deposit, joined to its basin
-//   frontier.json   Pareto frontiers and per-mineral splits by scenario
+//   basins.json          GeoJSON, simplified AWARE basins with stress + CF
+//   basin-deposits.json  deposit counts (and resources, for cells of
+//                        MIN_CELL or more) per basin and mineral, with one
+//                        point inside each basin to draw them at, and
+//                        totals per mineral
+//   frontier.json        Pareto frontiers and per-mineral splits by scenario
+// and, gitignored, .cache/mining-water/deposit-cells.json: deposit ID ->
+// cell, which build-mining-water-runs.mjs needs and which is never published.
 //
 // Basin names. AWARE 2.0 identifies basins by number only, so each basin is
 // named from two other public sources:
@@ -33,10 +40,10 @@
 //     cover most of it.
 // Small coastal basins with no named river are labelled by place alone.
 //
-// Usage:  node scripts/build-mining-water.mjs
+// Usage:  node scripts/build-mining-water.mjs [--reuse-basins]
 // Env:    MINING_WATER_REPO_REF  git ref of the replication repo (default main)
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { unzipSync, strFromU8 } from 'fflate';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
@@ -50,6 +57,14 @@ const AWARE_INTERMEDIATE =
   'https://zenodo.org/api/records/15133241/files/AWARE20_Intermediate_Variables.xlsx/content';
 const NE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson';
 const OUT = resolve('public/tools/mining-water');
+const CACHE = resolve('.cache/mining-water');
+const REUSE_BASINS = process.argv.includes('--reuse-basins');
+// Deposit data are licensed from S&P Global for summary statistics only.
+// Contained resources are published only for a basin×mineral cell with at
+// least this many deposits; smaller cells show a count alone.
+const MIN_CELL = 3;
+// Basins above this stress index count as stressed (the tool's filter).
+const STRESSED = 0.1;
 // Natural Earth's formal country names, shortened for the detail card.
 const COUNTRY_SHORT = {
   'United States of America': 'United States',
@@ -173,141 +188,150 @@ async function main() {
   }
 
   // ── AWARE 2.0 basins ───────────────────────────────────────────────────
-  console.log('Fetching AWARE 2.0 basins from Zenodo…');
-  const kr = await fetch(AWARE_KMZ, { headers: HEADERS });
-  if (!kr.ok) throw new Error(`${AWARE_KMZ} -> ${kr.status}`);
-  const kmz = new Uint8Array(await kr.arrayBuffer());
-  const files = unzipSync(kmz);
-  const kmlName = Object.keys(files).find((f) => f.endsWith('.kml'));
-  const kml = strFromU8(files[kmlName]);
+  // --reuse-basins reads the basins (outlines, stress, names) from the last
+  // build instead of re-fetching AWARE and Natural Earth, for when only the
+  // deposit summaries need rebuilding or Zenodo is refusing requests.
+  let features;
+  if (REUSE_BASINS) {
+    features = JSON.parse(await readFile(resolve(OUT, 'basins.json'), 'utf8')).features;
+    console.log(`basins ${features.length}, reused from basins.json`);
+  } else {
+    console.log('Fetching AWARE 2.0 basins from Zenodo…');
+    const kr = await fetch(AWARE_KMZ, { headers: HEADERS });
+    if (!kr.ok) throw new Error(`${AWARE_KMZ} -> ${kr.status}`);
+    const kmz = new Uint8Array(await kr.arrayBuffer());
+    const files = unzipSync(kmz);
+    const kmlName = Object.keys(files).find((f) => f.endsWith('.kml'));
+    const kml = strFromU8(files[kmlName]);
 
-  const features = [];
-  const pmRe = /<Placemark[^>]*>([\s\S]*?)<\/Placemark>/g;
-  const coordRe = /<outerBoundaryIs>\s*<LinearRing[^>]*>[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>/g;
-  let m, nIn = 0, nOut = 0;
-  while ((m = pmRe.exec(kml))) {
-    const body = m[1];
-    const id = body.match(/<name>\s*CFs for Basin_ID\s*(\d+)\s*<\/name>/);
-    if (!id) continue;
-    const bid = Number(id[1]);
-    const cfM = body.match(/CF_annual_unspecified<\/td><td>([-\d.eE]+)/);
-    const polys = [];
-    let c;
-    coordRe.lastIndex = 0;
-    while ((c = coordRe.exec(body))) {
-      const pts = c[1].trim().split(/\s+/).map((t) => t.split(',').slice(0, 2).map(Number));
-      if (pts.length < 4) continue;
-      nIn += pts.length;
-      let sp = simplify(pts, SIMPLIFY_DEG);
-      if (sp.length < 4) sp = pts;
-      const ring = sp.map(([x, y]) => [r2(x), r2(y)]);
-      const [fx, fy] = ring[0], [lx, ly] = ring[ring.length - 1];
-      if (fx !== lx || fy !== ly) ring.push([fx, fy]);
-      nOut += ring.length;
-      polys.push([ring]);
-    }
-    if (!polys.length) continue;
-    const s = stress.get(bid);
-    features.push({
-      type: 'Feature',
-      id: bid,
-      properties: {
+    features = [];
+    const pmRe = /<Placemark[^>]*>([\s\S]*?)<\/Placemark>/g;
+    const coordRe = /<outerBoundaryIs>\s*<LinearRing[^>]*>[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>/g;
+    let m, nIn = 0, nOut = 0;
+    while ((m = pmRe.exec(kml))) {
+      const body = m[1];
+      const id = body.match(/<name>\s*CFs for Basin_ID\s*(\d+)\s*<\/name>/);
+      if (!id) continue;
+      const bid = Number(id[1]);
+      const cfM = body.match(/CF_annual_unspecified<\/td><td>([-\d.eE]+)/);
+      const polys = [];
+      let c;
+      coordRe.lastIndex = 0;
+      while ((c = coordRe.exec(body))) {
+        const pts = c[1].trim().split(/\s+/).map((t) => t.split(',').slice(0, 2).map(Number));
+        if (pts.length < 4) continue;
+        nIn += pts.length;
+        let sp = simplify(pts, SIMPLIFY_DEG);
+        if (sp.length < 4) sp = pts;
+        const ring = sp.map(([x, y]) => [r2(x), r2(y)]);
+        const [fx, fy] = ring[0], [lx, ly] = ring[ring.length - 1];
+        if (fx !== lx || fy !== ly) ring.push([fx, fy]);
+        nOut += ring.length;
+        polys.push([ring]);
+      }
+      if (!polys.length) continue;
+      const s = stress.get(bid);
+      features.push({
+        type: 'Feature',
         id: bid,
-        // Stress index as the paper maps it; null = basin outside the model.
-        s: s == null ? null : Math.round(s * 1e4) / 1e4,
-        cf: cfM ? Number(cfM[1]) : null,
-      },
-      geometry: { type: 'MultiPolygon', coordinates: polys },
+        properties: {
+          id: bid,
+          // Stress index as the paper maps it; null = basin outside the model.
+          s: s == null ? null : Math.round(s * 1e4) / 1e4,
+          cf: cfM ? Number(cfM[1]) : null,
+        },
+        geometry: { type: 'MultiPolygon', coordinates: polys },
+      });
+    }
+    console.log(`basins ${features.length}, vertices ${nIn} -> ${nOut}`);
+
+    // ── Basin names ────────────────────────────────────────────────────────
+    console.log('Naming basins from Natural Earth…');
+    const [admin1, rivers] = await Promise.all([
+      fetchJson(`${NE}/ne_10m_admin_1_states_provinces.geojson`),
+      fetchJson(`${NE}/ne_10m_rivers_lake_centerlines.geojson`),
+    ]);
+    const basinAt = gridIndex(features);
+    const adminAt = gridIndex(admin1.features);
+
+    // Place: majority vote of the state/province under the basin's vertices
+    // and its bounding-box centre.
+    const place = features.map((f) => {
+      const pts = [];
+      for (const poly of f.geometry.coordinates) {
+        const ring = poly[0];
+        const step = Math.max(1, Math.floor(ring.length / 10));
+        for (let i = 0; i < ring.length; i += step) pts.push(ring[i]);
+      }
+      const votes = new Map();
+      for (const [x, y] of pts) {
+        const a = adminAt(x, y);
+        if (a < 0) continue;
+        const p = admin1.features[a].properties;
+        const country = COUNTRY_SHORT[p.admin] ?? p.admin;
+        const label = [p.name, country].filter(Boolean).join(', ');
+        votes.set(label, (votes.get(label) ?? 0) + 1);
+      }
+      let best = null, n = 0;
+      for (const [k, v] of votes) if (v > n) { best = k; n = v; }
+      return best;
     });
-  }
-  console.log(`basins ${features.length}, vertices ${nIn} -> ${nOut}`);
 
-  // ── Basin names ────────────────────────────────────────────────────────
-  console.log('Naming basins from Natural Earth…');
-  const [admin1, rivers] = await Promise.all([
-    fetchJson(`${NE}/ne_10m_admin_1_states_provinces.geojson`),
-    fetchJson(`${NE}/ne_10m_rivers_lake_centerlines.geojson`),
-  ]);
-  const basinAt = gridIndex(features);
-  const adminAt = gridIndex(admin1.features);
-
-  // Place: majority vote of the state/province under the basin's vertices
-  // and its bounding-box centre.
-  const place = features.map((f) => {
-    const pts = [];
-    for (const poly of f.geometry.coordinates) {
-      const ring = poly[0];
-      const step = Math.max(1, Math.floor(ring.length / 10));
-      for (let i = 0; i < ring.length; i += step) pts.push(ring[i]);
+    // River: the most prominent (lowest scalerank) named river with a vertex
+    // in the basin; ties go to the river with more vertices there.
+    const riverHits = new Map(); // basin index -> Map(name -> {rank, n})
+    for (const r of rivers.features) {
+      const p = r.properties;
+      if (p.featurecla !== 'River') continue;
+      const name = p.name_en || p.name;
+      if (!name) continue;
+      const lines = r.geometry.type === 'LineString' ? [r.geometry.coordinates] : r.geometry.coordinates;
+      for (const line of lines) for (const [x, y] of line) {
+        const b = basinAt(x, y);
+        if (b < 0) continue;
+        if (!riverHits.has(b)) riverHits.set(b, new Map());
+        const h = riverHits.get(b);
+        const cur = h.get(name) ?? { rank: p.scalerank ?? 99, n: 0 };
+        cur.n++;
+        h.set(name, cur);
+      }
     }
-    const votes = new Map();
-    for (const [x, y] of pts) {
-      const a = adminAt(x, y);
-      if (a < 0) continue;
-      const p = admin1.features[a].properties;
-      const country = COUNTRY_SHORT[p.admin] ?? p.admin;
-      const label = [p.name, country].filter(Boolean).join(', ');
-      votes.set(label, (votes.get(label) ?? 0) + 1);
+    const riverOf = new Map();
+    for (const [b, h] of riverHits) {
+      let best = null;
+      for (const [name, v] of h)
+        if (!best || v.rank < best.rank || (v.rank === best.rank && v.n > best.n)) best = { name, ...v };
+      riverOf.set(features[b].properties.id, best.name);
     }
-    let best = null, n = 0;
-    for (const [k, v] of votes) if (v > n) { best = k; n = v; }
-    return best;
-  });
 
-  // River: the most prominent (lowest scalerank) named river with a vertex
-  // in the basin; ties go to the river with more vertices there.
-  const riverHits = new Map(); // basin index -> Map(name -> {rank, n})
-  for (const r of rivers.features) {
-    const p = r.properties;
-    if (p.featurecla !== 'River') continue;
-    const name = p.name_en || p.name;
-    if (!name) continue;
-    const lines = r.geometry.type === 'LineString' ? [r.geometry.coordinates] : r.geometry.coordinates;
-    for (const line of lines) for (const [x, y] of line) {
-      const b = basinAt(x, y);
-      if (b < 0) continue;
-      if (!riverHits.has(b)) riverHits.set(b, new Map());
-      const h = riverHits.get(b);
-      const cur = h.get(name) ?? { rank: p.scalerank ?? 99, n: 0 };
-      cur.n++;
-      h.set(name, cur);
+    // Sub-basins without a river of their own take the river of the basin
+    // they drain into, per AWARE's own hierarchy.
+    console.log('Reading the AWARE 2.0 basin hierarchy…');
+    const ir = await fetch(AWARE_INTERMEDIATE, { headers: HEADERS });
+    if (!ir.ok) throw new Error(`${AWARE_INTERMEDIATE} -> ${ir.status}`);
+    const wb = XLSX.read(new Uint8Array(await ir.arrayBuffer()), { type: 'array', sheets: 'additional_information' });
+    const parent = new Map();
+    for (const r of XLSX.utils.sheet_to_json(wb.Sheets.additional_information)) {
+      const into = Number(r.subbasin_discharges_into_Basin_ID);
+      if (into > 0 && into !== Number(r.Basin_ID)) parent.set(Number(r.Basin_ID), into);
     }
-  }
-  const riverOf = new Map();
-  for (const [b, h] of riverHits) {
-    let best = null;
-    for (const [name, v] of h)
-      if (!best || v.rank < best.rank || (v.rank === best.rank && v.n > best.n)) best = { name, ...v };
-    riverOf.set(features[b].properties.id, best.name);
-  }
+    const riverFor = (id) => {
+      for (let k = 0, cur = id; k < 30 && cur != null; k++, cur = parent.get(cur)) {
+        if (riverOf.has(cur)) return riverOf.get(cur);
+      }
+      return null;
+    };
 
-  // Sub-basins without a river of their own take the river of the basin
-  // they drain into, per AWARE's own hierarchy.
-  console.log('Reading the AWARE 2.0 basin hierarchy…');
-  const ir = await fetch(AWARE_INTERMEDIATE, { headers: HEADERS });
-  if (!ir.ok) throw new Error(`${AWARE_INTERMEDIATE} -> ${ir.status}`);
-  const wb = XLSX.read(new Uint8Array(await ir.arrayBuffer()), { type: 'array', sheets: 'additional_information' });
-  const parent = new Map();
-  for (const r of XLSX.utils.sheet_to_json(wb.Sheets.additional_information)) {
-    const into = Number(r.subbasin_discharges_into_Basin_ID);
-    if (into > 0 && into !== Number(r.Basin_ID)) parent.set(Number(r.Basin_ID), into);
+    let named = 0, placed = 0;
+    features.forEach((f, i) => {
+      const river = riverFor(f.properties.id);
+      f.properties.river = river;
+      f.properties.place = place[i];
+      if (river) named++;
+      if (place[i]) placed++;
+    });
+    console.log(`basins with a river name ${named}, with a place ${placed} of ${features.length}`);
   }
-  const riverFor = (id) => {
-    for (let k = 0, cur = id; k < 30 && cur != null; k++, cur = parent.get(cur)) {
-      if (riverOf.has(cur)) return riverOf.get(cur);
-    }
-    return null;
-  };
-
-  let named = 0, placed = 0;
-  features.forEach((f, i) => {
-    const river = riverFor(f.properties.id);
-    f.properties.river = river;
-    f.properties.place = place[i];
-    if (river) named++;
-    if (place[i]) placed++;
-  });
-  console.log(`basins with a river name ${named}, with a place ${placed} of ${features.length}`);
 
   // ── Deposits, joined to the basin they sit in ──────────────────────────
   const bboxes = features.map((f) => {
@@ -317,8 +341,12 @@ async function main() {
     }
     return [x0, y0, x1, y1];
   });
-  const deposits = [];
-  let joined = 0, nearest = 0;
+  // Each deposit is joined to its basin, then counted into a basin×mineral
+  // cell. Nothing about a single deposit leaves this script.
+  const MINS = ['Copper', 'Nickel', 'Cobalt', 'Lithium'];
+  const cellOf = new Map(); // "basin|mineral" -> cell
+  const depositCell = {}; // deposit ID -> cell index, for the runs step only
+  let joined = 0, nearest = 0, outside = 0;
   for (const r of parseCsv(depCsv)) {
     const x = Number(r.LONGITUDE), y = Number(r.LATITUDE);
     const pt = [x, y];
@@ -339,26 +367,62 @@ async function main() {
       });
       if (hit) nearest++;
     }
-    if (hit) joined++;
-    deposits.push({
-      type: 'Feature',
-      properties: {
-        id: Number(r.ID),
-        mineral: r.Mineral,
-        // Contained resources, million tonnes of metal.
-        res: Math.round(Number(r.resources) * 1000) / 1000,
-        basin: hit ? hit.properties.id : null,
-        river: hit ? hit.properties.river : null,
-        place: hit ? hit.properties.place : null,
-        s: hit ? hit.properties.s : null,
-        cf: hit ? hit.properties.cf : null,
-      },
-      geometry: { type: 'Point', coordinates: [Math.round(x * 1000) / 1000, Math.round(y * 1000) / 1000] },
-    });
+    if (!hit) { outside++; continue; }
+    joined++;
+    const key = `${hit.properties.id}|${r.Mineral}`;
+    if (!cellOf.has(key)) cellOf.set(key, { b: hit.properties.id, m: MINS.indexOf(r.Mineral), n: 0, res: 0, ids: [] });
+    const c = cellOf.get(key);
+    c.n++;
+    c.res += Number(r.resources);
+    c.ids.push(Number(r.ID));
   }
-  // Largest first, so small deposits draw on top and stay clickable.
-  deposits.sort((a, b) => b.properties.res - a.properties.res);
-  console.log(`deposits ${deposits.length}, joined ${joined} (${nearest} by nearest basin)`);
+  console.log(`deposits joined ${joined} (${nearest} by nearest basin), ${outside} outside every basin`);
+
+  // One point per basin to hang its marks on: inside the basin, near the
+  // middle of its largest part. Not any deposit's location.
+  const featureById = new Map(features.map((f) => [f.properties.id, f]));
+  const labelPoint = (f) => {
+    let best = null, area = -1;
+    for (const poly of f.geometry.coordinates) {
+      const ring = poly[0];
+      let a = 0, cx = 0, cy = 0;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const k = ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
+        a += k; cx += (ring[j][0] + ring[i][0]) * k; cy += (ring[j][1] + ring[i][1]) * k;
+      }
+      if (Math.abs(a) > area) { area = Math.abs(a); best = { ring, c: a ? [cx / (3 * a), cy / (3 * a)] : ring[0] }; }
+    }
+    if (booleanPointInPolygon(best.c, f)) return best.c.map(r2);
+    // Concave outline: the inside grid point nearest the centroid.
+    let x0 = 180, y0 = 90, x1 = -180, y1 = -90;
+    for (const [x, y] of best.ring) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    let pick = best.ring[0], d = Infinity;
+    for (let gx = 0; gx <= 24; gx++) for (let gy = 0; gy <= 24; gy++) {
+      const p = [x0 + ((x1 - x0) * gx) / 24, y0 + ((y1 - y0) * gy) / 24];
+      const dd = Math.hypot(p[0] - best.c[0], p[1] - best.c[1]);
+      if (dd < d && booleanPointInPolygon(p, f)) { d = dd; pick = p; }
+    }
+    return pick.map(r2);
+  };
+  const atOf = new Map();
+  // Largest first, so small cells draw on top and stay clickable.
+  const cellList = [...cellOf.values()].sort((a, b) => b.n - a.n || a.b - b.b || a.m - b.m);
+  const cells = cellList.map((c, k) => {
+    for (const id of c.ids) depositCell[id] = k;
+    if (!atOf.has(c.b)) atOf.set(c.b, labelPoint(featureById.get(c.b)));
+    return [c.b, c.m, c.n, c.n >= MIN_CELL ? Math.round(c.res * 10) / 10 : null];
+  });
+  const at = Object.fromEntries(atOf);
+  // Totals per mineral, over all basins and over stressed basins only.
+  const totals = Object.fromEntries(MINS.map((m) => [m, { n: 0, res: 0, nStressed: 0, resStressed: 0 }]));
+  for (const c of cellList) {
+    const t = totals[MINS[c.m]];
+    const s = featureById.get(c.b).properties.s;
+    t.n += c.n; t.res += c.res;
+    if (s != null && s > STRESSED) { t.nStressed += c.n; t.resStressed += c.res; }
+  }
+  for (const t of Object.values(totals)) { t.res = Math.round(t.res); t.resStressed = Math.round(t.resStressed); }
+  console.log(`cells ${cells.length} in ${atOf.size} basins, ${cells.filter((c) => c[3] == null).length} below ${MIN_CELL} deposits`);
 
   // ── Figure 2: frontiers and per-mineral splits ─────────────────────────
   // Scenario names as the paper labels them (Fig2a scen_name).
@@ -420,7 +484,11 @@ async function main() {
 
   const write = (name, obj) => writeFile(resolve(OUT, name), JSON.stringify(obj));
   await write('basins.json', { type: 'FeatureCollection', features });
-  await write('deposits.json', { type: 'FeatureCollection', features: deposits });
+  await write('basin-deposits.json', { minerals: MINS, minCell: MIN_CELL, cells, at, totals });
+  // The deposit-to-cell map stays on this machine (gitignored); the runs
+  // step needs it to count mined deposits per cell.
+  await mkdir(CACHE, { recursive: true });
+  await writeFile(resolve(CACHE, 'deposit-cells.json'), JSON.stringify(depositCell));
   await write('frontier.json', { scenarios, series, demandMt });
   console.log(`wrote ${OUT}`);
 }

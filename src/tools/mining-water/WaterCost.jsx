@@ -399,7 +399,7 @@ export default function WaterCost({ data, scenario, material, compact = false, i
           {bands && sweep && ' Shading shows how the curve moves with cumulative metal demand (colour bar, Mt of metal, 2025–2050): each band lies between two of the model’s 31 demand levels.'}
           {bands && !sweep && ' Shading shows how the curve moves with cumulative metal demand (colour bar, Mt of metal, 2025–2050), interpolated between the three IEA scenarios, the only demand levels solved mineral by mineral.'}
           {fish && ` ${{ 'Current policies': 'Current-policies', Pledges: 'Pledged-policies', 'Net-zero': 'Net-zero' }[scenario] ?? scenario} demand. Each dotted curve closes basins above a fish biodiversity index (0–100, from IUCN fish ranges) to mining, along with basins that drain into them; the tighter the threshold, the higher the curve. Shortfalls are cobalt, much of which lies in fish-rich basins; where demand goes unmet, total cost includes the model’s penalty for the shortfall.`}
-          {' The map behind follows the point: deposits the model mines at that cost ceiling, those it adds and those it drops.'}
+          {' The map behind follows the point: basins where the model mines more or fewer deposits at that cost ceiling than at the reference.'}
           {!fish && material !== 'All' && ' Single-mineral curves are the paper’s per-kilogram results times that mineral’s demand; the cost ceiling applies to all four minerals together, so one mineral’s cost can move either way.'}
         </p>
       </div>

@@ -3,7 +3,8 @@
 // Second data step for /tools/mining-water: the model runs behind the
 // paper's Figure 2a and Extended Data Fig. 6, shared by Pablo Busch for the
 // site (they are not in the public replication repo). Run it after
-// build-mining-water.mjs, which writes the deposits this indexes into.
+// build-mining-water.mjs, which writes the basin×mineral cells this counts
+// into (and the local, gitignored deposit-to-cell map).
 //
 // Input, one folder per run with Metrics and per-deposit files:
 //   DemandScenario/<scen>/{Base,Water_EpsNN}{,_Metrics}.csv
@@ -15,10 +16,11 @@
 //   FW_FISH_Basin_FishIndex_Global.csv
 //       Fish biodiversity index per AWARE basin, 0–100.
 //
-// What is published. Deposit names in the per-deposit files come from S&P
-// Global and are dropped. Of the model output only one bit per deposit and
-// run is kept: whether the deposit produces anything 2025–2050. No
-// tonnages, capacities or timing.
+// What is published. Deposit data are licensed from S&P Global for summary
+// statistics only, so nothing per deposit is kept. For each run: how many
+// deposits in each basin×mineral cell produce anything 2025–2050, and, per
+// mineral, how many produce, are added and are dropped against the run's
+// reference. No IDs, tonnages, capacities or timing.
 //
 // Output: public/tools/mining-water/runs.json
 //
@@ -68,10 +70,23 @@ async function producing(dir, file) {
   return on
 }
 
-function bits(ids, on) {
-  const b = new Uint8Array(Math.ceil(ids.length / 8))
-  ids.forEach((id, i) => { if (on.has(id)) b[i >> 3] |= 1 << (i & 7) })
+// Deposits producing in each cell, one byte per cell (no cell holds 255).
+function cellCounts(cellOf, nCells, on) {
+  const b = new Uint8Array(nCells)
+  for (const id of on) if (cellOf[id] != null) b[cellOf[id]]++
   return Buffer.from(b).toString('base64')
+}
+
+// Per mineral and for all four: deposits producing, added and dropped
+// against the reference run.
+function tally(mineralOf, on, ref) {
+  const out = { All: [0, 0, 0] }
+  for (const m of new Set(Object.values(mineralOf))) out[m] = [0, 0, 0]
+  for (const [id, m] of Object.entries(mineralOf)) {
+    const a = on.has(Number(id)), b = ref.has(Number(id))
+    for (const t of [out.All, out[m]]) { if (a) t[0]++; if (a && !b) t[1]++; if (b && !a) t[2]++ }
+  }
+  return out
 }
 
 function parseCsv(text) {
@@ -81,8 +96,10 @@ function parseCsv(text) {
 }
 
 async function main() {
-  const deposits = JSON.parse(await readFile(join(OUT, 'deposits.json'), 'utf8')).features
-  const ids = [...new Set(deposits.map((f) => f.properties.id))].sort((a, b) => a - b)
+  const { minerals, cells } = JSON.parse(await readFile(join(OUT, 'basin-deposits.json'), 'utf8'))
+  const cellOf = JSON.parse(await readFile(resolve('.cache/mining-water/deposit-cells.json'), 'utf8'))
+  const mineralOf = Object.fromEntries(Object.entries(cellOf).map(([id, k]) => [id, minerals[cells[k][1]]]))
+  const count = (on) => cellCounts(cellOf, cells.length, on)
 
   // Cumulative 2025–2050 demand per run, Mt of metal, from the public repo.
   const dem = parseCsv(await (await fetch(
@@ -94,6 +111,7 @@ async function main() {
   // Demand sweep: the frontier at every demand level, for the shaded bands.
   const sweep = []
   const producingBy = {}
+  const statsBy = {}
   for (const scen of (await import('node:fs')).readdirSync(join(SRC, 'DemandScenario'))) {
     const dir = join(SRC, 'DemandScenario', scen)
     if (!existsSync(join(dir, 'Base_Metrics.csv'))) continue
@@ -101,8 +119,10 @@ async function main() {
     for (const f of FILES) pts.push((await metrics(dir, f)).slice(0, 2))
     sweep.push({ name: scen, demand: Math.round(demandMt[scen] * 10) / 10, pts })
     if (NAMED[scen]) {
-      producingBy[NAMED[scen]] = []
-      for (const f of FILES) producingBy[NAMED[scen]].push(bits(ids, await producing(dir, f)))
+      const runs = []
+      for (const f of FILES) runs.push(await producing(dir, f))
+      producingBy[NAMED[scen]] = runs.map(count)
+      statsBy[NAMED[scen]] = runs.map((on) => tally(mineralOf, on, runs[0]))
     }
   }
   sweep.sort((a, b) => a.demand - b.demand)
@@ -110,19 +130,24 @@ async function main() {
   // Fish protection, for each IEA demand case.
   const fish = { levels: FISH.map(([, fi]) => fi), byScenario: {} }
   for (const [scen, name] of Object.entries(NAMED)) {
-    const series = {}, prod = {}
+    const series = {}, prod = {}, stats = {}
+    let ref = null // no protection, least cost
     for (const [key, fi] of FISH) {
       const dir = join(SRC, 'BioDScenario', scen, key)
       const k = fi == null ? 'none' : String(fi)
       series[k] = []
       prod[k] = []
+      stats[k] = []
       for (let i = 0; i < FILES.length; i++) {
         const [cost, water, consumed, unmetCo] = await metrics(dir, FILES[i])
         series[k].push({ step: STEPS[i], cost, water, consumed, unmetCo })
-        prod[k].push(bits(ids, await producing(dir, FILES[i])))
+        const on = await producing(dir, FILES[i])
+        ref ??= on
+        prod[k].push(count(on))
+        stats[k].push(tally(mineralOf, on, ref).All)
       }
     }
-    fish.byScenario[name] = { series, producing: prod }
+    fish.byScenario[name] = { series, producing: prod, stats }
   }
 
   // Basin fish index, only where it reaches the lowest threshold offered.
@@ -133,10 +158,10 @@ async function main() {
     if (f > minFi) fishIndex[b] = Math.round(f * 10) / 10
   }
 
-  const out = { steps: STEPS, ids, sweep, producing: producingBy, fish, fishIndex }
+  const out = { steps: STEPS, sweep, producing: producingBy, stats: statsBy, fish, fishIndex }
   await writeFile(join(OUT, 'runs.json'), JSON.stringify(out))
   console.log(`runs.json: ${sweep.length} demand levels, ${Object.keys(producingBy).length} named, ` +
-    `${fish.levels.length} fish levels × ${Object.keys(fish.byScenario).length} scenarios, ${Object.keys(fishIndex).length} fish-rich basins, ${ids.length} deposits`)
+    `${fish.levels.length} fish levels × ${Object.keys(fish.byScenario).length} scenarios, ${Object.keys(fishIndex).length} fish-rich basins, ${cells.length} cells`)
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

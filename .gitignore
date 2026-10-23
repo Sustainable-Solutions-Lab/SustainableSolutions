@@ -46,3 +46,6 @@ public/tools/food-emissions/*.pmtiles
 # magnets scenario grid: model output kept in Dropbox, fetched by
 # scripts/fetch-magnet-grid.js (docs/magnet-grid.md). The manifest IS committed.
 src/tools/magnets/scenarios*.json
+
+# Local build caches (mining-water deposit-to-basin map: licensed, never commit)
+.cache/

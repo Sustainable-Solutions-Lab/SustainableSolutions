@@ -6,7 +6,7 @@
  *
  *   Map        Figure 1 — AWARE 2.0 basins shaded by the paper's water stress
  *              index, with the 1,293 copper, nickel, cobalt and lithium
- *              deposits in the model sized by contained resources.
+ *              deposits in the model counted by basin and mineral.
  *   Trade-off  Figure 2 — the cost of cutting stress-weighted water use, one
  *              Pareto frontier per demand scenario, and the split by mineral
  *              at any point on it.
@@ -17,12 +17,17 @@
  * public/tools/mining-water/. It reuses the engine's flat basemap, world land
  * underlay and footer, and wraps itself in ToolShell like every other tool.
  *
+ * Deposit data are licensed from S&P Global for summary statistics only, so
+ * the tool never sees a single deposit: basin-deposits.json holds counts per
+ * basin and mineral (with contained resources where a cell has three or
+ * more deposits), drawn at a point inside the basin.
+ *
  * Model runs. runs.json (scripts/build-mining-water-runs.mjs) adds the
- * paper's demand sweep, the fish-protection runs and, for each run, which
- * deposits the model mines. While the trade-offs panel is open the map
- * follows its point: deposits mined, added and dropped against the
- * reference solution. Without runs.json the tool falls back to the
- * published figure data.
+ * paper's demand sweep, the fish-protection runs and, for each run, how
+ * many deposits the model mines in each basin. While the trade-offs panel
+ * is open the map follows its point: basins where more or fewer are mined
+ * than in the reference solution. Without runs.json the tool falls back to
+ * the published figure data.
  *
  * Hover reads a feature on desktop; click or tap pins it to the card, which
  * is the touch equivalent.
@@ -84,18 +89,17 @@ const STRESSED = 0.1
 // Fish-protection thresholds offered in the panel (runs.json fish.byScenario).
 const FISH_LEVELS = ['none', '95', '90', '80', '70', '60', '50']
 
-// runs.json stores, per run, one bit per deposit (ids order): does the
-// model mine it at all 2025–2050.
-function decodeBits(b64) {
+// runs.json stores, per run, one byte per basin×mineral cell (cell order):
+// how many of its deposits the model mines at all 2025–2050.
+function decodeBytes(b64) {
   const s = atob(b64)
   const b = new Uint8Array(s.length)
   for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i)
   return b
 }
-const hasBit = (b, i) => (b[i >> 3] >> (i & 7)) & 1
-// Run state per deposit, as the map draws it: 1 mined in both, 2 added
-// (mined here, not at the reference), 3 dropped, 4 mined in neither.
-const RUN_STATE_LABEL = { 1: 'mined', 2: 'mined at this point, not at the reference', 3: 'mined at the reference, dropped here', 4: 'not mined' }
+// Run state per cell, as the map draws it: 1 as many mined as at the
+// reference, 2 more, 3 fewer, 4 none mined in either.
+const RUN_STATE_LABEL = { 1: 'as at the reference', 2: 'more than at the reference', 3: 'fewer than at the reference', 4: 'none' }
 
 const isDarkNow = () =>
   typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
@@ -206,14 +210,14 @@ function StressLegend({ compact = false }) {
 function SizeLegend({ radius }) {
   return (
     <div className="flex items-end" style={{ gap: 10 }}>
-      {[1, 10, 100].map((v) => {
+      {[1, 5, 20].map((v) => {
         const r = radius(v)
         return (
           <span key={v} className="inline-flex items-end font-mono text-ink-3" style={{ gap: 4, fontSize: 10 }}>
             <svg width={2 * r + 2} height={2 * r + 2} aria-hidden="true">
               <circle cx={r + 1} cy={r + 1} r={r} fill="none" stroke="currentColor" strokeWidth={1} />
             </svg>
-            {v} Mt
+            {v}
           </span>
         )
       })}
@@ -221,41 +225,42 @@ function SizeLegend({ radius }) {
   )
 }
 
-function Detail({ item, onClose }) {
+function Detail({ item, onClose, minCell }) {
   if (!item) {
     return (
       <p className="text-ink-3 m-0" style={{ fontSize: 12, lineHeight: 1.45 }}>
-        Hover a deposit or basin, or tap one, for its details.
+        Hover a basin or its marks, or tap one, for its details.
       </p>
     )
   }
+  const basinRows = [
+    ['Region', item.place ?? '—'],
+    ['Water stress', item.s == null ? 'not in model' : `${pct(item.s)}, ${stressClass(item.s)}`],
+    ['AWARE 2.0 factor', item.cf == null ? '—' : `${fmt(item.cf, 2)} m³-eq/m³`],
+    ...(item.fi != null ? [['Fish index', fmt(item.fi, 0)]] : []),
+  ]
   const rows =
-    item.kind === 'deposit'
+    item.kind === 'cell'
       ? [
-          ['Contained resources', `${fmt(item.res, 2)} Mt metal`],
-          ['Location', latlon(item.coords)],
-          ['Basin', item.basin == null ? '—' : basinName(item.river, item.place)],
-          ['Region', item.place ?? '—'],
-          ['Basin water stress', item.s == null ? 'not in model' : `${pct(item.s)}, ${stressClass(item.s)}`],
-          ['AWARE 2.0 factor', item.cf == null ? '—' : `${fmt(item.cf, 2)} m³-eq/m³`],
-          ...(item.fi != null ? [['Basin fish index', fmt(item.fi, 0)]] : []),
-          ...(item.run ? [['In the model run', RUN_STATE_LABEL[item.run]]] : []),
+          ['Deposits', String(item.n)],
+          ['Contained resources', item.res == null ? `not shown below ${minCell} deposits` : `${fmt(item.res, 1)} Mt metal`],
+          ...basinRows,
+          ...(item.run ? [['Mined at this point', `${item.run.now} of ${item.n}, ${RUN_STATE_LABEL[item.run.st]}`]] : []),
         ]
       : [
-          ['Region', item.place ?? '—'],
-          ['Water stress', item.s == null ? 'not in model' : `${pct(item.s)}, ${stressClass(item.s)}`],
-          ['AWARE 2.0 factor', item.cf == null ? '—' : `${fmt(item.cf, 2)} m³-eq/m³`],
-          ...(item.fi != null ? [['Fish index', fmt(item.fi, 0)]] : []),
-          ['Deposits in basin', item.count ? `${item.count} (${fmt(item.resTotal, 1)} Mt)` : 'none in the model'],
+          ...basinRows,
+          ['Deposits in basin', item.byMineral.length
+            ? item.byMineral.map(([m, n]) => `${m} ${n}`).join(' · ')
+            : 'none in the model'],
         ]
   return (
     <div>
       <div className="flex items-baseline justify-between" style={{ gap: 8 }}>
         <p className="font-serif text-ink m-0" style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.2 }}>
-          {item.kind === 'deposit' ? (
+          {item.kind === 'cell' ? (
             <span className="inline-flex items-center" style={{ gap: 6 }}>
               <Swatch color={MINERAL_COLOR[item.mineral]} />
-              {item.mineral} deposit
+              {item.mineral}, {basinName(item.river, item.place)}
             </span>
           ) : (
             basinName(item.river, item.place)
@@ -281,15 +286,14 @@ function Detail({ item, onClose }) {
         ))}
       </dl>
       <p className="text-ink-3 m-0" style={{ fontSize: 10, lineHeight: 1.4, marginTop: 6 }}>
-        {item.kind === 'deposit'
-          ? <>Deposit {item.id}{item.basin != null ? `, AWARE basin ${item.basin}` : ''}. Deposit names, grades and costs are licensed from S&amp;P Global and not shown.</>
-          : <>AWARE basin {item.id}. Named from Natural Earth rivers and provinces.</>}
+        AWARE basin {item.kind === 'cell' ? item.basin : item.id}. Named from Natural Earth rivers and provinces.
+        {item.kind === 'cell' && <> Deposit data are licensed from S&amp;P Global and shown only as basin totals.</>}
       </p>
     </div>
   )
 }
 
-// Key to the deposit marks while the panel drives the map.
+// Key to the basin marks while the panel drives the map.
 function RunKey({ fishRef, closed }) {
   const ink = 'var(--ink)'
   const mark = (fill, stroke, sw, op = 1) => (
@@ -298,10 +302,10 @@ function RunKey({ fishRef, closed }) {
     </svg>
   )
   const items = [
-    [mark('var(--ink-3)', 'var(--rule-strong)', 0.6), 'mined'],
-    [mark('var(--ink-3)', ink, 1.6), 'added'],
-    [mark('none', 'var(--cardinal)', 1.5), 'dropped'],
-    [mark('var(--ink-3)', 'var(--rule)', 0.4, 0.15), 'not mined'],
+    [mark('var(--ink-3)', 'var(--rule-strong)', 0.6), 'unchanged'],
+    [mark('var(--ink-3)', ink, 1.6), 'more mined'],
+    [mark('none', 'var(--cardinal)', 1.5), 'fewer mined'],
+    [mark('var(--ink-3)', 'var(--rule)', 0.4, 0.15), 'none mined'],
   ]
   return (
     <div className="px-3 pb-3">
@@ -318,7 +322,7 @@ function RunKey({ fishRef, closed }) {
         )}
       </div>
       <p className="text-ink-3 m-0" style={{ fontSize: 10.5, lineHeight: 1.4, marginTop: 4 }}>
-        Deposits the model mines at the point on the curve, against {fishRef ? 'no protection at least cost' : 'the least-cost solution'}.
+        Deposits the model mines in each basin at the point on the curve, against {fishRef ? 'no protection at least cost' : 'the least-cost solution'}.
       </p>
     </div>
   )
@@ -342,7 +346,7 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
     const outline = dark ? 'rgba(248,248,232,0.85)' : 'rgba(24,24,56,0.85)'
     const depStroke = dark ? 'rgba(248,248,232,0.75)' : 'rgba(24,24,56,0.75)'
     if (!map.getSource('basins')) map.addSource('basins', { type: 'geojson', data: data.basins, promoteId: 'id' })
-    if (!map.getSource('deposits')) map.addSource('deposits', { type: 'geojson', data: data.deposits, promoteId: 'id' })
+    if (!map.getSource('cells')) map.addSource('cells', { type: 'geojson', data: data.cells, promoteId: 'k' })
     // Land outside the model is drawn from the basins themselves (s = null)
     // rather than from Natural Earth land, whose Eurasia polygon fills a band
     // across the Arctic at these zooms.
@@ -388,21 +392,22 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
       filter: ['==', ['get', 'id'], -1],
       paint: { 'line-color': outline, 'line-width': 1.4 },
     })
-    // Run state (feature-state `st`, set while the trade-offs panel is
-    // open): mined deposits as usual, added ones ringed in ink, dropped ones
-    // hollow with a cardinal ring, unmined ones faint.
+    // One mark per basin and mineral, at a point inside the basin. Run state
+    // (feature-state `st`, set while the trade-offs panel is open): unchanged
+    // cells as usual, cells with more mined ringed in ink, fewer hollow with a
+    // cardinal ring, none mined faint.
     const st = ['coalesce', ['feature-state', 'st'], 0]
     map.addLayer({
-      id: 'deposits', type: 'circle', source: 'deposits',
+      id: 'cells', type: 'circle', source: 'cells',
       paint: {
         'circle-color': ['match', ['get', 'mineral'], ...MINERALS.flat(), '#888'],
-        // Area ∝ resources; grows with zoom so clusters separate.
-        // Changed deposits grow a little so they read at world zoom.
+        // Area ∝ number of deposits; grows with zoom.
+        // Changed cells grow a little so they read at world zoom.
         'circle-radius': ['interpolate', ['linear'], ['zoom'],
-          1, ['+', ['match', st, 2, 3, 3, 3, 1.2], ['*', 0.85, ['sqrt', ['get', 'res']]]],
-          6, ['+', ['match', st, 2, 5, 3, 5, 2.5], ['*', 2.2, ['sqrt', ['get', 'res']]]]],
-        // While a run is shown, unchanged mines recede and unmined deposits
-        // nearly vanish, so what the point moved is what stands out.
+          1, ['+', ['match', st, 2, 3, 3, 3, 1.2], ['*', 1.5, ['sqrt', ['get', 'n']]]],
+          6, ['+', ['match', st, 2, 5, 3, 5, 2.5], ['*', 4, ['sqrt', ['get', 'n']]]]],
+        // While a run is shown, unchanged cells recede and cells with none
+        // mined nearly vanish, so what the point moved is what stands out.
         'circle-opacity': ['match', st, 1, 0.45, 2, 1, 3, 0, 4, 0.06, 0.85],
         'circle-stroke-color': ['match', st, 2, dark ? '#F8F8E8' : '#181838', 3, dark ? '#E0533D' : '#8C1515', depStroke],
         'circle-stroke-width': ['match', st, 2, 2.2, 3, 2.2, 0.5],
@@ -410,13 +415,13 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
       },
     })
     map.addLayer({
-      id: 'deposit-hl', type: 'circle', source: 'deposits',
-      filter: ['==', ['get', 'id'], -1],
+      id: 'cell-hl', type: 'circle', source: 'cells',
+      filter: ['==', ['get', 'k'], -1],
       paint: {
         'circle-color': 'rgba(0,0,0,0)',
         'circle-radius': ['interpolate', ['linear'], ['zoom'],
-          1, ['+', 3.5, ['*', 0.85, ['sqrt', ['get', 'res']]]],
-          6, ['+', 5, ['*', 2.2, ['sqrt', ['get', 'res']]]]],
+          1, ['+', 3.5, ['*', 1.5, ['sqrt', ['get', 'n']]]],
+          6, ['+', 5, ['*', 4, ['sqrt', ['get', 'n']]]]],
         'circle-stroke-color': outline,
         'circle-stroke-width': 1.6,
       },
@@ -486,36 +491,37 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
       setReady(true)
     })
 
-    const depositFrom = (f) => ({
-      kind: 'deposit', id: f.properties.id, mineral: f.properties.mineral, res: f.properties.res,
+    const cellFrom = (f) => ({
+      kind: 'cell', k: f.properties.k, mineral: f.properties.mineral, n: f.properties.n, res: f.properties.res ?? null,
       basin: f.properties.basin, river: f.properties.river, place: f.properties.place,
-      s: f.properties.s, cf: f.properties.cf, coords: f.geometry.coordinates,
+      s: f.properties.s, cf: f.properties.cf,
       fi: data.fishIndex?.[f.properties.basin] ?? null,
     })
     const basinFrom = (f) => {
       const id = f.properties.id
-      const inBasin = data.deposits.features.filter((d) => d.properties.basin === id)
       return {
         kind: 'basin', id, river: f.properties.river, place: f.properties.place, s: f.properties.s, cf: f.properties.cf,
         fi: f.properties.fi || null,
-        count: inBasin.length, resTotal: inBasin.reduce((a, d) => a + d.properties.res, 0),
+        byMineral: data.cells.features
+          .filter((c) => c.properties.basin === id)
+          .map((c) => [c.properties.mineral, c.properties.n]),
       }
     }
     const pick = (e) => {
-      const dep = map.queryRenderedFeatures(e.point, { layers: ['deposits'] })[0]
-      if (dep) return depositFrom(dep)
+      const cell = map.queryRenderedFeatures(e.point, { layers: ['cells'] })[0]
+      if (cell) return cellFrom(cell)
       const b = map.queryRenderedFeatures(e.point, { layers: ['basins'] })[0]
       return b ? basinFrom(b) : null
     }
     map.on('mousemove', (e) => {
-      if (!map.getLayer('deposits')) return
+      if (!map.getLayer('cells')) return
       const item = pick(e)
       map.getCanvas().style.cursor = item ? 'pointer' : ''
       onHover(item)
     })
     map.on('mouseout', () => onHover(null))
     map.on('click', (e) => {
-      if (!map.getLayer('deposits')) return
+      if (!map.getLayer('cells')) return
       onPick(pick(e))
     })
     return () => map.remove()
@@ -536,22 +542,22 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
   }, [isDark]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const applyFilter = (map) => {
-    if (!map.getLayer('deposits')) return
+    if (!map.getLayer('cells')) return
     const f = ['all', ['in', ['get', 'mineral'], ['literal', minerals]]]
     if (stressedOnly) f.push(['all', ['!=', ['get', 's'], null], ['>', ['get', 's'], STRESSED]])
-    map.setFilter('deposits', f)
+    map.setFilter('cells', f)
   }
   const applyHighlight = (map) => {
-    if (!map.getLayer('deposit-hl')) return
-    map.setFilter('deposit-hl', ['==', ['get', 'id'], picked?.kind === 'deposit' ? picked.id : -1])
+    if (!map.getLayer('cell-hl')) return
+    map.setFilter('cell-hl', ['==', ['get', 'k'], picked?.kind === 'cell' ? picked.k : -1])
     map.setFilter('basin-hl', ['==', ['get', 'id'], picked ? (picked.kind === 'basin' ? picked.id : picked.basin ?? -1) : -1])
   }
-  // Run state: one feature-state per deposit ID, cleared when the panel closes.
+  // Run state: one feature-state per cell, cleared when the panel closes.
   const applyRun = (map) => {
-    if (!map.getSource('deposits')) return
-    map.removeFeatureState({ source: 'deposits' })
+    if (!map.getSource('cells')) return
+    map.removeFeatureState({ source: 'cells' })
     if (!runState) return
-    for (const [id, v] of runState) map.setFeatureState({ source: 'deposits', id }, { st: v })
+    runState.st.forEach((v, id) => map.setFeatureState({ source: 'cells', id }, { st: v }))
   }
   const applyFish = (map) => {
     if (!map.getLayer('fish-closed')) return
@@ -594,17 +600,31 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   useEffect(() => {
-    Promise.all(['basins', 'deposits', 'frontier'].map((n) => fetch(`${DATA}/${n}.json`).then((r) => {
+    Promise.all(['basins', 'basin-deposits', 'frontier'].map((n) => fetch(`${DATA}/${n}.json`).then((r) => {
       if (!r.ok) throw new Error(`${n}.json: ${r.status}`)
       return r.json()
     })))
-      .then(async ([basins, deposits, frontier]) => {
+      .then(async ([basins, dep, frontier]) => {
+        // Basin×mineral cells as points at the basin's anchor, carrying the
+        // basin's own properties for the card and the stressed filter.
+        const basinProps = new Map(basins.features.map((f) => [f.properties.id, f.properties]))
+        const cells = {
+          type: 'FeatureCollection',
+          features: dep.cells.map(([b, m, n, res], k) => {
+            const p = basinProps.get(b) ?? {}
+            return {
+              type: 'Feature',
+              properties: { k, basin: b, mineral: dep.minerals[m], n, res, s: p.s ?? null, cf: p.cf ?? null, river: p.river ?? null, place: p.place ?? null },
+              geometry: { type: 'Point', coordinates: dep.at[b] },
+            }
+          }),
+        }
         // Model runs (per-deposit results, demand sweep, fish protection)
         // are optional: without them the tool falls back to the paper's
         // published figures.
         const runs = await fetch(`${DATA}/runs.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
         if (runs) for (const f of basins.features) f.properties.fi = runs.fishIndex[f.properties.id] ?? 0
-        setData({ basins, deposits, ...frontier, runs, fishIndex: runs?.fishIndex ?? null })
+        setData({ basins, cells, totals: dep.totals, minCell: dep.minCell, ...frontier, runs, fishIndex: runs?.fishIndex ?? null })
       })
       .catch((e) => setError(String(e)))
   }, [])
@@ -626,56 +646,40 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
     if (!r || !panelOpen || step == null) return null
     const arr = fishView ? r.fish.byScenario[scenario]?.producing[fishLevel] : r.producing[scenario]
     if (!arr) return null
-    const now = decodeBits(arr[step])
-    const ref = decodeBits(fishView ? r.fish.byScenario[scenario].producing.none[0] : arr[0])
-    const state = new Map()
-    r.ids.forEach((id, i) => {
-      const a = hasBit(now, i), b = hasBit(ref, i)
-      state.set(id, a && b ? 1 : a ? 2 : b ? 3 : 4)
-    })
-    return state
+    const now = decodeBytes(arr[step])
+    const ref = decodeBytes(fishView ? r.fish.byScenario[scenario].producing.none[0] : arr[0])
+    const st = Array.from(now, (a, k) => (a > ref[k] ? 2 : a < ref[k] ? 3 : a ? 1 : 4))
+    return { st, now }
   }, [data, panelOpen, step, fishView, fishLevel, scenario])
-  // Deposit counts for the readout at every step of the selected curve,
-  // restricted to the chosen mineral.
+  // Deposits mined, added and dropped at every step of the selected curve,
+  // for the chosen mineral (the fish runs cover all four together). Totals
+  // over every deposit, from the build.
   const mineStats = useMemo(() => {
     const r = data?.runs
     if (!r || !panelOpen) return null
-    const arr = fishView ? r.fish.byScenario[scenario]?.producing[fishLevel] : r.producing[scenario]
-    if (!arr) return null
-    const mat = fishView ? 'All' : material
-    const idx = []
-    if (mat === 'All') r.ids.forEach((_, i) => idx.push(i))
-    else {
-      const pos = new Map(r.ids.map((id, i) => [id, i]))
-      for (const f of data.deposits.features) if (f.properties.mineral === mat) idx.push(pos.get(f.properties.id))
+    const t = data.totals
+    if (fishView) {
+      const rows = r.fish.byScenario[scenario]?.stats?.[fishLevel]
+      const total = Object.values(t).reduce((a, v) => a + v.n, 0)
+      return rows?.map(([n, added, dropped]) => ({ n, added, dropped, total })) ?? null
     }
-    const ref = decodeBits(fishView ? r.fish.byScenario[scenario].producing.none[0] : arr[0])
-    return arr.map((b64) => {
-      const now = decodeBits(b64)
-      let n = 0, added = 0, dropped = 0
-      for (const i of idx) {
-        const a = hasBit(now, i), b = hasBit(ref, i)
-        if (a) n++
-        if (a && !b) added++
-        if (b && !a) dropped++
-      }
-      return { n, added, dropped, total: idx.length }
-    })
+    const rows = r.stats?.[scenario]
+    const total = material === 'All' ? Object.values(t).reduce((a, v) => a + v.n, 0) : t[material].n
+    return rows?.map((x) => { const [n, added, dropped] = x[material]; return { n, added, dropped, total } }) ?? null
   }, [data, panelOpen, fishView, fishLevel, scenario, material])
   const onStep = useCallback((i) => setStep(i), [])
-  const withRun = (item) => (item && item.kind === 'deposit' && run ? { ...item, run: run.get(item.id) } : item)
+  const withRun = (item) => (item && item.kind === 'cell' && run ? { ...item, run: { st: run.st[item.k], now: run.now[item.k] } } : item)
 
   // Matches the circle-radius expression near the opening zoom.
-  const radius = (v) => 1.3 + 0.9 * Math.sqrt(v)
+  const radius = (v) => 1.3 + 1.6 * Math.sqrt(v)
   const shownItem = withRun(hover ?? (picked ? { ...picked, pinned: true } : null))
   const counts = useMemo(() => {
     if (!data) return null
     let n = 0, mt = 0
-    for (const f of data.deposits.features) {
-      const p = f.properties
-      if (!minerals.includes(p.mineral)) continue
-      if (stressedOnly && !(p.s != null && p.s > STRESSED)) continue
-      n++; mt += p.res
+    for (const m of minerals) {
+      const t = data.totals[m]
+      n += stressedOnly ? t.nStressed : t.n
+      mt += stressedOnly ? t.resStressed : t.res
     }
     return { n, mt }
   }, [data, minerals.join(','), stressedOnly]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -739,19 +743,20 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
           </div>
 
           <div className="mb-4">
-            <Eyebrow>Deposit size</Eyebrow>
+            <Eyebrow>Deposits per basin</Eyebrow>
             <SizeLegend radius={radius} />
           </div>
 
           <div className="mb-4 border-t border-rule" style={{ paddingTop: 10 }}>
-            <Detail item={shownItem} onClose={() => setPicked(null)} />
+            <Detail item={shownItem} minCell={data?.minCell} onClose={() => setPicked(null)} />
           </div>
         </>
       )}
       <div className="border-t border-rule" style={{ paddingTop: 8 }}>
         <p className="text-ink-3 m-0" style={{ fontSize: 10, lineHeight: 1.45 }}>
-          Basins: AWARE 2.0 (Seitfudem, Berger &amp; Boulay, CC BY 4.0), simplified for display. Deposits and
-          results: the paper's replication data.
+          Basins: AWARE 2.0 (Seitfudem, Berger &amp; Boulay, CC BY 4.0), simplified for display. Deposits:
+          S&amp;P Global, licensed, shown only as counts by basin and mineral, with contained resources where
+          a basin holds three or more. Results: the paper's model runs.
         </p>
         {/* STEER credit through ToolFooter's initiative slot (as Food
             Emissions credits Cornerstone), with the wordmark the magnet
@@ -801,7 +806,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
                 background: isDark ? 'rgba(12, 12, 28, 0.94)' : 'rgba(248, 248, 232, 0.94)',
               }}
             >
-              <Detail item={withRun({ ...picked, pinned: true })} onClose={() => setPicked(null)} />
+              <Detail item={withRun({ ...picked, pinned: true })} minCell={data?.minCell} onClose={() => setPicked(null)} />
             </div>
           )}
           {/* Mobile legend, as the map engine's: the rail's legend lives in

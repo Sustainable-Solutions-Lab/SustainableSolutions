@@ -381,6 +381,7 @@ export default function DemandCeilingsTool() {
               <h3 style={{ font: '600 clamp(20px, 2.8vw, 26px)/1.2 var(--font-serif)', color: 'var(--ink)', margin: 0 }}>
                 {tsel.name} <span style={{ fontWeight: 400, fontSize: '0.7em', color: 'var(--ink-3)' }}>{tsel.emp.toFixed(2)}M jobs · {tsel.type}</span>
               </h3>
+              {tsel.desc && <p style={{ margin: '-4px 0 0', fontSize: 14.5, lineHeight: 1.45, color: 'var(--ink-2)', maxWidth: '62ch' }}>{tsel.desc}</p>}
               <label htmlFor="dc-sector" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px' }}>
                 <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>Change industry (or tap any circle or column above)</span>
                 <select id="dc-sector" value={selCode} onChange={(e) => setSelCode(e.target.value)}

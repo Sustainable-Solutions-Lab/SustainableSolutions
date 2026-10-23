@@ -97,7 +97,7 @@ export default function ForceMix({ sectors, growth, world, metric, selCode, onPi
           onPointerMove={(ev) => {
             if (ev.pointerType === 'touch') return;
             const c = colAt(ev);
-            if (c) tip.show(ev, `${c.s.name}: ${what} ${pctChange(Math.exp(c.net))}`); else tip.hide();
+            if (c) tip.show(ev, `${c.s.name}: ${what} ${pctChange(Math.exp(c.net))}. ${c.s.desc ?? ''}`); else tip.hide();
           }}
           onPointerLeave={tip.hide}
           onClick={(ev) => { const c = colAt(ev); if (c) { onPick(c.s.code); tip.hide(); } }}>

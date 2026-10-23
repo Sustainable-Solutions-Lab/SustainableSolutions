@@ -3,7 +3,7 @@ title: Ken Caldeira
 role: Visiting Scholar, Coordinator of the Conceptual Investigations Unit
 ---
 
-Ken Caldeira is a Visiting Scholar at Stanford University and the Coordinator of the Conceptual Investigations Unit of Steve Davis's Sustainable Solutions Lab. He is also a Senior Scientist at Gates Ventures.
+Ken Caldeira is a Visiting Scholar at Stanford University and the Coordinator of the [Conceptual Investigations Unit](https://ciunit.org) of Steve Davis's Sustainable Solutions Lab. He is also a Senior Scientist at Gates Ventures.
 
 ## Background
 
@@ -76,4 +76,5 @@ Prior to Gates Ventures, Ken was Senior Scientist at the Carnegie Institution fo
 ## Contact
 
 - [caldeira@stanford.edu](mailto:caldeira@stanford.edu)
+- [Conceptual Investigations Unit website](https://ciunit.org)
 - [Google Scholar](https://scholar.google.com/citations?hl=en&user=zgXf2JsAAAAJ)

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { CIU_URL } from '../../lib/ciu';
 import publications from '../../data/publications.json';
 import people from '../../data/people.json';
 import researchData from '../../data/research.json';
@@ -168,6 +169,7 @@ const approachCards = [
     count: conceptualPubs.length,
     cites: conceptualCites,
     eyebrow: 'CONCEPTUAL · CIU',
+    external: { href: CIU_URL, label: 'CIU website · ciunit.org' },
   },
   {
     slug: 'data-driven',
@@ -180,6 +182,7 @@ const approachCards = [
     count: dataDrivenPubs.length,
     cites: dataDrivenCites,
     eyebrow: 'DATA-DRIVEN',
+    external: null as { href: string; label: string } | null,
   },
 ];
 ---
@@ -360,12 +363,11 @@ const approachCards = [
     <h2 class="eyebrow mb-4">BY APPROACH</h2>
     <ul class="grid md:grid-cols-2 gap-4 list-none p-0 m-0">
       {approachCards.map((a) => (
-        <li class="m-0 p-0 h-full">
-          <a
-            href={a.href}
-            class="flex flex-col h-full bg-paper border border-rule hover:border-ink-3 transition-colors border-b-0"
-            style={`border-radius: var(--radius-md); border-top: 4px solid ${a.color}; overflow: hidden;`}
-          >
+        <li
+          class="m-0 p-0 h-full flex flex-col bg-paper border border-rule hover:border-ink-3 transition-colors"
+          style={`border-radius: var(--radius-md); border-top: 4px solid ${a.color}; overflow: hidden;`}
+        >
+          <a href={a.href} class="flex flex-col flex-1 border-b-0">
             <div class="p-5 flex-1 flex flex-col">
               <p class="eyebrow m-0 mb-2" style={`color: ${a.color};`}>{a.eyebrow}</p>
               <h3 class="m-0">{a.title}</h3>
@@ -379,6 +381,13 @@ const approachCards = [
               </p>
             </div>
           </a>
+          {a.external && (
+            <a
+              href={a.external.href}
+              class="block px-5 pb-4 -mt-2 font-mono text-xs uppercase tracking-wider text-ink-3 hover:text-ink border-b-0"
+              data-external
+            >{a.external.label} →</a>
+          )}
         </li>
       ))}
     </ul>

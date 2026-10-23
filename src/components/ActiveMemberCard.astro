@@ -1,6 +1,7 @@
 ---
 import type { Person, Publication, Tool, NewsItem } from '../lib/types';
 import { roleColor } from '../lib/roles';
+import { splitCiu, CIU_URL } from '../lib/ciu';
 import { splitAndLinkAuthors } from '../lib/author-links';
 import publications from '../data/publications.json';
 import externalPubs from '../data/external-pubs.json';
@@ -25,6 +26,7 @@ const hrefIsExternal = isExternal && !!person.personal_url;
 const sectionLabel =
   person.unit === 'ciu' ? 'CONCEPTUAL INVESTIGATIONS UNIT' : 'CURRENT';
 const stripeColor = roleColor(person.role);
+const roleParts = splitCiu(person.role);
 
 // Spectral letter-avatar fallback (same hash as PersonCard for visual continuity)
 const spectralColors = [
@@ -173,7 +175,9 @@ function newsYearLabel(d: string | null | undefined): string {
       )}
     </h3>
 
-    <p class="text-ink-2 mt-2 m-0 text-sm">{person.role}</p>
+    <p class="text-ink-2 mt-2 m-0 text-sm">{roleParts.before}{roleParts.name && (
+      <a href={CIU_URL} class="hover:text-ink" data-external>{roleParts.name}</a>
+    )}{roleParts.after}</p>
 
     {person.bio_short && (
       <p class="mt-4 text-sm text-ink m-0" style="line-height: 1.5;">

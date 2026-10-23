@@ -393,7 +393,7 @@ const config = {
     mobileCenter: [-79.5, 24],
     mobileZoom: 2.35,
     minZoom: 1.2,
-    maxZoom: 7,
+    maxZoom: 6,
     // Share of the viewport that may sit below the southern cut, so Tierra
     // del Fuego and the Falklands clear the year bar (map/index.jsx).
     southSlack: 0.13,

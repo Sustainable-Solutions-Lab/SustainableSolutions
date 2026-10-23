@@ -29,6 +29,10 @@
  * than in the reference solution. Without runs.json the tool falls back to
  * the published figure data.
  *
+ * Projection. Equal Earth, as on the Food Emissions map: basins and cells
+ * are projected on load (_map/lib/equal-earth.js) and MapLibre draws them as
+ * if they were Mercator, so basin areas compare at every latitude.
+ *
  * Hover reads a feature on desktop; click or tap pins it to the card, which
  * is the touch equivalent.
  */
@@ -39,6 +43,7 @@ import { X } from 'lucide-react'
 import ToolShell from '../_shell/ToolShell'
 import { BusyOverlay } from '../_shell/busy-overlay.jsx'
 import { basemapStyle } from '../_map/components/map/basemap-style.jsx'
+import { toMap, toMapLat, setEqualEarth, geometryToMap } from '../_map/lib/equal-earth.js'
 import { ToolFooter } from '../_map/components/sidebar/tool-footer.jsx'
 import WaterCost from './WaterCost.jsx'
 
@@ -436,8 +441,8 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
     // applies, so dragging at the limit stays smooth. North is hard; the
     // south gets SOUTH_SLACK of the viewport as ocean.
     const mc = maplibregl.MercatorCoordinate
-    const yTop = mc.fromLngLat({ lng: 0, lat: LAT_BOUNDS[1] }).y
-    const yBot = mc.fromLngLat({ lng: 0, lat: LAT_BOUNDS[0] }).y
+    const yTop = mc.fromLngLat({ lng: 0, lat: toMapLat(LAT_BOUNDS[1]) }).y
+    const yBot = mc.fromLngLat({ lng: 0, lat: toMapLat(LAT_BOUNDS[0]) }).y
     const transformCameraUpdate = ({ center, zoom }) => {
       const h = ref.current?.clientHeight
       if (!h || center == null || zoom == null) return {}
@@ -450,7 +455,7 @@ function MiningMap({ data, isDark, minerals, stressedOnly, onHover, onPick, pick
       if (Math.abs(lat - center.lat) < 1e-9) return {}
       return { center: { lng: center.lng, lat } }
     }
-    const startCenter = isSmall ? [-79.5, 21.5] : [-30, 20]
+    const startCenter = toMap(...(isSmall ? [-79.5, 21.5] : [-30, 20]))
     const map = new maplibregl.Map({
       container: ref.current,
       style: basemapStyle(isDark ? 'dark' : 'light'),
@@ -608,6 +613,9 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
         // Basin×mineral cells as points at the basin's anchor, carrying the
         // basin's own properties for the card and the stressed filter.
         const basinProps = new Map(basins.features.map((f) => [f.properties.id, f.properties]))
+        // Into Equal Earth map coordinates (see the header).
+        setEqualEarth(true)
+        for (const f of basins.features) f.geometry = geometryToMap(f.geometry)
         const cells = {
           type: 'FeatureCollection',
           features: dep.cells.map(([b, m, n, res], k) => {
@@ -615,7 +623,7 @@ export default function MiningWaterTool({ companion = null, repoLinks = null, di
             return {
               type: 'Feature',
               properties: { k, basin: b, mineral: dep.minerals[m], n, res, s: p.s ?? null, cf: p.cf ?? null, river: p.river ?? null, place: p.place ?? null },
-              geometry: { type: 'Point', coordinates: dep.at[b] },
+              geometry: { type: 'Point', coordinates: toMap(...dep.at[b]) },
             }
           }),
         }

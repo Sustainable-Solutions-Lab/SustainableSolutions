@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { geoNaturalEarth1, geoPath, type GeoPermissibleObjects } from 'd3-geo';
+import { geoEqualEarth, geoPath, type GeoPermissibleObjects } from 'd3-geo';
 import { scaleSequential } from 'd3-scale';
 import { interpolateYlOrRd } from 'd3-scale-chromatic';
 import { feature } from 'topojson-client';
@@ -82,7 +82,7 @@ export default function Choropleth({ data }: Props) {
       fc.type === 'FeatureCollection'
         ? (fc as { features: Feature<Geometry, CountryProps>[] }).features
         : [fc as Feature<Geometry, CountryProps>];
-    const projection = geoNaturalEarth1()
+    const projection = geoEqualEarth()
       .fitSize([size.w, mapH], { type: 'Sphere' } as unknown as GeoPermissibleObjects);
     const pathFn = geoPath(projection);
     const color = scaleSequential(interpolateYlOrRd).domain([data.min, data.max || 1]) as unknown as (

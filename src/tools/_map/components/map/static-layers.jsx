@@ -11,7 +11,24 @@
  * Call addStaticLayers(map, scheme) after map load and after every setStyle().
  */
 
-import { projectLines } from '../../lib/equal-earth.js'
+import { projectLines, toMap } from '../../lib/equal-earth.js'
+
+// World city labels (world projects): Natural Earth 10m populated places,
+// built to /geo/world-cities.geojson with rank 1 = 5M+, 2 = 1M+ or a
+// capital, 3 = 150k+. Fetched once per page and, under Equal Earth,
+// projected once; theme changes reuse it.
+let worldCitiesData = null
+function loadWorldCities(equalEarth) {
+  if (!worldCitiesData) {
+    worldCitiesData = fetch('/geo/world-cities.geojson')
+      .then((r) => r.json())
+      .then((fc) => {
+        if (equalEarth) for (const f of fc.features) f.geometry.coordinates = toMap(...f.geometry.coordinates)
+        return fc
+      })
+  }
+  return worldCitiesData
+}
 
 // ── California cities (ranked by size for progressive zoom disclosure) ─────────
 const CALIFORNIA_CITIES = {
@@ -495,6 +512,52 @@ export function addStaticLayers(map, scheme, opts = {}) {
       })
     } else {
       map.setPaintProperty('adm0-lines', 'line-color', adm0Color)
+    }
+  }
+
+  // ── 2d. World city labels (world projects) ───────────────────────────────
+  // Only near the camera's closest zooms (max 6 on Food Emissions): the
+  // largest cities from z 4.5, then 1M+ and capitals, then 150k+ at the
+  // last step. Collision placement drops whatever does not fit, in
+  // population order. Kept above the data by the render hook's
+  // enforceOverlayOrder, as the boundary lines are.
+  if (worldOverlays && !map.getSource('world-cities')) {
+    map.addSource('world-cities', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+    loadWorldCities(opts.equalEarth)
+      .then((fc) => map.getSource('world-cities')?.setData(fc))
+      .catch(() => { worldCitiesData = null })
+  }
+  const worldCityText = scheme === 'dark' ? 'rgba(248, 248, 232, 0.88)' : 'rgba(24, 24, 56, 0.82)'
+  const worldCityHalo = scheme === 'dark' ? 'rgba(12, 12, 28, 0.85)' : 'rgba(248, 248, 232, 0.92)'
+  const worldCityRanks = [
+    { id: 'world-city-labels-r1', rank: 1, minzoom: 4.5, size: 11 },
+    { id: 'world-city-labels-r2', rank: 2, minzoom: 5.25, size: 10 },
+    { id: 'world-city-labels-r3', rank: 3, minzoom: 5.75, size: 10 },
+  ]
+  if (worldOverlays) for (const { id, rank, minzoom, size } of worldCityRanks) {
+    if (!map.getLayer(id)) {
+      map.addLayer({
+        id,
+        type: 'symbol',
+        source: 'world-cities',
+        minzoom,
+        filter: ['==', ['get', 'rank'], rank],
+        layout: {
+          'text-field': ['get', 'name'],
+          'text-size': size,
+          'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+          'text-anchor': 'left',
+          'text-offset': [0.4, 0],
+        },
+        paint: {
+          'text-color': worldCityText,
+          'text-halo-color': worldCityHalo,
+          'text-halo-width': 1.6,
+        },
+      })
+    } else {
+      map.setPaintProperty(id, 'text-color', worldCityText)
+      map.setPaintProperty(id, 'text-halo-color', worldCityHalo)
     }
   }
 

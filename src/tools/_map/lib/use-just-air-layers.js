@@ -435,6 +435,18 @@ export function useJustAirLayers(map, config, state, tuning) {
           try { map.moveLayer(id) } catch { /* ordering only */ }
         }
       }
+      // City labels ride above everything, the regional view included;
+      // r1 last so the largest cities are placed first.
+      const lastAnyIdx = Math.max(
+        ...order.map((id, i) =>
+          /^(just-air-cells-|pale-units-|unit-values-|adm[01]-lines)/.test(id) ? i : -1),
+      )
+      for (const id of ['world-city-labels-r3', 'world-city-labels-r2', 'world-city-labels-r1']) {
+        const idx = order.indexOf(id)
+        if (idx >= 0 && idx < lastAnyIdx) {
+          try { map.moveLayer(id) } catch { /* ordering only */ }
+        }
+      }
     }
     map.on('styledata', enforceOverlayOrder)
     map.on('idle', enforceOverlayOrder)

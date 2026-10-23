@@ -91,7 +91,7 @@ export default function OutlookChart({ sectors, metric, growth, world, selCode, 
         onPointerMove={(ev) => {
           if (ev.pointerType === 'touch') return;
           const p = nearest(ev);
-          if (p) tip.show(ev, `${p.s.name}: ${pctChange(p.v[1])}`); else tip.hide();
+          if (p) tip.show(ev, `${p.s.name}: ${pctChange(p.v[1])}. ${p.s.desc ?? ''}`); else tip.hide();
         }}
         onPointerLeave={tip.hide}
         onClick={(ev) => { const p = nearest(ev); if (p) { onPick(p.s.code); tip.hide(); } }}>

@@ -25,6 +25,7 @@ import {
   computeCommodityTrendWeights,
 } from '../../lib/area-stats.js'
 import { LAYER_IDS } from '../../lib/use-map-layer.js'
+import { geoToMap, geometryToMap, lngLatGeo, projectGeo, unprojectGeo, screenBbox } from '../../lib/equal-earth.js'
 import { justAirLayerIds } from '../../lib/use-just-air-layers.js'
 import { getActiveVariable } from '../../lib/get-active-variable.js'
 import { activeMaskSuffixes, readProp } from '../../lib/variable-value.js'
@@ -73,6 +74,12 @@ function circleToGeoJSON(lat, lng, radiusKm, nPoints = 64) {
   return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] }, properties: {} }
 }
 
+// The same circle in map coordinates (Equal Earth bends it), for drawing.
+function circleToMapGeoJSON(lat, lng, radiusKm) {
+  const f = circleToGeoJSON(lat, lng, radiusKm)
+  return { ...f, geometry: { ...f.geometry, coordinates: [f.geometry.coordinates[0].map(geoToMap)] } }
+}
+
 // World polygon with a circular hole — dims everything outside the selection circle.
 // Outer ring covers the whole world; inner ring (reversed winding) punches the hole.
 function worldWithHole(circlePoly) {
@@ -86,7 +93,7 @@ function worldWithHole(circlePoly) {
 }
 
 function drawCircleOnMap(map, lat, lng, radiusKm, isDark = true) {
-  const circlePoly = circleToGeoJSON(lat, lng, radiusKm)
+  const circlePoly = circleToMapGeoJSON(lat, lng, radiusKm)
   const geojson = {
     type: 'FeatureCollection',
     features: [circlePoly, worldWithHole(circlePoly)],
@@ -155,7 +162,8 @@ function worldWithPolygonHole(geometry) {
   }
 }
 
-function drawPolygonOnMap(map, geometry, isDark = true) {
+function drawPolygonOnMap(map, realGeometry, isDark = true) {
+  const geometry = geometryToMap(realGeometry)
   const poly = { type: 'Feature', properties: {}, geometry }
   const geojson = { type: 'FeatureCollection', features: [poly, worldWithPolygonHole(geometry)] }
   const lineColor = circleLineColor(isDark)
@@ -232,7 +240,7 @@ export function AreaTool({ map, config, state, dispatch }) {
     if (!map) return
     const { lat, lng, radiusKm } = circleRef.current
     const dLng = ((radiusKm / 6371) * (180 / Math.PI)) / Math.cos((lat * Math.PI) / 180)
-    const pt = map.project([lng + dLng, lat])
+    const pt = projectGeo(map, [lng + dLng, lat])
     setHandlePos({ x: pt.x, y: pt.y })
   }, [map])
 
@@ -240,14 +248,7 @@ export function AreaTool({ map, config, state, dispatch }) {
   const computeAndDispatch = useCallback(() => {
     if (!map) return
     const { lat, lng, radiusKm } = circleRef.current
-    const degPerKm = radiusKm / 111
-    const pad = degPerKm * 1.4
-    const p1 = map.project([lng + pad, lat + pad])
-    const p2 = map.project([lng - pad, lat - pad])
-    const bbox = [
-      [Math.min(p1.x, p2.x), Math.min(p1.y, p2.y)],
-      [Math.max(p1.x, p2.x), Math.max(p1.y, p2.y)],
-    ]
+    const bbox = screenBbox(map, circleToGeoJSON(lat, lng, radiusKm * 1.05).geometry)
     const activeLayers = dataLayerIds(config).filter((id) => map.getLayer(id))
     const features = map.queryRenderedFeatures(bbox, { layers: activeLayers })
     let filtered = featuresWithinCircle(features, lat, lng, radiusKm)
@@ -376,13 +377,7 @@ export function AreaTool({ map, config, state, dispatch }) {
   const computePolygonStats = useCallback(() => {
     if (!map || !state.drawnPolygon) return
     const geometry = state.drawnPolygon.geometry
-    const [w, s, e, n] = polygonBbox(geometry)
-    const sw = map.project([w, s])
-    const ne = map.project([e, n])
-    const bbox = [
-      [Math.min(sw.x, ne.x), Math.min(sw.y, ne.y)],
-      [Math.max(sw.x, ne.x), Math.max(sw.y, ne.y)],
-    ]
+    const bbox = screenBbox(map, geometry)
     const activeLayers = dataLayerIds(config).filter((id) => map.getLayer(id))
     const features = map.queryRenderedFeatures(bbox, { layers: activeLayers })
     let filtered = featuresWithinPolygon(features, geometry)
@@ -486,7 +481,7 @@ export function AreaTool({ map, config, state, dispatch }) {
     removeCircleFromMap(map)
     setHandlePos(null)
     drawPolygonOnMap(map, state.drawnPolygon.geometry, state.colorScheme === 'dark')
-    const [w, s, e, n] = polygonBbox(state.drawnPolygon.geometry)
+    const [w, s, e, n] = polygonBbox(geometryToMap(state.drawnPolygon.geometry))
     // Generous padding + a zoom cap that keeps the surrounding region in
     // frame - a sourcing shed reads better with its context visible.
     map.fitBounds([[w, s], [e, n]], { padding: 140, duration: 600, maxZoom: 6.5 })
@@ -529,7 +524,7 @@ export function AreaTool({ map, config, state, dispatch }) {
     // this effect re-runs without an active polygon and initializes a circle.
     if (state.drawnPolygon) return
     if (map.getLayer(CIRCLE_LINE_LAYER_ID)) return  // circle already drawn
-    const center = map.getCenter()
+    const center = lngLatGeo(map.getCenter())
     // Scale default radius so the circle is a useful ~12 % of the smaller
     // viewport dimension. Without this the circle is sub-pixel at low zoom
     // (50 km at z3 ≈ 0.6 px on a CONUS-spanning view) or fills the screen
@@ -572,14 +567,15 @@ export function AreaTool({ map, config, state, dispatch }) {
     function onMapMouseMove(e) {
       if (movingCircle) return
       const { lat, lng, radiusKm } = circleRef.current
-      const dist = haversineKm(lat, lng, e.lngLat.lat, e.lngLat.lng)
+      const ll = lngLatGeo(e.lngLat)
+      const dist = haversineKm(lat, lng, ll.lat, ll.lng)
       canvas.style.cursor = dist <= radiusKm ? 'grab' : ''
     }
 
     function onCanvasMouseDown(e) {
       if (e.button !== 0) return
       const rect = canvas.getBoundingClientRect()
-      const lngLat = map.unproject([e.clientX - rect.left, e.clientY - rect.top])
+      const lngLat = unprojectGeo(map, [e.clientX - rect.left, e.clientY - rect.top])
       const { lat, lng, radiusKm } = circleRef.current
       const dist = haversineKm(lat, lng, lngLat.lat, lngLat.lng)
 
@@ -596,7 +592,7 @@ export function AreaTool({ map, config, state, dispatch }) {
 
       function onDocMouseMove(evt) {
         const r = canvas.getBoundingClientRect()
-        const cur = map.unproject([evt.clientX - r.left, evt.clientY - r.top])
+        const cur = unprojectGeo(map, [evt.clientX - r.left, evt.clientY - r.top])
         const newLat = origLat + (cur.lat - startLat)
         const newLng = origLng + (cur.lng - startLng)
         circleRef.current = { ...circleRef.current, lat: newLat, lng: newLng }
@@ -622,7 +618,7 @@ export function AreaTool({ map, config, state, dispatch }) {
       if (e.touches.length !== 1) return
       const t = e.touches[0]
       const rect = canvas.getBoundingClientRect()
-      const lngLat = map.unproject([t.clientX - rect.left, t.clientY - rect.top])
+      const lngLat = unprojectGeo(map, [t.clientX - rect.left, t.clientY - rect.top])
       const { lat, lng, radiusKm } = circleRef.current
       if (haversineKm(lat, lng, lngLat.lat, lngLat.lng) > radiusKm) return
 
@@ -639,7 +635,7 @@ export function AreaTool({ map, config, state, dispatch }) {
         evt.preventDefault()
         const tt = evt.touches[0]
         const r = canvas.getBoundingClientRect()
-        const cur = map.unproject([tt.clientX - r.left, tt.clientY - r.top])
+        const cur = unprojectGeo(map, [tt.clientX - r.left, tt.clientY - r.top])
         const newLat = origLat + (cur.lat - startLat)
         const newLng = origLng + (cur.lng - startLng)
         circleRef.current = { ...circleRef.current, lat: newLat, lng: newLng }
@@ -681,7 +677,7 @@ export function AreaTool({ map, config, state, dispatch }) {
 
     const onMouseMove = (evt) => {
       const rect = canvas.getBoundingClientRect()
-      const lngLat = map.unproject([evt.clientX - rect.left, evt.clientY - rect.top])
+      const lngLat = unprojectGeo(map, [evt.clientX - rect.left, evt.clientY - rect.top])
       const { lat, lng } = circleRef.current
       const newRadius = haversineKm(lat, lng, lngLat.lat, lngLat.lng)
       if (newRadius >= MIN_RADIUS_KM) {
@@ -713,7 +709,7 @@ export function AreaTool({ map, config, state, dispatch }) {
       evt.preventDefault()
       const t = evt.touches[0]
       const rect = canvas.getBoundingClientRect()
-      const lngLat = map.unproject([t.clientX - rect.left, t.clientY - rect.top])
+      const lngLat = unprojectGeo(map, [t.clientX - rect.left, t.clientY - rect.top])
       const { lat, lng } = circleRef.current
       const newRadius = haversineKm(lat, lng, lngLat.lat, lngLat.lng)
       if (newRadius >= MIN_RADIUS_KM) {

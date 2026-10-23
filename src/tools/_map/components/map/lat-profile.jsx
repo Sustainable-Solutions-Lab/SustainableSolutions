@@ -21,6 +21,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { toMapLat, fromMapLat } from '../../lib/equal-earth.js'
 
 const WIDTH = 54
 const FADE = 64
@@ -96,7 +97,8 @@ export function LatProfile({ map, config, variable, isDark }) {
 
     function latAtY(y, h) {
       if (mode === 'globe') return latTop + (y / h) * (latBot - latTop)
-      return map.unproject([0, y]).lat
+      const fLat = map.unproject([0, y]).lat
+      return config.region?.projection === 'equalEarth' ? fromMapLat(fLat) : fLat
     }
 
     function rebuild() {
@@ -139,7 +141,7 @@ export function LatProfile({ map, config, variable, isDark }) {
         }
       } else {
         for (let latT = 75; latT >= -75; latT -= 15) {
-          const y = map.project([map.getCenter().lng, latT]).y
+          const y = map.project([map.getCenter().lng, config.region?.projection === 'equalEarth' ? toMapLat(latT) : latT]).y
           if (y < 10 || y > h - 6) continue
           ticks.push({ y, label: latT === 0 ? '0°' : `${Math.abs(latT)}°${latT > 0 ? 'N' : 'S'}` })
         }

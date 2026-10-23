@@ -5,6 +5,7 @@ import maplibregl from 'maplibre-gl'
 import { Protocol } from 'pmtiles'
 import { Globe } from 'lucide-react'
 import { basemapStyle } from './basemap-style.jsx'
+import { toMap, toMapLat, setEqualEarth } from '../../lib/equal-earth.js'
 import { addStaticLayers, setGraticuleVisible as applyGraticuleVisibility } from './static-layers.jsx'
 import { useMapLayer } from '../../lib/use-map-layer.js'
 import { useMultiSourceLayers } from '../../lib/use-multi-source-layers.js'
@@ -277,6 +278,13 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     // of that to absorb the in-tool title bar.
     const upwardOffset = isMobile ? 0.75 : 0.15
     const center = [config.region.center[0], config.region.center[1] - upwardOffset]
+    // Equal Earth projects (config.region.projection) store every layer
+    // pre-projected, so the camera and the latitude band are handed to
+    // MapLibre in those coordinates too (lib/equal-earth.js).
+    const EE = config.region?.projection === 'equalEarth'
+    setEqualEarth(EE)
+    const camPt = (p) => (EE && p ? toMap(p[0], p[1]) : p)
+    const latBoundsMap = config.region?.latBounds && (EE ? config.region.latBounds.map(toMapLat) : config.region.latBounds)
     // Camera clamps: prefer config.region.{min,max}Zoom; fall back to the
     // historic Firefuels values when a project hasn't declared them.
     const fallbackMinZoom = isMobile ? 4.8 : 5.3
@@ -290,7 +298,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
     // keeps the band filling the viewport lives in the load handler below.
     let transformCameraUpdate
     if (config.region?.latBounds) {
-      const [latS, latN] = config.region.latBounds
+      const [latS, latN] = latBoundsMap
       const mc = maplibregl.MercatorCoordinate
       const yTop = mc.fromLngLat({ lng: 0, lat: latN }).y
       const yBot = mc.fromLngLat({ lng: 0, lat: latS }).y
@@ -317,7 +325,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
 
     // Phone-sized viewports may declare their own starting frame.
     const isSmallViewport = typeof window !== 'undefined' && window.innerWidth < 768
-    const startCenter = (isSmallViewport && config.region.mobileCenter) || center
+    const startCenter = camPt((isSmallViewport && config.region.mobileCenter) || center)
     const startZoom = (isSmallViewport && config.region.mobileZoom) || initialZoom
 
     const map = new maplibregl.Map({
@@ -350,7 +358,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
       // no zoom level can reveal past the polar cut. Recomputed on resize;
       // the jumpTo routes the (possibly raised) camera through the clamp.
       if (config.region?.latBounds) {
-        const [latS, latN] = config.region.latBounds
+        const [latS, latN] = latBoundsMap
         const mc = maplibregl.MercatorCoordinate
         const yTop = mc.fromLngLat({ lng: 0, lat: latN }).y
         const yBot = mc.fromLngLat({ lng: 0, lat: latS }).y
@@ -383,6 +391,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         worldOverlays: config.region?.useWorldOverlay === true,
         boundariesUrl: config.region?.boundariesUrl,
         landUrl: config.region?.landUrl,
+        equalEarth: config.region?.projection === 'equalEarth',
       })
       if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, schemeRef.current)
       setMapReady(true)
@@ -423,6 +432,7 @@ export function Map({ config, state, dispatch, height, onMapReady, onFilterStats
         worldOverlays: config.region?.useWorldOverlay === true,
         boundariesUrl: config.region?.boundariesUrl,
         landUrl: config.region?.landUrl,
+        equalEarth: config.region?.projection === 'equalEarth',
       })
       if (config.boxOverlay) addBoxOverlay(map, config.boxOverlay, state.colorScheme)
       // Restore graticule visibility

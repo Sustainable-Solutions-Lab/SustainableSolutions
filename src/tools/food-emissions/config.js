@@ -395,19 +395,23 @@ const config = {
     minZoom: 1.2,
     maxZoom: 7,
     // Share of the viewport that may sit below the southern cut, so Tierra
-    // del Fuego clears the year bar (map/index.jsx; 0.04 and 0.10 were too tight).
-    southSlack: 0.15,
-    // Poles truncated ~300 km beyond the highest-latitude plotted cells
-    // (data spans -51.9 to 68.4): the land layer is clipped to [-55, 71.5]
-    // and the viewport edges are hard-locked to the same band, so dragging
-    // can never reveal the cut.
-    latBounds: [-55, 71.5],
+    // del Fuego and the Falklands clear the year bar (map/index.jsx).
+    southSlack: 0.13,
+    // Camera band, in real latitudes (data span -51.9 to 68.4). North is
+    // hard-locked at 79°N, enough to show the Arctic islands; the land layer
+    // drops Antarctica, so the southern slack shows only ocean.
+    latBounds: [-56, 79],
+    // Equal Earth: every layer is stored pre-projected
+    // (scripts/equal-earth-geojson.mjs) and the camera, clicks and area tool
+    // convert through _map/lib/equal-earth.js.
+    projection: 'equalEarth',
     useCaliforniaOverlay: false,
     useWorldOverlay: true,
     // Subtle national + admin-1 reference lines (Natural Earth 10m).
-    boundariesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/boundaries.pmtiles',
+    boundariesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/boundaries-ee.pmtiles',
     // Natural Earth 1:10m land (public domain), tippecanoe z0-8, layer 'land'.
-    landUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/land10m.pmtiles',
+    // Both are reprojected to Equal Earth before tiling (the -ee files).
+    landUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/land10m-ee.pmtiles',
   },
 
   // ── Layers ───────────────────────────────────────────────────────────────
@@ -705,13 +709,13 @@ const config = {
 
   // ── Regional map view: admin-1 x biome unit choropleth ──────────────────
   regionalView: {
-    tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/unit-values.pmtiles',
+    tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/unit-values-ee.pmtiles',
     sourceLayer: 'unit-values',
   },
 
   // ── PALE drivers choropleth (jurisdiction LMDI map) ──────────────────────
   paleMap: {
-    tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/pale-units.pmtiles',
+    tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/pale-units-ee.pmtiles',
     sourceLayer: 'pale-units',
     // Analysis is a single view: the net change in emissions, 2000-2023.
     // Gridded, that is each cell's own change; regional, each unit's — and
@@ -809,7 +813,7 @@ const config = {
   // A tiling change that the deployed client cannot read goes up under a
   // new name and the URL switches with the site deploy (2026-10-20: the
   // 5' tier; 2026-10-21 it starts at z5, food-emissions-5min-z5.pmtiles).
-  tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/food-emissions-5min-z5.pmtiles',
+  tilesUrl: 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/food-emissions/food-emissions-ee.pmtiles',
   sourceLayer: 'food-emissions',
   // The Cornerstone initiative (cornerstonedata.org) — this project is part
   // of it, and the jurisdictional land-use-change framework the explorer
@@ -837,9 +841,9 @@ const config = {
   // over-saturated), growing past touching when zoomed in so the diagonal
   // gaps stop washing the field out.
   scales: [
-    { value: 56, maxZoom: 3.0, radiusMode: 'cell', fill: [[1, 1.1], [3, 1.25]] },
-    { value: 28, minZoom: 2.99, maxZoom: 5.25, radiusMode: 'cell', fill: [[3, 0.9], [5, 1.05]] },
-    { value: 9, minZoom: 5.24, radiusMode: 'cell', fill: [[5, 1.0], [8, 1.3]] },
+    { value: 56, maxZoom: 3.0, radiusMode: 'cell', areaRadius: true, fill: [[1, 1.1], [3, 1.25]] },
+    { value: 28, minZoom: 2.99, maxZoom: 5.25, radiusMode: 'cell', areaRadius: true, fill: [[3, 0.9], [5, 1.05]] },
+    { value: 9, minZoom: 5.24, radiusMode: 'cell', areaRadius: true, fill: [[5, 1.0], [8, 1.3]] },
   ],
 }
 

@@ -16,6 +16,11 @@
 //
 // Run from repo root:  node scripts/build-food-emissions-tiles.mjs
 // Requires: tippecanoe, pmtiles on PATH.
+//
+// The map is drawn in Equal Earth (src/tools/_map/lib/equal-earth.js), so the
+// cells are reprojected (scripts/equal-earth-geojson.mjs) before tiling. The
+// samples, ladders and latitude profiles below read the ORIGINAL file: they
+// need real latitudes, and the reprojection changes nothing else.
 
 import { promises as fs, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, basename, dirname } from 'node:path';
@@ -60,12 +65,19 @@ async function main() {
   const hasFine = existsSync(fine);
   console.log('Tiling…');
   const mbtCoarse = hasFine ? resolve(OUT_DIR, 'food-emissions-coarse.mbtiles') : mbt;
+  const reproject = (from) => {
+    const to = resolve(OUT_DIR, basename(from).replace(/\.geojsonl$/, '.ee.geojsonl'));
+    console.log(`Reprojecting ${basename(from)} to Equal Earth…`);
+    run('node', [resolve(__dirname, 'equal-earth-geojson.mjs'), from, to]);
+    return to;
+  };
+  const srcEE = reproject(src);
   run('tippecanoe', [
     '-o', mbtCoarse, '--force',
     '-l', 'food-emissions',
     '-Z', '0', '-z', hasFine ? '5' : '8',
     '-r1', '--no-feature-limit', '--no-tile-size-limit',
-    src,
+    srcEE,
   ]);
   if (hasFine) {
     const mbtFine = resolve(OUT_DIR, 'food-emissions-fine.mbtiles');
@@ -75,7 +87,7 @@ async function main() {
       '-l', 'food-emissions',
       '-Z', '5', '-z', '7',
       '-r1', '--no-feature-limit', '--no-tile-size-limit',
-      fine,
+      reproject(fine),
     ]);
     run('tile-join', ['-o', mbt, '--force', '--no-tile-size-limit', mbtCoarse, mbtFine]);
   } else {

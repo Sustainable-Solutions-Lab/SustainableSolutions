@@ -169,6 +169,17 @@ export function buildCellRadiusExpr(scaleEntry, tuning) {
   // so the low-zoom clamp is baked into per-integer-zoom stops instead of a
   // wrapping ['max'].
   const expr = ['interpolate', ['exponential', 2], ['zoom']]
+  if (scaleEntry.areaRadius) {
+    // Equal-area map: a km² covers the same screen area everywhere, so each
+    // circle is sized from its own cell's area (the `km2` property) and keeps
+    // pace with the grid as cells narrow toward the poles. The equatorial
+    // Equal Earth scale matches Mercator's, so `fill` keeps its meaning.
+    const kArea = (512 / (2 * 40075.016)) * mul
+    for (let z = 0; z <= 12; z++) {
+      expr.push(z, ['max', 1.25, ['*', kArea * fillAt(z) * 2 ** z, ['sqrt', ['coalesce', ['get', 'km2'], scaleKm * scaleKm]]]])
+    }
+    return expr
+  }
   for (let z = 0; z <= 12; z++) expr.push(z, Math.max(1.25, kBase * fillAt(z) * 2 ** z))
   return expr
 }

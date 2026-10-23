@@ -6,6 +6,7 @@
  */
 
 import { useEffect } from 'react'
+import { lngLatGeo } from '../../lib/equal-earth.js'
 import { Actions } from '../../contracts/events.js'
 
 /**
@@ -26,8 +27,8 @@ export function useClickHandler(map, config, dispatch) {
       dispatch({
         type: Actions.SELECT_CELL,
         cell: {
-          lat: e.lngLat.lat,
-          lng: e.lngLat.lng,
+          lat: lngLatGeo(e.lngLat).lat,
+          lng: lngLatGeo(e.lngLat).lng,
           values: props,
         },
       })

@@ -5,6 +5,8 @@
  * Called by the area tool (components/area-tool/) after the user finishes drawing.
  */
 
+import { mapToGeo } from './equal-earth.js'
+
 const EARTH_RADIUS_KM = 6371
 
 /**
@@ -37,7 +39,7 @@ export function haversineKm(lat1, lng1, lat2, lng2) {
  */
 export function featuresWithinCircle(features, centerLat, centerLng, radiusKm) {
   return features.filter((f) => {
-    const [lng, lat] = f.geometry.coordinates
+    const [lng, lat] = mapToGeo(f.geometry.coordinates)
     return haversineKm(centerLat, centerLng, lat, lng) <= radiusKm
   })
 }
@@ -61,7 +63,7 @@ export function featuresWithinPolygon(features, polygon) {
         : null
   if (!rings) return []
   return features.filter((f) => {
-    const [lng, lat] = f.geometry.coordinates
+    const [lng, lat] = mapToGeo(f.geometry.coordinates)
     return rings.some((poly) => pointInPolygon(lng, lat, poly))
   })
 }

@@ -619,6 +619,12 @@ function FoodEmissionsMethods() {
         trajectory (enteric CH₄ for livestock groups, fertilizer for crops).
       </p>
       <p style={pStyle}>
+        The map uses the Equal Earth projection, so a square kilometre covers
+        the same screen area at every latitude and high-latitude regions are
+        not inflated as they are on web maps. Each circle is sized to its own
+        cell&rsquo;s area, which shrinks toward the poles.
+      </p>
+      <p style={pStyle}>
         Land-use-change emissions (deforestation, grassland conversion, the
         peat-drainage pulse) are not yet shown; they are in development and
         pending final release. Replication code and tests:{' '}

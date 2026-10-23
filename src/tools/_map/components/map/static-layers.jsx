@@ -11,6 +11,8 @@
  * Call addStaticLayers(map, scheme) after map load and after every setStyle().
  */
 
+import { projectLines } from '../../lib/equal-earth.js'
+
 // ── California cities (ranked by size for progressive zoom disclosure) ─────────
 const CALIFORNIA_CITIES = {
   type: 'FeatureCollection',
@@ -501,11 +503,12 @@ export function addStaticLayers(map, scheme, opts = {}) {
   // World projects get a 15°-spaced global graticule; CONUS-wide projects a
   // 5°-spaced one across the lower 48; CA-only projects keep the 2°-spaced
   // California-extent default.
-  const graticuleData = worldOverlays
+  const graticuleRaw = worldOverlays
     ? buildGraticule({ latStep: 15, lonStep: 15, bounds: [-180, -60, 180, 75] })
     : usOverlays
       ? buildGraticule({ latStep: 5, lonStep: 5, bounds: [-125, 24, -66, 50] })
       : buildGraticule()
+  const graticuleData = opts.equalEarth ? projectLines(graticuleRaw) : graticuleRaw
   if (!map.getSource('graticule')) {
     map.addSource('graticule', {
       type: 'geojson',

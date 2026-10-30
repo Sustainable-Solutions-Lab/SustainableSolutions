@@ -17,10 +17,10 @@ Routes (GET):
   /api/contrails?route=1&origin=SFO&dest=LHR
       → { known, n_flights, aircraft: [{icao, share}...] } — whether the
         corpus contains direct flights on this airport pair, and the
-        observed aircraft mix (2019+2021)
+        observed aircraft mix (2024–25)
   /api/contrails?origin=SFO&dest=LHR&date=2026-10-12&time=21:40&aircraft=B789
       [&tz=local|utc] [&curve=1]
-      → score payload (percentile vs all 2021 flights, top-10% flag,
+      → score payload (percentile vs all 2025 flights, top-10% flag,
         expected CO2e, optional 24-hour departure curve)
 
 `time` is local at the origin airport by default (tz=local); the airport
@@ -204,7 +204,7 @@ def _itin_percentile(kg_km):
 
 
 def resolve_flightno(fn):
-    """IATA flight number -> typical route/dep-time/aircraft (2019+2021
+    """IATA flight number -> typical route/dep-time/aircraft (2025
     schedules; numbers change, so treat as a convenience prefill)."""
     rec = _flightnos.get(fn.upper().replace(" ", ""))
     if rec is None:
@@ -214,7 +214,7 @@ def resolve_flightno(fn):
         return {"found": False}
     # convert median UTC minute-of-day to origin-local clock time
     from datetime import datetime as _dt, timedelta as _td, timezone as _tz
-    utc = _dt(2021, 6, 15, mod_utc // 60, mod_utc % 60, tzinfo=_tz.utc)
+    utc = _dt(2025, 6, 15, mod_utc // 60, mod_utc % 60, tzinfo=_tz.utc)
     local = utc.astimezone(ZoneInfo(_airports[o]["tz"]))
     return {"found": True, "origin": o, "dest": d,
             "time_local": local.strftime("%H:%M"),
@@ -230,16 +230,11 @@ def route_info(origin, dest):
             "aircraft": [{"icao": k, "share": v} for k, v in r["ac"].items()]}
 
 
-# Types the model predicts far lower contrail forcing for (paper's
-# Supplementary Fig. 1, types re-predicted on fixed schedules). The gap comes
-# from the training labels' contrail model, which seeds ice only on soot
-# (no volatile-particle activation), so fleets dominated by lean-burn,
-# low-soot engines (GEnx, LEAP) score far lower. Each type averages over the
-# engines it flies: about half of A320neos fly PW1100Gs and a third of 787s
-# fly Trent 1000s. In-flight measurements (Voigt et al. 2026) and vPM-enabled
-# CoCiP runs suggest the gap is overstated, so the explanations below
-# describe the model's prediction rather than asserting an engine effect.
-_CLEAN_TYPES = {"B788", "B789", "B78X", "B748", "B38M", "B39M", "A20N", "A21N"}
+# Aircraft type is not among the reasons: with the 2019–25 labels (ice
+# nucleated on soot, volatile and ambient particles) the model's spread
+# across types flying the same schedule is small, and no family stands
+# out as cleaner. The per-type comparison the route panel returns shows
+# what difference the type makes on the chosen route.
 
 
 def _reasons(feats, aircraft, dep_utc, o_ap, d_ap, pct):
@@ -261,14 +256,6 @@ def _reasons(feats, aircraft, dep_utc, o_ap, d_ap, pct):
         tagged.append(("-", f"Cruise is mostly in daylight (~{100 - ns:.0f}%), "
                        "when contrails' reflection of sunlight offsets much "
                        "of their warming"))
-    if aircraft in _CLEAN_TYPES:
-        tagged.append(("-", f"The model predicts less contrail warming "
-                       f"for the {aircraft} than other aircraft given the "
-                       "soot and volatile particulates its engines emit"))
-    else:
-        tagged.append(("+", f"The model predicts more contrail warming for "
-                       f"the {aircraft} than other aircraft given the soot "
-                       "and volatile particulates its engines emit"))
     mid_lat = abs((o_ap["lat"] + d_ap["lat"]) / 2)
     month = dep_utc.month
     nh = (o_ap["lat"] + d_ap["lat"]) / 2 >= 0
@@ -498,7 +485,7 @@ def bookable_flights(origin, dest, date_s):
 
 def resolve_live(fn, origin, dest, date_s):
     """Flight numbers change over time; when one is missing from the
-    2019+2021 table, find it in live Duffel inventory on a known route
+    2025 table, find it in live Duffel inventory on a known route
     and date, and return its schedule (leg endpoints, departure time,
     aircraft) for normal scoring. Piggybacks on the cached search."""
     m = re.match(r"([A-Z0-9]{2})\s*0*(\d+)$", fn.upper().replace(" ", ""))

@@ -72,16 +72,13 @@ type AirportRow = [string, string, string, string];
 
 const API = '/api/contrails';
 // bump when the API response schema changes: busts stale CDN-cached responses
-const SV = 'sv=9';
+const SV = 'sv=10';
 
 // Shareable links: the assessment is encoded in the query string, so a
 // copied URL reproduces the exact flight for the recipient.
 const QS = typeof window !== 'undefined'
   ? new URLSearchParams(window.location.search)
   : new URLSearchParams();
-// aircraft types the model scores far lower, largely on engine soot
-// (mirrors the API's _CLEAN_TYPES; see the caveat there)
-const CLEAN_TYPES = new Set(['B788', 'B789', 'B78X', 'B748', 'B38M', 'B39M', 'A20N', 'A21N']);
 // Chrome Web Store listing (live as of 24 Aug 26)
 const CWS_URL: string | null =
   'https://chromewebstore.google.com/detail/contrail-check-for-google/jgoiipmnojcdecidalejcadljdcjacgl';
@@ -678,7 +675,7 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
           setResolvedLabel(`${fnClean} · typical schedule from ${rb.n_observed} observed flights`);
           setFnNeedsRoute(false);
         } else {
-          // modern numbers missing from the 2019–21 table: look the
+          // numbers missing from the 2025 table: look the
           // flight up in live inventory on the selected route/date
           const lr = await fetch(`${API}?resolve_live=1&fn=${encodeURIComponent(fnClean)}&origin=${origin}&dest=${dest}&date=${date}&${SV}`);
           const lb = await lr.json();
@@ -686,11 +683,11 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
             o = lb.origin; d = lb.dest; t = lb.time_local;
             if (lb.aircraft) ac = lb.aircraft;
             setOrigin(o); setDest(d); setTime(t); if (lb.aircraft) setAircraft(lb.aircraft);
-            setResolvedLabel(`${fnClean} · live schedule (not in our 2019–21 database${lb.aircraft ? '' : '; aircraft assumed'})`);
+            setResolvedLabel(`${fnClean} · live schedule (not in our 2025 database${lb.aircraft ? '' : '; aircraft assumed'})`);
             setFnNeedsRoute(false);
           } else {
             setFnNeedsRoute(true);
-            throw new Error(`${fnClean} isn't in our 2019–2021 schedules or in live inventory for ${origin}→${dest} on ${date}. Set its route below and Assess again.`);
+            throw new Error(`${fnClean} isn't in our 2025 schedules or in live inventory for ${origin}→${dest} on ${date}. Set its route below and Assess again.`);
           }
         }
       }
@@ -857,7 +854,7 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
               placeholder="UA 875"
               onChange={(e) => setFlightNo(e.target.value)}
             />
-            <span className="text-[11px] italic opacity-60">Route, time and aircraft filled from 2019–2021 schedules.</span>
+            <span className="text-[11px] italic opacity-60">Route, time and aircraft filled from 2025 schedules.</span>
           </label>
         )}
         {mode === 'flightno' && fnNeedsRoute && (
@@ -945,7 +942,7 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
 
         {route && !route.known && mode === 'route' && origin !== dest && (
           <p className="text-xs opacity-70">
-            No direct flights between {origin} and {dest} in our 2019–2021
+            No direct flights between {origin} and {dest} in our 2024–2025
             database — the estimate treats this as a hypothetical nonstop.
           </p>
         )}
@@ -1351,14 +1348,12 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
                           const nights = f.legs.map((l) => l.night).filter((n): n is number => n !== undefined);
                           const altNight = nights.length ? Math.round(nights.reduce((a, b) => a + b, 0) / nights.length) : null;
                           const yourNight = Math.round(result.night_score);
-                          const acUpgrade = f.legs.every((l) => CLEAN_TYPES.has(l.aircraft)) && !CLEAN_TYPES.has(result.aircraft);
                           const parts: string[] = [];
                           if (altNight !== null && altNight <= yourNight - 8) {
                             parts.push(`it flies more in daylight (${altNight}% night vs your ${yourNight}%)`);
                           }
-                          if (acUpgrade) parts.push('the model rates its aircraft lower');
                           const note = parts.length
-                            ? `Cooler because ${parts.join(', and ')}.`
+                            ? `Cooler because ${parts[0]}.`
                             : 'Cooler thanks to schedule differences that avoid contrail-prone conditions.';
                           return <p className="mt-1 text-xs italic opacity-70">{note}</p>;
                         })()}
@@ -1410,8 +1405,8 @@ export default function ContrailsTool({ eyebrow = 'Interactive model', title = '
 
             <p className="mt-5 max-w-[640px] text-sm italic opacity-70">
               A climatological expectation from schedule information alone — not a
-              weather forecast. Percentile is relative to 22M scheduled commercial
-              flights flown in 2021. Warming figures are per passenger, using
+              weather forecast. Percentile is relative to 36.7M scheduled commercial
+              flights flown in 2025. Warming figures are per passenger, using
               typical passenger counts for each leg's aircraft; connecting
               itineraries sum their legs.
             </p>

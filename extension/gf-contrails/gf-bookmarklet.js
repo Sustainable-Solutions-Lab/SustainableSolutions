@@ -84,7 +84,7 @@
     // flights" lists can be longer, so fetch in sequential chunks
     var j = { results: [] };
     for (var ci = 0; ci < items.length; ci += 50) {
-      var r = await fetch(API + '?batch=1&sv=6&q=' +
+      var r = await fetch(API + '?batch=1&sv=7&q=' +
         encodeURIComponent(JSON.stringify({ air: air, f: items.slice(ci, ci + 50) })));
       var jc = await r.json();
       if (!r.ok || !jc.results) { say('Contrails API error: ' + (jc.error || r.status)); return; }
@@ -242,7 +242,7 @@
         pop.appendChild(mk('div', 'color:' + TH.body + ';margin-bottom:10px;',
           'Predicted warming from this itinerary\u2019s condensation trails, per passenger, estimated from its schedule (route, timing, season' +
           (res.error ? '' : (res.ac_estimated ? ', assumed ' : ', ') + res.ac) +
-          ') by a model trained on simulated contrails from 52 million flights.'));
+          ') by a model trained on simulated contrails from 196 million flights, 2019–2025.'));
         if (res.why && res.why.length) {
           for (var wi = 0; wi < res.why.length; wi++) {
             pop.appendChild(mk('div', 'color:' + TH.body + ';margin-bottom:6px;', res.why[wi] + '.'));

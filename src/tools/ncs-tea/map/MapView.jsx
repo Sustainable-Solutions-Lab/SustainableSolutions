@@ -184,7 +184,6 @@ export default function MapView({ grid, field, domain, variable, selected, onSel
       renderWorldCopies: false, attributionControl: false, dragRotate: false, pitchWithRotate: false, touchPitch: false,
     })
     map.touchZoomRotate.disableRotation()
-    map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: 'Equal Earth · SPAM 2020 · SoilGrids · WorldClim · CRU TS · Natural Earth' }), 'bottom-right')
     if (!small) map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
     map.on('load', () => setReady(true))
 
@@ -366,6 +365,8 @@ export default function MapView({ grid, field, domain, variable, selected, onSel
           <button type="button" className="btn" onClick={onDrawCancel}><X size={13} strokeWidth={1.5} /> Cancel</button>
         </div>
       ) : null}
+      {/* Static attribution, as in the explorer: faint text, no control chrome. */}
+      <div className="map-attrib">© <a href="https://maplibre.org" target="_blank" rel="noopener noreferrer">MapLibre</a> · Equal Earth · SPAM 2020 · SoilGrids · WorldClim · CRU TS · Natural Earth</div>
     </>
   )
 }

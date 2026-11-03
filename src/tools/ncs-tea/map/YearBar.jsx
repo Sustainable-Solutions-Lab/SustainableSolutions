@@ -2,7 +2,8 @@
  * map/YearBar.jsx — the always-visible year control at the foot of the map,
  * as in the food-emissions explorer: play, slider, the year in bold. The
  * first and last years sit at the ends of the slider. The year only
- * changes views marked "in year"; for the others the bar stays and says so.
+ * changes views marked "in year"; for the others the bar stays and the
+ * label reads "cumulative <start>–<end>".
  */
 import { useEffect, useRef } from 'react'
 import { Play, Pause } from 'lucide-react'
@@ -24,8 +25,9 @@ export function YearBar({ startYear, years, year, onYear, playing, onTogglePlay,
         <input type="range" className="range" min={0} max={years - 1} step={1} value={year}
           onChange={(e) => { if (playing) onTogglePlay(); onYear(Number(e.target.value)) }} aria-label="Year" />
       </div>
-      <span className="year">{startYear + year}</span>
-      {!active ? <span className="yearbar-note">whole horizon shown</span> : null}
+      {active
+        ? <span className="year">{startYear + year}</span>
+        : <span className="year">cumulative {startYear}–{startYear + years - 1}</span>}
     </div>
   )
 }

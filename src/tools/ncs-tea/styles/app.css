@@ -144,7 +144,6 @@
 .ncs .yearbar .year { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink); flex-shrink: 0; }
 .ncs .yearbar-track { flex: 1; min-width: 90px; display: flex; flex-direction: column; gap: 0; }
 .ncs .yearbar-ends { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--ink-3); font-variant-numeric: tabular-nums; line-height: 1; }
-.ncs .yearbar-note { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); flex-shrink: 0; }
 .ncs .yearbar .play { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; cursor: pointer; color: var(--ink); padding: 0; flex-shrink: 0; }
 
 .ncs .detail {

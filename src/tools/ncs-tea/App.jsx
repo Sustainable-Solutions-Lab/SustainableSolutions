@@ -135,7 +135,7 @@ export default function App({ embedded = false, dataBase = '/data/grid' }) {
   ) : <p className="note">Loading the grid…</p>
 
   return (
-    <Shell eyebrow="Sustainable Solutions Lab · tool" title="Technoeconomics of nature-based climate solutions" summary="Build a cost and carbon assessment of a land-based practice from menus, and see where it pays off." rail={rail}>
+    <Shell eyebrow="Interactive tool" title="Technoeconomic analysis of climate solutions" summary="Build a cost and carbon assessment of a land-based practice from menus, and see where it pays off." rail={rail}>
       {grid ? (
         <>
           <MapView grid={grid} field={field} domain={domain} variable={variable} selected={selected} onSelect={(i) => setSelected(i >= 0 ? i : null)} theme={theme} onToggleTheme={embedded ? null : toggleTheme}

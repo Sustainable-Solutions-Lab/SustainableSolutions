@@ -46,7 +46,26 @@ export const COST_BASES = [
   { id: 'per_project', label: 'fixed for the whole deployment', unit: '$', hint: 'One total, shared across cells in proportion to treated area' },
 ]
 
-export const COST_CATEGORIES = ['capital', 'operating', 'opportunity', 'mrv', 'transport', 'revenue', 'other']
+/**
+ * Technoeconomic cost categories. Each carries the scaling basis and timing
+ * a new component of that kind starts with, so "add a capital cost" means
+ * a one-off per-hectare outlay and "add an operating cost" a recurring one,
+ * before the user refines either. Results are broken down by these.
+ */
+export const COST_CATEGORIES = [
+  { id: 'capex', label: 'Capital', short: 'Capital', description: 'One-off investment: equipment, establishment, site preparation, land conversion.', basis: 'per_ha', timing: { type: 'once', year: 0 } },
+  { id: 'opex_fixed', label: 'Operating, fixed', short: 'Operating (fixed)', description: 'Recurring per hectare whatever the output: seed, labour, fuel, maintenance, inputs applied at a fixed rate.', basis: 'per_ha', timing: { type: 'constant' } },
+  { id: 'opex_variable', label: 'Operating, variable', short: 'Operating (variable)', description: 'Scales with the material applied: rock, biochar, fertilizer, water. Priced per tonne, with an application rate per hectare.', basis: 'per_t_material', timing: { type: 'constant' } },
+  { id: 'transport', label: 'Transport and logistics', short: 'Transport', description: 'Hauling material to the field: per tonne, multiplied by distance.', basis: 'per_t_material', timing: { type: 'constant' } },
+  { id: 'opportunity', label: 'Opportunity cost', short: 'Opportunity', description: 'Foregone yield, land rent or the next-best use of the land, per hectare per year.', basis: 'per_ha', timing: { type: 'constant' } },
+  { id: 'mrv', label: 'Monitoring, reporting and verification', short: 'MRV', description: 'Sampling, modelling, registry and verification fees, usually per tonne credited.', basis: 'per_tco2', timing: { type: 'constant' } },
+  { id: 'transaction', label: 'Transaction and programme', short: 'Programme', description: 'Set-up, enrolment, extension and administration: fixed for the deployment or per cell.', basis: 'per_project', timing: { type: 'once', year: 0 } },
+  { id: 'revenue', label: 'Revenue and savings', short: 'Revenue', description: 'Co-products, input savings, yield gains. Entered as a negative cost.', basis: 'per_ha', timing: { type: 'constant' } },
+]
+export const costCategory = (id) => COST_CATEGORIES.find((c) => c.id === id) ?? COST_CATEGORIES[1]
+
+// Older files used looser names.
+const LEGACY_CATEGORY = { capital: 'capex', operating: 'opex_fixed', other: 'opex_fixed' }
 
 export const GASES = ['CO2', 'N2O', 'CH4']
 
@@ -71,7 +90,7 @@ export function blankCost(overrides = {}) {
   return {
     id: newId('cost'),
     label: 'New cost',
-    category: 'operating',
+    category: 'opex_fixed',
     basis: 'per_ha',
     value: 0,
     quantity: null,
@@ -105,7 +124,7 @@ export function normalizeDefinition(d) {
     horizon: { ...b.horizon, ...(d.horizon ?? {}) },
     finance: { ...b.finance, ...(d.finance ?? {}) },
     area: { ...b.area, ...(d.area ?? {}), eligibility: d.area?.eligibility ?? b.area.eligibility },
-    costs: (d.costs ?? []).map((c) => ({ ...blankCost(), ...c, id: c.id ?? newId('cost') })),
+    costs: (d.costs ?? []).map((c) => ({ ...blankCost(), ...c, id: c.id ?? newId('cost'), category: LEGACY_CATEGORY[c.category] ?? (COST_CATEGORIES.some((k) => k.id === c.category) ? c.category : 'opex_fixed') })),
     mitigation: (d.mitigation ?? []).map((m) => ({ ...blankMitigation(), ...m, id: m.id ?? newId('mit') })),
   }
   out.horizon.years = Math.max(1, Math.min(200, Math.round(Number(out.horizon.years) || 30)))

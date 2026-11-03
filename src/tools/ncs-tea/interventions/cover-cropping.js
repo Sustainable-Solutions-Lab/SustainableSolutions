@@ -25,15 +25,15 @@ export const coverCropping = {
   },
   costs: [
     {
-      id: 'seed', label: 'Seed', category: 'operating', basis: 'per_ha', value: 90,
+      id: 'seed', label: 'Seed', category: 'opex_fixed', basis: 'per_ha', value: 90,
       modifiers: [], timing: { type: 'constant' }, escalation: 0,
     },
     {
-      id: 'planting', label: 'Planting (drill or broadcast)', category: 'operating', basis: 'per_ha', value: 37,
+      id: 'planting', label: 'Planting (drill or broadcast)', category: 'opex_fixed', basis: 'per_ha', value: 37,
       modifiers: [], timing: { type: 'constant' }, escalation: 0,
     },
     {
-      id: 'termination', label: 'Termination (herbicide or roller)', category: 'operating', basis: 'per_ha', value: 30,
+      id: 'termination', label: 'Termination (herbicide or roller)', category: 'opex_fixed', basis: 'per_ha', value: 30,
       modifiers: [], timing: { type: 'constant' }, escalation: 0,
     },
     {
@@ -45,7 +45,7 @@ export const coverCropping = {
       modifiers: [], timing: { type: 'constant' }, escalation: 0,
     },
     {
-      id: 'setup', label: 'Programme set-up', category: 'capital', basis: 'per_project', value: 2_000_000,
+      id: 'setup', label: 'Programme set-up', category: 'transaction', basis: 'per_project', value: 2_000_000,
       modifiers: [], timing: { type: 'once', year: 0 }, escalation: 0,
     },
   ],

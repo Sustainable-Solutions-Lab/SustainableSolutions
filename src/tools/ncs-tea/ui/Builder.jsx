@@ -6,7 +6,8 @@
  */
 import { useRef, useState } from 'react'
 import { Plus, Download, Upload } from 'lucide-react'
-import { COST_BASES, COST_CATEGORIES, GASES, blankCost, blankMitigation } from '../engine/schema.js'
+import { COST_BASES, COST_CATEGORIES, GASES, blankCost, blankMitigation, costCategory } from '../engine/schema.js'
+import { parsePolygonFile } from '../map/focus.js'
 import { PROFILE_TYPES } from '../engine/profiles.js'
 import { RATE_TYPES } from '../engine/rates.js'
 import { csvToLayer } from '../data/grid.js'
@@ -189,19 +190,20 @@ function CostCard({ cost, onChange, onRemove, grid, horizon }) {
   const [open, setOpen] = useState(false)
   const set = (patch) => onChange({ ...cost, ...patch })
   const basis = COST_BASES.find((b) => b.id === cost.basis) ?? COST_BASES[0]
+  const cat = costCategory(cost.category)
   const timing = cost.timing?.type === 'constant' ? '/yr' : cost.timing?.type === 'once' ? ' once' : cost.timing?.type === 'every' ? ` every ${cost.timing.interval} yr` : ''
   return (
     <div className="card">
       <button type="button" className="card-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className="name">{cost.label}</span>
+        <span className="name">{cost.label}<span className="cat">{cat.short}</span></span>
         <span className={`meta ${cost.value < 0 ? 'neg' : ''}`}>{fmt(cost.value, '$')}{basis.unit.replace('$', '')}{timing}</span>
       </button>
       {open ? (
         <div className="card-body">
-          <div className="row">
-            <Field label="Name"><Txt value={cost.label} onChange={(v) => set({ label: v })} /></Field>
-            <Field label="Kind"><Select value={cost.category} onChange={(v) => set({ category: v })} options={COST_CATEGORIES.map((c) => ({ id: c, label: c }))} /></Field>
-          </div>
+          <Field label="Name"><Txt value={cost.label} onChange={(v) => set({ label: v })} /></Field>
+          <Field label="Category" hint={cat.description}>
+            <Select value={cost.category} onChange={(v) => { const k = costCategory(v); set({ category: v, basis: k.basis, timing: k.timing, quantity: k.basis === 'per_t_material' ? cost.quantity ?? { type: 'constant', value: 1, label: 'Application rate' } : cost.quantity }) }} options={COST_CATEGORIES.map((c) => ({ id: c.id, label: c.label, hint: c.description }))} />
+          </Field>
           <Field label="Scales" hint={basis.hint}>
             <Select value={cost.basis} onChange={(v) => set({ basis: v, quantity: v === 'per_t_material' ? cost.quantity ?? { type: 'constant', value: 1, label: 'Application rate' } : cost.quantity })} options={COST_BASES.map((b) => ({ id: b.id, label: b.label, hint: b.hint }))} />
           </Field>
@@ -321,6 +323,37 @@ function DataSection({ grid, onGridChange, onShowLayer }) {
   )
 }
 
+// ── Region focus ──────────────────────────────────────────────────────────
+export function FocusSection({ focus, onFocus, drawing, onDraw, summary }) {
+  const fileRef = useRef(null)
+  const [err, setErr] = useState(null)
+  const onFile = async (e) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    try { onFocus({ type: 'polygon', geometry: parsePolygonFile(f.name, await f.text()), name: f.name }); setErr(null) } catch (ex) { setErr(ex.message) }
+    e.target.value = ''
+  }
+  return (
+    <Section title="Region focus" defaultOpen>
+      <div className="mode-row">
+        <button type="button" className="mode" aria-pressed={focus?.type === 'circle'} onClick={() => (focus?.type === 'circle' ? onFocus(null) : onFocus({ type: 'circle', lat: 40, lon: -95, radiusKm: 600, centreOnMap: true }))}>Circle</button>
+        <button type="button" className="mode" aria-pressed={drawing} onClick={() => onDraw(!drawing)}>Define polygon</button>
+        <button type="button" className="mode" onClick={() => fileRef.current?.click()}>Upload polygon</button>
+        {focus ? <button type="button" className="mode" onClick={() => onFocus(null)}>Clear</button> : null}
+        <input ref={fileRef} type="file" accept=".geojson,.json,.kml,application/geo+json,application/json" style={{ display: 'none' }} onChange={onFile} />
+      </div>
+      <p className="hint">
+        {drawing ? 'Click the map to place the corners of a polygon; double-click or press Finish to close it.'
+          : focus?.type === 'circle' ? 'Drag the circle to move it and its east handle to resize it. Results and the curve are for the cells inside.'
+          : focus?.type === 'polygon' ? `Results and the curve are for the cells inside ${focus.name ?? 'the polygon'}.`
+          : 'Restrict the results to a circle, a polygon you draw, or a GeoJSON or KML file (a sourcing area, a watershed, a country).'}
+      </p>
+      {summary ? <p className="note">{summary}</p> : null}
+      {err ? <p className="hint warn">{err}</p> : null}
+    </Section>
+  )
+}
+
 // ── The builder ───────────────────────────────────────────────────────────
 export function Builder({ def, onChange, grid, onGridChange, presets, presetId, onPreset, onShowLayer, problems }) {
   const set = (patch) => onChange({ ...def, ...patch })
@@ -381,12 +414,14 @@ export function Builder({ def, onChange, grid, onGridChange, presets, presetId, 
         {def.costs.map((c, k) => (
           <CostCard key={c.id} cost={c} grid={grid} horizon={horizon} onChange={(nc) => set({ costs: replaceAt(def.costs, k, nc) })} onRemove={() => set({ costs: def.costs.filter((_, j) => j !== k) })} />
         ))}
+        <p className="label" style={{ marginTop: 4 }}>Add a cost</p>
         <div className="btn-row">
-          <button type="button" className="btn" onClick={() => set({ costs: [...def.costs, blankCost({ label: 'Annual cost', basis: 'per_ha', value: 50 })] })}><Plus size={13} strokeWidth={1.5} /> Annual, per ha</button>
-          <button type="button" className="btn" onClick={() => set({ costs: [...def.costs, blankCost({ label: 'One-off cost', basis: 'per_ha', value: 200, category: 'capital', timing: { type: 'once', year: 0 } })] })}><Plus size={13} strokeWidth={1.5} /> One-off, per ha</button>
-          <button type="button" className="btn" onClick={() => set({ costs: [...def.costs, blankCost({ label: 'Material', basis: 'per_t_material', value: 50, quantity: { type: 'constant', value: 5, label: 'Application rate' }, timing: { type: 'every', interval: 5, from: 0 } })] })}><Plus size={13} strokeWidth={1.5} /> Material, per tonne</button>
-          <button type="button" className="btn" onClick={() => set({ costs: [...def.costs, blankCost({ label: 'Monitoring', basis: 'per_tco2', value: 5, category: 'mrv' })] })}><Plus size={13} strokeWidth={1.5} /> Per tonne mitigated</button>
-          <button type="button" className="btn" onClick={() => set({ costs: [...def.costs, blankCost({ label: 'Fixed programme cost', basis: 'per_project', value: 1e6, category: 'capital', timing: { type: 'once', year: 0 } })] })}><Plus size={13} strokeWidth={1.5} /> Fixed total</button>
+          {COST_CATEGORIES.map((c) => (
+            <button key={c.id} type="button" className="btn" title={c.description}
+              onClick={() => set({ costs: [...def.costs, blankCost({ label: c.label, category: c.id, basis: c.basis, timing: c.timing, value: c.id === 'revenue' ? -20 : c.id === 'transaction' ? 1e6 : c.id === 'mrv' ? 5 : c.id === 'capex' ? 200 : c.id === 'transport' ? 0.1 : 50, quantity: c.basis === 'per_t_material' ? { type: 'constant', value: 5, label: 'Application rate' } : null, modifiers: c.id === 'transport' ? [{ type: 'constant', value: 100, label: 'Distance (km)' }] : [] })] })}>
+              <Plus size={13} strokeWidth={1.5} /> {c.short}
+            </button>
+          ))}
         </div>
       </Section>
 

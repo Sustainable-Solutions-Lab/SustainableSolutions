@@ -18,8 +18,8 @@ const biochar = {
   finance: { discountRate: 0.05, carbonPrice: 100, discountCarbon: false },
   area: { layer: 'cropland_ha', share: 1, eligibility: [{ layer: 'cropland_frac', min: 0.01 }] },
   costs: [
-    { id: 'biochar', label: 'Biochar, delivered', category: 'capital', basis: 'per_t_material', value: 350, quantity: { type: 'constant', value: 10 }, modifiers: [], timing: { type: 'once', year: 0 }, escalation: 0 },
-    { id: 'spreading', label: 'Spreading and incorporation', category: 'capital', basis: 'per_ha', value: 60, modifiers: [], timing: { type: 'once', year: 0 }, escalation: 0 },
+    { id: 'biochar', label: 'Biochar, delivered', category: 'opex_variable', basis: 'per_t_material', value: 350, quantity: { type: 'constant', value: 10 }, modifiers: [], timing: { type: 'once', year: 0 }, escalation: 0 },
+    { id: 'spreading', label: 'Spreading and incorporation', category: 'capex', basis: 'per_ha', value: 60, modifiers: [], timing: { type: 'once', year: 0 }, escalation: 0 },
     { id: 'mrv', label: 'Monitoring and verification', category: 'mrv', basis: 'per_tco2', value: 5, modifiers: [], timing: { type: 'constant' }, escalation: 0 },
   ],
   mitigation: [
@@ -39,9 +39,9 @@ const enhancedWeathering = {
   finance: { discountRate: 0.05, carbonPrice: 100, discountCarbon: false },
   area: { layer: 'cropland_ha', share: 1, eligibility: [{ layer: 'cropland_frac', min: 0.01 }, { layer: 'prec_mm', min: 300 }] },
   costs: [
-    { id: 'rock', label: 'Rock, crushed at quarry', category: 'operating', basis: 'per_t_material', value: 25, quantity: { type: 'constant', value: 10 }, modifiers: [], timing: { type: 'every', interval: 5, from: 0 }, escalation: 0 },
+    { id: 'rock', label: 'Rock, crushed at quarry', category: 'opex_variable', basis: 'per_t_material', value: 25, quantity: { type: 'constant', value: 10 }, modifiers: [], timing: { type: 'every', interval: 5, from: 0 }, escalation: 0 },
     { id: 'haul', label: 'Haulage', category: 'transport', basis: 'per_t_material', value: 0.12, quantity: { type: 'constant', value: 10 }, modifiers: [{ type: 'constant', value: 200, label: 'Distance to quarry (km)' }], timing: { type: 'every', interval: 5, from: 0 }, escalation: 0 },
-    { id: 'spreading', label: 'Spreading', category: 'operating', basis: 'per_ha', value: 15, modifiers: [], timing: { type: 'every', interval: 5, from: 0 }, escalation: 0 },
+    { id: 'spreading', label: 'Spreading', category: 'opex_fixed', basis: 'per_ha', value: 15, modifiers: [], timing: { type: 'every', interval: 5, from: 0 }, escalation: 0 },
     { id: 'mrv', label: 'Monitoring and verification', category: 'mrv', basis: 'per_tco2', value: 15, modifiers: [], timing: { type: 'constant' }, escalation: 0 },
   ],
   mitigation: [
@@ -71,9 +71,9 @@ const noTill = {
   finance: { discountRate: 0.05, carbonPrice: 100, discountCarbon: false },
   area: { layer: 'cropland_ha', share: 1, eligibility: [{ layer: 'cropland_frac', min: 0.01 }] },
   costs: [
-    { id: 'equipment', label: 'No-till drill (annualized share)', category: 'capital', basis: 'per_ha', value: 25, modifiers: [], timing: { type: 'constant' }, escalation: 0 },
+    { id: 'equipment', label: 'No-till drill (annualized share)', category: 'capex', basis: 'per_ha', value: 25, modifiers: [], timing: { type: 'constant' }, escalation: 0 },
     { id: 'fuel', label: 'Fuel and labour saved', category: 'revenue', basis: 'per_ha', value: -35, modifiers: [], timing: { type: 'constant' }, escalation: 0 },
-    { id: 'herbicide', label: 'Additional herbicide', category: 'operating', basis: 'per_ha', value: 20, modifiers: [], timing: { type: 'constant' }, escalation: 0 },
+    { id: 'herbicide', label: 'Additional herbicide', category: 'opex_fixed', basis: 'per_ha', value: 20, modifiers: [], timing: { type: 'constant' }, escalation: 0 },
     { id: 'mrv', label: 'Monitoring and verification', category: 'mrv', basis: 'per_tco2', value: 5, modifiers: [], timing: { type: 'constant' }, escalation: 0 },
   ],
   mitigation: [

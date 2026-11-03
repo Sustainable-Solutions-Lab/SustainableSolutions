@@ -1,0 +1,21 @@
+---
+import ToolFrame from '../../layouts/ToolFrame.astro';
+import App from '../../tools/ncs-tea/App.jsx';
+
+// Unlisted and noindex until the companion paper is out: not in the Tools
+// sheet, reachable by URL only. Add a row (slug: ncs-tea) to list it.
+//
+// The grid pack (docs/ncs-tea.md) is loaded by the browser from R2; a local
+// copy in public/tools/ncs-tea/grid/ (gitignored) takes over in dev when
+// present, so the tool runs offline.
+const dataBase = import.meta.env.DEV ? '/tools/ncs-tea/grid' : 'https://pub-4152429430274d988725593fd52db3ae.r2.dev/ncs-tea/grid';
+---
+
+<ToolFrame
+  title="Technoeconomics of nature-based climate solutions"
+  description="Build a cost and carbon assessment of a land-based practice from menus, run it over a global grid, and see where it pays off."
+  noindex
+  background="var(--paper-2)"
+>
+  <App client:only="react" embedded dataBase={dataBase} />
+</ToolFrame>

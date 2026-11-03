@@ -14,6 +14,7 @@ Three kinds of thing live here. Each tool is mounted by a page at
 | `magnets/` | **bespoke** | Standalone US rare-earth-magnet supply-chain explorer (its own components + a scenario grid from the rare-magnets-cem model, kept in Dropbox and fetched at build time: `docs/magnet-grid.md`). Does not use `_engine`. |
 | `mining-water/` | **bespoke** | Companion explorer to Busch et al. on water stress from mining battery minerals: AWARE 2.0 basins, deposits and the cost/water frontier. MapLibre over small GeoJSON built by `scripts/build-mining-water.mjs` from public sources; reuses `_map`'s basemap and footer. |
 | `contrails/` | **bespoke** | Booking-time contrail predictor (SVG great-circle map + Duffel flight search via `api/contrails.py`). Does not use `_engine`. |
+| `ncs-tea/` | **bespoke** | Technoeconomics of nature-based climate solutions: a menu-built TEA evaluated in the browser over a 0.5° grid, drawn in Equal Earth. Verbatim copy of the private `ncs-tea` repository (`docs/ncs-tea.md`); edit there. Unlisted until the paper is out. |
 | `_shell/` | **shell** | `ToolShell.tsx` — the standard chrome every full-viewport tool wraps itself in. Not a tool by itself. |
 
 Generated tool data (map tiles, materials lazy layers, etc.) is written to the

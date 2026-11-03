@@ -49,3 +49,6 @@ src/tools/magnets/scenarios*.json
 
 # Local build caches (mining-water deposit-to-basin map: licensed, never commit)
 .cache/
+
+# ncs-tea grid pack: pipeline output kept in Dropbox and on R2 (docs/ncs-tea.md)
+public/tools/ncs-tea/grid/

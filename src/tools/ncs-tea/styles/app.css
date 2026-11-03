@@ -1,0 +1,186 @@
+/* App layout and controls, all scoped under .ncs so the tool can be mounted
+   inside the lab site without touching its chrome. Tokens come from the
+   design system (tokens.css standalone, the site's stylesheet when embedded). */
+.ncs { height: 100%; width: 100%; font-family: var(--font-sans); font-size: 16px; line-height: 1.5; color: var(--ink); }
+
+.ncs button, .ncs input, .ncs select, .ncs textarea { font-family: var(--font-sans); color: var(--ink); }
+.ncs a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--link-rule); }
+.ncs a:hover { border-bottom-color: var(--ink); }
+
+/* ── Shell: desktop left rail + main; mobile header + drawer ───────────── */
+/* The root carries both classes, so this is the same element as .ncs. */
+.ncs.shell { display: flex; flex-direction: column; height: 100%; width: 100%; background: var(--paper); }
+.ncs .shell-row { position: relative; display: flex; flex: 1; min-height: 0; }
+.ncs .rail {
+  width: 330px; flex-shrink: 0; display: flex; flex-direction: column;
+  background: var(--paper-2); border-right: 1px solid var(--rule); overflow: hidden;
+}
+.ncs .rail-head { padding: 12px 14px 4px; flex-shrink: 0; }
+.ncs .rail-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 14px 14px; }
+.ncs .main { position: relative; flex: 1; min-width: 0; background: var(--paper); }
+.ncs .mobile-head { display: none; }
+.ncs .scrim { display: none; }
+.ncs .drawer { display: none; }
+
+.ncs .eyebrow {
+  margin: 0; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.ncs .title {
+  margin: 2px 0 0; font-family: var(--font-serif); font-weight: 600; font-size: 24px;
+  line-height: 1.1; letter-spacing: -0.01em; color: var(--ink);
+}
+.ncs .summary { margin: 6px 0 10px; font-size: 13px; line-height: 1.45; color: var(--ink-2); max-width: none; }
+
+/* ── Sections ──────────────────────────────────────────────────────────── */
+.ncs .section { border-top: 1px solid var(--rule); padding: 8px 0 10px; }
+.ncs .section-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; padding: 4px 0; background: transparent; border: 0; cursor: pointer; text-align: left;
+}
+.ncs .section-head .label { margin: 0; }
+.ncs .section-head .count { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.ncs .section-body { padding-top: 4px; }
+
+.ncs .label {
+  margin: 0 0 3px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-3); line-height: 1;
+}
+.ncs .hint { margin: 3px 0 0; font-size: 11px; line-height: 1.4; color: var(--ink-3); max-width: none; }
+.ncs .note { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--ink-2); max-width: none; }
+.ncs .warn { color: var(--negative); }
+
+.ncs .field { margin: 0 0 8px; }
+.ncs .row { display: flex; gap: 8px; align-items: flex-end; }
+.ncs .row > * { flex: 1; min-width: 0; }
+.ncs .row > .narrow { flex: 0 0 auto; }
+
+.ncs .select, .ncs .input, .ncs .textarea {
+  width: 100%; background: var(--paper); color: var(--ink); border: 1px solid var(--rule);
+  border-radius: var(--radius-sm); padding: 4px 6px; font-size: 13px; line-height: 1.3;
+}
+.ncs .select { cursor: pointer; }
+.ncs .select:focus, .ncs .input:focus, .ncs .textarea:focus { outline: none; border-color: var(--ink); }
+.ncs .input[type=number] { font-variant-numeric: tabular-nums; }
+.ncs .textarea { font-family: var(--font-code); font-size: 12px; min-height: 56px; resize: vertical; }
+.ncs .unit { font-size: 11px; color: var(--ink-3); white-space: nowrap; padding-bottom: 5px; }
+
+.ncs .range { width: 100%; accent-color: var(--cardinal); margin: 4px 0 0; cursor: pointer; }
+.ncs .range-labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.ncs .range-labels .cur { color: var(--ink); font-weight: 600; }
+
+.ncs .check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+.ncs .check input { accent-color: var(--ink); margin: 0; }
+
+.ncs .btn {
+  display: inline-flex; align-items: center; gap: 5px; background: transparent; border: 1px solid var(--rule);
+  border-radius: var(--radius-sm); padding: 3px 8px; font-size: 12px; color: var(--ink-2); cursor: pointer;
+}
+.ncs .btn:hover { color: var(--ink); border-color: var(--rule-strong); }
+.ncs .btn.link { border: 0; padding: 2px 0; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.ncs .btn.link:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.ncs .btn.icon { padding: 2px; border: 0; color: var(--ink-3); }
+.ncs .btn.icon:hover { color: var(--ink); }
+.ncs .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+
+/* Component cards (one cost, one carbon effect) */
+.ncs .card { border: 1px solid var(--rule); border-radius: var(--radius-sm); margin: 0 0 6px; background: var(--paper); }
+.ncs .card-head {
+  display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 8px; background: transparent; border: 0;
+  cursor: pointer; text-align: left; font-size: 13px; color: var(--ink);
+}
+.ncs .card-head .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ncs .card-head .meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ncs .card-head .meta.neg { color: var(--positive); }
+.ncs .card-body { padding: 2px 8px 8px; border-top: 1px solid var(--rule); }
+.ncs .sub { border-left: 2px solid var(--rule); padding-left: 8px; margin: 6px 0; }
+.ncs .sub-title { display: flex; justify-content: space-between; align-items: center; margin: 0 0 4px; }
+
+/* ── KPIs and charts ───────────────────────────────────────────────────── */
+.ncs .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin: 4px 0 8px; }
+.ncs .kpi .v { font-family: var(--font-serif); font-size: 19px; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ncs .kpi .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.ncs .chart { width: 100%; height: auto; display: block; overflow: visible; }
+.ncs .chart text { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-3); }
+.ncs .chart .axis { stroke: var(--rule-strong); }
+.ncs .chart .grid { stroke: var(--rule); }
+.ncs .chart .curve { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+.ncs .chart .mark { stroke: var(--cardinal); stroke-dasharray: 2 3; }
+.ncs .chart .bar { fill: var(--spectral-10); }
+.ncs .chart .bar.neg { fill: var(--spectral-2); }
+.ncs .chart .line { fill: none; stroke: var(--spectral-3); stroke-width: 1.5; }
+.ncs .caption { margin: 2px 0 0; font-family: var(--font-serif); font-style: italic; font-size: 12px; color: var(--ink-3); max-width: none; }
+.ncs .table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+.ncs .table th { text-align: left; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 400; padding: 2px 0; border-bottom: 1px solid var(--rule); }
+.ncs .table td { padding: 2px 0; border-bottom: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
+.ncs .table td.num, .ncs .table th.num { text-align: right; }
+
+/* ── Map overlays ──────────────────────────────────────────────────────── */
+.ncs .map { position: absolute; inset: 0; }
+.ncs .maplibregl-ctrl-attrib { font-size: 10px; background: transparent !important; color: var(--ink-3); }
+.ncs .maplibregl-ctrl-attrib a { color: var(--ink-3); border: 0; }
+.ncs .overlay-tl { position: absolute; top: 12px; left: 12px; z-index: 10; display: flex; flex-direction: column; gap: 6px; }
+.ncs .overlay-tr { position: absolute; top: 12px; right: 12px; z-index: 10; display: flex; gap: 6px; }
+.ncs .map-btn {
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius-sm); color: var(--ink-3);
+}
+.ncs .map-btn:hover, .ncs .map-btn[aria-pressed=true] { color: var(--ink); }
+.ncs .legend-float {
+  position: absolute; left: 12px; bottom: 56px; z-index: 10; width: 190px; padding: 6px 8px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent); border: 1px solid var(--rule); border-radius: var(--radius-sm);
+}
+.ncs .legend-bar { height: 10px; border-radius: var(--radius-sm); margin: 3px 0 2px; }
+.ncs .legend-labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.ncs .legend-title { font-size: 12px; color: var(--ink-2); line-height: 1.3; }
+
+.ncs .yearbar {
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 10;
+  width: min(460px, calc(100% - 24px)); padding: 8px 12px; display: flex; align-items: center; gap: 12px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent); border: 1px solid var(--rule); border-radius: var(--radius-md);
+}
+.ncs .yearbar .range { accent-color: var(--ink); margin: 0; }
+.ncs .yearbar .year { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink); flex-shrink: 0; }
+.ncs .yearbar .note { margin: 0; font-size: 10px; color: var(--ink-3); flex: 1 1 100%; }
+.ncs .yearbar .play { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; cursor: pointer; color: var(--ink); padding: 0; flex-shrink: 0; }
+
+.ncs .detail {
+  position: absolute; right: 12px; bottom: 60px; z-index: 11; width: min(340px, calc(100% - 24px)); max-height: calc(100% - 80px);
+  overflow-y: auto; padding: 12px 14px; background: var(--paper-2); border: 1px solid var(--rule); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+}
+.ncs .detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+.ncs .detail-place { font-family: var(--font-serif); font-size: 16px; color: var(--ink); line-height: 1.2; }
+.ncs .detail-coord { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+.ncs .detail .kpis { grid-template-columns: 1fr 1fr 1fr; }
+.ncs .detail .kpi .v { font-size: 15px; }
+
+.ncs .busy { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--paper) 70%, transparent); color: var(--ink-2); font-size: 13px; }
+
+.ncs .footer { border-top: 1px solid var(--rule); padding-top: 8px; margin-top: 6px; font-size: 11px; color: var(--ink-3); }
+.ncs .footer a { color: var(--ink-2); border: 0; }
+.ncs .footer a:hover { color: var(--ink); }
+
+/* ── Mobile ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .ncs .rail { display: none; }
+  .ncs .mobile-head {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--rule);
+    background: var(--paper-2); z-index: 30; position: relative;
+  }
+  .ncs .mobile-head .title { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ncs .mobile-head .eyebrow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
+  .ncs .mobile-head .grow { flex: 1; min-width: 0; }
+  .ncs .drawer {
+    display: block; position: absolute; top: 0; left: 0; right: 0; max-height: 78%; overflow-y: auto; z-index: 21;
+    background: var(--paper-2); border-bottom: 1px solid var(--rule); padding: 0 14px 14px; box-shadow: var(--shadow-pop);
+  }
+  .ncs .scrim { display: block; position: absolute; inset: 0; z-index: 20; background: color-mix(in srgb, var(--ink) 25%, transparent); }
+  .ncs .detail { bottom: 70px; max-height: 55%; }
+  .ncs .legend-float { top: 10px; left: 10px; bottom: auto; width: 170px; }
+  .ncs .yearbar { bottom: 10px; }
+}
+
+/* The floating legend is for phones, where the rail (and its legend) is hidden. */
+.ncs .legend-float { display: none; }
+@media (max-width: 767px) { .ncs .legend-float { display: block; } }

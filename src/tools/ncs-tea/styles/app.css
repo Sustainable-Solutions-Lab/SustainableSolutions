@@ -35,12 +35,14 @@
 /* ── Sections ──────────────────────────────────────────────────────────── */
 .ncs .section { border-top: 1px solid var(--rule); padding: 8px 0 10px; }
 .ncs .section-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  width: 100%; padding: 4px 0; background: transparent; border: 0; cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 6px;
+  width: 100%; padding: 2px 0; background: transparent; border: 0; cursor: pointer; text-align: left; color: var(--ink);
 }
-.ncs .section-head .label { margin: 0; }
-.ncs .section-head .count { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.ncs .section-body { padding-top: 4px; }
+.ncs .section-head .chev { flex-shrink: 0; transition: transform 0.15s; }
+.ncs .section-head[aria-expanded=true] .chev { transform: rotate(90deg); }
+.ncs .section-head .title { font-family: var(--font-mono); font-weight: 600; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.ncs .section-head .aside { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ncs .section-body { padding: 8px 0 2px; }
 
 .ncs .label {
   margin: 0 0 3px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;

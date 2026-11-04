@@ -1,18 +1,16 @@
 /** Small form controls in the lab's publications-filter style. */
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, X } from 'lucide-react'
+import { ChevronRight, X } from 'lucide-react'
 
-export function Section({ title, count, defaultOpen = true, children, right = null }) {
+export function Section({ title, aside = null, count, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen)
+  const side = aside ?? (count != null ? count : null)
   return (
     <div className="section">
       <button type="button" className="section-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <p className="label">{title}</p>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {count != null ? <span className="count">{count}</span> : null}
-          {right}
-          {open ? <ChevronDown size={14} strokeWidth={1.5} color="var(--ink-3)" /> : <ChevronRight size={14} strokeWidth={1.5} color="var(--ink-3)" />}
-        </span>
+        <ChevronRight size={14} strokeWidth={1.75} className="chev" />
+        <span className="title">{title}</span>
+        {side != null ? <span className="aside">{side}</span> : null}
       </button>
       {open ? <div className="section-body">{children}</div> : null}
     </div>

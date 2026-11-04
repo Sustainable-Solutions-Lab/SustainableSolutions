@@ -2,6 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 import './styles/app.css'
 import { loadGrid } from './data/grid.js'
 import { evaluate, STATUS } from './engine/evaluate.js'
+import { totalsOver } from './engine/aggregate.js'
 import { normalizeDefinition, validateDefinition } from './engine/schema.js'
 import { PRESETS, presetById } from './interventions/library.js'
 import MapView from './map/MapView.jsx'
@@ -106,6 +107,7 @@ export default function App({ embedded = false, dataBase = '/data/grid' }) {
   const onDraw = (on) => { setDrawing(on); if (on) setFocus(null) }
   const onDrawFinish = (geometry) => { setDrawing(false); setFocus({ type: 'polygon', geometry, name: 'the drawn polygon' }) }
 
+  const totals = useMemo(() => (res ? totalsOver(res, mask) : null), [res, mask])
   const focusSummary = useMemo(() => {
     if (!res || !mask) return null
     let n = 0, a = 0, m = 0
@@ -127,7 +129,7 @@ export default function App({ embedded = false, dataBase = '/data/grid' }) {
       <Legend variable={variable} domain={domain} />
       <Results res={res} mask={mask} focusLabel={focus ? (focus.type === 'circle' ? 'inside the circle' : 'inside the polygon') : null} brush={brush} onBrush={setBrush} />
       <FocusSection focus={focus} onFocus={onFocus} drawing={drawing} onDraw={onDraw} summary={focusSummary} />
-      <Builder def={def} onChange={onChange} grid={grid} onGridChange={onGridChange} presets={PRESETS} presetId={presetId} onPreset={onPreset} onShowLayer={(id) => setVarId(`layer:${id}`)} problems={problems} />
+      <Builder def={def} onChange={onChange} grid={grid} onGridChange={onGridChange} presets={PRESETS} presetId={presetId} onPreset={onPreset} onShowLayer={(id) => setVarId(`layer:${id}`)} problems={problems} totals={totals} />
       <div className="footer">
         Costs in real 2024 USD. Default numbers are starting points, documented in the repository; replace them with your own. <a href={REPO} target="_blank" rel="noopener noreferrer">ncs-tea ↗</a>
       </div>

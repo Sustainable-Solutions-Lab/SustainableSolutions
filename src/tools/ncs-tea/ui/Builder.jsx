@@ -12,7 +12,7 @@ import { PROFILE_TYPES } from '../engine/profiles.js'
 import { RATE_TYPES } from '../engine/rates.js'
 import { csvToLayer } from '../data/grid.js'
 import { Section, Field, Select, Num, Txt, Check, Range, RemoveButton } from './controls.jsx'
-import { fmt } from '../map/format.js'
+import { fmt, fmtBn, fmtGt } from '../map/format.js'
 
 const layerOptions = (grid, numericOnly = true) =>
   Object.values(grid.meta).filter((m) => !numericOnly || m.id !== 'country_id').map((m) => ({ id: m.id, label: `${m.label}${m.unit ? ` (${m.unit})` : ''}` }))
@@ -299,7 +299,7 @@ function DataSection({ grid, onGridChange, onShowLayer }) {
     e.target.value = ''
   }
   return (
-    <Section title="Data layers" count={Object.keys(grid.meta).length} defaultOpen={false}>
+    <Section title="Data layers" aside={`${Object.keys(grid.meta).length} layers`} defaultOpen={false}>
       <p className="hint" style={{ marginBottom: 6 }}>Global grid at {grid.res}°. Add your own layer as a CSV of points (lon, lat, value) or of countries (iso3, value); it then appears in every layer menu.</p>
       <table className="table">
         <tbody>
@@ -325,6 +325,7 @@ function DataSection({ grid, onGridChange, onShowLayer }) {
 
 // ── Region focus ──────────────────────────────────────────────────────────
 export function FocusSection({ focus, onFocus, drawing, onDraw, summary }) {
+  const aside = focus ? (focus.type === 'circle' ? `${Math.round(focus.radiusKm * 2).toLocaleString()} km circle` : 'Polygon') : 'Whole world'
   const fileRef = useRef(null)
   const [err, setErr] = useState(null)
   const onFile = async (e) => {
@@ -334,7 +335,7 @@ export function FocusSection({ focus, onFocus, drawing, onDraw, summary }) {
     e.target.value = ''
   }
   return (
-    <Section title="Region focus" defaultOpen>
+    <Section title="Region focus" aside={aside} defaultOpen>
       <div className="mode-row">
         <button type="button" className="mode" aria-pressed={focus?.type === 'circle'} onClick={() => (focus?.type === 'circle' ? onFocus(null) : onFocus({ type: 'circle', lat: 40, lon: -95, radiusKm: 600, centreOnMap: true }))}>Circle</button>
         <button type="button" className="mode" aria-pressed={drawing} onClick={() => onDraw(!drawing)}>Define polygon</button>
@@ -355,10 +356,13 @@ export function FocusSection({ focus, onFocus, drawing, onDraw, summary }) {
 }
 
 // ── The builder ───────────────────────────────────────────────────────────
-export function Builder({ def, onChange, grid, onGridChange, presets, presetId, onPreset, onShowLayer, problems }) {
+export function Builder({ def, onChange, grid, onGridChange, presets, presetId, onPreset, onShowLayer, problems, totals }) {
   const set = (patch) => onChange({ ...def, ...patch })
   const importRef = useRef(null)
   const horizon = def.horizon.years
+  const areaLayer = grid.meta[def.area.layer]?.label ?? def.area.layer
+  const pct = Math.round((def.area.share ?? 1) * 100)
+  const n = (k, one, many) => `${k} ${k === 1 ? one : many}`
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(def, null, 2)], { type: 'application/json' })
     const a = document.createElement('a')
@@ -376,7 +380,7 @@ export function Builder({ def, onChange, grid, onGridChange, presets, presetId, 
 
   return (
     <>
-      <Section title="Intervention" defaultOpen>
+      <Section title="Intervention" aside={def.name} defaultOpen>
         <Field label="Start from">
           <Select value={presetId} onChange={onPreset} options={presets.map((p) => ({ id: p.id, label: p.name }))} />
         </Field>
@@ -391,7 +395,7 @@ export function Builder({ def, onChange, grid, onGridChange, presets, presetId, 
         {problems.length ? <ul className="hint warn" style={{ paddingLeft: 16, margin: '6px 0 0' }}>{problems.map((p) => <li key={p}>{p}</li>)}</ul> : null}
       </Section>
 
-      <Section title="Where it applies" defaultOpen={false}>
+      <Section title="Where it applies" aside={`${pct}% of ${areaLayer.toLowerCase()}`} defaultOpen={false}>
         <Field label="Area treated per cell comes from">
           <Select value={def.area.layer} onChange={(v) => set({ area: { ...def.area, layer: v } })} options={layerOptions(grid)} />
         </Field>
@@ -410,7 +414,7 @@ export function Builder({ def, onChange, grid, onGridChange, presets, presetId, 
         <button type="button" className="btn" onClick={() => set({ area: { ...def.area, eligibility: [...(def.area.eligibility ?? []), { layer: 'prec_mm', min: 300 }] } })}><Plus size={13} strokeWidth={1.5} /> Add a rule</button>
       </Section>
 
-      <Section title="Costs" count={def.costs.length} defaultOpen={false}>
+      <Section title="Costs" aside={totals ? `${n(def.costs.length, 'item', 'items')} · ${fmtBn(totals.costNPV)} PV` : n(def.costs.length, 'item', 'items')} defaultOpen={false}>
         {def.costs.map((c, k) => (
           <CostCard key={c.id} cost={c} grid={grid} horizon={horizon} onChange={(nc) => set({ costs: replaceAt(def.costs, k, nc) })} onRemove={() => set({ costs: def.costs.filter((_, j) => j !== k) })} />
         ))}
@@ -425,7 +429,7 @@ export function Builder({ def, onChange, grid, onGridChange, presets, presetId, 
         </div>
       </Section>
 
-      <Section title="Carbon effects" count={def.mitigation.length} defaultOpen={false}>
+      <Section title="Carbon effects" aside={totals ? `${n(def.mitigation.length, 'effect', 'effects')} · ${fmtGt(totals.mitTotal)}` : n(def.mitigation.length, 'effect', 'effects')} defaultOpen={false}>
         {def.mitigation.map((m, k) => (
           <MitigationCard key={m.id} m={m} grid={grid} horizon={horizon} onChange={(nm) => set({ mitigation: replaceAt(def.mitigation, k, nm) })} onRemove={() => set({ mitigation: def.mitigation.filter((_, j) => j !== k) })} />
         ))}
@@ -437,7 +441,7 @@ export function Builder({ def, onChange, grid, onGridChange, presets, presetId, 
         </div>
       </Section>
 
-      <Section title="Finance and horizon" defaultOpen={false}>
+      <Section title="Finance and horizon" aside={`${def.horizon.years} yr · ${Math.round(def.finance.discountRate * 1000) / 10}% · $${def.finance.carbonPrice}/t`} defaultOpen={false}>
         <div className="row">
           <Field label="Horizon (years)"><Num value={def.horizon.years} onChange={(v) => set({ horizon: { ...def.horizon, years: Math.max(1, Math.min(200, Math.round(v))) } })} step={1} min={1} max={200} /></Field>
           <Field label="First year"><Num value={def.horizon.startYear} onChange={(v) => set({ horizon: { ...def.horizon, startYear: Math.round(v) } })} step={1} /></Field>

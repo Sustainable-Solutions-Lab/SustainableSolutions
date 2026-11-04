@@ -84,7 +84,7 @@ export function Results({ res, mask, focusLabel, brush, onBrush }) {
   const price = res.def.finance.carbonPrice
   const discounted = res.def.finance.discountCarbon
   return (
-    <Section title={focusLabel ? `Results · ${focusLabel}` : 'Results'} defaultOpen>
+    <Section title="Results" aside={focusLabel ?? 'Whole world'} defaultOpen>
       <div className="kpis">
         <div className="kpi"><div className="v">{fmtMha(t.areaHa)}</div><div className="k">Treated area</div></div>
         <div className="kpi"><div className="v">{fmtGt(t.mitTotal)}</div><div className="k">Abatement, {res.T} yr</div></div>

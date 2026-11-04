@@ -185,7 +185,19 @@ export default function MapView({ grid, field, domain, variable, selected, onSel
     })
     map.touchZoomRotate.disableRotation()
     if (!small) map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
-    map.on('load', () => setReady(true))
+    // Dynamic minimum zoom, companion to the clamp (as in the explorer): the
+    // band plus the southern slack must at least fill the viewport height,
+    // so no zoom level opens blank map past the polar cuts. Recomputed on
+    // resize; the jumpTo routes the camera back through the clamp.
+    const applyMinZoom = () => {
+      const h = map.getContainer().clientHeight
+      if (!h) return
+      const bandMin = Math.log2((h * (1 - REGION.southSlack)) / (512 * (yBot - yTop)))
+      map.setMinZoom(Math.max(REGION.minZoom, bandMin))
+      map.jumpTo({ center: map.getCenter() })
+    }
+    map.on('load', () => { applyMinZoom(); setReady(true) })
+    map.on('resize', applyMinZoom)
 
     // Clicks: add a vertex while drawing, otherwise select the cell.
     map.on('click', (e) => {

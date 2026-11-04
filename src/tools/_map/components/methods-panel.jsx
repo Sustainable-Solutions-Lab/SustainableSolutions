@@ -469,6 +469,23 @@ function FoodEmissionsMethods() {
         when the Standard&rsquo;s forestry language is final.
       </p>
 
+      <h2 style={h2Style}>Fires in organic soils</h2>
+      <p style={pStyle}>
+        Peat fires are a map-only layer under category 2, from the peat
+        burning class of <a href="https://doi.org/10.1038/s41597-025-06127-w" target="_blank" rel="noopener noreferrer" style={linkStyle}>GFED5.1</a> (van
+        der Werf et al. 2025, CC BY 4.0): CO₂, CH₄ and N₂O from fire burning
+        into peat and the vegetation on it, placed on the 5′ grid in
+        proportion to mapped peat (PEATMAP, PEATGRIDS). They average about
+        370 Mt CO₂e/yr over 2000–2024 but run from 150 to 1,020 Mt between
+        years, peaking in Indonesian drought years (2006, 2015, 2019), so
+        the map shows the 25-year mean and does not follow the year slider.
+        Indonesia is about half (199 Mt/yr, against 225 in FAOSTAT&rsquo;s
+        fires in organic soils); much of the rest is in tropical wetlands of
+        South America and Africa that FAOSTAT counts as zero and the peat
+        maps cover only in part. Fire is not yet split by land use, so it is
+        attributed to no commodity and counted in no total.
+      </p>
+
       <h2 style={h2Style}>Soil carbon: cropland</h2>
       <p style={pStyle}>
         Selecting Soil carbon CO₂ as the source shows the mean annual change

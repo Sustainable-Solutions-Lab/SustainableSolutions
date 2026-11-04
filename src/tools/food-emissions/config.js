@@ -45,6 +45,9 @@ const RANGELAND_SCOPE_TOTALS = {
 // Forest soil colour cap, t CO2e/yr per 0.25° cell (p95 of fsoil).
 const FSOIL_COLOR_MAX = 12000
 
+// Fires in organic soils colour cap, t CO2e/yr per 0.25° cell (p95 of pfire).
+const PFIRE_COLOR_MAX = 17000
+
 // Forest soil split by who would own it under the GHG Protocol LSRS
 // (Gridded LM D15). v1 of the standard covers CH4 and N2O on forest land
 // (production emissions) but leaves forest-land CO2 to a forest decision
@@ -268,6 +271,23 @@ function makeVariable({ source, crop }) {
       description: o.description,
     }
   }
+  // Fires in organic soils (Gridded LM build_peat_fire_5min.py, 2026-11-04):
+  // GFED5.1's peat burning class, 2000-2024 mean. Map only, not in any
+  // total, and constant in time: peat fires swing ~50x between years, which
+  // the national 2020-ratio factors (clipped to 0.1-10x) cannot carry.
+  if (source === 'pfire') {
+    return {
+      ...shared,
+      id: 'pfire',
+      label: 'Peat fires (fires in organic soils)',
+      unit: 't CO₂e/yr',
+      domain: { min: 0, max: PFIRE_COLOR_MAX },
+      yearTerms: [{ prop: 'pfire', src: 'pfire' }],
+      constantInTime: true,
+      note: 'Fires that burn into peat and other organic soils, with the vegetation burning on them: the peat class of GFED5.1 (van der Werf et al. 2025), CO₂, CH₄ and N₂O, placed on the 5′ grid over mapped peat (PEATMAP, PEATGRIDS). It averages about 370 Mt CO₂e/yr over 2000–2024 but runs from 150 to 1,020 Mt between years, peaking in Indonesian drought years (2006, 2015, 2019), so this view shows the 25-year mean and does not vary with the year slider. Indonesia accounts for about half, 199 Mt/yr against 225 in FAOSTAT\u2019s fires in organic soils. Most of the rest is in tropical wetlands of South America and central and southern Africa (Brazil 34, DR Congo 15, Angola 12, Argentina 11 Mt/yr), which FAOSTAT counts as zero and the peat maps cover only in part: 18% of the global total falls in quarter-degree cells with no mapped peat and is spread over their land. The colour scale tops out at 17,000 t per cell so the pattern outside Southeast Asia stays readable; the largest Indonesian cells run more than 100 times higher. Not attributed to any commodity; not counted in any total.',
+      description: 'Fires burning into peat and other organic soils (GFED5.1), CO₂ + CH₄ + N₂O, 2000–2024 annual mean.',
+    }
+  }
   if (source === 'fsoil') {
     return {
       ...shared,
@@ -446,6 +466,8 @@ const config = {
         // other soil carbon sources, right after rangeland.
         ...SOURCES.flatMap(([id, label]) => id === 'peat'
           ? [{ id, label }, { id: 'peatv', label: 'Peatland — single 37.3 rate (comparison · map only)', cat: 'cat2' }]
+          : id === 'burn'
+          ? [{ id, label }, { id: 'pfire', label: 'Peat fires — organic soils (2000–24 mean · map only)', cat: 'cat2' }]
           : id === 'rsoil'
           ? [{ id, label }, { id: 'fsoil', label: 'Soil carbon — forest (drained organic, all owners · map only)', cat: 'cat2' },
             ...Object.entries(FSOIL_OWNERS).map(([oid, o]) => ({ id: oid, label: o.menu, cat: o.cat }))]
@@ -629,7 +651,7 @@ const config = {
     // Forest pilot and forest soil views ignore the commodity dropdown: alias every crop
     // selection to the same signed layer so no source x crop combination
     // is left without a variable.
-    ...['fmlp', 'fab', 'fsoil', 'peatv', ...Object.keys(FSOIL_OWNERS)].flatMap((source) => [
+    ...['fmlp', 'fab', 'fsoil', 'peatv', 'pfire', ...Object.keys(FSOIL_OWNERS)].flatMap((source) => [
       makeVariable({ source, crop: 'all' }),
       ...[...CROPS, ...LIVESTOCK_COMMODITIES, ['feed']].map(([crop]) => ({
         ...makeVariable({ source, crop: 'all' }),

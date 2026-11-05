@@ -7,6 +7,7 @@ import publications from '../data/publications.json';
 import externalPubs from '../data/external-pubs.json';
 import tools from '../data/tools.json';
 import news from '../data/news.json';
+import { toIsoDate } from '../lib/dates';
 import { totalCitations } from '../lib/citations';
 import { toolHref } from '../lib/tools';
 
@@ -141,7 +142,8 @@ const recentMeta = recent ? pubMeta(recent) : null;
 // Sorted newest-first; capped at 3 to keep the card compact.
 const personNews: NewsItem[] = (news as NewsItem[])
   .filter((n) => Array.isArray(n.people) && n.people.includes(person.slug) && n.title)
-  .slice()
+  // Sheet dates arrive as "4/30/26"; compare as ISO, not as raw strings.
+  .map((n) => ({ ...n, date: toIsoDate(n.date) }))
   .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
   .slice(0, 3);
 function newsYearLabel(d: string | null | undefined): string {

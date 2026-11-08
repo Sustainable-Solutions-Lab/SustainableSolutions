@@ -15,7 +15,7 @@ Three kinds of thing live here. Each tool is mounted by a page at
 | `mining-water/` | **bespoke** | Companion explorer to Busch et al. on water stress from mining battery minerals: AWARE 2.0 basins, deposits and the cost/water frontier. MapLibre over small GeoJSON built by `scripts/build-mining-water.mjs` from public sources; reuses `_map`'s basemap and footer. |
 | `contrails/` | **bespoke** | Booking-time contrail predictor (SVG great-circle map + Duffel flight search via `api/contrails.py`). Does not use `_engine`. |
 | `ncs-tea/` | **bespoke** | Technoeconomics of nature-based climate solutions: a menu-built TEA evaluated in the browser over a 0.5° grid, drawn in Equal Earth. Verbatim copy of the private `ncs-tea` repository (`docs/ncs-tea.md`); edit there. Unlisted until the paper is out. |
-| `forest-accounting/` | **bespoke** | One stylised company under the forest carbon accounting rules before the GHG Protocol (MLP as piloted, MLP+, ABA) and a configurable set of guardrails; `model.ts` holds the rules, the component the three figures. Unlisted until the companion work is public. |
+| `forest-accounting/` | **bespoke** | One stylised company under the forest carbon accounting rules before the GHG Protocol (MLP as piloted, MLP+, ABA) and a configurable set of guardrails; `model.ts` holds the rules, `ChainChart.tsx` Figure 1 (supply chain across, rules down). Plain scrolling page, no rail (ai-labor layout). Unlisted until the companion work is public. |
 | `_shell/` | **shell** | `ToolShell.tsx` — the standard chrome every full-viewport tool wraps itself in. Not a tool by itself. |
 
 Generated tool data (map tiles, materials lazy layers, etc.) is written to the

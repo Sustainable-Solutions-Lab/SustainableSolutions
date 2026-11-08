@@ -26,6 +26,9 @@ const tool = (tools as Tool[]).find((t) => t.slug === 'forest-accounting') ?? nu
      to this tool. */
   .fa-tool { --fa-thumb: 19px; --fa-hit: 22px; }
   .fa-tool p { max-width: none; }
+  .fa-tool details summary::-webkit-details-marker { display: none; }
+  .fa-tool details[open] > summary .fa-chev { transform: rotate(90deg); }
+  .fa-tool .fa-chev { transition: transform 120ms ease; }
   @media (pointer: fine) and (min-width: 1000px) {
     .fa-tool { --fa-thumb: 15px; --fa-hit: 18px; }
   }

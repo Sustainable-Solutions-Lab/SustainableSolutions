@@ -1,0 +1,181 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+
+// Companion methods page for the forest accounting tool
+// (/tools/forest-accounting): the rules side by side, the model's inputs,
+// the readings, the caveats and the sources. noindex matches the tool.
+//
+// LIVING DOCUMENT: the rule table and the status line must change whenever
+// model.ts changes, or when the GHG Protocol process moves (the forest
+// carbon request for information is due in 2026).
+const tool = (tools as Tool[]).find((t) => t.slug === 'forest-accounting') ?? null;
+
+type Cell = string;
+const rows: Array<{ q: string; mlp: Cell; plus: Cell; aba: Cell; ours: Cell }> = [
+  {
+    q: 'Harvest emissions',
+    mlp: 'All carbon leaving the forest, in the year of harvest (stock change).',
+    plus: 'Same. Product carbon storage is a separate category, not netted.',
+    aba: 'Pool by pool as it decays; the share still in products after 100 years is not emitted.',
+    ours: 'As MLP; storage reported as its own ledger.',
+  },
+  {
+    q: 'Ambient growth (CO₂, nitrogen, climate)',
+    mlp: 'A removal in the scopes.',
+    plus: 'A removal in the scopes.',
+    aba: 'Baseline. Not a removal.',
+    ours: 'Disclosed as background stock change, not claimed (switch: attributable only).',
+  },
+  {
+    q: 'Regrowth from harvest before the base year',
+    mlp: 'A removal in the scopes.',
+    plus: 'A removal in the scopes.',
+    aba: 'Baseline. Not a removal.',
+    ours: 'Disclosed, not claimed (same switch).',
+  },
+  {
+    q: 'Growth caused by current management',
+    mlp: 'A removal (not separated from the rest).',
+    plus: 'A removal; also the basis of the forest impact statement, outside the inventory.',
+    aba: 'The only removal: observed growth minus a no-activity counterfactual.',
+    ours: 'The only claimed removal.',
+  },
+  {
+    q: 'Leased, already growing forest',
+    mlp: 'Its growth is a removal.',
+    plus: 'Scope 1: a removal if managed. Scope 3: excluded as non-productive land.',
+    aba: 'Nothing: no activity, no anthropogenic removal.',
+    ours: 'Background, disclosed not claimed.',
+  },
+  {
+    q: 'Scope 3 wood with no traceability',
+    mlp: 'National or global land-carbon factor; a sink almost everywhere.',
+    plus: 'Emissions reported; no removals without sourcing-region traceability and safeguards.',
+    aba: 'Activity factor per tonne of wood; works for any traceability.',
+    ours: 'As ABA; a shared removal is divided among its claimants (switch: one claimant).',
+  },
+  {
+    q: 'Netting',
+    mlp: 'Everything nets, fossil included (as the pilots reported).',
+    plus: 'Forest removals net against land emissions, including agriculture and conversion, but may not compensate fossil emissions.',
+    aba: 'Anthropogenic removals net against emissions in the scopes; not against fossil, per the LSRS.',
+    ours: 'Two ledgers, no net line (switch: separate ledgers); fossil CO₂ balanced only by durable storage (switch: like for like).',
+  },
+  {
+    q: 'Reported outside the scopes',
+    mlp: 'Product carbon storage.',
+    plus: 'Forest impact statement; product carbon storage.',
+    aba: 'Carbon stock change on owned land.',
+    ours: 'Background stock change; product carbon storage.',
+  },
+];
+
+const inputs = [
+  { k: 'Forest in the boundary', u: 'Mha', w: 'Owned or controlled forest (scope 1) or the attributable productive sourcing area (scope 3).' },
+  { k: 'Ambient growth', u: 't CO₂/ha/yr', w: 'The passive sink: CO₂ fertilisation, nitrogen deposition, a longer season. About 10 Gt CO₂/yr over the world’s forests, two to three tonnes a hectare; higher in the temperate north.' },
+  { k: 'Regrowth from past harvest', u: 't CO₂/ha/yr', w: 'Stands cut or cleared before the base year still filling in. High in the eastern United States and Europe; near zero in long-conserved forest.' },
+  { k: 'Growth caused by management', u: 't CO₂/ha/yr', w: 'What the company’s activity adds above a no-activity counterfactual: faster regrowth of young stands, planting, fertilising.' },
+  { k: 'Harvest', u: 't CO₂/ha/yr', w: 'Carbon leaving the forest at harvest, roundwood plus slash and collateral damage.' },
+  { k: 'Stored in products after 100 years', u: 'share', w: 'The part of harvested carbon in long-lived products a century on.' },
+  { k: 'Fossil, agricultural and land-use-change emissions', u: 'Mt CO₂e/yr', w: 'The rest of the inventory, so the land terms can be seen against it.' },
+  { k: 'Leased or acquired growing forest', u: 'Mha', w: 'Unharvested forest already growing at the ambient and legacy rates; the “lease the sink” lever.' },
+  { k: 'Durable removals bought, and their price', u: 'Mt/yr, $/t', w: 'Geological or mineralised storage; what forest removals compete with.' },
+  { k: 'Claimants of the same scope 3 removal', u: 'count', w: 'Supplier, mill, brand: how many report the same sourcing-region removal.' },
+];
+---
+
+<BaseLayout
+  title={`${tool?.title ?? 'Forest carbon accounting'}: methods`}
+  description="How the forest accounting tool writes each rule, what its inputs mean, and where the numbers come from."
+  noindex={tool?.unlisted ?? true}
+>
+  <article class="mx-auto max-w-[760px] px-4 pb-24 pt-10">
+    <p class="m-0 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">Methods</p>
+    <h1 class="font-serif text-ink" style="font-size: 34px; line-height: 1.12; letter-spacing: -0.01em; margin: 6px 0 12px;">Forest carbon accounting</h1>
+    <p class="text-ink-2" style="font-size: 16px; line-height: 1.6; margin: 0 0 8px;">
+      The GHG Protocol published its Land Sector and Removals Standard in 2026 without forest carbon, because its expert group could not agree between two rules: a managed land proxy that counts all carbon flux on managed forest land as the company's, and activity-based accounting that counts only the difference the company's activity made. <a href="/tools/forest-accounting" class="text-ink underline">The tool</a> runs one stylised company through both, through the safeguarded MLP+ version submitted in May 2025, and through a set of guardrails we are proposing, so the consequences of each choice can be seen on the same forest.
+    </p>
+
+    <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">The rules, side by side</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full border-collapse" style="min-width: 720px; font-size: 13px; line-height: 1.45;">
+        <thead>
+          <tr class="border-b border-rule-strong text-left font-mono text-[11px] uppercase tracking-[0.09em] text-ink-3">
+            <th class="py-2 pr-3 font-medium" style="width: 18%;">Question</th>
+            <th class="py-2 pr-3 font-medium">MLP, as piloted</th>
+            <th class="py-2 pr-3 font-medium">MLP+</th>
+            <th class="py-2 pr-3 font-medium">ABA</th>
+            <th class="py-2 font-medium">Guardrails (ours)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr class="border-b border-rule align-top">
+              <td class="py-2.5 pr-3 text-ink" style="font-weight: 600;">{r.q}</td>
+              <td class="py-2.5 pr-3 text-ink-2">{r.mlp}</td>
+              <td class="py-2.5 pr-3 text-ink-2">{r.plus}</td>
+              <td class="py-2.5 pr-3 text-ink-2">{r.aba}</td>
+              <td class="py-2.5 text-ink-2">{r.ours}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="font-serif italic text-ink-3" style="font-size: 13.5px; line-height: 1.5; margin: 10px 0 0;">
+      MLP as piloted follows the 2022 draft guidance and what the 2024 pilot companies reported. MLP+ follows the May 2025 submission. ABA follows the proposal and its explanatory memo. The guardrails are four switches in the tool; with all four on they amount to ABA's removals in a two-ledger presentation with nothing netted.
+    </p>
+
+    <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">The company model</h2>
+    <p class="text-ink-2" style="font-size: 15px; line-height: 1.6; margin: 0 0 12px;">
+      Each hectare of forest in the boundary changes carbon stock at four constant rates. Area times rate gives Mt CO₂ a year. Every rule reads the same four numbers; what differs is which of them it puts in the scopes, what it nets, and what it discloses outside them.
+    </p>
+    <dl style="margin: 0; display: grid; grid-template-columns: 1fr; gap: 10px;">
+      {inputs.map((i) => (
+        <div class="border-b border-rule pb-2.5">
+          <dt class="text-ink" style="font-size: 14px; font-weight: 600;">{i.k} <span class="font-mono text-ink-4" style="font-size: 11px; font-weight: 400;">{i.u}</span></dt>
+          <dd class="m-0 text-ink-2" style="font-size: 13.5px; line-height: 1.5;">{i.w}</dd>
+        </div>
+      ))}
+    </dl>
+
+    <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">The supply chain strip</h2>
+    <p class="text-ink-2" style="font-size: 15px; line-height: 1.6; margin: 0 0 12px;">
+      Each term is placed where it arises, in chain order: conversion and land management on the land, the forest growing, harvest, the company's own processing and transport, products and slash decaying downstream, and durable storage. Bands mark the scope each stage falls in for a company of that type: a forest owner's land is scope 1, a buyer's suppliers' land is upstream scope 3. The bar under a stage shows the pool it nets in under the chosen rule, and the line beneath says what happens to removals at the border between the land and the company's operations: whether they enter a buyer's inventory, reach fossil emissions, or stay where they arose. Under ABA harvest emissions appear at the decay stage, since that rule counts them as pools release carbon; under the others they appear at harvest.
+    </p>
+
+    <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">The readings</h2>
+    <p class="text-ink-2" style="font-size: 15px; line-height: 1.6; margin: 0 0 12px;">
+      <strong>Net-zero position.</strong> What the company must still balance to claim net zero, or reports as a surplus. Where a rule lets forest removals offset fossil emissions, the whole inventory nets and the position is its net total. Otherwise fossil emissions stand alone and only a land surplus adds to them. This is the cardinal tick in Figure 1; durable removals already bought are subtracted from a shortfall to give the bold row in Figure 3.
+    </p>
+    <p class="text-ink-2" style="font-size: 15px; line-height: 1.6; margin: 0 0 12px;">
+      <strong>What each rule rewards.</strong> Figure 2 recomputes the position after each move a company of that scope could make. For a forest owner, harvest and the regrowth it triggers move together, since cutting more makes more young, fast-growing stands, so harvesting 10% more raises both the harvest and the management-growth rate by 10%. For a buyer, buying more wood enlarges its share of the sourcing region, and sourcing from a region cut hard a generation ago doubles the legacy regrowth it inherits. Leasing adds unmanaged growing forest at the ambient and legacy rates. A fall in the position means the rule rewards the move.
+    </p>
+    <p class="text-ink-2" style="font-size: 15px; line-height: 1.6; margin: 0 0 12px;">
+      <strong>Wood footprint.</strong> The forest's in-scope emissions plus removals, divided by dry wood harvested, taking 60% of the carbon removed as roundwood at 50% carbon. A negative number means the rule reports wood as carbon negative, the result every pilot company found under the managed land proxy.
+    </p>
+    <p class="text-ink-2" style="font-size: 15px; line-height: 1.6; margin: 0 0 12px;">
+      <strong>Forest removals standing in for durable removals.</strong> The forest removals a rule lets net against emissions the company would otherwise have to cut or balance with storage: against everything under MLP as piloted, against land emissions under MLP+ and ABA, against nothing under like-for-like.
+    </p>
+
+    <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">What this is not</h2>
+    <p class="text-ink-2" style="font-size: 15px; line-height: 1.6; margin: 0 0 12px;">
+      A device for comparing rules, not an estimate for any company. Rates are constant, so there is no stand age, rotation, disturbance year or decay curve; harvest emissions land in the year of harvest except for the century-stored share, where ABA would spread them over decades. The presets are invented. Their rates sit in the range of national inventories and of a companion analysis of 334,000 re-measured forest inventory plots in the United States, France and Spain, where the two main rules disagree in sign for the same forests and the choice of counterfactual baseline moves the answer about six times less than the choice of rule.
+    </p>
+
+    <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">Sources</h2>
+    <ul class="text-ink-2" style="font-size: 14px; line-height: 1.6; padding-left: 18px; margin: 0;">
+      <li>GHG Protocol. Land Sector and Removals Standard (2026); Land Sector and Removals Guidance, draft for pilot testing (2022).</li>
+      <li>Managed Land Proxy “Plus”: final submission to the GHG Protocol forest carbon accounting technical working group (May 2025).</li>
+      <li>Brandão, M., Canham, C., Chen, J., Dooley, K., Notten, P., Searchinger, T., Skene, J. Explanation of activity-based accounting v. managed land proxy proposal (2025).</li>
+      <li>IPCC. Report of the expert meeting on reconciling anthropogenic land use emissions (2024).</li>
+      <li>Allen, M. R. and others. Geological net zero and the need for disaggregated accounting for carbon sinks. Nature 638, 343–350 (2025).</li>
+      <li>Grassi, G. and others. Harmonising the land-use flux estimates of global models and national inventories for 2000–2020. Earth System Science Data 15, 1093–1114 (2023).</li>
+      <li>Peng, L., Searchinger, T. D., Zionts, J., Waite, R. The carbon costs of global wood harvests. Nature 620, 110–115 (2023).</li>
+      <li>Ruehr, S. and others. Evidence and attribution of the enhanced land carbon sink. Nature Reviews Earth &amp; Environment 4, 518–534 (2023).</li>
+    </ul>
+
+    <p class="font-mono text-ink-4" style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin: 40px 0 0;">Status as of 8 November 2026 · unlisted while in review</p>
+  </article>
+</BaseLayout>

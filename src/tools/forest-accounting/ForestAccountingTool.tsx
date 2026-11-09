@@ -1,12 +1,13 @@
 /**
- * Forest carbon accounting: one stylised company, up to four accounting
- * rules side by side. A plain scrolling page, no side rail (the ai-labor
- * layout): a sticky bar picks the company and the rules; the guardrail
- * switches and the company's forest, other emissions and levers sit in
- * collapsed groups whose summary line says what the preset holds. Then
- * what each rule puts in the inventory stage by stage (Figure 1), what each
- * rule rewards (Figure 2) and what each lets the company claim (Figure 3).
- * The arithmetic is in model.ts; nothing here decides what counts.
+ * Forest carbon accounting: one piece of land, four accounting rules side
+ * by side. A plain scrolling page, no side rail (the ai-labor layout): a
+ * sticky bar picks the land scenario and whether the reporting company is
+ * its owner (scope 1) or a downstream buyer of its output (scope 3); the
+ * scenario's forest, other emissions and levers sit in a collapsed group
+ * whose summary line says what the preset holds. Then what each rule puts
+ * in the inventory stage by stage (Figure 1), what each rule rewards
+ * (Figure 2) and what each lets the company claim (Figure 3). The
+ * arithmetic is in model.ts; nothing here decides what counts.
  */
 import { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronRight, Minus } from 'lucide-react';
@@ -23,11 +24,19 @@ import {
   effect,
   fmt,
   ledger,
+  withRole,
   type Company,
-  type ProposedOptions,
-  type RuleId,
+  type Scope,
   type Traceability,
 } from './model';
+
+/** One line per rule, under Figure 1. */
+const RULE_LINE: Record<string, string> = {
+  mlp: 'All carbon flux on managed land is the company’s, passive uptake included; everything nets to one number, fossil too.',
+  mlpPlus: 'Same inventory, but scope 3 removals need sourcing-region traceability and forest removals may not compensate fossil emissions.',
+  aba: 'Emissions as pools release carbon; removals only where management caused growth above a no-activity counterfactual; stock change disclosed outside the scopes.',
+  proposed: 'Removals only where the company caused them, passive uptake disclosed not claimed; emissions and removals as two totals; fossil CO₂ balanced only by durable storage; one claimant per tonne.',
+};
 
 const BASE = '/tools/forest-accounting';
 
@@ -71,18 +80,18 @@ function Check({ checked, onChange, label, sub }: { checked: boolean; onChange: 
   );
 }
 
-/** Toggle pills, one per rule; the same look as the other explorers' chips. */
-function RuleChips({ rules, setRules }: { rules: RuleId[]; setRules: (f: (xs: RuleId[]) => RuleId[]) => void }) {
+/** Two pills: the same look as the other explorers' chips. */
+function Chips<T extends string>({ label, value, options, onChange, disabled }: { label: string; value: T; options: Array<[T, string]>; onChange: (v: T) => void; disabled?: Partial<Record<T, string>> }) {
   return (
-    <div role="group" aria-label="Rules to compare" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-      <span style={{ ...mono11, fontSize: 10.5 }}>Rules</span>
-      {RULE_ORDER.map((r) => {
-        const on = rules.includes(r);
+    <div role="radiogroup" aria-label={label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+      <span style={{ ...mono11, fontSize: 10.5 }}>{label}</span>
+      {options.map(([v, lab]) => {
+        const on = v === value;
+        const why = disabled?.[v];
         return (
-          <button key={r} type="button" aria-pressed={on} title={RULES[r].name}
-            onClick={() => setRules((xs) => (on ? (xs.length > 1 ? xs.filter((x) => x !== r) : xs) : RULE_ORDER.filter((x) => x === r || xs.includes(x))))}
-            style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, padding: '3px 10px', cursor: 'pointer', borderRadius: 999, border: '1px solid var(--rule-strong)', background: on ? 'var(--ink)' : 'var(--paper)', color: on ? 'var(--paper)' : 'var(--ink-2)' }}>
-            {RULES[r].short}
+          <button key={v} type="button" role="radio" aria-checked={on} onClick={() => !why && onChange(v)} title={why} aria-disabled={!!why}
+            style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, padding: '3px 10px', cursor: why ? 'not-allowed' : 'pointer', borderRadius: 999, border: '1px solid var(--rule-strong)', background: on ? 'var(--ink)' : 'var(--paper)', color: on ? 'var(--paper)' : why ? 'var(--ink-4)' : 'var(--ink-2)', opacity: why ? 0.6 : 1 }}>
+            {lab}
           </button>
         );
       })}
@@ -134,15 +143,15 @@ function Row({ label, vals, strong }: { label: string; vals: string[]; strong?: 
 export default function ForestAccountingTool() {
   const [presetId, setPresetId] = useState(COMPANIES[0].id);
   const [c, setC] = useState<Company>(COMPANIES[0]);
-  const [rules, setRules] = useState<RuleId[]>(RULE_ORDER);
-  const [opt, setOpt] = useState<ProposedOptions>(DEFAULT_PROPOSED);
   const [methods, setMethods] = useState(false);
+  const opt = DEFAULT_PROPOSED;
 
-  const preset = COMPANIES.find((p) => p.id === presetId) ?? COMPANIES[0];
+  const scenario = COMPANIES.find((p) => p.id === presetId) ?? COMPANIES[0];
+  const preset = withRole(scenario, c.scope);
   const edited = JSON.stringify(c) !== JSON.stringify(preset);
   const set = <K extends keyof Company>(k: K, v: Company[K]) => setC((p) => ({ ...p, [k]: v }));
 
-  const ledgers = useMemo(() => RULE_ORDER.filter((r) => rules.includes(r)).map((r) => ledger(c, r, opt)), [c, rules, opt]);
+  const ledgers = useMemo(() => RULE_ORDER.map((r) => ledger(c, r, opt)), [c, opt]);
   const shown = ledgers.map((L) => L.rule);
 
   const actions = actionsFor(c);
@@ -154,7 +163,6 @@ export default function ForestAccountingTool() {
     return `${a.label.replace(/ \(.*\)$/, '')}: ${rewards.length ? `rewarded under ${join(rewards)}` : ''}${rewards.length && penal.length ? '; ' : ''}${penal.length ? `penalised under ${join(penal)}` : ''}.`;
   };
 
-  const guardOn = [opt.attributableOnly && 'attributable only', opt.separateLedgers && 'separate ledgers', opt.likeForLike && 'like for like', opt.oneClaimant && 'one claimant'].filter(Boolean) as string[];
   const digest = [
     c.area > 0 ? `${fmt(c.area)} Mha forest, harvest ${fmt(c.harvest)} t/ha` : 'no forest of its own',
     `fossil ${fmt(c.fossil)} Mt/yr`,
@@ -183,21 +191,24 @@ export default function ForestAccountingTool() {
         <div>
           <p style={{ ...mono11, margin: 0 }}>Interactive model · Forest carbon · {methodsBtn('methods')}</p>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(24px, 3.4vw, 32px)', fontWeight: 600, lineHeight: 1.15, letterSpacing: '-0.01em', margin: '4px 0 6px', color: 'var(--ink)' }}>
-            The same forest, four accounting rules
+            The same land, four accounting rules
           </h2>
           <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-2)', maxWidth: '72ch', lineHeight: 1.45 }}>
-            One stylised company, the rules before the GHG Protocol side by side: what each puts in its inventory, what each rewards, and what each lets it claim.
+            One piece of land, seen by its owner or a downstream buyer, under the rules before the GHG Protocol: what each puts in the inventory, what each rewards, and what each lets the company claim.
           </p>
         </div>
 
         <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--paper)', padding: '8px 0', borderBottom: '1px solid var(--rule)', display: 'flex', gap: '8px 18px', flexWrap: 'wrap', alignItems: 'center' }}>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ ...mono11, fontSize: 10.5 }}>Company</span>
+            <span style={{ ...mono11, fontSize: 10.5 }}>Land</span>
             <select value={presetId} style={selectStyle}
-              onChange={(e) => { const p = COMPANIES.find((x) => x.id === e.target.value)!; setPresetId(p.id); setC(p); }}>
+              onChange={(e) => { const p = COMPANIES.find((x) => x.id === e.target.value)!; setPresetId(p.id); setC(withRole(p, c.scope)); }}>
               {COMPANIES.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </label>
+          <Chips<Scope> label="Reporting company" value={c.scope} onChange={(v) => setC((p) => withRole(p, v))}
+            options={[['scope1', 'Landowner'], ['scope3', 'Downstream buyer']]}
+            disabled={c.harvest + c.ag + c.luc > 0 ? undefined : { scope3: 'This land produces nothing to buy.' }} />
           {c.scope === 'scope3' && (
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <span style={{ ...mono11, fontSize: 10.5 }}>Traceability</span>
@@ -206,30 +217,19 @@ export default function ForestAccountingTool() {
               </select>
             </label>
           )}
-          <RuleChips rules={rules} setRules={setRules} />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: -8 }}>
           <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: 'var(--ink-3)' }}>
-            {preset.blurb}{edited ? ' Edited.' : ''}
+            {scenario.blurb} {c.scope === 'scope1' ? 'Reported by the landowner: the land is scope 1.' : `Reported by a buyer of everything it produces: the land is upstream scope 3, ${TRACEABILITY_LABEL[c.traceability].toLowerCase()}.`}{edited ? ' Edited.' : ''}
             {edited && (
               <button type="button" onClick={() => setC(preset)} style={{ marginLeft: 8, font: '11px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--cardinal)', background: 'none', border: 0, padding: 0, cursor: 'pointer' }}>
                 Reset
               </button>
             )}
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 8, alignItems: 'start' }}>
-            {rules.includes('proposed') && (
-              <Group title="Guardrail switches" digest={`${guardOn.length} of 4 on`}>
-                <div className="fa-cols" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px 24px' }}>
-                  <Check checked={opt.attributableOnly} onChange={(v) => setOpt({ ...opt, attributableOnly: v })} label="Attributable removals only" sub="Count growth the company caused; disclose the background sink, don't claim it." />
-                  <Check checked={opt.separateLedgers} onChange={(v) => setOpt({ ...opt, separateLedgers: v })} label="Separate ledgers" sub="Report emissions and removals as two totals; no net line." />
-                  <Check checked={opt.likeForLike} onChange={(v) => setOpt({ ...opt, likeForLike: v })} label="Like for like" sub="Fossil CO₂ is balanced only by durable storage." />
-                  <Check checked={opt.oneClaimant} onChange={(v) => setOpt({ ...opt, oneClaimant: v })} label="One claimant per tonne" sub="A shared scope 3 removal is divided among those who report it." />
-                </div>
-              </Group>
-            )}
-            <Group title="Adjust the company" digest={digest}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+            <Group title="Adjust the scenario" digest={digest}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px 28px' }}>
                 {(['forest', 'other', 'levers'] as const).map((g) => (
                   <div key={g} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -247,8 +247,11 @@ export default function ForestAccountingTool() {
           <h3 style={{ ...figTitle, marginBottom: 10 }}>Where the carbon moves, and what each rule counts</h3>
           <ChainChart company={c} ledgers={ledgers} />
           <p style={{ ...caption, marginTop: 10 }}>
-            Emissions right of a stage's zero line, removals left, Mt CO₂e per year; dashed is disclosed outside the scopes. One colour per netting pool, so a one-colour row nets to one number. The arrow marks removals crossing the scope border.
+            Emissions right of a stage's zero line, removals left, Mt CO₂e per year; dashed is disclosed outside the scopes. One colour per netting pool, so a one-colour row nets to one number. The wide column says what passes the scope border under each rule.
           </p>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 0, listStyle: 'none', fontSize: 12.5, lineHeight: 1.5, color: 'var(--ink-3)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '2px 18px' }}>
+            {RULE_ORDER.map((r) => <li key={r}><strong style={{ color: 'var(--ink-2)' }}>{RULES[r].short}</strong> · {RULE_LINE[r]}</li>)}
+          </ul>
           {ledgers.some((L) => L.notes.length) && (
             <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 12.5, lineHeight: 1.5, color: 'var(--ink-3)' }}>
               {ledgers.flatMap((L) => L.notes.map((n, i) => <li key={`${L.rule}-${i}`}><strong style={{ color: 'var(--ink-2)' }}>{RULES[L.rule].short}</strong> · {n}</li>))}

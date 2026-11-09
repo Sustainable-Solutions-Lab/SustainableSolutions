@@ -26,14 +26,14 @@ const rows: Array<{ q: string; mlp: Cell; plus: Cell; aba: Cell; ours: Cell }> =
     mlp: 'A removal in the scopes.',
     plus: 'A removal in the scopes.',
     aba: 'Baseline. Not a removal.',
-    ours: 'Disclosed as background stock change, not claimed (switch: attributable only).',
+    ours: 'Disclosed as background stock change, not claimed.',
   },
   {
     q: 'Regrowth from harvest before the base year',
     mlp: 'A removal in the scopes.',
     plus: 'A removal in the scopes.',
     aba: 'Baseline. Not a removal.',
-    ours: 'Disclosed, not claimed (same switch).',
+    ours: 'Disclosed, not claimed.',
   },
   {
     q: 'Growth caused by current management',
@@ -54,14 +54,14 @@ const rows: Array<{ q: string; mlp: Cell; plus: Cell; aba: Cell; ours: Cell }> =
     mlp: 'National or global land-carbon factor; a sink almost everywhere.',
     plus: 'Emissions reported; no removals without sourcing-region traceability and safeguards.',
     aba: 'Activity factor per tonne of wood; works for any traceability.',
-    ours: 'As ABA; a shared removal is divided among its claimants (switch: one claimant).',
+    ours: 'As ABA; a shared removal is divided among its claimants.',
   },
   {
     q: 'Netting',
     mlp: 'Everything nets, fossil included (as the pilots reported).',
     plus: 'Forest removals net against land emissions, including agriculture and conversion, but may not compensate fossil emissions.',
     aba: 'Anthropogenic removals net against emissions in the scopes; not against fossil, per the LSRS.',
-    ours: 'Two ledgers, no net line (switch: separate ledgers); fossil CO₂ balanced only by durable storage (switch: like for like).',
+    ours: 'Two ledgers, no net line; fossil CO₂ balanced only by durable storage.',
   },
   {
     q: 'Reported outside the scopes',
@@ -95,7 +95,7 @@ const inputs = [
     <p class="m-0 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">Methods</p>
     <h1 class="font-serif text-ink" style="font-size: 34px; line-height: 1.12; letter-spacing: -0.01em; margin: 6px 0 12px;">Forest carbon accounting</h1>
     <p class="text-ink-2" style="font-size: 16px; line-height: 1.6; margin: 0 0 8px;">
-      The GHG Protocol published its Land Sector and Removals Standard in 2026 without forest carbon, because its expert group could not agree between two rules: a managed land proxy that counts all carbon flux on managed forest land as the company's, and activity-based accounting that counts only the difference the company's activity made. <a href="/tools/forest-accounting" class="text-ink underline">The tool</a> runs one stylised company through both, through the safeguarded MLP+ version submitted in May 2025, and through a set of guardrails we are proposing, so the consequences of each choice can be seen on the same forest.
+      The GHG Protocol published its Land Sector and Removals Standard in 2026 without forest carbon, because its expert group could not agree between two rules: a managed land proxy that counts all carbon flux on managed forest land as the company's, and activity-based accounting that counts only the difference the company's activity made. <a href="/tools/forest-accounting" class="text-ink underline">The tool</a> runs one piece of land, seen by its owner or by a downstream buyer, through both, through the safeguarded MLP+ version submitted in May 2025, and through the rule we propose, so the consequences of each choice can be seen on the same forest.
     </p>
 
     <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">The rules, side by side</h2>
@@ -107,7 +107,7 @@ const inputs = [
             <th class="py-2 pr-3 font-medium">MLP, as piloted</th>
             <th class="py-2 pr-3 font-medium">MLP+</th>
             <th class="py-2 pr-3 font-medium">ABA</th>
-            <th class="py-2 font-medium">Guardrails (ours)</th>
+            <th class="py-2 font-medium">Proposal (ours)</th>
           </tr>
         </thead>
         <tbody>
@@ -124,10 +124,10 @@ const inputs = [
       </table>
     </div>
     <p class="font-serif italic text-ink-3" style="font-size: 13.5px; line-height: 1.5; margin: 10px 0 0;">
-      MLP as piloted follows the 2022 draft guidance and what the 2024 pilot companies reported. MLP+ follows the May 2025 submission. ABA follows the proposal and its explanatory memo. The guardrails are four switches in the tool; with all four on they amount to ABA's removals in a two-ledger presentation with nothing netted.
+      MLP as piloted follows the 2022 draft guidance and what the 2024 pilot companies reported. MLP+ follows the May 2025 submission. ABA follows the proposal and its explanatory memo. Our proposal amounts to ABA's removals in a two-ledger presentation with nothing netted, passive uptake disclosed but not claimed, and fossil CO₂ balanced only by durable storage.
     </p>
 
-    <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">The company model</h2>
+    <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">The land model</h2>
     <p class="text-ink-2" style="font-size: 15px; line-height: 1.6; margin: 0 0 12px;">
       Each hectare of forest in the boundary changes carbon stock at four constant rates. Area times rate gives Mt CO₂ a year. Every rule reads the same four numbers; what differs is which of them it puts in the scopes, what it nets, and what it discloses outside them.
     </p>
@@ -142,7 +142,7 @@ const inputs = [
 
     <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">Figure 1: the supply chain by rule</h2>
     <p class="text-ink-2" style="font-size: 15px; line-height: 1.6; margin: 0 0 12px;">
-      Each term is placed where it arises, in chain order across the top: conversion and land management on the land, the forest growing, harvest, the company's own processing and transport, products and slash decaying downstream, and durable storage. Bands mark the scope each stage falls in for a company of that type: a forest owner's land is scope 1, a buyer's suppliers' land is upstream scope 3. Each row is a rule. The bar under a stage is what that rule puts in the inventory there, emissions to the right of the stage's zero line and removals to the left; a dashed outline is disclosed outside the scopes. Bars share a colour where the rule nets them together, so a row of one colour nets to one number and a row of two colours keeps fossil apart from land, or emissions apart from removals. The arrow in the gap at the scope border marks removals crossing from the land into the company's operations, whether into a buyer's inventory or against fossil emissions. Under ABA harvest emissions appear at the decay stage, since that rule counts them as pools release carbon; under the others they appear at harvest. The number ending each row is what the rule leaves the company to balance.
+      Each term is placed where it arises, in chain order across the top: conversion and land management on the land, the forest growing, harvest, the company's own processing and transport, products and slash decaying downstream, and durable storage. Bands mark the scope each stage falls in for the reporting company: the land's owner reports it in scope 1, a downstream buyer of its output in upstream scope 3. Each row is a rule. The bar under a stage is what that rule puts in the inventory there, emissions to the right of the stage's zero line and removals to the left; a dashed outline is disclosed outside the scopes. Bars share a colour where the rule nets them together, so a row of one colour nets to one number and a row of two colours keeps fossil apart from land, or emissions apart from removals. The gap at the scope border says, line by line, whether the land's emissions and removals pass across it under that rule: for a buyer, whether they enter its scope 3; for an owner, whether removals reach its fossil emissions. The forest-growing bar is stacked, management uptake solid and passive uptake lighter. Under ABA harvest emissions appear at the decay stage, since that rule counts them as pools release carbon; under the others they appear at harvest. The number ending each row is what the rule leaves the company to balance.
     </p>
 
     <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">The readings</h2>
@@ -161,7 +161,7 @@ const inputs = [
 
     <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">What this is not</h2>
     <p class="text-ink-2" style="font-size: 15px; line-height: 1.6; margin: 0 0 12px;">
-      A device for comparing rules, not an estimate for any company. Rates are constant, so there is no stand age, rotation, disturbance year or decay curve; harvest emissions land in the year of harvest except for the century-stored share, where ABA would spread them over decades. The presets are invented. Their rates sit in the range of national inventories and of a companion analysis of 334,000 re-measured forest inventory plots in the United States, France and Spain, where the two main rules disagree in sign for the same forests and the choice of counterfactual baseline moves the answer about six times less than the choice of rule.
+      A device for comparing rules, not an estimate for any company. Rates are constant, so there is no stand age, rotation, disturbance year or decay curve; harvest emissions land in the year of harvest except for the century-stored share, where ABA would spread them over decades. The land scenarios are invented. Their rates sit in the range of national inventories and of a companion analysis of 334,000 re-measured forest inventory plots in the United States, France and Spain, where the two main rules disagree in sign for the same forests and the choice of counterfactual baseline moves the answer about six times less than the choice of rule.
     </p>
 
     <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">Sources</h2>

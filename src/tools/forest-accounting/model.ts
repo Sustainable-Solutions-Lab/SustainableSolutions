@@ -22,7 +22,8 @@
  * Managed Land Proxy "Plus" submission of May 2025 and the activity-based
  * accounting memo), the 2022 draft the pilots used, and the LSRS v1 rule
  * that land removals and fossil emissions are never netted. The fourth
- * rule is configurable: a set of guardrails we are proposing.
+ * rule is our proposal: attributable removals only, two ledgers, like
+ * for like, one claimant per tonne (ProposedOptions, all on by default).
  *
  * Units: Mha × t/ha = Mt. All flows are Mt CO₂e per year, emissions
  * positive, removals negative.
@@ -94,9 +95,9 @@ export const RULES: Record<RuleId, { short: string; name: string; source: string
     source: 'ABA proposal and explanatory memo, 2025',
   },
   proposed: {
-    short: 'Guardrails',
-    name: 'Attributable removals, separate ledgers',
-    source: 'our proposal; the switches set which guardrails apply',
+    short: 'Proposal',
+    name: 'Our proposal: attributable removals, two ledgers, like for like',
+    source: 'our proposal, in review',
   },
 };
 
@@ -283,7 +284,7 @@ export function ledger(c: Company, rule: RuleId, opt: ProposedOptions = DEFAULT_
     return finish(c, rule, emissions, removals, info, true, false, 'land', g.wood, notes);
   }
 
-  // Proposed guardrails. Each switch is one rule; with all four on, the
+  // Our proposal. Each option is one rule; with all four on (the default), the
   // inventory carries two ledgers (emissions; attributable removals), the
   // background sink is disclosed but not claimed, fossil CO₂ is balanced
   // only by durable storage, and a shared scope 3 removal is claimed once.
@@ -347,55 +348,66 @@ export function effect(c: Company, rule: RuleId, a: Action, opt: ProposedOptions
   return ledger(a.apply(c), rule, opt).position - ledger(c, rule, opt).position;
 }
 
-/* ---------------- companies ---------------- */
+/* ---------------- scenarios ----------------
+ * Each preset is a piece of land. The reporting company is either its owner
+ * (scope 1) or a downstream buyer of what it produces (scope 3); the tool
+ * sets scope, traceability and claimants when the role changes. Fossil is
+ * the reporting company's own processing and transport. */
 
 export const COMPANIES: Company[] = [
   {
     id: 'pine',
-    name: 'Southern Pine Co.',
-    blurb: 'An integrated timber company owning 2 Mha of productive, young, heavily worked forest in the US Southeast. Scope 1.',
+    name: 'Southeast US pine plantation',
+    blurb: '2 Mha of young, heavily worked loblolly pine on short rotations: fast regrowth from past cutting, management that adds growth, and a high harvest.',
     scope: 'scope1',
     area: 2.0, ambient: 2.0, legacy: 2.5, mgmt: 1.5, harvest: 5.5, hwp: 0.25,
     traceability: 'lmu',
     fossil: 1.0, ag: 0, luc: 0, leased: 0, cdr: 0, cdrPrice: 300, claimants: 1,
   },
   {
-    id: 'boxboard',
-    name: 'Boxboard Brands',
-    blurb: 'A packaging buyer with no forest of its own. Its fibre traces to a sourcing region of 0.5 Mha of attributable productive forest. Scope 3.',
-    scope: 'scope3',
-    area: 0.5, ambient: 2.0, legacy: 2.0, mgmt: 1.2, harvest: 4.0, hwp: 0.10,
-    traceability: 'region',
-    fossil: 2.0, ag: 0, luc: 0, leased: 0, cdr: 0, cdrPrice: 300, claimants: 2,
+    id: 'dougfir',
+    name: 'Pacific Northwest Douglas-fir',
+    blurb: '1 Mha of Douglas-fir on 40 to 60 year rotations: strong ambient growth, slower legacy regrowth, and a third of the harvest held in lumber for a century.',
+    scope: 'scope1',
+    area: 1.0, ambient: 2.5, legacy: 1.5, mgmt: 1.0, harvest: 4.5, hwp: 0.35,
+    traceability: 'lmu',
+    fossil: 0.5, ag: 0, luc: 0, leased: 0, cdr: 0, cdrPrice: 300, claimants: 1,
   },
   {
-    id: 'foods',
-    name: 'Harvest Foods',
-    blurb: 'A food company: 15 Mt of agricultural methane and nitrous oxide, 5 Mt of conversion in its supply chain, and 0.3 Mha of plantation forest it owns. Try leasing growing forest.',
+    id: 'amazon',
+    name: 'Amazon pasture, recently cleared',
+    blurb: '1 Mha of cattle pasture on former forest: 8 Mt a year from the clearing still under way, 3 Mt of methane and nitrous oxide from the herd, and secondary regrowth on abandoned paddocks. No harvest.',
     scope: 'scope1',
-    area: 0.3, ambient: 2.5, legacy: 1.0, mgmt: 0.5, harvest: 2.0, hwp: 0.20,
+    area: 1.0, ambient: 0.3, legacy: 0.6, mgmt: 0, harvest: 0, hwp: 0,
     traceability: 'lmu',
-    fossil: 3.0, ag: 15, luc: 5, leased: 0, cdr: 0, cdrPrice: 300, claimants: 1,
-  },
-  {
-    id: 'cloud',
-    name: 'Northstar Cloud',
-    blurb: 'A data-centre operator with 10 Mt of fossil emissions, no harvest, 2 Mha of leased boreal forest and a durable-removals contract at $500/t.',
-    scope: 'scope1',
-    area: 0, ambient: 1.5, legacy: 1.0, mgmt: 0, harvest: 0, hwp: 0,
-    traceability: 'lmu',
-    fossil: 10, ag: 0, luc: 0, leased: 2.0, cdr: 0.5, cdrPrice: 500, claimants: 1,
+    fossil: 0.2, ag: 3, luc: 8, leased: 0, cdr: 0, cdrPrice: 300, claimants: 1,
   },
   {
     id: 'okoume',
-    name: 'Okoumé Concession',
-    blurb: 'A selective-logging concession of 1 Mha in Gabon: old, conserved forest with little legacy regrowth and slow ambient growth. Scope 1.',
+    name: 'Gabon selective-logging concession',
+    blurb: '1 Mha of old, largely intact forest logged at one or two trees a hectare: little legacy regrowth, slow ambient growth, a light harvest.',
     scope: 'scope1',
     area: 1.0, ambient: 1.2, legacy: 0.2, mgmt: 0.2, harvest: 1.5, hwp: 0.30,
     traceability: 'lmu',
     fossil: 0.1, ag: 0, luc: 0, leased: 0, cdr: 0, cdrPrice: 300, claimants: 1,
   },
+  {
+    id: 'boreal',
+    name: 'Boreal forest under conservation lease',
+    blurb: '2 Mha of unharvested Canadian boreal forest held by a data-centre operator with 10 Mt of fossil emissions and a durable-removals contract at $500/t. Nothing is produced; the forest only grows.',
+    scope: 'scope1',
+    area: 2.0, ambient: 1.5, legacy: 1.0, mgmt: 0, harvest: 0, hwp: 0,
+    traceability: 'lmu',
+    fossil: 10, ag: 0, luc: 0, leased: 0, cdr: 0.5, cdrPrice: 500, claimants: 1,
+  },
 ];
+
+/** The same land seen by its owner (scope 1) or by a downstream buyer of its output (scope 3). */
+export function withRole(c: Company, scope: Scope): Company {
+  return scope === 'scope1'
+    ? { ...c, scope, traceability: 'lmu', claimants: 1 }
+    : { ...c, scope, traceability: c.scope === 'scope3' ? c.traceability : 'region', claimants: c.scope === 'scope3' ? c.claimants : 2 };
+}
 
 export interface SliderSpec {
   key: keyof Company;

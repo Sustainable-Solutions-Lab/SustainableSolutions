@@ -49,12 +49,26 @@ const STAGES: Stage[] = [
   { id: 'cdr', label: 'Durable storage', icon: Mountain, group: 'down' },
 ];
 
-/* Grid columns: 1 = rule label; stages sit in 2–5, 7 and 9–10; 6 is the
-   scope border between the land and the company's operations, 8 the one
-   between its operations and downstream; 11 = the total. */
-const COL = (i: number) => (i < 4 ? i + 2 : i === 4 ? 7 : i + 4);
-const TEMPLATE = '84px repeat(4, minmax(0, 1fr)) 118px minmax(0, 1fr) 20px repeat(2, minmax(0, 1fr)) 92px';
-const GROUP_SPAN: Record<Group, string> = { land: '2 / 6', ops: '7 / 8', down: '9 / 11' };
+/* Grid columns: 1 = rule label; then the land stages, the wide scope
+   border between the land and the company's operations, the operations
+   stage, the narrow border to downstream, the downstream stages, and the
+   total. The land-use change and land management stages appear only when
+   the scenario has those emissions, so the layout is built per render. */
+function layout(stages: Stage[]) {
+  const land = stages.filter((s) => s.group === 'land').length;
+  const down = stages.filter((s) => s.group === 'down').length;
+  const col: Record<string, number> = {};
+  let k = 2;
+  for (const s of stages.filter((s) => s.group === 'land')) col[s.id] = k++;
+  const border1 = k++;
+  for (const s of stages.filter((s) => s.group === 'ops')) col[s.id] = k++;
+  const border2 = k++;
+  for (const s of stages.filter((s) => s.group === 'down')) col[s.id] = k++;
+  const total = k;
+  const span: Record<Group, string> = { land: `2 / ${border1}`, ops: `${border1 + 1} / ${border2}`, down: `${border2 + 1} / ${total}` };
+  const template = `84px repeat(${land}, minmax(0, 1fr)) 118px minmax(0, 1fr) 20px repeat(${down}, minmax(0, 1fr)) 92px`;
+  return { col, border1, border2, total, span, template, minWidth: 420 + 70 * (land + 1 + down) };
+}
 const GROUP_LABEL = (scope: Company['scope']): Record<Group, string> =>
   scope === 'scope1'
     ? { land: 'Own land · scope 1', ops: 'Own operations · scopes 1 and 2', down: 'Downstream · scope 3' }
@@ -130,14 +144,18 @@ type Focus = { text: string } | null;
 
 export default function ChainChart({ company: c, ledgers }: { company: Company; ledgers: Ledger[] }) {
   const [focus, setFocus] = useState<Focus>(null);
-  const rows = ledgers.map((L) => ({ L, cells: cells(c, L), x: crossings(c, L) }));
+  const stages = STAGES.filter((s) => (s.id === 'luc' ? c.luc > 0 : s.id === 'ag' ? c.ag > 0 : true));
+  const keep = STAGES.map((s) => stages.includes(s));
+  const rows = ledgers.map((L) => ({ L, cells: cells(c, L).filter((_, i) => keep[i]), x: crossings(c, L) }));
+  const lay = layout(stages);
   const labels = GROUP_LABEL(c.scope);
   let maxAbs = 0.1;
   for (const r of rows) for (const k of r.cells) maxAbs = Math.max(maxAbs, Math.abs(k.value), Math.abs(k.info));
   const w = (v: number) => (Math.abs(v) / maxAbs) * HALF;
-  const usedStage = STAGES.map((_, i) => rows.some((r) => r.cells[i].value !== 0 || r.cells[i].info !== 0));
+  const usedStage = stages.map((_, i) => rows.some((r) => r.cells[i].value !== 0 || r.cells[i].info !== 0));
   const usedPools = Array.from(new Set(rows.flatMap((r) => r.cells.filter((k) => k.value !== 0).map((k) => k.pool)))) as Pool[];
-  const anyStacked = rows.some((r) => r.cells[2].parts && r.cells[2].parts.ifm < 0 && r.cells[2].parts.passive < 0);
+  const growIdx = stages.findIndex((s) => s.id === 'grow');
+  const anyStacked = rows.some((r) => { const g = r.cells[growIdx]; return g.parts && g.parts.ifm < 0 && g.parts.passive < 0; });
   const firstRow = 3;
   const lastRow = firstRow + rows.length;
 
@@ -167,41 +185,41 @@ export default function ChainChart({ company: c, ledgers }: { company: Company; 
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <div style={{ minWidth: 700, display: 'grid', gridTemplateColumns: TEMPLATE, columnGap: 4, alignItems: 'stretch' }}>
+      <div style={{ minWidth: lay.minWidth, display: 'grid', gridTemplateColumns: lay.template, columnGap: 4, alignItems: 'stretch' }}>
         {/* row 1: scope bands */}
         {(['land', 'ops', 'down'] as Group[]).map((g) => (
-          <div key={g} style={{ gridRow: 1, gridColumn: GROUP_SPAN[g], borderBottom: '1px solid var(--rule-strong)', paddingBottom: 3, ...mono, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div key={g} style={{ gridRow: 1, gridColumn: lay.span[g], borderBottom: '1px solid var(--rule-strong)', paddingBottom: 3, ...mono, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {labels[g]}
           </div>
         ))}
         {/* row 2: stages */}
-        {STAGES.map((s, i) => {
+        {stages.map((s, i) => {
           const Icon = s.icon;
           return (
-            <div key={s.id} style={{ gridRow: 2, gridColumn: COL(i), display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 3, padding: '8px 0 6px', opacity: usedStage[i] ? 1 : 0.35 }}>
+            <div key={s.id} style={{ gridRow: 2, gridColumn: lay.col[s.id], display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 3, padding: '8px 0 6px', opacity: usedStage[i] ? 1 : 0.35 }}>
               <span style={{ color: 'var(--ink-2)', display: 'inline-flex' }}><Icon size={22} strokeWidth={1.5} /></span>
               <span style={{ fontSize: 11, lineHeight: 1.25, color: 'var(--ink-2)' }}>{s.label}</span>
             </div>
           );
         })}
-        <div style={{ gridRow: 2, gridColumn: 6, alignSelf: 'end', textAlign: 'center', paddingBottom: 6, ...mono, color: 'var(--cardinal)' }}>
+        <div style={{ gridRow: 2, gridColumn: lay.border1, alignSelf: 'end', textAlign: 'center', paddingBottom: 6, ...mono, color: 'var(--cardinal)' }}>
           {c.scope === 'scope3' ? 'What passes to the buyer' : 'What reaches fossil'}
         </div>
-        <div style={{ gridRow: 2, gridColumn: 11, alignSelf: 'end', textAlign: 'right', paddingBottom: 6 }}>
+        <div style={{ gridRow: 2, gridColumn: lay.total, alignSelf: 'end', textAlign: 'right', paddingBottom: 6 }}>
           <span style={{ ...mono, color: 'var(--cardinal)' }}>Left to balance</span>
           <span style={{ display: 'block', fontSize: 10.5, color: 'var(--ink-4)', fontFamily: 'var(--font-mono)' }}>Mt CO₂e/yr</span>
         </div>
         {/* zero lines, one per stage, and the scope borders */}
-        {STAGES.map((s, i) => (
-          <div key={`z-${s.id}`} aria-hidden="true" style={{ gridRow: `${firstRow} / ${lastRow}`, gridColumn: COL(i), position: 'relative', pointerEvents: 'none' }}>
+        {stages.map((s) => (
+          <div key={`z-${s.id}`} aria-hidden="true" style={{ gridRow: `${firstRow} / ${lastRow}`, gridColumn: lay.col[s.id], position: 'relative', pointerEvents: 'none' }}>
             <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, background: 'var(--rule-strong)' }} />
           </div>
         ))}
-        <div aria-hidden="true" style={{ gridRow: `1 / ${lastRow}`, gridColumn: 6, position: 'relative', pointerEvents: 'none' }}>
+        <div aria-hidden="true" style={{ gridRow: `1 / ${lastRow}`, gridColumn: lay.border1, position: 'relative', pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderLeft: '1px dashed var(--ink-4)' }} />
           <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, borderLeft: '1px dashed var(--ink-4)' }} />
         </div>
-        <div aria-hidden="true" style={{ gridRow: `1 / ${lastRow}`, gridColumn: 8, position: 'relative', pointerEvents: 'none' }}>
+        <div aria-hidden="true" style={{ gridRow: `1 / ${lastRow}`, gridColumn: lay.border2, position: 'relative', pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, borderLeft: '1px dashed var(--ink-4)' }} />
         </div>
         {/* rule rows */}
@@ -219,10 +237,10 @@ export default function ChainChart({ company: c, ledgers }: { company: Company; 
               const top = k.info ? 6 : 12;
               const h = 12;
               const infoTop = k.value ? 22 : 14;
-              const text = `${short} · ${STAGES[i].label}: ${k.detail} Mt CO₂e/yr`;
+              const text = `${short} · ${stages[i].label}: ${k.detail} Mt CO₂e/yr`;
               const parts = k.parts && k.parts.ifm < 0 && k.parts.passive < 0 ? k.parts : null;
               return (
-                <div key={`${L.rule}-${i}`} style={{ gridRow: row, gridColumn: COL(i), position: 'relative', height: ROW, borderTop: '1px solid var(--rule)' }}>
+                <div key={`${L.rule}-${i}`} style={{ gridRow: row, gridColumn: lay.col[stages[i].id], position: 'relative', height: ROW, borderTop: '1px solid var(--rule)' }}>
                   {parts
                     ? [
                         seg(parts.ifm, 0, k.pool, top, h, false, false, `${short} · management uptake ${fmt(parts.ifm)} Mt CO₂e/yr`, 'ifm'),
@@ -230,12 +248,12 @@ export default function ChainChart({ company: c, ledgers }: { company: Company; 
                       ]
                     : seg(k.value, 0, k.pool, top, h, false, k.parts ? k.parts.passive < 0 : false, text, 'v')}
                   {k.value !== 0 && valueLabel(k.value, w(k.value), top, h, false)}
-                  {seg(k.info, 0, k.pool, infoTop, 8, true, false, `${short} · ${STAGES[i].label}, outside the scopes: ${k.infoDetail} Mt CO₂e/yr`, 'i')}
+                  {seg(k.info, 0, k.pool, infoTop, 8, true, false, `${short} · ${stages[i].label}, outside the scopes: ${k.infoDetail} Mt CO₂e/yr`, 'i')}
                   {k.info !== 0 && valueLabel(k.info, w(k.info), infoTop, 8, true)}
                 </div>
               );
             }),
-            <div key={`${L.rule}-x`} style={{ gridRow: row, gridColumn: 6, height: ROW, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2, padding: '0 6px', borderTop: '1px solid var(--rule)', background: 'var(--paper-2)', zIndex: 1 }}>
+            <div key={`${L.rule}-x`} style={{ gridRow: row, gridColumn: lay.border1, height: ROW, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2, padding: '0 6px', borderTop: '1px solid var(--rule)', background: 'var(--paper-2)', zIndex: 1 }}>
               {r.x.map((x) => (
                 <span key={x.label} title={x.text} onMouseEnter={() => setFocus({ text: x.text })} onMouseLeave={() => setFocus(null)} onClick={() => setFocus({ text: x.text })}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono)', fontSize: 10, lineHeight: 1.1, whiteSpace: 'nowrap', cursor: 'default',
@@ -245,7 +263,7 @@ export default function ChainChart({ company: c, ledgers }: { company: Company; 
                 </span>
               ))}
             </div>,
-            <div key={`${L.rule}-t`} style={{ gridRow: row, gridColumn: 11, height: ROW, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', borderTop: '1px solid var(--rule)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+            <div key={`${L.rule}-t`} style={{ gridRow: row, gridColumn: lay.total, height: ROW, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', borderTop: '1px solid var(--rule)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--cardinal)' }}>{(L.position > 0.05 ? '+' : '') + fmt(L.position)}</span>
               <span style={{ fontSize: 10, color: 'var(--ink-4)', whiteSpace: 'nowrap' }}>+{fmt(E)} / {fmt(L.removalsTotal)}</span>
             </div>,

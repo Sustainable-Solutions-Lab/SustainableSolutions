@@ -22,8 +22,10 @@
  * Managed Land Proxy "Plus" submission of May 2025 and the activity-based
  * accounting memo), the 2022 draft the pilots used, and the LSRS v1 rule
  * that land removals and fossil emissions are never netted. The fourth
- * rule is our proposal: attributable removals only, two ledgers, like
- * for like, one claimant per tonne (ProposedOptions, all on by default).
+ * rule is the hybrid we propose: the MLP stock change stays on the land
+ * inventory, reported by component with nothing netted; land removals
+ * never attach to wood or offset non-forest emissions; wood leaves the
+ * forest carrying an ABA-derived harvest emission.
  *
  * Units: Mha × t/ha = Mt. All flows are Mt CO₂e per year, emissions
  * positive, removals negative.
@@ -60,24 +62,6 @@ export interface Company {
   claimants: number;
 }
 
-export interface ProposedOptions {
-  /** Removals count only where the company's own activity caused them (mgmt); ambient and legacy growth are reported as background. */
-  attributableOnly: boolean;
-  /** Emissions and removals are two ledgers; the inventory reports both and nets neither. */
-  separateLedgers: boolean;
-  /** Fossil CO₂ can be balanced only by durable storage; land removals balance only land emissions. */
-  likeForLike: boolean;
-  /** A scope 3 removal is claimed once along the chain, so each claimant reports its share. */
-  oneClaimant: boolean;
-}
-
-export const DEFAULT_PROPOSED: ProposedOptions = {
-  attributableOnly: true,
-  separateLedgers: true,
-  likeForLike: true,
-  oneClaimant: true,
-};
-
 export const RULES: Record<RuleId, { short: string; name: string; source: string }> = {
   mlp: {
     short: 'MLP',
@@ -95,9 +79,9 @@ export const RULES: Record<RuleId, { short: string; name: string; source: string
     source: 'ABA proposal and explanatory memo, 2025',
   },
   proposed: {
-    short: 'Proposal',
-    name: 'Our proposal: attributable removals, two ledgers, like for like',
-    source: 'our proposal, in review',
+    short: 'Hybrid',
+    name: 'Our proposal: MLP on the land, by component; no removals travel; ABA harvest factor on wood',
+    source: 'our proposal, in development',
   },
 };
 
@@ -175,14 +159,17 @@ function finish(
   substitutesWith: 'all' | 'land' | 'none',
   wood: number,
   notes: string[],
+  /** The forest emission wood carries downstream, when the rule attaches one; otherwise the footprint is the land's in-scope forest terms per tonne. */
+  carried?: number,
 ): Ledger {
   const landEmissions = sum(emissions);
   const removalsTotal = sum(removals);
   const landNet = landEmissions + removalsTotal;
   // What the company must still balance to claim net zero. Where the rule
   // lets forest removals offset fossil emissions the whole inventory nets;
-  // otherwise fossil stands alone and only a land surplus adds to it.
-  const position = netsFossil ? c.fossil + landNet : c.fossil + Math.max(landNet, 0);
+  // where they net only within land, fossil stands alone and a land
+  // surplus adds to it; where nothing nets, every emission stands.
+  const position = netsFossil ? c.fossil + landNet : netsLand ? c.fossil + Math.max(landNet, 0) : c.fossil + landEmissions;
   const cdrNeeded = Math.max(position - c.cdr, 0);
   const cdrCost = cdrNeeded * c.cdrPrice; // Mt × $/t = $M
   const substitutes =
@@ -193,7 +180,7 @@ function finish(
         : 0;
   const forestEm = emissions.filter((s) => s.key === 'forest').reduce((a, s) => a + s.value, 0);
   const forestRem = removals.filter((s) => s.key !== 'leased').reduce((a, s) => a + s.value, 0);
-  const woodFootprint = wood > 0 ? (forestEm + forestRem) / wood : null;
+  const woodFootprint = wood > 0 ? (carried !== undefined ? carried : forestEm + forestRem) / wood : null;
   return {
     rule,
     fossil: c.fossil,
@@ -219,7 +206,7 @@ const otherLand = (c: Company): Segment[] => [
   ...(c.luc > 0 ? [{ key: 'luc', label: 'Land-use change', value: c.luc }] : []),
 ];
 
-export function ledger(c: Company, rule: RuleId, opt: ProposedOptions = DEFAULT_PROPOSED): Ledger {
+export function ledger(c: Company, rule: RuleId): Ledger {
   const g = grossFlows(c);
   const notes: string[] = [];
 
@@ -284,32 +271,35 @@ export function ledger(c: Company, rule: RuleId, opt: ProposedOptions = DEFAULT_
     return finish(c, rule, emissions, removals, info, true, false, 'land', g.wood, notes);
   }
 
-  // Our proposal. Each option is one rule; with all four on (the default), the
-  // inventory carries two ledgers (emissions; attributable removals), the
-  // background sink is disclosed but not claimed, fossil CO₂ is balanced
-  // only by durable storage, and a shared scope 3 removal is claimed once.
-  const emissions: Segment[] = [...otherLand(c), ...(g.harvest > 0 ? [{ key: 'forest', label: 'Harvest, at the time of harvest', value: g.harvest }] : [])];
-  let removals: Segment[] = opt.attributableOnly
-    ? g.mgmt > 0
-      ? [{ key: 'mgmt', label: 'Growth caused by management', value: -g.mgmt }]
-      : []
-    : [
-        ...(g.mgmt > 0 ? [{ key: 'mgmt', label: 'Growth caused by management', value: -g.mgmt }] : []),
-        ...(g.legacy > 0 ? [{ key: 'legacy', label: 'Regrowth from past harvest', value: -g.legacy }] : []),
-        ...(g.ambient > 0 ? [{ key: 'ambient', label: 'Ambient growth (CO₂, N, climate)', value: -g.ambient }] : []),
-        ...(g.leased > 0 ? [{ key: 'leased', label: 'Growth on leased forest', value: -g.leased }] : []),
-      ];
-  if (opt.oneClaimant && c.scope === 'scope3' && c.claimants > 1) {
-    removals = removals.map((s) => ({ ...s, label: `${s.label}, 1/${c.claimants} share`, value: s.value / c.claimants }));
-    notes.push(`Scope 3 removals are shared among ${c.claimants} claimants; this company reports its 1/${c.claimants}.`);
+  // The hybrid we propose. The land inventory is MLP's stock change, since
+  // that is what can be measured and what ISO 13391 already requires, but
+  // it is reported by component (conversion, land management, harvest,
+  // removals) with no netting, so removals cannot hide emissions. Land
+  // removals never leave the land: they do not attach to wood, do not
+  // enter a buyer's scope 3, and do not offset the owner's non-forest
+  // emissions; durable storage is what balances fossil CO₂. Wood leaves
+  // the forest carrying an ABA-derived harvest emission (carbon removed,
+  // less the century-stored share and the regrowth the harvest causes),
+  // so a buyer sees conversion and land-management emissions plus that
+  // factor, never a sink. Removals are the company's own component with
+  // a benchmark of their own; claims are alignment claims only.
+  const factor = Math.max(g.harvest - g.stored - g.mgmt, 0);
+  if (c.scope === 'scope1') {
+    const emissions: Segment[] = [...otherLand(c), ...(g.harvest > 0 ? [{ key: 'forest', label: 'Harvest, at the time of harvest', value: g.harvest }] : [])];
+    const removals: Segment[] = [
+      ...(g.mgmt > 0 ? [{ key: 'mgmt', label: 'Growth caused by management', value: -g.mgmt }] : []),
+      ...(g.legacy > 0 ? [{ key: 'legacy', label: 'Regrowth from past harvest', value: -g.legacy }] : []),
+      ...(g.ambient > 0 ? [{ key: 'ambient', label: 'Ambient growth (CO₂, N, climate)', value: -g.ambient }] : []),
+      ...(g.leased > 0 ? [{ key: 'leased', label: 'Growth on leased forest', value: -g.leased }] : []),
+    ];
+    const info: Segment[] = g.stored > 0 ? [{ key: 'hwp', label: 'Product carbon storage', value: -g.stored }] : [];
+    notes.push('Removals are reported as their own component against a regional benchmark; they net neither land emissions nor fossil.');
+    if (g.harvest > 0) notes.push(`Wood leaves the forest carrying ${fmt(factor)} Mt of harvest emission (ABA-derived), the only forest term a buyer sees.`);
+    return finish(c, rule, emissions, removals, info, false, false, 'none', g.wood, notes, factor);
   }
-  const background = g.ambient + g.legacy + g.leased;
-  const info: Segment[] = [
-    ...(opt.attributableOnly && background > 0 ? [{ key: 'background', label: 'Background stock change, disclosed not claimed', value: -background }] : []),
-    ...(g.stored > 0 ? [{ key: 'hwp', label: 'Product carbon storage', value: -g.stored }] : []),
-  ];
-  if (opt.separateLedgers) notes.push('Emissions and removals are reported as two totals; the inventory has no net line.');
-  return finish(c, rule, emissions, removals, info, !opt.separateLedgers, !opt.likeForLike, opt.likeForLike ? 'land' : 'all', g.wood, notes);
+  const emissions: Segment[] = [...otherLand(c), ...(factor > 0 ? [{ key: 'forest', label: 'Harvest emission carried by the wood (ABA-derived factor)', value: factor }] : [])];
+  notes.push('No land removals pass downstream: wood enters scope 3 at conversion and land-management emissions plus the harvest factor.');
+  return finish(c, rule, emissions, [], [], false, false, 'none', g.wood, notes, factor);
 }
 
 /* ---------------- what the rule rewards ---------------- */
@@ -344,8 +334,8 @@ export function actionsFor(c: Company): Action[] {
 }
 
 /** Change in the company's net-zero position, Mt CO₂e/yr. Negative means the rule rewards the action. */
-export function effect(c: Company, rule: RuleId, a: Action, opt: ProposedOptions): number {
-  return ledger(a.apply(c), rule, opt).position - ledger(c, rule, opt).position;
+export function effect(c: Company, rule: RuleId, a: Action): number {
+  return ledger(a.apply(c), rule).position - ledger(c, rule).position;
 }
 
 /* ---------------- scenarios ----------------

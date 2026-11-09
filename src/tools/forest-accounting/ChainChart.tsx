@@ -133,7 +133,7 @@ function crossings(c: Company, L: Ledger): Crossing[] {
   }
   if (grossRemovals <= 0.05) return [{ label: 'removals', state: 'none', text: `${short}: no uptake to carry.` }];
   if (L.netsFossil) return [{ label: 'removals offset fossil', state: 'passes', text: `${short}: ${fmt(r)} Mt of removals offset the company's fossil emissions.` }];
-  return [{ label: 'removals offset fossil', state: 'blocked', text: `${short}: removals ${r > 0.05 ? 'net land emissions only' : 'are not counted'}; none reach fossil emissions.` }];
+  return [{ label: 'removals offset fossil', state: 'blocked', text: `${short}: removals ${r <= 0.05 ? 'are not counted' : L.netsLand ? 'net land emissions only' : 'are their own component and net nothing'}; none reach fossil emissions.` }];
 }
 
 const mono: React.CSSProperties = { fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-3)' };
@@ -231,7 +231,7 @@ export default function ChainChart({ company: c, ledgers }: { company: Company; 
           return [
             <div key={`${L.rule}-l`} title={RULES[L.rule].name} style={{ gridRow: row, gridColumn: 1, height: ROW, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderTop: '1px solid var(--rule)' }}>
               <span style={{ font: '600 12.5px var(--font-sans, Inter, system-ui)', color: 'var(--ink)' }}>{short}</span>
-              <span style={{ fontSize: 10.5, color: 'var(--ink-4)', lineHeight: 1.2 }}>{L.netsFossil ? 'nets everything' : L.netsLand ? 'nets within land' : 'two ledgers'}</span>
+              <span style={{ fontSize: 10.5, color: 'var(--ink-4)', lineHeight: 1.2 }}>{L.netsFossil ? 'nets everything' : L.netsLand ? 'nets within land' : 'no netting'}</span>
             </div>,
             ...r.cells.map((k, i) => {
               const top = k.info ? 6 : 12;

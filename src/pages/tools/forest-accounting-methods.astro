@@ -19,56 +19,56 @@ const rows: Array<{ q: string; mlp: Cell; plus: Cell; aba: Cell; ours: Cell }> =
     mlp: 'All carbon leaving the forest, in the year of harvest (stock change).',
     plus: 'Same. Product carbon storage is a separate category, not netted.',
     aba: 'Pool by pool as it decays; the share still in products after 100 years is not emitted.',
-    ours: 'As MLP; storage reported as its own ledger.',
+    ours: 'On the land, as MLP. On the wood, an ABA-derived factor: carbon removed less the century-stored share and the regrowth the harvest causes.',
   },
   {
     q: 'Ambient growth (CO₂, nitrogen, climate)',
     mlp: 'A removal in the scopes.',
     plus: 'A removal in the scopes.',
     aba: 'Baseline. Not a removal.',
-    ours: 'Disclosed as background stock change, not claimed.',
+    ours: 'Reported in the land\'s removals component; never leaves the land.',
   },
   {
     q: 'Regrowth from harvest before the base year',
     mlp: 'A removal in the scopes.',
     plus: 'A removal in the scopes.',
     aba: 'Baseline. Not a removal.',
-    ours: 'Disclosed, not claimed.',
+    ours: 'Reported in the removals component; never leaves the land.',
   },
   {
     q: 'Growth caused by current management',
     mlp: 'A removal (not separated from the rest).',
     plus: 'A removal; also the basis of the forest impact statement, outside the inventory.',
     aba: 'The only removal: observed growth minus a no-activity counterfactual.',
-    ours: 'The only claimed removal.',
+    ours: 'In the removals component on the land; netted into the harvest factor on the wood.',
   },
   {
     q: 'Leased, already growing forest',
     mlp: 'Its growth is a removal.',
     plus: 'Scope 1: a removal if managed. Scope 3: excluded as non-productive land.',
     aba: 'Nothing: no activity, no anthropogenic removal.',
-    ours: 'Background, disclosed not claimed.',
+    ours: 'Its growth is reported in the removals component; it offsets nothing.',
   },
   {
     q: 'Scope 3 wood with no traceability',
     mlp: 'National or global land-carbon factor; a sink almost everywhere.',
     plus: 'Emissions reported; no removals without sourcing-region traceability and safeguards.',
     aba: 'Activity factor per tonne of wood; works for any traceability.',
-    ours: 'As ABA; a shared removal is divided among its claimants.',
+    ours: 'Conversion and land-management emissions plus the harvest factor; no removals, whatever the traceability.',
   },
   {
     q: 'Netting',
     mlp: 'Everything nets, fossil included (as the pilots reported).',
     plus: 'Forest removals net against land emissions, including agriculture and conversion, but may not compensate fossil emissions.',
     aba: 'Anthropogenic removals net against emissions in the scopes; not against fossil, per the LSRS.',
-    ours: 'Two ledgers, no net line; fossil CO₂ balanced only by durable storage.',
+    ours: 'None across components: removals net neither land emissions nor fossil. Fossil CO₂ is balanced only by durable storage.',
   },
   {
     q: 'Reported outside the scopes',
     mlp: 'Product carbon storage.',
     plus: 'Forest impact statement; product carbon storage.',
     aba: 'Carbon stock change on owned land.',
-    ours: 'Background stock change; product carbon storage.',
+    ours: 'Product carbon storage.',
   },
 ];
 
@@ -95,7 +95,7 @@ const inputs = [
     <p class="m-0 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">Methods</p>
     <h1 class="font-serif text-ink" style="font-size: 34px; line-height: 1.12; letter-spacing: -0.01em; margin: 6px 0 12px;">Forest carbon accounting</h1>
     <p class="text-ink-2" style="font-size: 16px; line-height: 1.6; margin: 0 0 8px;">
-      The GHG Protocol published its Land Sector and Removals Standard in 2026 without forest carbon, because its expert group could not agree between two rules: a managed land proxy that counts all carbon flux on managed forest land as the company's, and activity-based accounting that counts only the difference the company's activity made. <a href="/tools/forest-accounting" class="text-ink underline">The tool</a> runs one piece of land, seen by its owner or by a downstream buyer, through both, through the safeguarded MLP+ version submitted in May 2025, and through the rule we propose, so the consequences of each choice can be seen on the same forest.
+      The GHG Protocol published its Land Sector and Removals Standard in 2026 without forest carbon, because its expert group could not agree between two rules: a managed land proxy that counts all carbon flux on managed forest land as the company's, and activity-based accounting that counts only the difference the company's activity made. <a href="/tools/forest-accounting" class="text-ink underline">The tool</a> runs one piece of land, seen by its owner or by a downstream buyer, through both, through the safeguarded MLP+ version submitted in May 2025, and through the hybrid we propose, so the consequences of each choice can be seen on the same forest.
     </p>
 
     <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">The rules, side by side</h2>
@@ -107,7 +107,7 @@ const inputs = [
             <th class="py-2 pr-3 font-medium">MLP, as piloted</th>
             <th class="py-2 pr-3 font-medium">MLP+</th>
             <th class="py-2 pr-3 font-medium">ABA</th>
-            <th class="py-2 font-medium">Proposal (ours)</th>
+            <th class="py-2 font-medium">Hybrid (ours)</th>
           </tr>
         </thead>
         <tbody>
@@ -124,7 +124,7 @@ const inputs = [
       </table>
     </div>
     <p class="font-serif italic text-ink-3" style="font-size: 13.5px; line-height: 1.5; margin: 10px 0 0;">
-      MLP as piloted follows the 2022 draft guidance and what the 2024 pilot companies reported. MLP+ follows the May 2025 submission. ABA follows the proposal and its explanatory memo. Our proposal amounts to ABA's removals in a two-ledger presentation with nothing netted, passive uptake disclosed but not claimed, and fossil CO₂ balanced only by durable storage.
+      MLP as piloted follows the 2022 draft guidance and what the 2024 pilot companies reported. MLP+ follows the May 2025 submission. ABA follows the proposal and its explanatory memo. The hybrid we propose keeps MLP's stock change on the land, reported by component with nothing netted, lets no land removal attach to wood or offset non-forest emissions, and attaches an ABA-derived harvest emission to wood leaving the forest.
     </p>
 
     <h2 class="font-serif text-ink" style="font-size: 23px; line-height: 1.25; margin: 36px 0 10px;">The land model</h2>

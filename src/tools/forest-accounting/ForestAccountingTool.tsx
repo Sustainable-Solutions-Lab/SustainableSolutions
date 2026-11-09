@@ -16,7 +16,6 @@ import ChainChart from './ChainChart';
 import {
   actionsFor,
   COMPANIES,
-  DEFAULT_PROPOSED,
   RULES,
   RULE_ORDER,
   SLIDERS,
@@ -35,7 +34,7 @@ const RULE_LINE: Record<string, string> = {
   mlp: 'All carbon flux on managed land is the company’s, passive uptake included; everything nets to one number, fossil too.',
   mlpPlus: 'Same inventory, but scope 3 removals need sourcing-region traceability and forest removals may not compensate fossil emissions.',
   aba: 'Emissions as pools release carbon; removals only where management caused growth above a no-activity counterfactual; stock change disclosed outside the scopes.',
-  proposed: 'Removals only where the company caused them, passive uptake disclosed not claimed; emissions and removals as two totals; fossil CO₂ balanced only by durable storage; one claimant per tonne.',
+  proposed: 'MLP stock change stays on the land, reported by component with nothing netted; land removals never attach to wood, enter a buyer’s scope 3 or offset fossil; wood carries an ABA-derived harvest emission.',
 };
 
 const BASE = '/tools/forest-accounting';
@@ -144,20 +143,19 @@ export default function ForestAccountingTool() {
   const [presetId, setPresetId] = useState(COMPANIES[0].id);
   const [c, setC] = useState<Company>(COMPANIES[0]);
   const [methods, setMethods] = useState(false);
-  const opt = DEFAULT_PROPOSED;
 
   const scenario = COMPANIES.find((p) => p.id === presetId) ?? COMPANIES[0];
   const preset = withRole(scenario, c.scope);
   const edited = JSON.stringify(c) !== JSON.stringify(preset);
   const set = <K extends keyof Company>(k: K, v: Company[K]) => setC((p) => ({ ...p, [k]: v }));
 
-  const ledgers = useMemo(() => RULE_ORDER.map((r) => ledger(c, r, opt)), [c, opt]);
+  const ledgers = useMemo(() => RULE_ORDER.map((r) => ledger(c, r)), [c]);
   const shown = ledgers.map((L) => L.rule);
 
   const actions = actionsFor(c);
   const reading = (a: (typeof actions)[number]) => {
-    const rewards = shown.filter((r) => effect(c, r, a, opt) < -0.05).map((r) => RULES[r].short);
-    const penal = shown.filter((r) => effect(c, r, a, opt) > 0.05).map((r) => RULES[r].short);
+    const rewards = shown.filter((r) => effect(c, r, a) < -0.05).map((r) => RULES[r].short);
+    const penal = shown.filter((r) => effect(c, r, a) > 0.05).map((r) => RULES[r].short);
     if (!rewards.length && !penal.length) return null;
     const join = (xs: string[]) => xs.length <= 1 ? xs.join('') : xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1];
     return `${a.label.replace(/ \(.*\)$/, '')}: ${rewards.length ? `rewarded under ${join(rewards)}` : ''}${rewards.length && penal.length ? '; ' : ''}${penal.length ? `penalised under ${join(penal)}` : ''}.`;
@@ -277,7 +275,7 @@ export default function ForestAccountingTool() {
                 {actions.map((a) => (
                   <tr key={a.id}>
                     <td style={{ ...cell, color: 'var(--ink)' }}>{a.label}</td>
-                    {shown.map((r) => <td key={r} style={num}><Delta v={effect(c, r, a, opt)} /></td>)}
+                    {shown.map((r) => <td key={r} style={num}><Delta v={effect(c, r, a)} /></td>)}
                   </tr>
                 ))}
               </tbody>

@@ -156,15 +156,12 @@ export default function ForestAccountingTool() {
 
   const guardOn = [opt.attributableOnly && 'attributable only', opt.separateLedgers && 'separate ledgers', opt.likeForLike && 'like for like', opt.oneClaimant && 'one claimant'].filter(Boolean) as string[];
   const digest = [
-    c.area > 0
-      ? `${fmt(c.area)} Mha of forest growing ${fmt(c.ambient)} ambient, ${fmt(c.legacy)} legacy and ${fmt(c.mgmt)} managed t/ha/yr, harvested at ${fmt(c.harvest)}`
-      : `no forest of its own`,
+    c.area > 0 ? `${fmt(c.area)} Mha forest, harvest ${fmt(c.harvest)} t/ha` : 'no forest of its own',
     `fossil ${fmt(c.fossil)} Mt/yr`,
     c.ag > 0 ? `agricultural ${fmt(c.ag)}` : '',
-    c.luc > 0 ? `land-use change ${fmt(c.luc)}` : '',
+    c.luc > 0 ? `conversion ${fmt(c.luc)}` : '',
     c.leased > 0 ? `${fmt(c.leased)} Mha leased` : '',
-    c.cdr > 0 ? `${fmt(c.cdr)} Mt of durable removals at $${c.cdrPrice}/t` : `durable removals at $${c.cdrPrice}/t`,
-    c.scope === 'scope3' ? `${c.claimants} claimant${c.claimants === 1 ? '' : 's'}` : '',
+    c.cdr > 0 ? `${fmt(c.cdr)} Mt durable removals` : '',
   ].filter(Boolean).join(' · ');
   const sliders = (g: 'forest' | 'other' | 'levers') =>
     SLIDERS.filter((s) => s.group === g && (s.key !== 'claimants' || c.scope === 'scope3')).map((s) => (
@@ -182,14 +179,14 @@ export default function ForestAccountingTool() {
   return (
     <div className="fa-tool" style={{ height: '100%', position: 'relative', overflowY: 'auto', background: 'var(--paper)' }}>
       {methods && <Methods onClose={() => setMethods(false)} />}
-      <div style={{ maxWidth: 880, margin: '0 auto', padding: 'clamp(16px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div style={{ maxWidth: 880, margin: '0 auto', padding: 'clamp(16px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <p style={{ ...mono11, margin: 0 }}>Interactive model · Forest carbon · {methodsBtn('methods')}</p>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(24px, 3.4vw, 32px)', fontWeight: 600, lineHeight: 1.15, letterSpacing: '-0.01em', margin: '4px 0 6px', color: 'var(--ink)' }}>
             The same forest, four accounting rules
           </h2>
-          <p style={{ margin: 0, fontSize: 14.5, color: 'var(--ink-2)', maxWidth: '72ch', lineHeight: 1.5 }}>
-            A company's forest changes its carbon stock for four reasons: growth that rising CO₂ and a warmer climate cause everywhere, regrowth from past harvest, growth the company's own management adds, and harvest. The rules before the GHG Protocol agree on the physics and differ on which growth is the company's, what nets against what, and what is disclosed rather than claimed. Pick a company and compare what each rule puts in its inventory, what each rewards, and what each lets it claim.
+          <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-2)', maxWidth: '72ch', lineHeight: 1.45 }}>
+            One stylised company, the rules before the GHG Protocol side by side: what each puts in its inventory, what each rewards, and what each lets it claim.
           </p>
         </div>
 
@@ -212,20 +209,18 @@ export default function ForestAccountingTool() {
           <RuleChips rules={rules} setRules={setRules} />
         </div>
 
-        <div>
-          <p style={{ ...mono11, margin: 0 }}>{c.scope === 'scope1' ? 'Scope 1 · owned or controlled forest' : `Scope 3 · ${TRACEABILITY_LABEL[c.traceability].toLowerCase()}`}</p>
-          <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: 23, fontWeight: 600, lineHeight: 1.2, margin: '4px 0 6px', color: 'var(--ink)' }}>
-            {preset.name}{edited ? ', edited' : ''}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: -8 }}>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: 'var(--ink-3)' }}>
+            {preset.blurb}{edited ? ' Edited.' : ''}
             {edited && (
-              <button type="button" onClick={() => setC(preset)} style={{ marginLeft: 12, verticalAlign: 'middle', font: '11px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--cardinal)', background: 'none', border: 0, padding: 0, cursor: 'pointer' }}>
-                Reset to preset
+              <button type="button" onClick={() => setC(preset)} style={{ marginLeft: 8, font: '11px var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--cardinal)', background: 'none', border: 0, padding: 0, cursor: 'pointer' }}>
+                Reset
               </button>
             )}
-          </h3>
-          <p style={{ margin: '0 0 12px', fontSize: 14.5, lineHeight: 1.5, color: 'var(--ink-2)', maxWidth: '72ch' }}>{preset.blurb}</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 8, alignItems: 'start' }}>
             {rules.includes('proposed') && (
-              <Group title="Guardrail switches" digest={`${guardOn.length} of 4 on${guardOn.length ? `: ${guardOn.join(', ')}` : ''}`}>
+              <Group title="Guardrail switches" digest={`${guardOn.length} of 4 on`}>
                 <div className="fa-cols" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px 24px' }}>
                   <Check checked={opt.attributableOnly} onChange={(v) => setOpt({ ...opt, attributableOnly: v })} label="Attributable removals only" sub="Count growth the company caused; disclose the background sink, don't claim it." />
                   <Check checked={opt.separateLedgers} onChange={(v) => setOpt({ ...opt, separateLedgers: v })} label="Separate ledgers" sub="Report emissions and removals as two totals; no net line." />
@@ -249,10 +244,10 @@ export default function ForestAccountingTool() {
 
         <section style={sectionRule}>
           <p style={{ ...mono11, margin: '0 0 4px' }}>Figure 1</p>
-          <h3 style={{ ...figTitle, marginBottom: 12 }}>Where the carbon moves, and what each rule counts</h3>
+          <h3 style={{ ...figTitle, marginBottom: 10 }}>Where the carbon moves, and what each rule counts</h3>
           <ChainChart company={c} ledgers={ledgers} />
           <p style={{ ...caption, marginTop: 10 }}>
-            Stages in supply chain order under the scope they fall in; one row per rule. Emissions extend right of a stage's zero line and removals left, Mt CO₂e per year; a dashed outline is disclosed outside the scopes. Bars share a colour where the rule nets them together, so a row of one colour nets to one number. The arrow at the scope border marks removals crossing it. Every rule sees the same forest; they differ in which growth counts as the company's, what nets against what, and what is disclosed rather than claimed.
+            Emissions right of a stage's zero line, removals left, Mt CO₂e per year; dashed is disclosed outside the scopes. One colour per netting pool, so a one-colour row nets to one number. The arrow marks removals crossing the scope border.
           </p>
           {ledgers.some((L) => L.notes.length) && (
             <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 12.5, lineHeight: 1.5, color: 'var(--ink-3)' }}>
@@ -265,7 +260,7 @@ export default function ForestAccountingTool() {
           <p style={{ ...mono11, margin: '0 0 4px' }}>Figure 2</p>
           <h3 style={figTitle}>What each rule rewards</h3>
           <p style={{ ...caption, margin: '4px 0 10px' }}>
-            Change in the company's net-zero position, Mt CO₂e per year, if it took the action. Down means the rule rewards it; the same move can be rewarded under one rule and penalised under another.
+            Change in what the company has left to balance, Mt CO₂e per year, if it took the action. Down means the rule rewards it.
           </p>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 420 }}>
@@ -294,7 +289,7 @@ export default function ForestAccountingTool() {
           <p style={{ ...mono11, margin: '0 0 4px' }}>Figure 3</p>
           <h3 style={figTitle}>What each rule lets the company claim</h3>
           <p style={{ ...caption, margin: '4px 0 10px' }}>
-            Forest removals that stand in for durable removals are the ones the rule lets net against emissions the company would otherwise have to cut or balance with storage.
+            Forest removals standing in for durable ones are those the rule lets net against emissions the company would otherwise cut or store.
           </p>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 420 }}>

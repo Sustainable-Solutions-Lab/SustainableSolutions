@@ -1,0 +1,23 @@
+---
+// COIN_equality interactive model (Papargyri & Caldeira). The page itself is a single
+// self-contained HTML file built in the coin-equality repository (interactive/, `npm run build`)
+// and copied to public/tools/coin-equality/app.html; this route frames it like the other tools.
+// Unlisted (noindex, no Tools card) until a Tools-sheet row says otherwise.
+import ToolFrame from '../../layouts/ToolFrame.astro';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+const tool = (tools as Tool[]).find((t) => t.slug === 'coin-equality') ?? null;
+const title = tool?.title ?? 'Accounting for income inequality favors stronger climate policy';
+---
+<ToolFrame
+  title={title}
+  description={tool?.summary ??
+    'Who suffers climate damage and who pays for abatement: see how they change the social cost of carbon and warming.'}
+  noindex={tool?.unlisted ?? true}
+>
+  <iframe
+    src="/tools/coin-equality/app.html"
+    title={title}
+    style="border: 0; display: block;"
+  ></iframe>
+</ToolFrame>

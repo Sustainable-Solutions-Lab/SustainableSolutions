@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SSL Design Tokens",
+  "description": "Schema for Sustainable Solutions Lab design token files",
+  "type": "object",
+  "required": ["status", "verifiedDate", "fonts", "typeScale", "modes", "brand", "spectral", "layout"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["VERIFIED_PRODUCTION_EXTRACT", "PROPOSED_NOT_PRODUCTION_EXTRACT", "MIXED"],
+      "description": "Overall verification status of the token file"
+    },
+    "verifiedDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the tokens were last verified against the live site"
+    },
+    "verifiedMethod": {
+      "type": "string",
+      "description": "How verification was performed"
+    },
+    "framework": {
+      "type": "string",
+      "description": "CSS framework used by the site"
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "format": "uri" }
+    },
+    "fonts": {
+      "type": "object",
+      "required": ["sans", "serif"],
+      "additionalProperties": {
+        "type": "object",
+        "required": ["value", "status"],
+        "properties": {
+          "value": { "type": "string" },
+          "status": { "type": "string", "enum": ["VERIFIED", "INFERRED", "PROPOSED"] },
+          "cssVar": { "type": "string" },
+          "usage": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "typeScale": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["size", "lineHeight", "status"],
+        "properties": {
+          "size": { "type": "string" },
+          "lineHeight": { "type": "string" },
+          "status": { "type": "string", "enum": ["VERIFIED", "INFERRED", "PROPOSED"] }
+        }
+      }
+    },
+    "fontWeights": {
+      "type": "object",
+      "additionalProperties": { "type": "integer" }
+    },
+    "modes": {
+      "type": "object",
+      "required": ["light", "dark"],
+      "additionalProperties": {
+        "type": "object",
+        "required": ["paper", "ink", "status"],
+        "properties": {
+          "status": { "type": "string", "enum": ["VERIFIED", "INFERRED", "PROPOSED"] }
+        },
+        "additionalProperties": { "type": "string" }
+      }
+    },
+    "brand": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": { "type": "string" }
+    },
+    "spectral": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": { "type": "string" }
+    },
+    "layout": {
+      "type": "object",
+      "required": ["containerContentMax", "status"],
+      "properties": {
+        "containerContentMax": { "type": "string" },
+        "headerHeight": { "type": "string" },
+        "spacingBase": { "type": "string" },
+        "status": { "type": "string", "enum": ["VERIFIED", "INFERRED", "PROPOSED"] }
+      }
+    }
+  }
+}

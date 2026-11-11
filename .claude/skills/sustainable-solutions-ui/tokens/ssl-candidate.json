@@ -1,0 +1,202 @@
+{
+  "$schema": "./tokens.schema.json",
+  "status": "SOURCE_VERIFIED",
+  "verifiedDate": "2026-11-09",
+  "verifiedMethod": "Source repository inspection (src/styles/colors_and_type.css + src/styles/global.css) + browser computed-style cross-check",
+  "sourceRepo": "Sustainable-Solutions-Lab/SustainableSolutions",
+  "framework": "Tailwind CSS v4 + Astro",
+  "sources": {
+    "productionSite": "https://sustainablesolutions.stanford.edu/",
+    "sourceCSS": "src/styles/colors_and_type.css",
+    "tailwindBridge": "src/styles/global.css",
+    "fontLoading": "src/layouts/BaseLayout.astro (Google Fonts link)",
+    "universityPrimary": "https://identity.stanford.edu/design-elements/color/primary-colors/",
+    "universityDigital": "https://identity.stanford.edu/design-elements/color/web/",
+    "universityFonts": "https://identity.stanford.edu/design-elements/typography/"
+  },
+  "fonts": {
+    "sans": {
+      "value": "\"Inter\", -apple-system, BlinkMacSystemFont, \"Helvetica Neue\", Arial, sans-serif",
+      "status": "SOURCE-VERIFIED",
+      "cssVar": "--font-sans",
+      "loading": "Google Fonts <link> in BaseLayout.astro (weights 400, 500, 600, 700)",
+      "usage": "Body text, UI labels, navigation, controls"
+    },
+    "serif": {
+      "value": "\"Tiempos Headline\", \"Source Serif 4\", \"Source Serif Pro\", Georgia, \"Times New Roman\", serif",
+      "status": "SOURCE-VERIFIED",
+      "cssVar": "--font-serif",
+      "loading": "Source Serif 4 loaded via Google Fonts. Tiempos Headline @font-face is COMMENTED OUT — not licensed. Actual rendered font is Source Serif 4.",
+      "usage": "Headings (h1–h3), display text, tool titles, lede, captions, blockquotes"
+    },
+    "mono": {
+      "value": "\"Inter\", -apple-system, BlinkMacSystemFont, \"Helvetica Neue\", Arial, sans-serif",
+      "status": "SOURCE-VERIFIED",
+      "cssVar": "--font-mono",
+      "note": "Uses Inter (not a monospace typeface); used for eyebrow labels with uppercase + tracking + tabular-nums"
+    },
+    "code": {
+      "value": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+      "status": "SOURCE-VERIFIED",
+      "cssVar": "--font-code",
+      "usage": "Code blocks, <code>, <kbd>, <pre>"
+    }
+  },
+  "typeScale": {
+    "xs":   { "size": "11px", "cssVar": "--t-xs",   "tailwind": "--text-xs",   "usage": "mono labels, captions",  "status": "SOURCE-VERIFIED" },
+    "sm":   { "size": "13px", "cssVar": "--t-sm",    "tailwind": "--text-sm",   "usage": "metadata, small body",   "status": "SOURCE-VERIFIED" },
+    "base": { "size": "16px", "cssVar": "--t-base",  "tailwind": "--text-base", "usage": "body",                   "status": "SOURCE-VERIFIED" },
+    "md":   { "size": "19px", "cssVar": "--t-md",    "tailwind": "--text-md",   "usage": "large body, lede",       "status": "SOURCE-VERIFIED" },
+    "lg":   { "size": "23px", "cssVar": "--t-lg",    "tailwind": "--text-lg",   "usage": "h4",                     "status": "SOURCE-VERIFIED" },
+    "xl":   { "size": "28px", "cssVar": "--t-xl",    "tailwind": "--text-xl",   "usage": "h3",                     "status": "SOURCE-VERIFIED" },
+    "2xl":  { "size": "34px", "cssVar": "--t-2xl",   "tailwind": "--text-2xl",  "usage": "h2",                     "status": "SOURCE-VERIFIED" },
+    "3xl":  { "size": "41px", "cssVar": "--t-3xl",   "tailwind": "--text-3xl",  "usage": "h1",                     "status": "SOURCE-VERIFIED" },
+    "4xl":  { "size": "56px", "cssVar": "--t-4xl",   "tailwind": "--text-4xl",  "usage": "display",                "status": "SOURCE-VERIFIED" },
+    "5xl":  { "size": "72px", "cssVar": "--t-5xl",   "tailwind": "--text-5xl",  "usage": "hero",                   "status": "SOURCE-VERIFIED" }
+  },
+  "lineHeights": {
+    "tight":  { "value": 1.12, "cssVar": "--lh-tight",  "status": "SOURCE-VERIFIED" },
+    "snug":   { "value": 1.28, "cssVar": "--lh-snug",   "status": "SOURCE-VERIFIED" },
+    "normal": { "value": 1.5,  "cssVar": "--lh-normal", "status": "SOURCE-VERIFIED" },
+    "loose":  { "value": 1.7,  "cssVar": "--lh-loose",  "status": "SOURCE-VERIFIED" }
+  },
+  "letterSpacing": {
+    "tight":   { "value": "-0.02em", "cssVar": "--tr-tight",   "usage": "large display", "status": "SOURCE-VERIFIED" },
+    "normal":  { "value": "0",       "cssVar": "--tr-normal",  "status": "SOURCE-VERIFIED" },
+    "mono":    { "value": "0.04em",  "cssVar": "--tr-mono",    "usage": "mono caps",     "status": "SOURCE-VERIFIED" },
+    "eyebrow": { "value": "0.12em",  "cssVar": "--tr-eyebrow", "usage": "eyebrow labels","status": "SOURCE-VERIFIED" }
+  },
+  "fontWeights": {
+    "normal":   400,
+    "medium":   500,
+    "semibold": 600,
+    "bold":     700
+  },
+  "spacing": {
+    "base": "4px",
+    "scale": {
+      "1": "4px", "2": "8px", "3": "12px", "4": "16px", "5": "24px",
+      "6": "32px", "7": "48px", "8": "64px", "9": "96px", "10": "128px"
+    },
+    "status": "SOURCE-VERIFIED"
+  },
+  "radii": {
+    "sm": "2px",
+    "md": "4px",
+    "lg": "8px",
+    "status": "SOURCE-VERIFIED"
+  },
+  "modes": {
+    "light": {
+      "paper":        "#f8f8e8",
+      "paper-2":      "#f1f1df",
+      "paper-3":      "#e8e8d4",
+      "ink":          "#181838",
+      "ink-2":        "#3a3a5a",
+      "ink-3":        "#6b6b80",
+      "ink-4":        "#9a9aae",
+      "rule":         "rgba(24, 24, 56, 0.14)",
+      "rule-strong":  "rgba(24, 24, 56, 0.28)",
+      "highlight":    "rgba(120, 200, 216, 0.35)",
+      "cardinal":     "#8c1515",
+      "cardinal-bg":  "rgba(140, 21, 21, 0.06)",
+      "accent-brand": "#8c1515",
+      "accent-bg":    "rgba(140, 21, 21, 0.08)",
+      "risk-chip-bg": "rgba(24, 24, 56, 0.9)",
+      "status": "SOURCE-VERIFIED"
+    },
+    "dark": {
+      "paper":        "#0c0c1c",
+      "paper-2":      "#14142a",
+      "paper-3":      "#1c1c36",
+      "ink":          "#f8f8e8",
+      "ink-2":        "#c8c8d8",
+      "ink-3":        "#9a9ab0",
+      "ink-4":        "#686880",
+      "rule":         "rgba(248, 248, 232, 0.14)",
+      "rule-strong":  "rgba(248, 248, 232, 0.28)",
+      "highlight":    "rgba(120, 200, 216, 0.22)",
+      "cardinal":     "#e04545",
+      "cardinal-bg":  "rgba(224, 69, 69, 0.10)",
+      "accent-brand": "#e04545",
+      "accent-bg":    "rgba(224, 69, 69, 0.10)",
+      "risk-chip-bg": "transparent",
+      "status": "SOURCE-VERIFIED"
+    }
+  },
+  "brand": {
+    "navy":   "#181838",
+    "green":  "#48a848",
+    "teal":   "#78c8d8",
+    "orange": "#e87828",
+    "cream":  "#f8f8e8",
+    "status": "SOURCE-VERIFIED"
+  },
+  "spectral": {
+    "1":  "#9e0142",
+    "2":  "#d53e4f",
+    "3":  "#f46d43",
+    "4":  "#fdae61",
+    "5":  "#fee08b",
+    "6":  "#ffffbf",
+    "7":  "#e6f598",
+    "8":  "#abdda4",
+    "9":  "#66c2a5",
+    "10": "#3288bd",
+    "11": "#5e4fa2",
+    "status": "SOURCE-VERIFIED",
+    "note": "ColorBrewer Spectral diverging — the lab's signature data palette"
+  },
+  "systemDomainColors": {
+    "light": {
+      "energy-text":    "#c2440e",
+      "food-text":      "#2e7b3f",
+      "water-text":     "#1f5e8c",
+      "materials-text": "#5e4fa2",
+      "climate-text":   "#1f6b82",
+      "health-text":    "#9e0142"
+    },
+    "dark": {
+      "energy-text":    "var(--spectral-3)",
+      "food-text":      "var(--spectral-8)",
+      "water-text":     "var(--spectral-10)",
+      "materials-text": "var(--spectral-11)",
+      "climate-text":   "var(--brand-teal)",
+      "health-text":    "var(--spectral-2)"
+    },
+    "status": "SOURCE-VERIFIED"
+  },
+  "layout": {
+    "contentMax":  "1200px",
+    "proseMax":    "680px",
+    "gutter":      "24px",
+    "gutterMobile": "16px",
+    "headerHeight": "56px",
+    "toolFrame":    "calc(100dvh - 56px)",
+    "toolFrameFallback": "calc(100vh - 56px)",
+    "status": "SOURCE-VERIFIED",
+    "note": "Header is 56px from ToolFrame.astro; browser measured 57px (includes 1px border)"
+  },
+  "motion": {
+    "ease":       "cubic-bezier(0.2, 0, 0, 1)",
+    "durFast":    "120ms",
+    "durUI":      "200ms",
+    "durContent": "400ms",
+    "durPage":    "600ms",
+    "status": "SOURCE-VERIFIED"
+  },
+  "elevation": {
+    "shadowPop": "0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08)",
+    "shadowPopDark": "0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5)",
+    "status": "SOURCE-VERIFIED"
+  },
+  "chartMapStack": {
+    "charting": "D3 (d3-array, d3-contour, d3-geo, d3-hierarchy, d3-scale, d3-scale-chromatic, d3-selection, d3-shape)",
+    "mapping": "MapLibre GL JS",
+    "tiles": "PMTiles (protomaps)",
+    "geo": "Turf.js (@turf/area, @turf/bbox, @turf/boolean-point-in-polygon), TopoJSON, world-atlas",
+    "state": "Zustand",
+    "icons": "Lucide React",
+    "status": "SOURCE-VERIFIED"
+  }
+}

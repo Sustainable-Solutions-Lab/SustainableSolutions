@@ -1,0 +1,23 @@
+# TEMPLATE ONLY — replace bracketed values with verified content
+site:
+  canonicalRoot: https://sustainablesolutions.stanford.edu
+  taxonomy: [INTERACTIVE MODEL, INTERACTIVE MAP AND MODEL, INTERACTIVE MAP, OPEN DATA INITIATIVE]
+tool:
+  id: "[slug]"
+  path: "/tools/[slug]"
+  name: "[research-oriented tool name]"
+  type: "INTERACTIVE MAP"
+  description: "[one sentence]"
+  status: draft
+  contentReviewedAt: null
+  dataVersion: null
+  paperRef: null
+  datasetRefs: []
+  softwareRefs: []
+  figures: []
+  maps: []
+  mediaRefs: []
+  credits: []
+references: []
+assets: []
+# Validate: all referenced IDs resolve; DOI/rights fields are accurate; staging placeholders block production.

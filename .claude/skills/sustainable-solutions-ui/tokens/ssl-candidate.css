@@ -1,0 +1,250 @@
+/* Stanford Sustainable Solutions Lab — Design Tokens
+   ====================================================
+   SOURCE-VERIFIED from the project repository (2026-11-09).
+   Canonical source: src/styles/colors_and_type.css + src/styles/global.css
+
+   Status key:
+     SOURCE-VERIFIED — matches the repo source file exactly
+     INFERRED        — derived from verified values
+     PROPOSED        — design recommendation, not yet in production
+
+   The site uses Tailwind CSS v4 with Astro. These tokens mirror the
+   site's actual custom properties from colors_and_type.css. The Tailwind
+   @theme bridge in global.css maps --t-* to --text-* and creates
+   --color-* aliases for utility classes (bg-paper, text-ink-2, etc.).
+   ================================================================== */
+
+/* ── LIGHT MODE (default) ─────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+
+  /* — Fonts (SOURCE-VERIFIED) —
+     Google Fonts (Source Serif 4, Inter) loaded via <link> in BaseLayout.astro.
+     Tiempos Headline is first in the serif stack but its @font-face is
+     COMMENTED OUT — the lab has not licensed it yet. The actual rendered
+     serif is Source Serif 4 falling through the stack. */
+  --font-sans:  "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Tiempos Headline", "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --font-mono:  "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-code:  ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* — Type scale (SOURCE-VERIFIED, 1.20 minor-third, anchored 16px) —
+     Source CSS uses --t-* names; Tailwind @theme maps to --text-* */
+  --t-xs:   11px;   /* mono labels, captions */
+  --t-sm:   13px;   /* metadata, small body */
+  --t-base: 16px;   /* body */
+  --t-md:   19px;   /* large body, lede */
+  --t-lg:   23px;   /* h4 */
+  --t-xl:   28px;   /* h3 */
+  --t-2xl:  34px;   /* h2 */
+  --t-3xl:  41px;   /* h1 */
+  --t-4xl:  56px;   /* display */
+  --t-5xl:  72px;   /* hero */
+
+  /* — Line heights (SOURCE-VERIFIED) — */
+  --lh-tight:  1.12;
+  --lh-snug:   1.28;
+  --lh-normal: 1.5;
+  --lh-loose:  1.7;
+
+  /* — Letter spacing (SOURCE-VERIFIED) — */
+  --tr-tight:   -0.02em;  /* large display */
+  --tr-normal:  0;
+  --tr-mono:    0.04em;   /* mono caps */
+  --tr-eyebrow: 0.12em;   /* small-caps eyebrow */
+
+  /* — Font weights (SOURCE-VERIFIED) — */
+  --font-weight-normal:   400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+
+  /* — Spacing scale (SOURCE-VERIFIED, 4px base) — */
+  --s-1:   4px;
+  --s-2:   8px;
+  --s-3:   12px;
+  --s-4:   16px;
+  --s-5:   24px;
+  --s-6:   32px;
+  --s-7:   48px;
+  --s-8:   64px;
+  --s-9:   96px;
+  --s-10:  128px;
+
+  /* — Radii (SOURCE-VERIFIED) — */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+
+  /* — Paper / Ink primitives (SOURCE-VERIFIED) — */
+  --paper:   #f8f8e8;        /* cream canvas (from logo) */
+  --paper-2: #f1f1df;        /* recessed surface */
+  --paper-3: #e8e8d4;        /* alternate row */
+  --ink:     #181838;        /* navy ink (from logo crosshair) */
+  --ink-2:   #3a3a5a;        /* secondary text */
+  --ink-3:   #6b6b80;        /* tertiary / metadata */
+  --ink-4:   #9a9aae;        /* disabled / hint */
+
+  /* — Structural colors (SOURCE-VERIFIED) — */
+  --rule:        rgba(24, 24, 56, 0.14);
+  --rule-strong: rgba(24, 24, 56, 0.28);
+  --highlight:   rgba(120, 200, 216, 0.35);  /* teal highlight */
+  --risk-chip-bg: rgba(24, 24, 56, 0.9);     /* dark pill behind amber risk text */
+
+  /* — Brand palette (SOURCE-VERIFIED, sampled from lab logo) — */
+  --brand-navy:   #181838;
+  --brand-green:  #48a848;        /* lit hemisphere */
+  --brand-teal:   #78c8d8;        /* ocean band */
+  --brand-orange: #e87828;        /* accent planet */
+  --brand-cream:  #f8f8e8;        /* paper */
+
+  /* — Accent / Cardinal (SOURCE-VERIFIED) — */
+  --accent-brand: #8c1515;        /* primary accent (cardinal) */
+  --accent-bg:    rgba(140, 21, 21, 0.08);
+  --cardinal:     #8c1515;        /* alias retained for legacy refs */
+  --cardinal-bg:  rgba(140, 21, 21, 0.06);
+
+  /* — Spectral 11 data-viz palette (SOURCE-VERIFIED, ColorBrewer) — */
+  --spectral-1:  #9e0142;
+  --spectral-2:  #d53e4f;
+  --spectral-3:  #f46d43;
+  --spectral-4:  #fdae61;
+  --spectral-5:  #fee08b;
+  --spectral-6:  #ffffbf;
+  --spectral-7:  #e6f598;
+  --spectral-8:  #abdda4;
+  --spectral-9:  #66c2a5;
+  --spectral-10: #3288bd;
+  --spectral-11: #5e4fa2;
+
+  /* — Semantic aliases (SOURCE-VERIFIED) — */
+  --bg:        var(--paper);
+  --bg-alt:    var(--paper-2);
+  --fg:        var(--ink);
+  --fg-2:      var(--ink-2);
+  --fg-3:      var(--ink-3);
+  --link:      var(--ink);
+  --link-rule: var(--rule-strong);
+  --accent:    var(--accent-brand);
+  --focus:     var(--accent-brand);
+
+  /* — Spectral semantic aliases (SOURCE-VERIFIED) — */
+  --positive: var(--spectral-9);   /* green */
+  --negative: var(--spectral-2);   /* red */
+  --warn:     var(--spectral-3);   /* orange */
+  --info:     var(--spectral-10);  /* blue */
+
+  /* — Research domain text colors (SOURCE-VERIFIED) —
+     Dark enough for WCAG AA (4.5:1) against cream paper. */
+  --system-energy-text:    #c2440e;   /* 4.75:1 */
+  --system-food-text:      #2e7b3f;   /* 4.87:1 */
+  --system-water-text:     #1f5e8c;   /* 6.45:1 */
+  --system-materials-text: var(--spectral-11);  /* 6.28:1 */
+  --system-climate-text:   #1f6b82;   /* 5.62:1 */
+  --system-health-text:    var(--spectral-1);   /* 7.72:1 */
+  --mitigation-text:       var(--system-water-text);
+  --impacts-text:          var(--system-health-text);
+
+  /* — Dynamic theme accent colors (SOURCE-VERIFIED) — */
+  --theme-dyn-1: var(--spectral-11);  /* purple */
+  --theme-dyn-2: var(--spectral-1);   /* wine */
+  --theme-dyn-3: #b8702c;             /* burnt sienna (light mode) */
+  --theme-dyn-4: #4a8a4f;             /* forest green (light mode) */
+  --theme-dyn-5: #6e8a1f;             /* olive (light mode) */
+
+  /* — Layout (SOURCE-VERIFIED) — */
+  --content-max:   1200px;
+  --prose-max:     680px;
+  --gutter:        24px;
+  --gutter-mobile: 16px;
+
+  /* — Motion (SOURCE-VERIFIED) — */
+  --ease:        cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast:    120ms;
+  --dur-ui:      200ms;
+  --dur-content: 400ms;
+  --dur-page:    600ms;
+
+  /* — Elevation (SOURCE-VERIFIED) — */
+  --shadow-pop:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ── DARK MODE (CarbonPlan-deep) ─────────────────────────────────── */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* — Paper / Ink (SOURCE-VERIFIED) — */
+  --paper:   #0c0c1c;
+  --paper-2: #14142a;
+  --paper-3: #1c1c36;
+  --ink:     #f8f8e8;
+  --ink-2:   #c8c8d8;
+  --ink-3:   #9a9ab0;
+  --ink-4:   #686880;
+
+  /* — Structural (SOURCE-VERIFIED) — */
+  --rule:        rgba(248, 248, 232, 0.14);
+  --rule-strong: rgba(248, 248, 232, 0.28);
+  --highlight:   rgba(120, 200, 216, 0.22);
+  --risk-chip-bg: transparent;
+
+  /* — Accent / Cardinal dark (SOURCE-VERIFIED) — */
+  --accent-brand: #e04545;
+  --accent-bg:    rgba(224, 69, 69, 0.10);
+  --cardinal:     #e04545;
+  --cardinal-bg:  rgba(224, 69, 69, 0.10);
+
+  /* — Semantic aliases (SOURCE-VERIFIED) — */
+  --bg:        var(--paper);
+  --bg-alt:    var(--paper-2);
+  --fg:        var(--ink);
+  --link:      var(--ink);
+  --link-rule: var(--rule-strong);
+  --accent:    var(--accent-brand);
+  --focus:     var(--accent-brand);
+
+  /* — Dynamic theme palette (SOURCE-VERIFIED) — */
+  --theme-dyn-3: var(--spectral-4);   /* light orange */
+  --theme-dyn-4: var(--spectral-8);   /* light green */
+  --theme-dyn-5: var(--spectral-7);   /* yellow-green */
+
+  /* — Research domain dark (SOURCE-VERIFIED) — */
+  --system-energy-text:    var(--spectral-3);
+  --system-food-text:      var(--spectral-8);
+  --system-water-text:     var(--spectral-10);
+  --system-materials-text: var(--spectral-11);
+  --system-climate-text:   var(--brand-teal);
+  --system-health-text:    var(--spectral-2);
+  --mitigation-text:       var(--spectral-10);
+  --impacts-text:          var(--spectral-2);
+
+  /* — Elevation dark (SOURCE-VERIFIED) — */
+  --shadow-pop:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ── TAILWIND v4 BRIDGE ──────────────────────────────────────────────
+   These mirror src/styles/global.css @theme directives. The @theme inline
+   block maps CSS vars to Tailwind utility classes (bg-paper, text-ink-2,
+   border-rule, font-serif, etc.). The @theme (non-inline) block creates
+   static --text-* aliases from the --t-* scale and defines the spacing base.
+
+   In production, these live in global.css; reproduced here for reference. */
+
+/* @theme inline maps --color-paper: var(--paper) etc. (live references) */
+/* @theme maps --text-xs: 11px, --spacing: 4px, --radius-*: etc. (static) */
+
+/* ── REDUCED MOTION (SOURCE-VERIFIED) ─────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -81,6 +81,8 @@ button.b:focus-visible, .seg button:focus-visible, select:focus-visible { outlin
 .seg button { font: inherit; font-size: 12.5px; padding: 5px 10px; border: 0; background: var(--panel); color: var(--ink-2); cursor: pointer }
 .seg button[aria-pressed=true] { background: var(--accent); color: var(--panel); font-weight: 600 }
 select { font: inherit; font-size: 12.5px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink) }
+.units { display: grid; gap: 6px; font-size: 12px; color: var(--muted) }
+.units .seg { width: fit-content }
 .opts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center }
 .chart { position: relative; width: 100% }
 .chart svg { display: block; width: 100%; height: auto; overflow: visible }
@@ -165,6 +167,8 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
   </header>
   <div class="layout">
     <aside class="rail" aria-label="Assumptions">
+      <div class="units"><span>Show demand and clean build as</span>
+        <div class="seg" role="group" aria-label="Units"><button type="button" data-u="pct">Growth (%/yr)</button><button type="button" data-u="abs">TWh and GW per year</button></div></div>
       <div class="lever">
         <h2>Demand</h2>
         <div class="ctl big" id="c-top_demand"></div>
@@ -255,6 +259,7 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
           <div class="method inner">
             <p><b>Demand.</b> 2025 demand of 4,532 TWh (Ember) is split by end use. Data centers are about 246 TWh: LBNL's 2018 and 2023 estimates (76 and 176 TWh), carried forward at their 18%/yr pace. LBNL's 2028 range of 325 to 580 TWh implies 13 to 27%/yr. Transportation is about 28 TWh (EV charging plus rail), growing about 20%/yr. Industry is about 27% of demand, and buildings (homes and non-data-center commercial) are the rest. Together, buildings and industry grew about 0.7%/yr over 2019 to 2025. Data-center and transport growth slow after the first timing year and reach the buildings and industry rate by the second. The top-line slider adds the same amount to every end-use rate. It reads as the average growth of total demand from 2025 to 2035.</p>
             <p><b>Clean generation.</b> Solar and wind fleets grow by each year's additions, with each source on its own rate. In 2023 to 2025, the U.S. added an average of 33 GW/yr of solar and 6 GW/yr of wind. Over 2016 to 2025, solar additions grew 19%/yr and wind additions fell 3%/yr. Nuclear changes by a net GW/yr. Hydro, bioenergy, other renewables and imports share one growth rate (−0.7%/yr over 2015 to 2025). 2025 capacity factors turn GW into TWh. The top-line slider adds the same amount to the solar, wind and other-clean rates. It reads as the average growth of clean generation from 2025 to 2035.</p>
+            <p><b>Units and context.</b> The two top-line sliders and the map's axes can be read as growth rates or as amounts per year, both averaged from 2025 to the year shown: the increase in total demand (TWh/yr) and the solar and wind capacity built (GW/yr). For context, the U.S. built 39 GW/yr of solar and wind in 2023 to 2025 (Ember). Princeton's Net-Zero America (2021) high-electrification pathway builds about 55 to 60 GW/yr through the 2020s. Princeton's REPEAT project put the Inflation Reduction Act's incentives at about 64 GW/yr, before the 2025 budget law cut them. NREL's study of 100% clean electricity by 2035 (2022) needs 110 to 240 GW/yr by about 2030, an annual rate rather than an average. On demand, Grid Strategies (2025) reads utility forecasts as about 5.7%/yr growth in electricity use over five years, and EPRI (2026) puts data centers at 9 to 17% of U.S. electricity in 2030.</p>
             <p><b>Fossil.</b> Coal and gas supply whatever demand is left. When that is less than in 2025, both scale down together. When it is more, gas covers the increase: first the existing fleet runs harder, then new plants are built. Coal retires 9 GW/yr (2020 to 2025 average) and gas 3 GW/yr.</p>
             <p><b>Emissions and targets.</b> Generation times 2025 lifecycle intensity by source (Ember), against Ember's 2005 total of 2,439 Mt. The U.S. economy-wide NDC targets, 50 to 52% below 2005 by 2030 and 61 to 66% by 2035, are applied to the power sector one for one. That reading is lenient, because most pathways cut power faster than the rest of the economy. The 100% clean electricity goal for 2035 and net zero by 2050 are shown as zero. The U.S. has since withdrawn from the Paris Agreement, so these are benchmarks.</p>
             <p><b>Limits.</b> This is an annual energy balance with no hourly matching or storage, so it overstates how much fossil power solar displaces once solar's share is large. Coal and gas output does not respond to fuel prices.</p>
@@ -269,7 +274,7 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script>
-const D = {"base": {"Solar": 388.82, "Wind": 464.39, "Nuclear": 784.78, "Hydro": 241.7, "Bioenergy": 46.19, "Other renewables": 17.7, "Net imports": 12.352, "Coal": 737.15, "Gas": 1807.34, "Other fossil": 31.72, "Demand": 4532.142, "cap_solar": 211.61, "cap_wind": 158.83, "cap_nuc": 96.89, "cap_coal": 188.86, "cap_gas": 549.79, "cap_ofos": 32.51, "cf_solar": 0.22808758863750483, "cf_wind": 0.3403914028356592, "cf_nuc": 0.9249097459309064, "cf_coal": 0.44103534265720873, "cf_gas": 0.37656023288587975, "cf_ofos": 0.11043014840530789, "ei": {"Solar": 0.04799907412170156, "Wind": 0.008510088503197743, "Nuclear": 0.005414256224674431, "Hydro": 0.02400082747207282, "Bioenergy": 0.2300064949123187, "Other renewables": 0.038022598870056504, "Coal": 0.9498338194397341, "Gas": 0.5373017805172242, "Other fossil": 0.7000000000000001, "Net imports": 0.0}}, "params": {"dc0": 246.25910572669505, "transport0": 28.0, "buildings0": 3034.2045542733044, "industry0": 1223.67834, "g_dc": 0.18287762019416953, "g_transport": 0.2, "g_buildings": 0.008, "g_industry": 0.004, "fade_start": 2030.0, "fade_end": 2040.0, "solar_add0": 32.92333333333334, "wind_add0": 5.776666666666671, "g_solar": 0.1885896243805283, "g_wind": -0.03245150095017035, "build_growth_end": 2035.0, "nuclear_add_gw": 0.07800000000000011, "g_oclean": -0.006669699492123815, "cf_solar": 0.22808758863750483, "cf_wind": 0.3403914028356592, "coal_retire_gw": 8.995999999999999, "gas_retire_gw": 3.0, "other_fossil_retire_gw": 0.0, "gas_cf_max": 0.6}, "g_demand_total": 0.012869546324808967, "g_other_demand": 0.007109623731736736, "ref2005": 2438.706, "history": {"year": [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025], "emissions": [2438.7, 2409.8, 2479.2, 2428.9, 2226.1, 2348.4, 2251.1, 2152.9, 2163.6, 2168.7, 2062.2, 1975.9, 1900.8, 1943.8, 1827.4, 1664.7, 1760.2, 1759.3, 1671.4, 1685.3, 1737.4], "demand": [4059.8, 4065.4, 4173.8, 4140.4, 3973.9, 4139.9, 4126.1, 4087.9, 4113.5, 4149.2, 4150.7, 4154.1, 4108.6, 4246.0, 4197.4, 4090.5, 4192.9, 4328.1, 4272.8, 4404.8, 4532.1], "clean": [1159.8, 1186.8, 1185.6, 1216.1, 1248.5, 1257.4, 1337.2, 1308.9, 1367.3, 1397.2, 1420.3, 1497.1, 1568.5, 1584.7, 1609.2, 1658.6, 1680.5, 1770.9, 1758.5, 1852.3, 1955.9]}, "check": {"2030": 1642.72, "2035": 1287.86, "2050": 285.04}};
+const D = {"base": {"Solar": 388.82, "Wind": 464.39, "Nuclear": 784.78, "Hydro": 241.7, "Bioenergy": 46.19, "Other renewables": 17.7, "Net imports": 12.352, "Coal": 737.15, "Gas": 1807.34, "Other fossil": 31.72, "Demand": 4532.142, "cap_solar": 211.61, "cap_wind": 158.83, "cap_nuc": 96.89, "cap_coal": 188.86, "cap_gas": 549.79, "cap_ofos": 32.51, "cf_solar": 0.22808758863750483, "cf_wind": 0.3403914028356592, "cf_nuc": 0.9249097459309064, "cf_coal": 0.44103534265720873, "cf_gas": 0.37656023288587975, "cf_ofos": 0.11043014840530789, "ei": {"Solar": 0.04799907412170156, "Wind": 0.008510088503197743, "Nuclear": 0.005414256224674431, "Hydro": 0.02400082747207282, "Bioenergy": 0.2300064949123187, "Other renewables": 0.038022598870056504, "Coal": 0.9498338194397341, "Gas": 0.5373017805172242, "Other fossil": 0.7000000000000001, "Net imports": 0.0}}, "params": {"dc0": 246.25910572669505, "transport0": 28.0, "buildings0": 3034.2045542733044, "industry0": 1223.67834, "g_dc": 0.18287762019416953, "g_transport": 0.2, "g_buildings": 0.008, "g_industry": 0.004, "fade_start": 2030.0, "fade_end": 2040.0, "solar_add0": 32.92333333333334, "wind_add0": 5.776666666666671, "g_solar": 0.1885896243805283, "g_wind": -0.03245150095017035, "build_growth_end": 2035.0, "nuclear_add_gw": 0.07800000000000011, "g_oclean": -0.006669699492123815, "cf_solar": 0.22808758863750483, "cf_wind": 0.3403914028356592, "coal_retire_gw": 8.995999999999999, "gas_retire_gw": 3.0, "other_fossil_retire_gw": 0.0, "gas_cf_max": 0.6}, "g_demand_total": 0.012869546324808967, "g_other_demand": 0.007109623731736736, "ref2005": 2438.706, "history": {"year": [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025], "emissions": [2438.7, 2409.8, 2479.2, 2428.9, 2226.1, 2348.4, 2251.1, 2152.9, 2163.6, 2168.7, 2062.2, 1975.9, 1900.8, 1943.8, 1827.4, 1664.7, 1760.2, 1759.3, 1671.4, 1685.3, 1737.4], "demand": [4059.8, 4065.4, 4173.8, 4140.4, 3973.9, 4139.9, 4126.1, 4087.9, 4113.5, 4149.2, 4150.7, 4154.1, 4108.6, 4246.0, 4197.4, 4090.5, 4192.9, 4328.1, 4272.8, 4404.8, 4532.1], "clean": [1159.8, 1186.8, 1185.6, 1216.1, 1248.5, 1257.4, 1337.2, 1308.9, 1367.3, 1397.2, 1420.3, 1497.1, 1568.5, 1584.7, 1609.2, 1658.6, 1680.5, 1770.9, 1758.5, 1852.3, 1955.9], "cap_sw": [9.59, 12.43, 17.95, 26.27, 36.39, 42.51, 51.32, 67.69, 73.01, 81.88, 96.01, 116.01, 130.71, 146.09, 164.5, 194.27, 227.64, 254.34, 287.45, 330.24, 370.44]}, "check": {"2030": 1642.72, "2035": 1287.86, "2050": 285.04}};
 const B = D.base, EI = B.ei, H = 8.76, Y0 = 2025, REF = D.ref2005, HZ = 2035;
 const DEF = Object.assign({}, D.params);
 let P = Object.assign({}, DEF);
@@ -344,60 +349,109 @@ const pct = (v, d = 1) => (v * 100).toFixed(d).replace(/\.0$/, "") + "%";
 const signPct = v => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1) + "%/yr";
 const signGW = v => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + " GW/yr";
 
+// ------------------------------------------------------------------ units
+// Two ways to read the top-line levers and the contour axes, both averages from 2025 to the year shown:
+//   pct: compound growth of total demand and of gross clean generation (%/yr)
+//   abs: average increase in demand (TWh/yr) and average solar and wind capacity built (GW/yr)
+let UNITS = "pct";
+try { if (localStorage.getItem("dc-units") === "abs") UNITS = "abs"; } catch (e) {}
+const D0 = D.history.demand[Y0 - 2005];
+const demAbs = (p, y = HZ) => { const r = run(p, y); return (r[r.length - 1].demand - r[0].demand) / (y - Y0); };
+const cleanAbs = (p, y = HZ) => { const r = run(p, y); return d3.mean(r.slice(1), d => d.add); };
+const demM = (p, y = HZ, u = UNITS) => u === "pct" ? demandCagr(p, y) : demAbs(p, y);
+const cleanM = (p, y = HZ, u = UNITS) => u === "pct" ? cleanCagr(p, y) : cleanAbs(p, y);
+const fmtD = (v, u = UNITS) => u === "pct" ? signPct(v) : (v >= 0 ? "+" : "−") + f0(Math.abs(v)) + " TWh/yr";
+const fmtC = (v, u = UNITS) => u === "pct" ? signPct(v) : f0(v) + " GW/yr";
+// total-demand growth <-> average increase: both depend only on the end-year total, so exact
+const dToU = (g, y = HZ, u = UNITS) => u === "pct" ? g : D0 * (Math.pow(1 + g, y - Y0) - 1) / (y - Y0);
+const dFromAbs = (a, y = HZ) => Math.pow(1 + a * (y - Y0) / D0, 1 / (y - Y0)) - 1;
+// clean build in one unit -> the other, by finding the clean shift that gives it (other settings as in base)
+function cConv(v, from, base, y = HZ, u = UNITS) {
+  if (from === u) return v;
+  const f = s => cleanM(shifted(base, 0, s), y, from);
+  if (v < f(-0.3) || v > f(0.25)) return null;
+  return cleanM(shifted(base, 0, solveShift(f, v, -0.3, 0.25)), y, u);
+}
+// Published context. Build references are solar + wind GW/yr; demand references are %/yr of total demand.
+const REFS_BUILD = [
+  { v: 38.7, label: "2023-25 pace", title: "U.S. solar and wind added, 2023 to 2025 average (Ember)", hist: true },
+  { v: 57.5, label: "Net-Zero America", title: "Princeton Net-Zero America (2021), high-electrification E+ pathway: about 55 to 60 GW/yr of wind and solar on average through the 2020s" },
+  { v: 64, label: "IRA path", title: "Princeton REPEAT estimate under the Inflation Reduction Act incentives (before the 2025 budget law): about 46 GW/yr solar and 18 GW/yr wind" },
+  { v: 110, label: "NREL 100% low", title: "NREL (2022), 100% clean electricity by 2035: 40 GW/yr solar plus 70 GW/yr wind by about 2030 (an annual rate, not an average)" },
+  { v: 240, label: "NREL 100% high", title: "NREL (2022), 100% clean electricity by 2035: 90 GW/yr solar plus 150 GW/yr wind by about 2030 (an annual rate, not an average)" },
+];
+const REFS_DEMAND = [
+  { g: 0.057, label: "Grid Strategies", title: "Grid Strategies (Nov 2025): utility forecasts imply U.S. electricity use growing about 5.7%/yr over five years; held to the year shown" },
+];
+
 // ------------------------------------------------------------------ controls
 let cur, noDC;
 // Reference ticks. Static ones are recent history, published projections and the defaults; the target
 // ticks are solved each update for the current settings (growth that just meets the target).
 const hc = (arr, a, b) => cagr(arr[a - 2005], arr[b - 2005], b - a);
 const ems35 = p => { const r = run(p, HZ); return r[r.length - 1].ems; };
-const DEF_D = demandCagr(DEF), DEF_C = cleanCagr(DEF);
 function needClean(pct) { // clean growth (to 2035) at which 2035 emissions hit the cut, other settings fixed
   const tgt = REF * (1 - pct / 100), f = s => -ems35(shifted(anchorC, 0, s));
   if (f(0.25) < -tgt || f(-0.3) > -tgt) return null;
-  return cleanCagr(shifted(anchorC, 0, solveShift(f, -tgt, -0.3, 0.25)));
+  return cleanM(shifted(anchorC, 0, solveShift(f, -tgt, -0.3, 0.25)));
 }
 function needDemand(pct) { // highest demand growth at which current clean build still hits the cut
   const tgt = REF * (1 - pct / 100), f = s => ems35(shifted(anchorD, s, 0));
   if (f(-0.04) > tgt || f(0.07) < tgt) return null;
-  return demandCagr(shifted(anchorD, solveShift(f, tgt, -0.04, 0.07), 0));
+  return demM(shifted(anchorD, solveShift(f, tgt, -0.04, 0.07), 0));
 }
 function needAllClean() { // clean growth at which gross clean supply equals demand in 2035
   const f = s => { const r = run(shifted(anchorC, 0, s), HZ), l = r[r.length - 1]; return l.cleanGross / l.demand; };
   if (f(0.25) < 1 || f(-0.3) > 1) return null;
-  return cleanCagr(shifted(anchorC, 0, solveShift(f, 1, -0.3, 0.25)));
+  return cleanM(shifted(anchorC, 0, solveShift(f, 1, -0.3, 0.25)));
 }
 const T = "tgt";
+const EPRI_HI = Math.pow(0.17 * 5046 / 246.26, 1 / 5) - 1; // 17% of ~5,046 TWh 2030 demand, from 246 TWh in 2025
 const twh = (k, lab) => p => `${f0(at(cur, HZ)[k])} TWh in 2035, from ${f0(p[k + "0"])} TWh in 2025${lab ? "; " + lab : ""}`;
 const CTL = [
-  { k: "top_demand", label: "Total demand growth", min: -0.01, max: 0.08, step: 0.001, fmt: v => signPct(v) + " to 2035",
-    get: () => demandCagr(P),
-    marks: () => [[hc(D.history.demand, 2005, 2019), "2005-19", "Average growth of U.S. demand, 2005 to 2019 (Ember)"],
-      [D.g_demand_total, "2019-25", "Average growth of U.S. demand, 2019 to 2025 (Ember)"],
-      [DEF_D, "Recent rates", "Every end use at its recent rate (the default)"],
-      [demandCagr(Object.assign({}, anchorD, { g_dc: 0.13 })), "LBNL low", "Data centers at LBNL's low 2028 projection (+13%/yr), other end uses as set"],
-      [demandCagr(Object.assign({}, anchorD, { g_dc: 0.27 })), "LBNL high", "Data centers at LBNL's high 2028 projection (+27%/yr), other end uses as set"],
+  { k: "top_demand", units: {
+      pct: { label: "Total demand growth", min: -0.01, max: 0.08, step: 0.001 },
+      abs: { label: "Demand added per year", min: -50, max: 550, step: 1 } },
+    fmt: v => fmtD(v) + " to 2035",
+    get: () => demM(P),
+    marks: () => [
+      ...(UNITS === "pct"
+        ? [[hc(D.history.demand, 2005, 2019), "2005-19", "Average growth of U.S. demand, 2005 to 2019 (Ember)"],
+           [D.g_demand_total, "2019-25", "Average growth of U.S. demand, 2019 to 2025 (Ember)"]]
+        : [[(D.history.demand[14] - D.history.demand[0]) / 14, "2005-19", "Average yearly increase in U.S. demand, 2005 to 2019 (Ember)"],
+           [(D.history.demand[20] - D.history.demand[14]) / 6, "2019-25", "Average yearly increase in U.S. demand, 2019 to 2025 (Ember)"]]),
+      [demM(DEF), "Recent rates", "Every end use at its recent rate (the default)"],
+      [demM(Object.assign({}, anchorD, { g_dc: 0.13 })), "LBNL low", "Data centers at LBNL's low 2028 projection (+13%/yr), other end uses as set"],
+      [demM(Object.assign({}, anchorD, { g_dc: 0.27 })), "LBNL high", "Data centers at LBNL's high 2028 projection (+27%/yr), other end uses as set"],
+      ...REFS_DEMAND.map(r => [dToU(r.g), r.label, r.title]),
       [needDemand(61), "Max for 61%", "Fastest demand growth at which the current clean build still cuts 2035 emissions 61% below 2005", T]],
-    note: () => `${f0(at(cur, HZ).demand)} TWh in 2035, from ${f0(at(cur, Y0).demand)} TWh. 2019-25 rate ${signPct(D.g_demand_total)}. Moves every end use below by the same amount` },
+    note: () => `${f0(at(cur, HZ).demand)} TWh in 2035, from ${f0(at(cur, Y0).demand)} TWh (${UNITS === "pct" ? fmtD(demAbs(P), "abs") : fmtD(demandCagr(P), "pct")}). Moves every end use below by the same amount` },
   { k: "g_dc", label: "Data centers", min: -0.05, max: 0.40, step: 0.005, fmt: signPct, note: twh("dc", "2018-23 rate +18.3%/yr"),
-    marks: () => [[0, "Flat"], [0.037, "EPRI low", "EPRI (2024) low scenario, +3.7%/yr to 2030"],
-      [0.13, "LBNL low", "LBNL (2024): 325 TWh in 2028"], [0.15, "EPRI high", "EPRI (2024) highest scenario, +15%/yr to 2030"],
+    marks: () => [[0, "Flat"], [0.13, "LBNL low", "LBNL (2024): 325 TWh in 2028"],
       [DEF.g_dc, "2018-23", "LBNL estimates, 76 TWh (2018) to 176 TWh (2023); the default"],
-      [0.27, "LBNL high", "LBNL (2024): 580 TWh in 2028"]] },
+      [0.27, "LBNL high", "LBNL (2024): 580 TWh in 2028"],
+      [EPRI_HI, "EPRI 2026 high", "EPRI (2026): data centers 17% of U.S. electricity in 2030, about 860 TWh here. Their low case, 9%, is about LBNL low"]] },
   { k: "g_transport", label: "Transportation", min: -0.05, max: 0.40, step: 0.005, fmt: signPct, note: twh("transport", "EV charging and rail"),
     marks: () => [[0, "Flat"], [DEF.g_transport, "Recent (est.)", "Order-of-magnitude EV-charging growth; the default"]] },
   { k: "g_buildings", label: "Buildings", min: -0.02, max: 0.06, step: 0.001, fmt: signPct, note: twh("buildings", "homes and non-data-center commercial"),
     marks: () => [[0, "Flat"], [D.g_other_demand, "2019-25", "Buildings and industry combined, 2019 to 2025"], [DEF.g_buildings, "Default"]] },
   { k: "g_industry", label: "Industry", min: -0.02, max: 0.06, step: 0.001, fmt: signPct, note: twh("industry"),
     marks: () => [[0, "Flat"], [DEF.g_industry, "Default"], [D.g_other_demand, "2019-25", "Buildings and industry combined, 2019 to 2025"]] },
-  { k: "top_clean", label: "Clean generation growth", min: 0, max: 0.16, step: 0.001, fmt: v => signPct(v) + " to 2035",
-    get: () => cleanCagr(P),
-    marks: () => [[hc(D.history.clean, 2005, 2019), "2005-19", "Average growth of U.S. clean generation, 2005 to 2019 (Ember)"],
-      [hc(D.history.clean, 2015, 2025), "2015-25", "Average growth of U.S. clean generation, 2015 to 2025 (Ember)"],
-      [DEF_C, "Recent rates", "Each source on its recent trend (the default)"],
-      [needClean(61), "61% cut", "Clean growth that cuts 2035 emissions 61% below 2005 with demand as set", T],
-      [needClean(66), "66% cut", "Clean growth that cuts 2035 emissions 66% below 2005 with demand as set", T],
+  { k: "top_clean", units: {
+      pct: { label: "Clean generation growth", min: 0, max: 0.16, step: 0.001 },
+      abs: { label: "Solar and wind built per year", min: 0, max: 300, step: 1 } },
+    fmt: v => fmtC(v) + " to 2035",
+    get: () => cleanM(P),
+    marks: () => [
+      ...(UNITS === "pct"
+        ? [[hc(D.history.clean, 2005, 2019), "2005-19", "Average growth of U.S. clean generation, 2005 to 2019 (Ember)"],
+           [hc(D.history.clean, 2015, 2025), "2015-25", "Average growth of U.S. clean generation, 2015 to 2025 (Ember)"]]
+        : [[(D.history.cap_sw[20] - D.history.cap_sw[10]) / 10, "2016-25", "U.S. solar and wind added per year, 2016 to 2025 average (Ember)"]]),
+      [cleanM(DEF), "Recent rates", "Each source on its recent trend (the default)"],
+      ...REFS_BUILD.map(r => [cConv(r.v, "abs", anchorC), r.label, r.title + (UNITS === "pct" ? ". Shown as the clean growth that build gives, with the current mix" : "")]),
+      [needClean(61), "61% cut", "Clean build that cuts 2035 emissions 61% below 2005 with demand as set", T],
       [needAllClean(), "100% clean", "Clean generation equal to demand in 2035", T]],
-    note: () => `${f0(at(cur, HZ).cleanGross)} TWh in 2035, from ${f0(at(cur, Y0).cleanGross)} TWh. Moves the solar, wind and other-clean rates below by the same amount` },
+    note: () => `${f0(at(cur, HZ).cleanGross)} TWh of clean generation in 2035, from ${f0(at(cur, Y0).cleanGross)} TWh (${UNITS === "pct" ? fmtC(cleanAbs(P), "abs") + " of solar and wind" : fmtC(cleanCagr(P), "pct")}). Moves the solar, wind and other-clean rates below by the same amount` },
   { k: "g_solar", label: "Solar: growth in yearly additions", min: -0.30, max: 0.40, step: 0.005, fmt: signPct,
     note: p => `${f0(at(cur, Math.min(HZ, p.build_growth_end)).sa)} GW added in ${Math.min(HZ, p.build_growth_end)}; ${f0(at(cur, HZ).solar)} TWh in 2035. 2016-25 trend ${signPct(DEF.g_solar)}`,
     marks: () => [[0, "Flat"], [DEF.g_solar, "2016-25 trend"]] },
@@ -425,6 +479,7 @@ const CTL = [
     marks: () => [[B.cf_gas, "2025"], [DEF.gas_cf_max, "Default"]] },
 ];
 const inputs = {};
+for (const c of CTL) if (c.units) Object.assign(c, c.units[UNITS]);
 let anchorD = Object.assign({}, P), anchorC = Object.assign({}, P);
 const DEM_KEYS = SECT.map(k => "g_" + k), CLEAN_KEYS = ["g_solar", "g_wind", "g_oclean"];
 for (const c of CTL) {
@@ -435,8 +490,8 @@ for (const c of CTL) {
   const inp = el.querySelector("input");
   inputs[c.k] = inp;
   c.apply = v => {
-    if (c.k === "top_demand") { const dd = solveShift(s => demandCagr(shifted(anchorD, s, 0)), v); for (const k of DEM_KEYS) P[k] = anchorD[k] + dd; }
-    else if (c.k === "top_clean") { const dcl = solveShift(s => cleanCagr(shifted(anchorC, 0, s)), v); for (const k of CLEAN_KEYS) P[k] = anchorC[k] + dcl; }
+    if (c.k === "top_demand") { const dd = solveShift(s => demM(shifted(anchorD, s, 0)), v); for (const k of DEM_KEYS) P[k] = anchorD[k] + dd; }
+    else if (c.k === "top_clean") { const dcl = solveShift(s => cleanM(shifted(anchorC, 0, s)), v); for (const k of CLEAN_KEYS) P[k] = anchorC[k] + dcl; }
     else { P[c.k] = v; fixTiming(c.k); }
     if (c.k !== "top_demand") anchorD = Object.assign({}, P);
     if (c.k !== "top_clean") anchorC = Object.assign({}, P);
@@ -487,13 +542,27 @@ function renderMarks(c, val) {
 }
 for (const d of document.querySelectorAll("details")) d.addEventListener("toggle", () => { for (const c of CTL) c.mkey = ""; schedule(); });
 addEventListener("resize", () => schedule());
+function setUnits(u) {
+  UNITS = u;
+  try { localStorage.setItem("dc-units", u); } catch (e) {}
+  for (const b of document.querySelectorAll(".units button")) b.setAttribute("aria-pressed", b.dataset.u === u);
+  for (const c of CTL) if (c.units) {
+    Object.assign(c, c.units[u]);
+    const inp = inputs[c.k]; inp.min = c.min; inp.max = c.max; inp.step = c.step;
+    document.querySelector(`label[for="in-${c.k}"]`).textContent = c.label;
+  }
+  for (const c of CTL) c.mkey = "";
+  lastGridKey = "";
+  schedule();
+}
+for (const b of document.querySelectorAll(".units button")) b.addEventListener("click", () => setUnits(b.dataset.u));
 function fixTiming(k) {
   if (k === "fade_start" && P.fade_end < P.fade_start) P.fade_end = P.fade_start;
   if (k === "fade_end" && P.fade_end < P.fade_start) P.fade_start = P.fade_end;
 }
 document.getElementById("reset").addEventListener("click", () => { P = Object.assign({}, DEF); anchorD = Object.assign({}, P); anchorC = Object.assign({}, P); schedule(); });
 document.getElementById("pin").addEventListener("click", () => {
-  pinned = { r: cur, label: `Kept: demand ${signPct(demandCagr(P))}, clean ${signPct(cleanCagr(P))}` };
+  pinned = { r: cur, label: `Kept: demand ${fmtD(demM(P))}, clean ${fmtC(cleanM(P))}` };
   drawTS();
 });
 document.getElementById("ct-year").addEventListener("change", e => { ctYear = +e.target.value; schedule(); });
@@ -512,7 +581,7 @@ function update() {
     if (c.marks) renderMarks(c, v);
   }
   drawKPIs(); drawTS(); drawTable();
-  const key = JSON.stringify([P, ctYear]);
+  const key = JSON.stringify([P, ctYear, UNITS]);
   if (key !== lastGridKey) { lastGridKey = key; clearTimeout(ctTimer); ctTimer = setTimeout(drawCT, firstDraw ? 0 : 160); firstDraw = false; }
 }
 
@@ -525,7 +594,7 @@ function drawKPIs() {
       <div class="s">${pb.toFixed(0)}% below 2005 (target 61 to 66%)</div>
       <span class="pill ${gap > 0 ? "bad" : "good"}">${gap > 0 ? "✕ Misses 2035 target by " + f0(gap) + " Mt" : "✓ Meets 2035 target"}</span></div>
     <div class="card kpi"><div class="k">Demand in 2035</div><div class="v">${f0(r35.demand)} <small>TWh</small></div>
-      <div class="s">${signPct(demandCagr(P))} since 2025; data centers ${f0(r35.dc)} TWh (${pct(r35.dc / r35.demand, 0)})</div></div>
+      <div class="s">${fmtD(demM(P))} since 2025; data centers ${f0(r35.dc)} TWh (${pct(r35.dc / r35.demand, 0)})</div></div>
     <div class="card kpi"><div class="k">Clean power in 2035</div><div class="v">${pct(r35.cleanShare, 0)} <small>of demand</small></div>
       <div class="s">Clean generation ${signPct(cleanCagr(P))}; ${f0(r35.add)} GW of solar and wind added that year</div></div>
     <div class="card kpi"><div class="k">From data-center growth</div><div class="v">${dcEff >= 0 ? "+" : "−"}${f0(Math.abs(dcEff))} <small>Mt in 2035</small></div>
@@ -618,8 +687,8 @@ function drawCT() {
   const YR = ctYear;
   const dD = d3.range(-0.04, 0.0701, 0.001), dC = d3.range(-0.30, 0.2501, 0.005);
   const nx = dD.length, ny = dC.length;
-  const xs = dD.map(s => demandCagr(shifted(P, s, 0), YR));
-  const ys = dC.map(s => cleanCagr(shifted(P, 0, s), YR));
+  const xs = dD.map(s => demM(shifted(P, s, 0), YR));
+  const ys = dC.map(s => cleanM(shifted(P, 0, s), YR));
   const vals = new Float64Array(nx * ny);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
     const r = run(shifted(P, dD[i], dC[j]), YR); vals[j * nx + i] = r[r.length - 1].ems;
@@ -643,11 +712,12 @@ function drawCT() {
   const bands = d3.contours().size([nx, ny]).thresholds(levels)(vals);
   plot.selectAll("path.band").data(bands).join("path").attr("d", path).attr("fill", (d, i) => color((d.value + upper(i)) / 2));
   plot.selectAll("path.iso").data(bands.filter(d => d.value > 0)).join("path").attr("d", path).attr("fill", "none").attr("stroke", "#000").attr("stroke-opacity", 0.12).attr("stroke-width", 0.6);
-  // One NDC line: the lower end of each range (50% for 2030, 61% for 2035), the figure usually quoted.
-  let tgtLabel = null;
-  if (tgt) {
-    const tl = d3.contours().size([nx, ny]).thresholds([REF * (1 - tgt[0] / 100)])(vals)[0];
-    plot.append("path").datum(tl).attr("d", path).attr("fill", "none").attr("stroke", "#111").attr("stroke-width", 1.8);
+  // Two labeled lines: today's (2025) emissions, solid; the NDC, dashed, at the lower end of each range
+  // (50% for 2030, 61% for 2035), the figure usually quoted.
+  const lineLabels = [];
+  function isoLine(level, dash, text, frac) {
+    const tl = d3.contours().size([nx, ny]).thresholds([level])(vals)[0];
+    plot.append("path").datum(tl).attr("d", path).attr("fill", "none").attr("stroke", "#111").attr("stroke-width", 1.8).attr("stroke-dasharray", dash);
     // label placement: interior vertices of the line (not the grid border), in screen space
     const pts = [];
     for (const poly of tl.coordinates) for (const ring of poly) {
@@ -661,24 +731,43 @@ function drawCT() {
     }
     const line = pts.sort((a, b) => b.length - a.length)[0];
     if (line && line.length > 4) {
-      const goal = m.l + 0.72 * (W - m.l - m.r);
+      const goal = m.l + frac * (W - m.l - m.r);
       let k = d3.minIndex(line, q => Math.abs(q[0] - goal));
       k = Math.max(2, Math.min(line.length - 3, k));
       const [a, b] = [line[k - 2], line[k + 2]];
       let ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
       if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
-      tgtLabel = { p: line[k], ang, text: `${YR} NDC: ${tgt[0]}% below 2005` };
+      lineLabels.push({ p: line[k], ang, text });
     }
   }
+  isoLine(E0, null, "2025 level", 0.3);
+  if (tgt) isoLine(REF * (1 - tgt[0] / 100), "6 4", `${YR} NDC: ${tgt[0]}% below 2005`, 0.72);
+  // published context: build references across, demand references down
+  const refG = svg.append("g").attr("clip-path", "url(#ctclip)");
+  const refStyle = sel => sel.attr("stroke", "#222").attr("stroke-opacity", 0.55).attr("stroke-width", 1).attr("stroke-dasharray", "2 3");
+  const refText = (sel, anchor) => sel.attr("text-anchor", anchor).style("fill", "#222").attr("font-size", 10.5).attr("font-weight", 500).attr("paint-order", "stroke")
+    .attr("stroke", "white").attr("stroke-width", 2.5).attr("stroke-linejoin", "round");
+  REFS_BUILD.forEach((r, i) => { // alternate label sides so close lines don't collide
+    const v = cConv(r.v, "abs", P, YR); if (v === null || v < ys[0] || v > ys[ny - 1]) return;
+    refStyle(refG.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(v)).attr("y2", y(v)));
+    const left = i % 2 === 0;
+    refText(refG.append("text").attr("x", left ? m.l + 6 : W - m.r - 6).attr("y", y(v) - 3), left ? "start" : "end").text(r.label);
+  });
+  const demRefs = [{ g: (UNITS === "pct" ? D.g_demand_total : dFromAbs((D.history.demand[20] - D.history.demand[14]) / 6, YR)), label: "2019-25 pace" }, ...REFS_DEMAND];
+  for (const r of demRefs) {
+    const v = dToU(r.g, YR); if (v < xs[0] || v > xs[nx - 1]) continue;
+    refStyle(refG.append("line").attr("x1", x(v)).attr("x2", x(v)).attr("y1", m.t).attr("y2", Hh - m.b));
+    refText(refG.append("text").attr("transform", `translate(${x(v) - 4},${Hh - m.b - 6}) rotate(-90)`), "start").text(r.label);
+  }
   svg.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", Hh - m.t - m.b).attr("fill", "none").attr("stroke", css("--ink-2")).attr("stroke-width", 0.8);
-  if (tgtLabel) svg.append("text").attr("transform", `translate(${tgtLabel.p[0]},${tgtLabel.p[1]}) rotate(${tgtLabel.ang})`)
+  for (const l of lineLabels) svg.append("text").attr("transform", `translate(${l.p[0]},${l.p[1]}) rotate(${l.ang})`)
     .attr("y", -6).attr("text-anchor", "middle").style("fill", "#111").attr("font-weight", 600).attr("font-size", 11.5)
-    .attr("paint-order", "stroke").attr("stroke", "white").attr("stroke-width", 3).attr("stroke-linejoin", "round").text(tgtLabel.text);
-  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`).call(d3.axisBottom(x).ticks(W < 500 ? 5 : 8).tickFormat(v => d3.format(".0f")(v * 100)).tickSizeOuter(0));
-  svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickFormat(v => d3.format(".0f")(v * 100)).tickSizeOuter(0));
-  svg.append("text").attr("x", (m.l + W - m.r) / 2).attr("y", Hh - m.b + 30).attr("text-anchor", "middle").attr("class", "lab").text(`Total demand growth, 2025-${YR} (%/yr)`);
-  svg.append("text").attr("transform", `translate(14,${(m.t + Hh - m.b) / 2}) rotate(-90)`).attr("text-anchor", "middle").attr("class", "lab").text(`Clean generation growth, 2025-${YR} (%/yr)`);
-  const cx = demandCagr(P, YR), cy = cleanCagr(P, YR);
+    .attr("paint-order", "stroke").attr("stroke", "white").attr("stroke-width", 3).attr("stroke-linejoin", "round").text(l.text);
+  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`).call(d3.axisBottom(x).ticks(W < 500 ? 5 : 8).tickFormat(v => UNITS === "pct" ? d3.format(".0f")(v * 100) : f0(v)).tickSizeOuter(0));
+  svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickFormat(v => UNITS === "pct" ? d3.format(".0f")(v * 100) : f0(v)).tickSizeOuter(0));
+  svg.append("text").attr("x", (m.l + W - m.r) / 2).attr("y", Hh - m.b + 30).attr("text-anchor", "middle").attr("class", "lab").text(UNITS === "pct" ? `Total demand growth, 2025-${YR} (%/yr)` : `Demand added per year, 2025-${YR} average (TWh/yr)`);
+  svg.append("text").attr("transform", `translate(14,${(m.t + Hh - m.b) / 2}) rotate(-90)`).attr("text-anchor", "middle").attr("class", "lab").text(UNITS === "pct" ? `Clean generation growth, 2025-${YR} (%/yr)` : `Solar and wind built per year, ${Y0 + 1}-${YR} average (GW/yr)`);
+  const cx = demM(P, YR), cy = cleanM(P, YR);
   if (cx >= xs[0] && cx <= xs[nx - 1] && cy >= ys[0] && cy <= ys[ny - 1]) {
     svg.append("circle").attr("cx", x(cx)).attr("cy", y(cy)).attr("r", 5.5).attr("fill", "white").attr("stroke", "#111").attr("stroke-width", 1.6);
     const right = x(cx) < W - 140;
@@ -707,10 +796,11 @@ function drawCT() {
       const r = run(shifted(P, dD[i], dC[j]), YR), last = r[r.length - 1];
       setTip(t, `${f0(e)} Mt CO₂e in ${YR}`, [
         ["Below 2005", pctBelow(e).toFixed(0) + "%"],
-        ["Total demand growth", signPct(xs[i])], [`Demand in ${YR}`, f0(last.demand) + " TWh"],
+        [`Demand in ${YR}`, f0(last.demand) + " TWh"],
+        ["Demand growth", fmtD(cagr(r[0].demand, last.demand, YR - Y0), "pct") + ", " + fmtD((last.demand - r[0].demand) / (YR - Y0), "abs")],
         ["Data centers", f0(last.dc) + " TWh"],
-        ["Clean generation growth", signPct(ys[j])], [`Clean share in ${YR}`, pct(last.cleanShare, 0)],
-        [`Solar and wind added in ${YR}`, f0(last.add) + " GW"],
+        ["Clean generation growth", signPct(cagr(r[0].cleanGross, last.cleanGross, YR - Y0))], [`Clean share in ${YR}`, pct(last.cleanShare, 0)],
+        ["Solar and wind built", fmtC(d3.mean(r.slice(1), d => d.add), "abs") + " on average"],
       ]);
       t.hidden = false;
       const bx = host.getBoundingClientRect(), sx = bx.width / W;
@@ -756,6 +846,7 @@ function drawTable() {
 let rw; window.addEventListener("resize", () => { clearTimeout(rw); rw = setTimeout(() => { lastGridKey = ""; update(); }, 150); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { lastGridKey = ""; update(); });
 new MutationObserver(() => { lastGridKey = ""; update(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+setUnits(UNITS);
 update();
 </script>
 <script>

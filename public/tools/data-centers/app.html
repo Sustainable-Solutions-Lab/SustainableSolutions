@@ -226,11 +226,10 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
         <div class="charthead">
           <div>
             <h3>Power-sector emissions</h3>
-            <p class="sub">Million tons CO<sub>2</sub>e per year. Black is history (Ember), with targets marked.</p>
+            <p class="sub">Million tons CO<sub>2</sub>e per year, with targets marked. History from Ember.</p>
           </div>
         </div>
         <div class="chart" id="ts"></div>
-        <div class="legend" id="tslegend"></div>
       </section>
 
       <section class="card">
@@ -631,9 +630,11 @@ function drawTS() {
   svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`).call(d3.axisBottom(x).ticks(W < 500 ? 5 : 9).tickFormat(d3.format("d")).tickSizeOuter(0));
   svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(f0).tickSize(0).tickPadding(6)).call(g => g.select(".domain").remove());
   const tg = svg.append("g");
-  for (const [yr, rng] of [[2030, [50, 52]], [2035, [61, 66]]]) {
-    tg.append("line").attr("x1", x(yr)).attr("x2", x(yr)).attr("y1", y(REF * (1 - rng[0] / 100))).attr("y2", y(REF * (1 - rng[1] / 100))).attr("stroke", ink).attr("stroke-width", 5);
-    tg.append("text").attr("x", x(yr) + 6).attr("y", y(REF * (1 - rng[1] / 100)) + 12).attr("class", "lab").text(`${yr} NDC`);
+  // NDC markers: open circles like the 100% clean one, at the lower end of each range (50% and 61%)
+  for (const yr of [2030, 2035]) {
+    const v = REF * (1 - TARGETS[yr][0] / 100);
+    tg.append("circle").attr("cx", x(yr)).attr("cy", y(v)).attr("r", 4).attr("fill", css("--panel")).attr("stroke", ink).attr("stroke-width", 1.5);
+    tg.append("text").attr("x", x(yr) - 8).attr("y", y(v) + 4).attr("text-anchor", "end").attr("class", "lab").text(`${yr} NDC (${TARGETS[yr][0]}%)`);
   }
   for (const [yr, t] of [[2035, "100% clean"], [2050, "Net zero"]]) {
     tg.append("circle").attr("cx", x(yr)).attr("cy", y(0)).attr("r", 4).attr("fill", css("--panel")).attr("stroke", ink).attr("stroke-width", 1.5);
@@ -643,10 +644,19 @@ function drawTS() {
   const hist = D.history.year.map((yr, i) => ({ year: yr, ems: D.history.emissions[i] }));
   svg.append("path").datum(hist).attr("d", line).attr("fill", "none").attr("stroke", ink).attr("stroke-width", 2);
   if (pinned) svg.append("path").datum(pinned.r).attr("d", line).attr("fill", "none").attr("stroke", pin).attr("stroke-width", 2);
-  svg.append("path").datum(noDC).attr("d", line).attr("fill", "none").attr("stroke", sc).attr("stroke-width", 1.5).attr("stroke-dasharray", "5 4");
   svg.append("path").datum(cur).attr("d", line).attr("fill", "none").attr("stroke", sc).attr("stroke-width", 2.5);
   const end = cur[cur.length - 1];
   svg.append("circle").attr("cx", x(end.year)).attr("cy", y(end.ems)).attr("r", 3.5).attr("fill", sc);
+  // direct labels in each series' color
+  const lab = (tx, ty, text, col, anchor = "start") => svg.append("text").attr("x", tx).attr("y", ty).attr("text-anchor", anchor)
+    .style("fill", col).attr("font-size", 12).attr("font-weight", 600).text(text);
+  lab(x(2012), y(d3.max(D.history.emissions.slice(5, 10))) - 10, "History", ink, "middle"); // above 2010-14
+  const pEnd = pinned ? pinned.r[pinned.r.length - 1] : null;
+  const scAbove = !pEnd || pEnd.ems <= end.ems;
+  let sy = y(end.ems) + (scAbove ? -10 : 18);
+  if (y(0) - sy < 22) sy = y(0) - 22; // clear the "Net zero" marker label
+  lab(x(2050) - 6, sy, "Scenario", sc, "end");
+  if (pEnd) lab(x(2050) - 6, y(pEnd.ems) + (scAbove ? 18 : -10), "Kept", pin, "end");
   const hair = svg.append("line").attr("y1", m.t).attr("y2", Hh - m.b).attr("stroke", css("--muted")).attr("stroke-width", 1).attr("visibility", "hidden");
   host.replaceChildren(svg.node());
   const t = tip(host);
@@ -658,9 +668,8 @@ function drawTS() {
       if (yr <= Y0) rows.push(["History", f0(D.history.emissions[yr - 2005]) + " Mt", ink]);
       if (yr >= Y0) {
         const c = at(cur, yr);
-        rows.push(["Current settings", f0(c.ems) + " Mt", sc], ["Below 2005", pctBelow(c.ems).toFixed(0) + "%", null],
-                  ["Data centers grow like the rest", f0(at(noDC, yr).ems) + " Mt", sc, true]);
-        if (pinned) rows.push(["Kept line", f0(at(pinned.r, yr).ems) + " Mt", pin]);
+        rows.push(["Scenario", f0(c.ems) + " Mt", sc], ["Below 2005", pctBelow(c.ems).toFixed(0) + "%", null]);
+        if (pinned) rows.push(["Kept", f0(at(pinned.r, yr).ems) + " Mt", pin]);
       }
       setTip(t, String(yr), rows); t.hidden = false;
       const bx = host.getBoundingClientRect(), sx = bx.width / W;
@@ -668,13 +677,6 @@ function drawTS() {
       t.style.left = left + "px"; t.style.top = (m.t * sx) + "px";
     })
     .on("pointerleave", () => { t.hidden = true; hair.attr("visibility", "hidden"); });
-  const lg = document.getElementById("tslegend"); lg.innerHTML = "";
-  const items = [["History", ink, false], ["Current settings", sc, false], ["Same, with data centers growing like buildings and industry", sc, true]];
-  if (pinned) items.push([pinned.label, pin, false]);
-  for (const [l, c, dash] of items) {
-    const s = document.createElement("span"); const k = document.createElement("i"); k.className = "key"; k.style.borderTopColor = c; if (dash) k.style.borderTopStyle = "dashed";
-    s.append(k, document.createTextNode(l)); lg.appendChild(s);
-  }
 }
 
 // ------------------------------------------------------------------ contour map

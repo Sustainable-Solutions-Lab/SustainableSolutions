@@ -233,7 +233,6 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
         <div class="charthead">
           <div>
             <h3 id="ct-title">Emissions in 2035</h3>
-            <p class="sub" id="ct-sub"></p>
           </div>
           <div class="opts">
             
@@ -644,12 +643,37 @@ function drawCT() {
   const bands = d3.contours().size([nx, ny]).thresholds(levels)(vals);
   plot.selectAll("path.band").data(bands).join("path").attr("d", path).attr("fill", (d, i) => color((d.value + upper(i)) / 2));
   plot.selectAll("path.iso").data(bands.filter(d => d.value > 0)).join("path").attr("d", path).attr("fill", "none").attr("stroke", "#000").attr("stroke-opacity", 0.12).attr("stroke-width", 0.6);
+  // One NDC line: the lower end of each range (50% for 2030, 61% for 2035), the figure usually quoted.
+  let tgtLabel = null;
   if (tgt) {
-    const tl = d3.contours().size([nx, ny]).thresholds([REF * (1 - tgt[0] / 100), REF * (1 - tgt[1] / 100)])(vals);
-    plot.selectAll("path.tgt").data(tl).join("path").attr("d", path).attr("fill", "none").attr("stroke", "#111").attr("stroke-width", 1.6)
-      .attr("stroke-dasharray", (d, i) => i === 0 ? null : "4 3");
+    const tl = d3.contours().size([nx, ny]).thresholds([REF * (1 - tgt[0] / 100)])(vals)[0];
+    plot.append("path").datum(tl).attr("d", path).attr("fill", "none").attr("stroke", "#111").attr("stroke-width", 1.8);
+    // label placement: interior vertices of the line (not the grid border), in screen space
+    const pts = [];
+    for (const poly of tl.coordinates) for (const ring of poly) {
+      const seg = [];
+      for (const [px, py] of ring) {
+        const inside = px > 1 && px < nx - 1 && py > 1 && py < ny - 1;
+        if (inside) seg.push([x(interp(xs, px - 0.5)), y(interp(ys, py - 0.5))]);
+        else if (seg.length) { pts.push(seg.splice(0)); }
+      }
+      if (seg.length) pts.push(seg);
+    }
+    const line = pts.sort((a, b) => b.length - a.length)[0];
+    if (line && line.length > 4) {
+      const goal = m.l + 0.72 * (W - m.l - m.r);
+      let k = d3.minIndex(line, q => Math.abs(q[0] - goal));
+      k = Math.max(2, Math.min(line.length - 3, k));
+      const [a, b] = [line[k - 2], line[k + 2]];
+      let ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
+      if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
+      tgtLabel = { p: line[k], ang, text: `${YR} NDC: ${tgt[0]}% below 2005` };
+    }
   }
   svg.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", Hh - m.t - m.b).attr("fill", "none").attr("stroke", css("--ink-2")).attr("stroke-width", 0.8);
+  if (tgtLabel) svg.append("text").attr("transform", `translate(${tgtLabel.p[0]},${tgtLabel.p[1]}) rotate(${tgtLabel.ang})`)
+    .attr("y", -6).attr("text-anchor", "middle").style("fill", "#111").attr("font-weight", 600).attr("font-size", 11.5)
+    .attr("paint-order", "stroke").attr("stroke", "white").attr("stroke-width", 3).attr("stroke-linejoin", "round").text(tgtLabel.text);
   svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`).call(d3.axisBottom(x).ticks(W < 500 ? 5 : 8).tickFormat(v => d3.format(".0f")(v * 100)).tickSizeOuter(0));
   svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickFormat(v => d3.format(".0f")(v * 100)).tickSizeOuter(0));
   svg.append("text").attr("x", (m.l + W - m.r) / 2).attr("y", Hh - m.b + 30).attr("text-anchor", "middle").attr("class", "lab").text(`Total demand growth, 2025-${YR} (%/yr)`);
@@ -696,10 +720,6 @@ function drawCT() {
     })
     .on("pointerleave", () => { t.hidden = true; });
   document.getElementById("ct-title").textContent = `Emissions in ${YR}`;
-  document.getElementById("ct-sub").textContent = (tgt
-    ? `Red is above 2025 emissions (${f0(E0)} Mt), blue below. Black lines mark the ${YR} NDC range (${tgt[0]}% below 2005 solid, ${tgt[1]}% dashed). `
-    : `Red is above 2025 emissions (${f0(E0)} Mt), blue below. No NDC target for ${YR}. `) +
-    "Each point scales the current mix of end uses and sources, as the two top-line sliders do.";
 }
 
 // ------------------------------------------------------------------ table

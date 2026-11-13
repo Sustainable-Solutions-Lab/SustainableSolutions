@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Data Centers and the Grid</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: left rail of controls (sticky on desktop), results column of KPIs, two charts and a table; stacks on phones. */
+:root {
+  --bg: #f5f7f6; --panel: #ffffff; --ink: #14201b; --ink-2: #4a5852; --muted: #75827c; --rule: #dde3e0;
+  --accent: #2b6f95; --scenario: #2f7fb8; --pinned: #9aa29e; --bad: #c0392b; --good: #1e8449;
+  --bad-bg: #fbeceb; --good-bg: #e8f5ec; --track: #d5dcd8;
+  --sans: "Public Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111614; --panel: #19201c; --ink: #e7ece9; --ink-2: #b3bdb8; --muted: #86928c; --rule: #2b3430;
+  --accent: #6fb3dc; --scenario: #5aa8de; --pinned: #7d8782; --bad: #ef7d70; --good: #5cc283;
+  --bad-bg: #3a2220; --good-bg: #1b3326; --track: #36403b; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111614; --panel: #19201c; --ink: #e7ece9; --ink-2: #b3bdb8; --muted: #86928c; --rule: #2b3430;
+  --accent: #6fb3dc; --scenario: #5aa8de; --pinned: #7d8782; --bad: #ef7d70; --good: #5cc283;
+  --bad-bg: #3a2220; --good-bg: #1b3326; --track: #36403b; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1280px; margin: 0 auto; padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 4px; margin-bottom: 16px }
+h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.01em; text-wrap: balance }
+.lede { color: var(--ink-2); margin: 0; max-width: 72ch }
+.layout { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) }
+@media (min-width: 920px) { .layout { grid-template-columns: 300px minmax(0, 1fr) }
+  .rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - 24px); overflow-y: auto } }
+.rail, .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px }
+.rail { padding: 14px; align-self: start; display: grid; gap: 14px; align-content: start }
+.rail h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0; font-weight: 600 }
+.ctl { display: grid; gap: 4px }
+.lever { display: grid; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--rule) }
+.lever details { border-top: 0; padding-top: 0 }
+.ctl.big label { font-size: 14px } .ctl.big output { font-size: 14px; font-weight: 500 }
+.ctl .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline }
+.ctl label { font-weight: 600; font-size: 13px }
+.ctl output { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; color: var(--ink) }
+.ctl .note { color: var(--muted); font-size: 12px }
+input[type=range] { width: 100%; height: 28px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; accent-color: var(--accent) }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; background: var(--track); border-radius: 2px }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); margin-top: -8px; border: 2px solid var(--panel) }
+input[type=range]::-moz-range-track { height: 4px; background: var(--track); border-radius: 2px }
+input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 2px solid var(--panel) }
+input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px }
+.marks { position: relative; height: 18px; font-size: 10.5px; line-height: 13px; color: var(--muted); margin: -6px 10px 2px }
+.marks i { position: absolute; top: 0; width: 1px; height: 5px; background: var(--muted); transform: translateX(-0.5px) }
+.marks button { position: absolute; transform: translateX(-50%); background: none; border: 0; padding: 0; color: var(--muted); font: inherit; cursor: pointer; white-space: nowrap }
+.marks button.l { transform: none } .marks button.r { transform: translateX(-100%) }
+.marks button:hover, .marks button.on { color: var(--ink) } .marks button.on { font-weight: 600 }
+.marks button.tgt { color: var(--accent) }
+details { border-top: 1px solid var(--rule); padding-top: 10px }
+details > summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--ink-2) }
+details > .inner { display: grid; gap: 12px; margin-top: 12px }
+.btns { display: flex; gap: 8px; flex-wrap: wrap }
+button.b { font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--rule); background: var(--bg); color: var(--ink); cursor: pointer }
+button.b:hover { border-color: var(--accent) }
+button.b:focus-visible, .seg button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px }
+.results { display: grid; gap: 16px; min-width: 0 }
+.kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) }
+.kpi { padding: 12px 14px; display: grid; gap: 2px; align-content: start }
+.kpi .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600 }
+.kpi .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums }
+.kpi .v small { font-size: 13px; font-weight: 500; color: var(--ink-2) }
+.kpi .s { color: var(--ink-2); font-size: 12.5px }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; width: fit-content; margin-top: 4px }
+.pill.bad { color: var(--bad); background: var(--bad-bg) } .pill.good { color: var(--good); background: var(--good-bg) }
+.card { padding: 14px; min-width: 0 }
+.card h3 { margin: 0 0 2px; font-size: 15px; font-weight: 700 }
+.card .sub { margin: 0 0 8px; color: var(--ink-2); font-size: 12.5px }
+.charthead { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: flex-start }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden }
+.seg button { font: inherit; font-size: 12.5px; padding: 5px 10px; border: 0; background: var(--panel); color: var(--ink-2); cursor: pointer }
+.seg button[aria-pressed=true] { background: var(--accent); color: var(--panel); font-weight: 600 }
+select { font: inherit; font-size: 12.5px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink) }
+.opts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center }
+.chart { position: relative; width: 100% }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible }
+.chart text { fill: var(--ink-2); font-family: var(--sans); font-size: 11px }
+.chart .axis line, .chart .axis path { stroke: var(--rule) }
+.chart .grid line { stroke: var(--rule); stroke-opacity: 0.6 }
+.chart .lab { fill: var(--ink-2); font-size: 11.5px }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 7px 9px; font-size: 12px; box-shadow: 0 4px 14px rgb(0 0 0 / 0.12); min-width: 150px; z-index: 5 }
+.tip .h { font-weight: 700; margin-bottom: 3px } .tip .r { display: flex; justify-content: space-between; gap: 12px; align-items: center }
+.tip .r span:first-child { color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px }
+.tip .r b { font-variant-numeric: tabular-nums; font-weight: 600 }
+.tip .key { display: inline-block; width: 14px; height: 0; border-top: 2px solid }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin-top: 6px }
+.legend span { display: inline-flex; align-items: center; gap: 6px }
+.legend .key { display: inline-block; width: 18px; height: 0; border-top: 2px solid }
+.tablewrap { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap }
+th:first-child, td:first-child { text-align: left; white-space: normal; min-width: 150px }
+tr.h td { font-weight: 600; border-top: 1px solid var(--rule) } td.ind { padding-left: 20px; color: var(--ink-2) }
+thead th { color: var(--muted); font-weight: 600; font-size: 11.5px }
+.method { color: var(--ink-2); font-size: 12.5px; display: grid; gap: 6px; max-width: 80ch }
+.method p { margin: 0 }
+a { color: var(--accent) }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+<style>
+/* Lab-site skin: Sustainable Solutions Lab tokens (src/styles/colors_and_type.css in the site repo),
+   layered over template.html's own tokens. Theme follows the parent page's data-theme (see build.py). */
+:root, :root[data-theme="light"] {
+  --bg: #F8F8E8; --panel: #F1F1DF; --ink: #181838; --ink-2: #3A3A5A; --muted: #6B6B80;
+  --rule: rgba(24, 24, 56, 0.14); --track: rgba(24, 24, 56, 0.18);
+  --accent: #181838; --focus: #8C1515; --target: #8C1515;
+  --scenario: #3288BD; --pinned: #9A9AAE; --bad: #9E0142; --good: #2E7B3F;
+  --bad-bg: rgba(213, 62, 79, 0.10); --good-bg: rgba(102, 194, 165, 0.16);
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --mono: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --serif: "Tiempos Headline", "Source Serif 4", "Source Serif Pro", Georgia, serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0C0C1C; --panel: #14142A; --ink: #F8F8E8; --ink-2: #C8C8D8; --muted: #9A9AB0;
+  --rule: rgba(248, 248, 232, 0.14); --track: rgba(248, 248, 232, 0.2);
+  --accent: #F8F8E8; --focus: #E04545; --target: #E04545;
+  --scenario: #66B2E0; --pinned: #686880; --bad: #F46D43; --good: #66C2A5;
+  --bad-bg: rgba(244, 109, 67, 0.14); --good-bg: rgba(102, 194, 165, 0.14); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0C0C1C; --panel: #14142A; --ink: #F8F8E8; --ink-2: #C8C8D8; --muted: #9A9AB0;
+  --rule: rgba(248, 248, 232, 0.14); --track: rgba(248, 248, 232, 0.2);
+  --accent: #F8F8E8; --focus: #E04545; --target: #E04545;
+  --scenario: #66B2E0; --pinned: #686880; --bad: #F46D43; --good: #66C2A5;
+  --bad-bg: rgba(244, 109, 67, 0.14); --good-bg: rgba(102, 194, 165, 0.14); color-scheme: dark }
+
+body { margin: 0; -webkit-font-smoothing: antialiased }
+.wrap { max-width: 1320px; padding-block: 24px 48px }
+.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted) }
+h1 { font-family: var(--serif); font-weight: 400; font-size: 34px; line-height: 1.12; letter-spacing: -0.02em }
+.lede { font-size: 15px; line-height: 1.5 }
+.rail, .card { border-radius: 4px; box-shadow: none }
+.card h3 { font-family: var(--serif); font-weight: 400; font-size: 21px; letter-spacing: -0.01em; margin-bottom: 4px }
+.kpi .k, .rail h2 { letter-spacing: 0.12em }
+.kpi .v { font-weight: 600; letter-spacing: -0.01em }
+.ctl output { font-weight: 600; font-size: 12.5px }
+.pill { border-radius: 2px }
+button.b, select, .seg { border-radius: 2px; border-color: rgba(127, 127, 150, 0.35) }
+button.b:hover { border-color: var(--ink) }
+button.b:focus-visible, select:focus-visible, input[type=range]:focus-visible, .marks button:focus-visible { outline: 2px solid var(--focus) }
+input[type=range]::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -6px; border: 2px solid var(--bg) }
+input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: 2px solid var(--bg) }
+input[type=range]::-webkit-slider-runnable-track, input[type=range]::-moz-range-track { height: 2px; border-radius: 0 }
+.marks button.tgt { color: var(--target) }
+.tip { border-radius: 4px; background: var(--bg); box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08) }
+a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-underline-offset: 2px }
+.credit { margin-top: 20px; font-size: 12px; color: var(--muted); max-width: 80ch }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Interactive tool</div>
+    <h1>Data centers, clean power and U.S. power-sector emissions</h1>
+    <p class="lede">How fast electricity demand grows, and how fast new solar and wind is built, decides whether U.S. power-sector emissions meet the 2030 and 2035 climate targets. Defaults are recent rates. Move the sliders to see the effect.</p>
+  </header>
+  <div class="layout">
+    <aside class="rail" aria-label="Assumptions">
+      <div class="lever">
+        <h2>Demand</h2>
+        <div class="ctl big" id="c-top_demand"></div>
+        <details id="dd">
+          <summary>By end use</summary>
+          <div class="inner">
+            <div class="ctl" id="c-g_dc"></div>
+            <div class="ctl" id="c-g_transport"></div>
+            <div class="ctl" id="c-g_buildings"></div>
+            <div class="ctl" id="c-g_industry"></div>
+          </div>
+        </details>
+      </div>
+      <div class="lever">
+        <h2>Clean generation</h2>
+        <div class="ctl big" id="c-top_clean"></div>
+        <details id="cd">
+          <summary>By source</summary>
+          <div class="inner">
+            <div class="ctl" id="c-g_solar"></div>
+            <div class="ctl" id="c-solar_add0"></div>
+            <div class="ctl" id="c-g_wind"></div>
+            <div class="ctl" id="c-wind_add0"></div>
+            <div class="ctl" id="c-nuclear_add_gw"></div>
+            <div class="ctl" id="c-g_oclean"></div>
+          </div>
+        </details>
+      </div>
+      <details>
+        <summary>Timing</summary>
+        <div class="inner">
+          <div class="ctl" id="c-fade_start"></div>
+          <div class="ctl" id="c-fade_end"></div>
+          <div class="ctl" id="c-build_growth_end"></div>
+        </div>
+      </details>
+      <details>
+        <summary>Fossil fleet</summary>
+        <div class="inner">
+          <div class="ctl" id="c-coal_retire_gw"></div>
+          <div class="ctl" id="c-gas_retire_gw"></div>
+          <div class="ctl" id="c-gas_cf_max"></div>
+        </div>
+      </details>
+      <div class="btns">
+        <button class="b" id="reset" type="button">Reset to recent rates</button>
+        <button class="b" id="pin" type="button">Keep line for comparison</button>
+      </div>
+    </aside>
+
+    <main class="results">
+      <section class="kpis" id="kpis" aria-live="polite"></section>
+
+      <section class="card">
+        <div class="charthead">
+          <div>
+            <h3>Power-sector emissions</h3>
+            <p class="sub">Million tons CO<sub>2</sub>e per year. Black is history (Ember), with targets marked.</p>
+          </div>
+        </div>
+        <div class="chart" id="ts"></div>
+        <div class="legend" id="tslegend"></div>
+      </section>
+
+      <section class="card">
+        <div class="charthead">
+          <div>
+            <h3 id="ct-title">Emissions in 2035</h3>
+            <p class="sub" id="ct-sub"></p>
+          </div>
+          <div class="opts">
+            
+            <label for="ct-year" class="sub" style="margin:0">Year</label>
+            <select id="ct-year"><option>2030</option><option selected>2035</option><option>2040</option></select>
+          </div>
+        </div>
+        <div class="chart" id="ct"></div>
+      </section>
+
+      <section class="card">
+        <h3>Scenario in numbers</h3>
+        <p class="sub">Absolute values for the current settings. Growth rates are compound annual rates from 2025.</p>
+        <div class="tablewrap"><table id="tbl"></table></div>
+      </section>
+
+      <section class="card">
+        <details open>
+          <summary>How this works</summary>
+          <div class="method inner">
+            <p><b>Demand.</b> 2025 demand of 4,532 TWh (Ember) is split by end use. Data centers are about 246 TWh: LBNL's 2018 and 2023 estimates (76 and 176 TWh), carried forward at their 18%/yr pace. LBNL's 2028 range of 325 to 580 TWh implies 13 to 27%/yr. Transportation is about 28 TWh (EV charging plus rail), growing about 20%/yr. Industry is about 27% of demand, and buildings (homes and non-data-center commercial) are the rest. Together, buildings and industry grew about 0.7%/yr over 2019 to 2025. Data-center and transport growth slow after the first timing year and reach the buildings and industry rate by the second. The top-line slider adds the same amount to every end-use rate. It reads as the average growth of total demand from 2025 to 2035.</p>
+            <p><b>Clean generation.</b> Solar and wind fleets grow by each year's additions, with each source on its own rate. In 2023 to 2025, the U.S. added an average of 33 GW/yr of solar and 6 GW/yr of wind. Over 2016 to 2025, solar additions grew 19%/yr and wind additions fell 3%/yr. Nuclear changes by a net GW/yr. Hydro, bioenergy, other renewables and imports share one growth rate (−0.7%/yr over 2015 to 2025). 2025 capacity factors turn GW into TWh. The top-line slider adds the same amount to the solar, wind and other-clean rates. It reads as the average growth of clean generation from 2025 to 2035.</p>
+            <p><b>Fossil.</b> Coal and gas supply whatever demand is left. When that is less than in 2025, both scale down together. When it is more, gas covers the increase: first the existing fleet runs harder, then new plants are built. Coal retires 9 GW/yr (2020 to 2025 average) and gas 3 GW/yr.</p>
+            <p><b>Emissions and targets.</b> Generation times 2025 lifecycle intensity by source (Ember), against Ember's 2005 total of 2,439 Mt. The U.S. economy-wide NDC targets, 50 to 52% below 2005 by 2030 and 61 to 66% by 2035, are applied to the power sector one for one. That reading is lenient, because most pathways cut power faster than the rest of the economy. The 100% clean electricity goal for 2035 and net zero by 2050 are shown as zero. The U.S. has since withdrawn from the Paris Agreement, so these are benchmarks.</p>
+            <p><b>Limits.</b> This is an annual energy balance with no hourly matching or storage, so it overstates how much fossil power solar displaces once solar's share is large. Coal and gas output does not respond to fuel prices.</p>
+            <p>Data: <a href="https://ember-energy.org/data/yearly-electricity-data/" target="_blank" rel="noopener">Ember yearly electricity data</a> (generation, capacity and emissions to 2025); Shehabi et al. (LBNL, 2024), <i>United States Data Center Energy Usage Report</i>.</p>
+          </div>
+        </details>
+      </section>
+    </main>
+  </div>
+  <p class="credit">A first-pass annual energy-balance model of the U.S. power sector, built by the Sustainable Solutions Lab. Data from Ember and Lawrence Berkeley National Laboratory; assumptions and limits under How this works.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const D = {"base": {"Solar": 388.82, "Wind": 464.39, "Nuclear": 784.78, "Hydro": 241.7, "Bioenergy": 46.19, "Other renewables": 17.7, "Net imports": 12.352, "Coal": 737.15, "Gas": 1807.34, "Other fossil": 31.72, "Demand": 4532.142, "cap_solar": 211.61, "cap_wind": 158.83, "cap_nuc": 96.89, "cap_coal": 188.86, "cap_gas": 549.79, "cap_ofos": 32.51, "cf_solar": 0.22808758863750483, "cf_wind": 0.3403914028356592, "cf_nuc": 0.9249097459309064, "cf_coal": 0.44103534265720873, "cf_gas": 0.37656023288587975, "cf_ofos": 0.11043014840530789, "ei": {"Solar": 0.04799907412170156, "Wind": 0.008510088503197743, "Nuclear": 0.005414256224674431, "Hydro": 0.02400082747207282, "Bioenergy": 0.2300064949123187, "Other renewables": 0.038022598870056504, "Coal": 0.9498338194397341, "Gas": 0.5373017805172242, "Other fossil": 0.7000000000000001, "Net imports": 0.0}}, "params": {"dc0": 246.25910572669505, "transport0": 28.0, "buildings0": 3034.2045542733044, "industry0": 1223.67834, "g_dc": 0.18287762019416953, "g_transport": 0.2, "g_buildings": 0.008, "g_industry": 0.004, "fade_start": 2030.0, "fade_end": 2040.0, "solar_add0": 32.92333333333334, "wind_add0": 5.776666666666671, "g_solar": 0.1885896243805283, "g_wind": -0.03245150095017035, "build_growth_end": 2035.0, "nuclear_add_gw": 0.07800000000000011, "g_oclean": -0.006669699492123815, "cf_solar": 0.22808758863750483, "cf_wind": 0.3403914028356592, "coal_retire_gw": 8.995999999999999, "gas_retire_gw": 3.0, "other_fossil_retire_gw": 0.0, "gas_cf_max": 0.6}, "g_demand_total": 0.012869546324808967, "g_other_demand": 0.007109623731736736, "ref2005": 2438.706, "history": {"year": [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025], "emissions": [2438.7, 2409.8, 2479.2, 2428.9, 2226.1, 2348.4, 2251.1, 2152.9, 2163.6, 2168.7, 2062.2, 1975.9, 1900.8, 1943.8, 1827.4, 1664.7, 1760.2, 1759.3, 1671.4, 1685.3, 1737.4], "demand": [4059.8, 4065.4, 4173.8, 4140.4, 3973.9, 4139.9, 4126.1, 4087.9, 4113.5, 4149.2, 4150.7, 4154.1, 4108.6, 4246.0, 4197.4, 4090.5, 4192.9, 4328.1, 4272.8, 4404.8, 4532.1], "clean": [1159.8, 1186.8, 1185.6, 1216.1, 1248.5, 1257.4, 1337.2, 1308.9, 1367.3, 1397.2, 1420.3, 1497.1, 1568.5, 1584.7, 1609.2, 1658.6, 1680.5, 1770.9, 1758.5, 1852.3, 1955.9]}, "check": {"2030": 1642.72, "2035": 1287.86, "2050": 285.04}};
+const B = D.base, EI = B.ei, H = 8.76, Y0 = 2025, REF = D.ref2005, HZ = 2035;
+const DEF = Object.assign({}, D.params);
+let P = Object.assign({}, DEF);
+let pinned = null, ctYear = 2035;
+const SECT = ["dc", "transport", "buildings", "industry"];
+const OC = ["Hydro", "Bioenergy", "Other renewables", "Net imports"];
+
+// ------------------------------------------------------------------ model (port of analysis/model.py)
+const bgRate = p => (p.g_buildings * p.buildings0 + p.g_industry * p.industry0) / (p.buildings0 + p.industry0);
+function fade(g, bg, y, p) {
+  if (y <= p.fade_start) return g;
+  if (y >= p.fade_end) return bg;
+  return g + (y - p.fade_start) / (p.fade_end - p.fade_start) * (bg - g);
+}
+function shifted(p, dd, dcl) {
+  const q = Object.assign({}, p);
+  for (const k of SECT) q["g_" + k] = p["g_" + k] + dd;
+  q.g_solar = p.g_solar + dcl; q.g_wind = p.g_wind + dcl; q.g_oclean = p.g_oclean + dcl;
+  return q;
+}
+function run(p, end = 2050) {
+  const bg = bgRate(p);
+  let d = { dc: p.dc0, transport: p.transport0, buildings: p.buildings0, industry: p.industry0 };
+  let cs = B.cap_solar, cw = B.cap_wind, cn = B.cap_nuc, cc = B.cap_coal, cg = B.cap_gas, co = B.cap_ofos, newGas = 0;
+  let oc = OC.reduce((o, k) => (o[k] = B[k], o), {});
+  const out = [];
+  for (let y = Y0; y <= end; y++) {
+    const i = y - Y0;
+    let sa = 0, wa = 0, solar, wind, nuc, ofos;
+    if (i > 0) {
+      d.dc *= 1 + fade(p.g_dc, bg, y, p); d.transport *= 1 + fade(p.g_transport, bg, y, p);
+      d.buildings *= 1 + p.g_buildings; d.industry *= 1 + p.g_industry;
+      const t = Math.min(y, p.build_growth_end) - Y0;
+      sa = p.solar_add0 * Math.pow(1 + p.g_solar, t); wa = p.wind_add0 * Math.pow(1 + p.g_wind, t);
+      const csp = cs, cwp = cw; cs += sa; cw += wa;
+      cn = Math.max(0, cn + p.nuclear_add_gw); cc = Math.max(0, cc - p.coal_retire_gw);
+      cg = Math.max(0, cg - p.gas_retire_gw); co = Math.max(0, co - p.other_fossil_retire_gw);
+      for (const k of OC) oc[k] *= 1 + p.g_oclean;
+      solar = (cs + csp) / 2 * p.cf_solar * H; wind = (cw + cwp) / 2 * p.cf_wind * H; nuc = cn * B.cf_nuc * H; ofos = co * B.cf_ofos * H;
+    } else { solar = B.Solar; wind = B.Wind; nuc = B.Nuclear; ofos = B["Other fossil"]; }
+    const demand = d.dc + d.transport + d.buildings + d.industry;
+    const other = OC.reduce((s, k) => s + oc[k], 0);
+    const clean = solar + wind + nuc + other;
+    const resid = Math.max(0, demand - clean - ofos), curt = Math.max(0, clean + ofos - demand);
+    const coalAv = cc * B.cf_coal * H, gasAv = cg * B.cf_gas * H;
+    const share = coalAv + gasAv > 0 ? Math.min(1, resid / (coalAv + gasAv)) : 1;
+    const coal = coalAv * share, gas = resid - coal;
+    newGas = Math.max(newGas, Math.max(0, gas - cg * p.gas_cf_max * H) / (p.gas_cf_max * H));
+    let k = 1; if (curt > 0) k = Math.max(0, 1 - curt / (solar + wind));
+    const s2 = solar * k, w2 = wind * k;
+    const ems = s2 * EI.Solar + w2 * EI.Wind + nuc * EI.Nuclear + OC.reduce((s, kk) => s + oc[kk] * EI[kk], 0)
+      + coal * EI.Coal + gas * EI.Gas + ofos * EI["Other fossil"];
+    out.push({ year: y, demand, ...d, sa, wa, add: sa + wa, capSW: cs + cw, capNuc: cn, solar: s2, wind: w2, nuc, other,
+               cleanGross: clean, clean: clean - curt, cleanShare: (clean - curt) / demand, coalCap: cc, newGas, coal, gas, ofos, ems });
+  }
+  return out;
+}
+const at = (r, y) => r[y - Y0];
+const pctBelow = e => 100 * (1 - e / REF);
+const cagr = (a, b, n) => Math.pow(b / a, 1 / n) - 1;
+const demandCagr = (p, y = HZ) => { const r = run(p, y); return cagr(r[0].demand, r[r.length - 1].demand, y - Y0); };
+const cleanCagr = (p, y = HZ) => { const r = run(p, y); return cagr(r[0].cleanGross, r[r.length - 1].cleanGross, y - Y0); };
+function solveShift(f, target, lo = -0.5, hi = 0.5) { // f monotone increasing in shift on [lo, hi]
+  for (let n = 0; n < 40; n++) { const m = (lo + hi) / 2; if (f(m) < target) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+const TARGETS = { 2030: [50, 52], 2035: [61, 66], 2040: null };
+
+// ------------------------------------------------------------------ formatting
+const f0 = d3.format(",.0f"), f1 = d3.format(",.1f");
+const pct = (v, d = 1) => (v * 100).toFixed(d).replace(/\.0$/, "") + "%";
+const signPct = v => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1) + "%/yr";
+const signGW = v => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + " GW/yr";
+
+// ------------------------------------------------------------------ controls
+let cur, noDC;
+// Reference ticks. Static ones are recent history, published projections and the defaults; the target
+// ticks are solved each update for the current settings (growth that just meets the target).
+const hc = (arr, a, b) => cagr(arr[a - 2005], arr[b - 2005], b - a);
+const ems35 = p => { const r = run(p, HZ); return r[r.length - 1].ems; };
+const DEF_D = demandCagr(DEF), DEF_C = cleanCagr(DEF);
+function needClean(pct) { // clean growth (to 2035) at which 2035 emissions hit the cut, other settings fixed
+  const tgt = REF * (1 - pct / 100), f = s => -ems35(shifted(anchorC, 0, s));
+  if (f(0.25) < -tgt || f(-0.3) > -tgt) return null;
+  return cleanCagr(shifted(anchorC, 0, solveShift(f, -tgt, -0.3, 0.25)));
+}
+function needDemand(pct) { // highest demand growth at which current clean build still hits the cut
+  const tgt = REF * (1 - pct / 100), f = s => ems35(shifted(anchorD, s, 0));
+  if (f(-0.04) > tgt || f(0.07) < tgt) return null;
+  return demandCagr(shifted(anchorD, solveShift(f, tgt, -0.04, 0.07), 0));
+}
+function needAllClean() { // clean growth at which gross clean supply equals demand in 2035
+  const f = s => { const r = run(shifted(anchorC, 0, s), HZ), l = r[r.length - 1]; return l.cleanGross / l.demand; };
+  if (f(0.25) < 1 || f(-0.3) > 1) return null;
+  return cleanCagr(shifted(anchorC, 0, solveShift(f, 1, -0.3, 0.25)));
+}
+const T = "tgt";
+const twh = (k, lab) => p => `${f0(at(cur, HZ)[k])} TWh in 2035, from ${f0(p[k + "0"])} TWh in 2025${lab ? "; " + lab : ""}`;
+const CTL = [
+  { k: "top_demand", label: "Total demand growth", min: -0.01, max: 0.08, step: 0.001, fmt: v => signPct(v) + " to 2035",
+    get: () => demandCagr(P),
+    marks: () => [[hc(D.history.demand, 2005, 2019), "2005-19", "Average growth of U.S. demand, 2005 to 2019 (Ember)"],
+      [D.g_demand_total, "2019-25", "Average growth of U.S. demand, 2019 to 2025 (Ember)"],
+      [DEF_D, "Recent rates", "Every end use at its recent rate (the default)"],
+      [demandCagr(Object.assign({}, anchorD, { g_dc: 0.13 })), "LBNL low", "Data centers at LBNL's low 2028 projection (+13%/yr), other end uses as set"],
+      [demandCagr(Object.assign({}, anchorD, { g_dc: 0.27 })), "LBNL high", "Data centers at LBNL's high 2028 projection (+27%/yr), other end uses as set"],
+      [needDemand(61), "Max for 61%", "Fastest demand growth at which the current clean build still cuts 2035 emissions 61% below 2005", T]],
+    note: () => `${f0(at(cur, HZ).demand)} TWh in 2035, from ${f0(at(cur, Y0).demand)} TWh. 2019-25 rate ${signPct(D.g_demand_total)}. Moves every end use below by the same amount` },
+  { k: "g_dc", label: "Data centers", min: -0.05, max: 0.40, step: 0.005, fmt: signPct, note: twh("dc", "2018-23 rate +18.3%/yr"),
+    marks: () => [[0, "Flat"], [0.037, "EPRI low", "EPRI (2024) low scenario, +3.7%/yr to 2030"],
+      [0.13, "LBNL low", "LBNL (2024): 325 TWh in 2028"], [0.15, "EPRI high", "EPRI (2024) highest scenario, +15%/yr to 2030"],
+      [DEF.g_dc, "2018-23", "LBNL estimates, 76 TWh (2018) to 176 TWh (2023); the default"],
+      [0.27, "LBNL high", "LBNL (2024): 580 TWh in 2028"]] },
+  { k: "g_transport", label: "Transportation", min: -0.05, max: 0.40, step: 0.005, fmt: signPct, note: twh("transport", "EV charging and rail"),
+    marks: () => [[0, "Flat"], [DEF.g_transport, "Recent (est.)", "Order-of-magnitude EV-charging growth; the default"]] },
+  { k: "g_buildings", label: "Buildings", min: -0.02, max: 0.06, step: 0.001, fmt: signPct, note: twh("buildings", "homes and non-data-center commercial"),
+    marks: () => [[0, "Flat"], [D.g_other_demand, "2019-25", "Buildings and industry combined, 2019 to 2025"], [DEF.g_buildings, "Default"]] },
+  { k: "g_industry", label: "Industry", min: -0.02, max: 0.06, step: 0.001, fmt: signPct, note: twh("industry"),
+    marks: () => [[0, "Flat"], [DEF.g_industry, "Default"], [D.g_other_demand, "2019-25", "Buildings and industry combined, 2019 to 2025"]] },
+  { k: "top_clean", label: "Clean generation growth", min: 0, max: 0.16, step: 0.001, fmt: v => signPct(v) + " to 2035",
+    get: () => cleanCagr(P),
+    marks: () => [[hc(D.history.clean, 2005, 2019), "2005-19", "Average growth of U.S. clean generation, 2005 to 2019 (Ember)"],
+      [hc(D.history.clean, 2015, 2025), "2015-25", "Average growth of U.S. clean generation, 2015 to 2025 (Ember)"],
+      [DEF_C, "Recent rates", "Each source on its recent trend (the default)"],
+      [needClean(61), "61% cut", "Clean growth that cuts 2035 emissions 61% below 2005 with demand as set", T],
+      [needClean(66), "66% cut", "Clean growth that cuts 2035 emissions 66% below 2005 with demand as set", T],
+      [needAllClean(), "100% clean", "Clean generation equal to demand in 2035", T]],
+    note: () => `${f0(at(cur, HZ).cleanGross)} TWh in 2035, from ${f0(at(cur, Y0).cleanGross)} TWh. Moves the solar, wind and other-clean rates below by the same amount` },
+  { k: "g_solar", label: "Solar: growth in yearly additions", min: -0.30, max: 0.40, step: 0.005, fmt: signPct,
+    note: p => `${f0(at(cur, Math.min(HZ, p.build_growth_end)).sa)} GW added in ${Math.min(HZ, p.build_growth_end)}; ${f0(at(cur, HZ).solar)} TWh in 2035. 2016-25 trend ${signPct(DEF.g_solar)}`,
+    marks: () => [[0, "Flat"], [DEF.g_solar, "2016-25 trend"]] },
+  { k: "solar_add0", label: "Solar added in 2025", min: 0, max: 80, step: 0.5, fmt: v => f1(v) + " GW", note: () => `2023-25 average ${f1(DEF.solar_add0)} GW/yr`, marks: () => [[DEF.solar_add0, "2023-25"]] },
+  { k: "g_wind", label: "Wind: growth in yearly additions", min: -0.30, max: 0.40, step: 0.005, fmt: signPct,
+    note: p => `${f1(at(cur, Math.min(HZ, p.build_growth_end)).wa)} GW added in ${Math.min(HZ, p.build_growth_end)}; ${f0(at(cur, HZ).wind)} TWh in 2035. 2016-25 trend ${signPct(DEF.g_wind)}`,
+    marks: () => [[DEF.g_wind, "2016-25 trend"], [0, "Flat"]] },
+  { k: "wind_add0", label: "Wind added in 2025", min: 0, max: 40, step: 0.5, fmt: v => f1(v) + " GW", note: () => `2023-25 average ${f1(DEF.wind_add0)} GW/yr`, marks: () => [[DEF.wind_add0, "2023-25"]] },
+  { k: "nuclear_add_gw", label: "Nuclear: net change", min: -5, max: 5, step: 0.1, fmt: signGW,
+    note: () => `${f0(at(cur, HZ).capNuc)} GW and ${f0(at(cur, HZ).nuc)} TWh in 2035; ${f0(B.cap_nuc)} GW in 2025, near flat since 2020`,
+    marks: () => [[DEF.nuclear_add_gw, "2020-25"]] },
+  { k: "g_oclean", label: "Other clean: hydro, bioenergy, geothermal, imports", min: -0.05, max: 0.10, step: 0.001, fmt: signPct,
+    note: () => `${f0(at(cur, HZ).other)} TWh in 2035; 2015-25 rate ${signPct(DEF.g_oclean)}`,
+    marks: () => [[DEF.g_oclean, "2015-25"], [0, "Flat"]] },
+  { k: "fade_start", label: "Data-center and transport growth slows after", min: 2026, max: 2050, step: 1, fmt: String, marks: () => [[DEF.fade_start, "Default"]] },
+  { k: "fade_end", label: "…and matches buildings and industry by", min: 2026, max: 2050, step: 1, fmt: String, marks: () => [[DEF.fade_end, "Default"]] },
+  { k: "build_growth_end", label: "Solar and wind additions stop growing after", min: 2026, max: 2050, step: 1, fmt: String,
+    note: () => "Additions are held at that year's level afterwards", marks: () => [[DEF.build_growth_end, "Default"]] },
+  { k: "coal_retire_gw", label: "Coal retirements", min: 0, max: 20, step: 0.5, fmt: v => f1(v) + " GW/yr",
+    note: () => `2020-25 average ${f1(DEF.coal_retire_gw)} GW/yr; ${f0(B.cap_coal)} GW in 2025, ${f0(at(cur, HZ).coalCap)} GW in 2035`,
+    marks: () => [[DEF.coal_retire_gw, "2020-25"]] },
+  { k: "gas_retire_gw", label: "Gas retirements", min: 0, max: 15, step: 0.5, fmt: v => f1(v) + " GW/yr", note: () => `${f0(B.cap_gas)} GW in 2025`, marks: () => [[DEF.gas_retire_gw, "Default"]] },
+  { k: "gas_cf_max", label: "Highest use of existing gas plants", min: 0.4, max: 0.8, step: 0.01, fmt: v => pct(v, 0),
+    note: () => `Capacity factor before new gas is built; ${pct(B.cf_gas, 0)} in 2025`,
+    marks: () => [[B.cf_gas, "2025"], [DEF.gas_cf_max, "Default"]] },
+];
+const inputs = {};
+let anchorD = Object.assign({}, P), anchorC = Object.assign({}, P);
+const DEM_KEYS = SECT.map(k => "g_" + k), CLEAN_KEYS = ["g_solar", "g_wind", "g_oclean"];
+for (const c of CTL) {
+  const el = document.getElementById("c-" + c.k);
+  el.innerHTML = `<div class="top"><label for="in-${c.k}">${c.label}</label><output id="out-${c.k}"></output></div>
+    <input type="range" id="in-${c.k}" min="${c.min}" max="${c.max}" step="${c.step}">
+    ${c.marks ? `<div class="marks" aria-hidden="true"></div>` : ""}<div class="note" id="nt-${c.k}"></div>`;
+  const inp = el.querySelector("input");
+  inputs[c.k] = inp;
+  c.apply = v => {
+    if (c.k === "top_demand") { const dd = solveShift(s => demandCagr(shifted(anchorD, s, 0)), v); for (const k of DEM_KEYS) P[k] = anchorD[k] + dd; }
+    else if (c.k === "top_clean") { const dcl = solveShift(s => cleanCagr(shifted(anchorC, 0, s)), v); for (const k of CLEAN_KEYS) P[k] = anchorC[k] + dcl; }
+    else { P[c.k] = v; fixTiming(c.k); }
+    if (c.k !== "top_demand") anchorD = Object.assign({}, P);
+    if (c.k !== "top_clean") anchorC = Object.assign({}, P);
+  };
+  inp.addEventListener("input", () => {
+    let v = +inp.value;
+    // snap: within 2.5% of the slider's span of a tick, take the tick's exact value
+    const tol = 0.025 * (c.max - c.min);
+    let best = null;
+    for (const [mv] of c.cur || []) if (Math.abs(v - mv) < tol && (best === null || Math.abs(v - mv) < Math.abs(v - best))) best = mv;
+    if (best !== null) v = best;
+    c.apply(v); schedule(c.k);
+  });
+}
+function renderMarks(c, val) {
+  const ms = c.marks().filter(m => m[0] !== null && isFinite(m[0]) && m[0] >= c.min && m[0] <= c.max);
+  c.cur = ms;
+  const hit = ms.find(m => Math.abs(m[0] - val) < 1e-4 * (c.max - c.min));
+  c.on = hit ? hit[1] : null;
+  const mk = document.querySelector("#c-" + c.k + " .marks");
+  const w = mk.clientWidth;
+  const key = JSON.stringify([ms.map(m => [+m[0].toFixed(4), m[1]]), w, c.on]);
+  if (key === c.mkey) return;
+  c.mkey = key;
+  mk.replaceChildren();
+  const rows = []; // right edge of the last label in each row, in px
+  for (const [v, t, title, cls] of [...ms].sort((a, b) => a[0] - b[0])) {
+    const f = (v - c.min) / (c.max - c.min);
+    const tick = document.createElement("i"); tick.style.left = f * 100 + "%"; mk.appendChild(tick);
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = t;
+    b.title = (title ? title + ". " : "") + "Set to " + c.fmt(v);
+    if (cls) b.classList.add(cls);
+    if (c.on === t) b.classList.add("on");
+    b.style.left = f * 100 + "%";
+    b.addEventListener("click", () => { c.apply(v); anchorD = Object.assign({}, P); anchorC = Object.assign({}, P); schedule(); });
+    mk.appendChild(b);
+    const bw = b.offsetWidth;
+    let x0 = f * w - bw / 2;
+    if (x0 < -10) { b.classList.add("l"); b.style.left = "-4px"; x0 = -4; }
+    else if (x0 + bw > w + 10) { b.classList.add("r"); b.style.left = "calc(100% + 4px)"; x0 = w + 4 - bw; }
+    let r = rows.findIndex(e => e + 4 <= x0);
+    if (r < 0) { r = rows.length; rows.push(0); }
+    rows[r] = x0 + bw;
+    b.style.top = 6 + r * 13 + "px";
+  }
+  mk.style.height = 6 + Math.max(1, rows.length) * 13 + "px";
+}
+for (const d of document.querySelectorAll("details")) d.addEventListener("toggle", () => { for (const c of CTL) c.mkey = ""; schedule(); });
+addEventListener("resize", () => schedule());
+function fixTiming(k) {
+  if (k === "fade_start" && P.fade_end < P.fade_start) P.fade_end = P.fade_start;
+  if (k === "fade_end" && P.fade_end < P.fade_start) P.fade_start = P.fade_end;
+}
+document.getElementById("reset").addEventListener("click", () => { P = Object.assign({}, DEF); anchorD = Object.assign({}, P); anchorC = Object.assign({}, P); schedule(); });
+document.getElementById("pin").addEventListener("click", () => {
+  pinned = { r: cur, label: `Kept: demand ${signPct(demandCagr(P))}, clean ${signPct(cleanCagr(P))}` };
+  drawTS();
+});
+document.getElementById("ct-year").addEventListener("change", e => { ctYear = +e.target.value; schedule(); });
+
+// ------------------------------------------------------------------ render loop
+let raf = 0, lastGridKey = "", activeKey = null, ctTimer = 0, firstDraw = true;
+function schedule(k = null) { activeKey = k; if (!raf) raf = requestAnimationFrame(() => { raf = 0; update(); }); }
+function update() {
+  cur = run(P);
+  noDC = run(Object.assign({}, P, { g_dc: bgRate(P) }));
+  for (const c of CTL) {
+    const v = c.get ? c.get() : P[c.k];
+    if (c.k !== activeKey) inputs[c.k].value = v;
+    document.getElementById("out-" + c.k).textContent = c.fmt(v);
+    document.getElementById("nt-" + c.k).textContent = c.note ? c.note(P) : "";
+    if (c.marks) renderMarks(c, v);
+  }
+  drawKPIs(); drawTS(); drawTable();
+  const key = JSON.stringify([P, ctYear]);
+  if (key !== lastGridKey) { lastGridKey = key; clearTimeout(ctTimer); ctTimer = setTimeout(drawCT, firstDraw ? 0 : 160); firstDraw = false; }
+}
+
+// ------------------------------------------------------------------ KPIs
+function drawKPIs() {
+  const r35 = at(cur, HZ), e = r35.ems, pb = pctBelow(e);
+  const gap = e - REF * (1 - 0.61), dcEff = e - at(noDC, HZ).ems;
+  document.getElementById("kpis").innerHTML = `
+    <div class="card kpi"><div class="k">2035 emissions</div><div class="v">${f0(e)} <small>Mt CO<sub>2</sub>e</small></div>
+      <div class="s">${pb.toFixed(0)}% below 2005 (target 61 to 66%)</div>
+      <span class="pill ${gap > 0 ? "bad" : "good"}">${gap > 0 ? "✕ Misses 2035 target by " + f0(gap) + " Mt" : "✓ Meets 2035 target"}</span></div>
+    <div class="card kpi"><div class="k">Demand in 2035</div><div class="v">${f0(r35.demand)} <small>TWh</small></div>
+      <div class="s">${signPct(demandCagr(P))} since 2025; data centers ${f0(r35.dc)} TWh (${pct(r35.dc / r35.demand, 0)})</div></div>
+    <div class="card kpi"><div class="k">Clean power in 2035</div><div class="v">${pct(r35.cleanShare, 0)} <small>of demand</small></div>
+      <div class="s">Clean generation ${signPct(cleanCagr(P))}; ${f0(r35.add)} GW of solar and wind added that year</div></div>
+    <div class="card kpi"><div class="k">From data-center growth</div><div class="v">${dcEff >= 0 ? "+" : "−"}${f0(Math.abs(dcEff))} <small>Mt in 2035</small></div>
+      <div class="s">Against the same build with data centers growing like buildings and industry</div></div>`;
+}
+
+// ------------------------------------------------------------------ tooltip helpers
+const tip = host => { let t = host.querySelector(".tip"); if (!t) { t = document.createElement("div"); t.className = "tip"; t.hidden = true; host.appendChild(t); } return t; };
+function setTip(t, head, rows) {
+  t.replaceChildren();
+  const h = document.createElement("div"); h.className = "h"; h.textContent = head; t.appendChild(h);
+  for (const [lab, val, col, dash] of rows) {
+    const r = document.createElement("div"); r.className = "r";
+    const a = document.createElement("span");
+    if (col) { const k = document.createElement("i"); k.className = "key"; k.style.borderTopColor = col; if (dash) k.style.borderTopStyle = "dashed"; a.appendChild(k); }
+    a.appendChild(document.createTextNode(lab));
+    const b = document.createElement("b"); b.textContent = val;
+    r.append(a, b); t.appendChild(r);
+  }
+}
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// ------------------------------------------------------------------ time series
+function drawTS() {
+  const host = document.getElementById("ts");
+  const W = Math.max(300, host.clientWidth), Hh = Math.round(Math.min(340, Math.max(240, W * 0.42)));
+  const m = { t: 12, r: 16, b: 30, l: 48 };
+  const x = d3.scaleLinear([2005, 2050], [m.l, W - m.r]);
+  const ymax = Math.max(2600, d3.max(cur, d => d.ems) * 1.05, pinned ? d3.max(pinned.r, d => d.ems) * 1.05 : 0);
+  const y = d3.scaleLinear([0, ymax], [Hh - m.b, m.t]).nice();
+  const ink = css("--ink"), sc = css("--scenario"), pin = css("--pinned");
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${Hh}`).attr("role", "img").attr("aria-label", "Power-sector emissions from 2005 to 2050");
+  svg.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).join("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", d => y(d)).attr("y2", d => y(d));
+  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`).call(d3.axisBottom(x).ticks(W < 500 ? 5 : 9).tickFormat(d3.format("d")).tickSizeOuter(0));
+  svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(f0).tickSize(0).tickPadding(6)).call(g => g.select(".domain").remove());
+  const tg = svg.append("g");
+  for (const [yr, rng] of [[2030, [50, 52]], [2035, [61, 66]]]) {
+    tg.append("line").attr("x1", x(yr)).attr("x2", x(yr)).attr("y1", y(REF * (1 - rng[0] / 100))).attr("y2", y(REF * (1 - rng[1] / 100))).attr("stroke", ink).attr("stroke-width", 5);
+    tg.append("text").attr("x", x(yr) + 6).attr("y", y(REF * (1 - rng[1] / 100)) + 12).attr("class", "lab").text(`${yr} NDC`);
+  }
+  for (const [yr, t] of [[2035, "100% clean"], [2050, "Net zero"]]) {
+    tg.append("circle").attr("cx", x(yr)).attr("cy", y(0)).attr("r", 4).attr("fill", css("--panel")).attr("stroke", ink).attr("stroke-width", 1.5);
+    tg.append("text").attr("x", x(yr)).attr("y", y(0) - 8).attr("text-anchor", yr === 2050 ? "end" : "middle").attr("class", "lab").text(t);
+  }
+  const line = d3.line().x(d => x(d.year)).y(d => y(d.ems));
+  const hist = D.history.year.map((yr, i) => ({ year: yr, ems: D.history.emissions[i] }));
+  svg.append("path").datum(hist).attr("d", line).attr("fill", "none").attr("stroke", ink).attr("stroke-width", 2);
+  if (pinned) svg.append("path").datum(pinned.r).attr("d", line).attr("fill", "none").attr("stroke", pin).attr("stroke-width", 2);
+  svg.append("path").datum(noDC).attr("d", line).attr("fill", "none").attr("stroke", sc).attr("stroke-width", 1.5).attr("stroke-dasharray", "5 4");
+  svg.append("path").datum(cur).attr("d", line).attr("fill", "none").attr("stroke", sc).attr("stroke-width", 2.5);
+  const end = cur[cur.length - 1];
+  svg.append("circle").attr("cx", x(end.year)).attr("cy", y(end.ems)).attr("r", 3.5).attr("fill", sc);
+  const hair = svg.append("line").attr("y1", m.t).attr("y2", Hh - m.b).attr("stroke", css("--muted")).attr("stroke-width", 1).attr("visibility", "hidden");
+  host.replaceChildren(svg.node());
+  const t = tip(host);
+  svg.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", Hh - m.t - m.b).attr("fill", "transparent")
+    .on("pointermove", ev => {
+      const [px] = d3.pointer(ev); const yr = Math.max(2005, Math.min(2050, Math.round(x.invert(px))));
+      hair.attr("x1", x(yr)).attr("x2", x(yr)).attr("visibility", "visible");
+      const rows = [];
+      if (yr <= Y0) rows.push(["History", f0(D.history.emissions[yr - 2005]) + " Mt", ink]);
+      if (yr >= Y0) {
+        const c = at(cur, yr);
+        rows.push(["Current settings", f0(c.ems) + " Mt", sc], ["Below 2005", pctBelow(c.ems).toFixed(0) + "%", null],
+                  ["Data centers grow like the rest", f0(at(noDC, yr).ems) + " Mt", sc, true]);
+        if (pinned) rows.push(["Kept line", f0(at(pinned.r, yr).ems) + " Mt", pin]);
+      }
+      setTip(t, String(yr), rows); t.hidden = false;
+      const bx = host.getBoundingClientRect(), sx = bx.width / W;
+      let left = x(yr) * sx + 12; if (left + t.offsetWidth > bx.width) left = x(yr) * sx - t.offsetWidth - 12;
+      t.style.left = left + "px"; t.style.top = (m.t * sx) + "px";
+    })
+    .on("pointerleave", () => { t.hidden = true; hair.attr("visibility", "hidden"); });
+  const lg = document.getElementById("tslegend"); lg.innerHTML = "";
+  const items = [["History", ink, false], ["Current settings", sc, false], ["Same, with data centers growing like buildings and industry", sc, true]];
+  if (pinned) items.push([pinned.label, pin, false]);
+  for (const [l, c, dash] of items) {
+    const s = document.createElement("span"); const k = document.createElement("i"); k.className = "key"; k.style.borderTopColor = c; if (dash) k.style.borderTopStyle = "dashed";
+    s.append(k, document.createTextNode(l)); lg.appendChild(s);
+  }
+}
+
+// ------------------------------------------------------------------ contour map
+// The grid is built on shifts of the two top-line levers (same amount added to every demand
+// rate, or every clean rate). Each shift maps one-to-one onto the average growth of total
+// demand or of clean generation, which are the axes.
+function interp(arr, f) { const i = Math.max(0, Math.min(arr.length - 1.0001, f)); const a = Math.floor(i); return arr[a] + (arr[a + 1] - arr[a]) * (i - a); }
+function drawCT() {
+  const host = document.getElementById("ct");
+  const YR = ctYear;
+  const dD = d3.range(-0.04, 0.0701, 0.001), dC = d3.range(-0.30, 0.2501, 0.005);
+  const nx = dD.length, ny = dC.length;
+  const xs = dD.map(s => demandCagr(shifted(P, s, 0), YR));
+  const ys = dC.map(s => cleanCagr(shifted(P, 0, s), YR));
+  const vals = new Float64Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const r = run(shifted(P, dD[i], dC[j]), YR); vals[j * nx + i] = r[r.length - 1].ems;
+  }
+  const W = Math.max(300, host.clientWidth), Hh = Math.round(Math.min(520, Math.max(300, W * 0.62)));
+  const m = { t: 10, r: 16, b: 92, l: 52 };
+  const x = d3.scaleLinear([xs[0], xs[nx - 1]], [m.l, W - m.r]);
+  const y = d3.scaleLinear([ys[0], ys[ny - 1]], [Hh - m.b, m.t]);
+  const tgt = TARGETS[YR];
+  // Red above 2025 emissions, blue below, neutral at today's level. Band edges sit on 2025 +/- k*200 Mt.
+  const E0 = D.history.emissions[Y0 - 2005], step = 200;
+  const levels = [0, ...d3.range(-20, 21).map(k => E0 + k * step).filter(v => v > 0)];
+  const upper = i => i + 1 < levels.length ? levels[i + 1] : levels[i] + step;
+  const color = d3.scaleDiverging([2 * E0, E0, 0], d3.interpolateRdBu).clamp(true);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${Hh}`).attr("role", "img")
+    .attr("aria-label", `Emissions in ${YR} across total demand growth and clean generation growth`);
+  const proj = d3.geoTransform({ point(px, py) { this.stream.point(x(interp(xs, px - 0.5)), y(interp(ys, py - 0.5))); } });
+  const path = d3.geoPath(proj);
+  svg.append("defs").append("clipPath").attr("id", "ctclip").append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", Hh - m.t - m.b);
+  const plot = svg.append("g").attr("clip-path", "url(#ctclip)");
+  const bands = d3.contours().size([nx, ny]).thresholds(levels)(vals);
+  plot.selectAll("path.band").data(bands).join("path").attr("d", path).attr("fill", (d, i) => color((d.value + upper(i)) / 2));
+  plot.selectAll("path.iso").data(bands.filter(d => d.value > 0)).join("path").attr("d", path).attr("fill", "none").attr("stroke", "#000").attr("stroke-opacity", 0.12).attr("stroke-width", 0.6);
+  if (tgt) {
+    const tl = d3.contours().size([nx, ny]).thresholds([REF * (1 - tgt[0] / 100), REF * (1 - tgt[1] / 100)])(vals);
+    plot.selectAll("path.tgt").data(tl).join("path").attr("d", path).attr("fill", "none").attr("stroke", "#111").attr("stroke-width", 1.6)
+      .attr("stroke-dasharray", (d, i) => i === 0 ? null : "4 3");
+  }
+  svg.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", Hh - m.t - m.b).attr("fill", "none").attr("stroke", css("--ink-2")).attr("stroke-width", 0.8);
+  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`).call(d3.axisBottom(x).ticks(W < 500 ? 5 : 8).tickFormat(v => d3.format(".0f")(v * 100)).tickSizeOuter(0));
+  svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickFormat(v => d3.format(".0f")(v * 100)).tickSizeOuter(0));
+  svg.append("text").attr("x", (m.l + W - m.r) / 2).attr("y", Hh - m.b + 30).attr("text-anchor", "middle").attr("class", "lab").text(`Total demand growth, 2025-${YR} (%/yr)`);
+  svg.append("text").attr("transform", `translate(14,${(m.t + Hh - m.b) / 2}) rotate(-90)`).attr("text-anchor", "middle").attr("class", "lab").text(`Clean generation growth, 2025-${YR} (%/yr)`);
+  const cx = demandCagr(P, YR), cy = cleanCagr(P, YR);
+  if (cx >= xs[0] && cx <= xs[nx - 1] && cy >= ys[0] && cy <= ys[ny - 1]) {
+    svg.append("circle").attr("cx", x(cx)).attr("cy", y(cy)).attr("r", 5.5).attr("fill", "white").attr("stroke", "#111").attr("stroke-width", 1.6);
+    const right = x(cx) < W - 140;
+    svg.append("text").attr("x", x(cx) + (right ? 9 : -9)).attr("y", y(cy) + 4).attr("text-anchor", right ? "start" : "end")
+      .style("fill", "#111").attr("font-weight", 600).attr("font-size", 11.5).attr("paint-order", "stroke").attr("stroke", "white").attr("stroke-width", 3).text("Current settings");
+  }
+  const kw = Math.min(360, W - m.l - m.r), kx = m.l + (W - m.l - m.r - kw) / 2, ky = Hh - 28, kh = 10;
+  const kmax = 2 * E0, kxS = d3.scaleLinear([0, kmax], [kx, kx + kw]);
+  const key = svg.append("g"), kl = levels.map((v, i) => [v, Math.min(kmax, upper(i))]).filter(([a]) => a < kmax);
+  key.selectAll("rect").data(kl).join("rect").attr("x", d => kxS(d[0])).attr("y", ky).attr("width", d => kxS(d[1]) - kxS(d[0])).attr("height", kh).attr("fill", d => color((d[0] + d[1]) / 2));
+  key.append("line").attr("x1", kxS(E0)).attr("x2", kxS(E0)).attr("y1", ky - 3).attr("y2", ky + kh).attr("stroke", css("--ink")).attr("stroke-width", 1.2);
+  key.append("text").attr("x", kxS(E0)).attr("y", ky - 5).attr("text-anchor", "middle").attr("class", "lab").text(`2025: ${f0(E0)}`);
+  key.append("text").attr("x", kx).attr("y", ky - 5).attr("class", "lab").text("← Lower");
+  key.append("text").attr("x", kx + kw).attr("y", ky - 5).attr("text-anchor", "end").attr("class", "lab").text("Higher →");
+  key.append("rect").attr("x", kx).attr("y", ky).attr("width", kw).attr("height", kh).attr("fill", "none").attr("stroke", css("--ink-2")).attr("stroke-width", 0.6);
+  key.append("g").attr("class", "axis").attr("transform", `translate(0,${ky + kh})`).call(d3.axisBottom(kxS).tickValues([0, 1000, 2000, 3000].filter(v => v <= kmax)).tickFormat(f0).tickSize(3)).call(g => g.select(".domain").remove());
+  key.append("text").attr("x", kx - 8).attr("y", ky + kh - 1).attr("text-anchor", "end").attr("class", "lab").text("Mt CO₂e");
+  host.replaceChildren(svg.node());
+  const t = tip(host);
+  svg.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", Hh - m.t - m.b).attr("fill", "transparent")
+    .on("pointermove", ev => {
+      const [px, py] = d3.pointer(ev);
+      const i = Math.max(0, Math.min(nx - 1, d3.bisectCenter(xs, x.invert(px))));
+      const j = Math.max(0, Math.min(ny - 1, d3.bisectCenter(ys, y.invert(py))));
+      const e = vals[j * nx + i];
+      const r = run(shifted(P, dD[i], dC[j]), YR), last = r[r.length - 1];
+      setTip(t, `${f0(e)} Mt CO₂e in ${YR}`, [
+        ["Below 2005", pctBelow(e).toFixed(0) + "%"],
+        ["Total demand growth", signPct(xs[i])], [`Demand in ${YR}`, f0(last.demand) + " TWh"],
+        ["Data centers", f0(last.dc) + " TWh"],
+        ["Clean generation growth", signPct(ys[j])], [`Clean share in ${YR}`, pct(last.cleanShare, 0)],
+        [`Solar and wind added in ${YR}`, f0(last.add) + " GW"],
+      ]);
+      t.hidden = false;
+      const bx = host.getBoundingClientRect(), sx = bx.width / W;
+      let left = px * sx + 14; if (left + t.offsetWidth > bx.width) left = px * sx - t.offsetWidth - 14;
+      let top = py * sx - t.offsetHeight - 10; if (top < 0) top = py * sx + 14;
+      t.style.left = left + "px"; t.style.top = top + "px";
+    })
+    .on("pointerleave", () => { t.hidden = true; });
+  document.getElementById("ct-title").textContent = `Emissions in ${YR}`;
+  document.getElementById("ct-sub").textContent = (tgt
+    ? `Red is above 2025 emissions (${f0(E0)} Mt), blue below. Black lines mark the ${YR} NDC range (${tgt[0]}% below 2005 solid, ${tgt[1]}% dashed). `
+    : `Red is above 2025 emissions (${f0(E0)} Mt), blue below. No NDC target for ${YR}. `) +
+    "Each point scales the current mix of end uses and sources, as the two top-line sliders do.";
+}
+
+// ------------------------------------------------------------------ table
+function drawTable() {
+  const yrs = [2025, 2030, 2035, 2040, 2050];
+  const g = (k, y) => y === Y0 ? "–" : signPct(cagr(at(cur, Y0)[k], at(cur, y)[k], y - Y0));
+  const rows = [
+    ["Demand (TWh)", r => f0(r.demand), "h"],
+    ["  Data centers", r => f0(r.dc)], ["  Transportation", r => f0(r.transport)],
+    ["  Buildings", r => f0(r.buildings)], ["  Industry", r => f0(r.industry)],
+    ["  Growth since 2025", (r, y) => g("demand", y)],
+    ["Clean generation (TWh)", r => f0(r.clean), "h"],
+    ["  Solar", r => f0(r.solar)], ["  Wind", r => f0(r.wind)], ["  Nuclear", r => f0(r.nuc)], ["  Other clean", r => f0(r.other)],
+    ["  Growth since 2025", (r, y) => g("cleanGross", y)],
+    ["  Share of demand", r => pct(r.cleanShare, 0)],
+    ["Solar and wind added that year (GW)", (r, y) => y === Y0 ? f1(P.solar_add0 + P.wind_add0) : f0(r.add)],
+    ["Fossil generation (TWh)", r => f0(r.coal + r.gas + r.ofos), "h"],
+    ["  Coal", r => f0(r.coal)], ["  Gas", r => f0(r.gas)],
+    ["  Coal capacity (GW)", r => f0(r.coalCap)], ["  New gas capacity needed (GW)", r => f0(r.newGas)],
+    ["Emissions (Mt CO₂e)", r => f0(r.ems), "h"],
+    ["  Below 2005", r => pctBelow(r.ems).toFixed(0) + "%"],
+  ];
+  const tb = document.getElementById("tbl"); tb.replaceChildren();
+  const th = tb.createTHead().insertRow();
+  for (const h of ["", ...yrs]) { const c = document.createElement("th"); c.textContent = h; th.appendChild(c); }
+  const body = tb.createTBody();
+  for (const [lab, fn, cls] of rows) {
+    const tr = body.insertRow(); if (cls) tr.className = cls;
+    const c0 = tr.insertCell(); c0.textContent = lab.trim(); if (lab.startsWith("  ")) c0.className = "ind";
+    for (const y of yrs) tr.insertCell().textContent = fn(at(cur, y), y);
+  }
+}
+
+let rw; window.addEventListener("resize", () => { clearTimeout(rw); rw = setTimeout(() => { lastGridKey = ""; update(); }, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { lastGridKey = ""; update(); });
+new MutationObserver(() => { lastGridKey = ""; update(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+update();
+</script>
+<script>
+(function () {
+  let host = null;
+  try { if (window.parent !== window) host = window.parent.document.documentElement; } catch (e) {}
+  const sync = () => {
+    const dark = host ? host.getAttribute("data-theme") === "dark"
+                      : (localStorage.getItem("ssl-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  };
+  sync();
+  if (host) new MutationObserver(() => { sync(); for (const c of CTL) c.mkey = ""; lastGridKey = ""; update(); })
+    .observe(host, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>

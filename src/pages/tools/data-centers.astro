@@ -1,0 +1,24 @@
+---
+// Data centers, clean power and U.S. power-sector emissions. The page is a single self-contained
+// HTML file built in the project folder (Papers/Ideas/Data center demand and emissions/web,
+// `python build.py`, from analysis/model.py via export_web.py) and copied to
+// public/tools/data-centers/app.html; this route frames it like the other tools.
+// Unlisted (noindex, no Tools card) until a Tools-sheet row says otherwise.
+import ToolFrame from '../../layouts/ToolFrame.astro';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+const tool = (tools as Tool[]).find((t) => t.slug === 'data-centers') ?? null;
+const title = tool?.title ?? 'Data centers, clean power and U.S. power-sector emissions';
+---
+<ToolFrame
+  title={title}
+  description={tool?.summary ??
+    'How fast electricity demand grows, and how fast clean power is built, decides whether U.S. power-sector emissions meet the 2030 and 2035 targets.'}
+  noindex={tool?.unlisted ?? true}
+>
+  <iframe
+    src="/tools/data-centers/app.html"
+    title={title}
+    style="border: 0; display: block;"
+  ></iframe>
+</ToolFrame>

@@ -248,7 +248,7 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
         <div class="charthead">
           <div>
             <h3>Power-sector emissions</h3>
-            <p class="sub">Million tons CO<sub>2</sub>e per year, with targets marked. History from Ember.</p>
+            <p class="sub">Million tons CO<sub>2</sub>e per year, with targets marked. Thin gray lines show the current settings with demand held at its 2025 level, or with no new clean capacity built. History from Ember.</p>
           </div>
         </div>
         <div class="chart" id="ts"></div>
@@ -406,7 +406,7 @@ const REFS_DEMAND = [
 ];
 
 // ------------------------------------------------------------------ controls
-let cur, noDC;
+let cur, noDC, noGrow, noBuild;
 // Reference ticks. Static ones are recent history, published projections and the defaults; the target
 // ticks are solved each update for the current settings (growth that just meets the target).
 const hc = (arr, a, b) => cagr(arr[a - 2005], arr[b - 2005], b - a);
@@ -594,6 +594,9 @@ function schedule(k = null) { activeKey = k; if (!raf) raf = requestAnimationFra
 function update() {
   cur = run(P);
   noDC = run(Object.assign({}, P, { g_dc: bgRate(P) }));
+  // bounding cases for the trend chart: demand held at 2025, and no new clean capacity (other settings kept)
+  noGrow = run(Object.assign({}, P, { g_dc: 0, g_transport: 0, g_buildings: 0, g_industry: 0 }));
+  noBuild = run(Object.assign({}, P, { solar_add0: 0, wind_add0: 0, nuclear_add_gw: Math.min(0, P.nuclear_add_gw), g_oclean: Math.min(0, P.g_oclean) }));
   for (const c of CTL) {
     const v = c.get ? c.get() : P[c.k];
     if (c.k !== activeKey) inputs[c.k].value = v;
@@ -644,7 +647,7 @@ function drawTS() {
   const W = Math.max(300, host.clientWidth), Hh = Math.round(Math.min(340, Math.max(240, W * 0.42)));
   const m = { t: 12, r: 16, b: 30, l: 48 };
   const x = d3.scaleLinear([2005, 2050], [m.l, W - m.r]);
-  const ymax = Math.max(2600, d3.max(cur, d => d.ems) * 1.05, pinned ? d3.max(pinned.r, d => d.ems) * 1.05 : 0);
+  const ymax = Math.max(2600, d3.max(cur, d => d.ems) * 1.05, d3.max(noBuild, d => d.ems) * 1.05, pinned ? d3.max(pinned.r, d => d.ems) * 1.05 : 0);
   const y = d3.scaleLinear([0, ymax], [Hh - m.b, m.t]).nice();
   const ink = css("--ink"), sc = css("--scenario"), pin = css("--pinned");
   const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${Hh}`).attr("role", "img").attr("aria-label", "Power-sector emissions from 2005 to 2050");
@@ -665,6 +668,9 @@ function drawTS() {
   const line = d3.line().x(d => x(d.year)).y(d => y(d.ems));
   const hist = D.history.year.map((yr, i) => ({ year: yr, ems: D.history.emissions[i] }));
   svg.append("path").datum(hist).attr("d", line).attr("fill", "none").attr("stroke", ink).attr("stroke-width", 2);
+  // hairlines: where emissions go with no demand growth, or with no new clean capacity
+  const hl = css("--muted");
+  for (const r of [noGrow, noBuild]) svg.append("path").datum(r).attr("d", line).attr("fill", "none").attr("stroke", hl).attr("stroke-width", 0.8);
   if (pinned) svg.append("path").datum(pinned.r).attr("d", line).attr("fill", "none").attr("stroke", pin).attr("stroke-width", 2);
   svg.append("path").datum(cur).attr("d", line).attr("fill", "none").attr("stroke", sc).attr("stroke-width", 2.5);
   const end = cur[cur.length - 1];
@@ -679,6 +685,11 @@ function drawTS() {
   if (y(0) - sy < 22) sy = y(0) - 22; // clear the "Net zero" marker label
   lab(x(2050) - 6, sy, "Scenario", sc, "end");
   if (pEnd) lab(x(2050) - 6, y(pEnd.ems) + (scAbove ? 18 : -10), "Kept", pin, "end");
+  // hairline labels: "No new clean power" above its line near the right; "No demand growth" to the left
+  // of its line where it falls through 40% of 2025 emissions, an empty part of the chart
+  svg.append("text").attr("x", x(2044)).attr("y", y(at(noBuild, 2044).ems) - 6).attr("text-anchor", "middle").attr("class", "lab").text("No new clean power");
+  const g40 = noGrow.find(d => d.year > Y0 && d.ems < 0.4 * D.history.emissions[Y0 - 2005]);
+  if (g40) svg.append("text").attr("x", x(g40.year) - 6).attr("y", y(g40.ems) + 4).attr("text-anchor", "end").attr("class", "lab").text("No demand growth");
   const hair = svg.append("line").attr("y1", m.t).attr("y2", Hh - m.b).attr("stroke", css("--muted")).attr("stroke-width", 1).attr("visibility", "hidden");
   host.replaceChildren(svg.node());
   const t = tip(host);
@@ -692,6 +703,7 @@ function drawTS() {
         const c = at(cur, yr);
         rows.push(["Scenario", f0(c.ems) + " Mt", sc], ["Below 2005", pctBelow(c.ems).toFixed(0) + "%", null]);
         if (pinned) rows.push(["Kept", f0(at(pinned.r, yr).ems) + " Mt", pin]);
+        rows.push(["No demand growth", f0(at(noGrow, yr).ems) + " Mt", hl], ["No new clean power", f0(at(noBuild, yr).ems) + " Mt", hl]);
       }
       setTip(t, String(yr), rows); t.hidden = false;
       const bx = host.getBoundingClientRect(), sx = bx.width / W;

@@ -71,7 +71,9 @@ const FAMS = [
   { id: 'science', label: 'Science titles', color: '#D53E4F',
     test: (j: string) => /^science(\s+advances)?$/.test(j) },
   { id: 'nature', label: 'Nature titles', color: '#3288BD',
-    test: (j: string) => /^(nature|npj)\b/.test(j) || /^scientific (data|reports)$/.test(j) || /^communications (earth|biology|chemistry)/.test(j) },
+    // Only journals with "Nature" in the name (Steve, 13 Nov 2026): npj,
+    // Scientific Reports/Data and Communications titles count as Other.
+    test: (j: string) => /\bnature\b/.test(j) },
   { id: 'pnas', label: 'PNAS', color: '#FDAE61',
     test: (j: string) => /^(pnas|proceedings of the national academy)/.test(j) },
   { id: 'cell', label: 'Cell titles', color: '#66C2A5',

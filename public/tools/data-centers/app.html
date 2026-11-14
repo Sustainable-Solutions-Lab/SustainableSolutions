@@ -53,6 +53,8 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px }
 .marks { position: relative; height: 18px; font-size: 10.5px; line-height: 13px; color: var(--muted); margin: -6px 10px 2px }
 .marks i { position: absolute; top: 0; width: 1px; height: 5px; background: var(--muted); transform: translateX(-0.5px) }
+.marks svg.ld { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none }
+.marks svg.ld polyline { fill: none; stroke: var(--muted); stroke-width: 1; opacity: 0.6 }
 .marks button { position: absolute; transform: translateX(-50%); background: none; border: 0; padding: 0; color: var(--muted); font: inherit; cursor: pointer; white-space: nowrap }
 .marks button.l { transform: none } .marks button.r { transform: translateX(-100%) }
 .marks button:hover, .marks button.on { color: var(--ink) } .marks button.on { font-weight: 600 }
@@ -395,7 +397,7 @@ function cConv(v, from, base, y = HZ, u = UNITS) {
 }
 // Published context. Build references are solar + wind GW/yr; demand references are %/yr of total demand.
 const REFS_BUILD = [
-  { v: 38.7, label: "2023-25 pace", title: "U.S. solar and wind added, 2023 to 2025 average (Ember)", hist: true },
+  { v: 38.7, label: "2023-25 pace", short: "2023-25", title: "U.S. solar and wind added, 2023 to 2025 average (Ember)", hist: true },
   { v: 57.5, label: "Net-Zero America", title: "Princeton Net-Zero America (2021), high-electrification E+ pathway: about 55 to 60 GW/yr of wind and solar on average through the 2020s" },
   { v: 64, label: "IRA path", title: "Princeton REPEAT estimate under the Inflation Reduction Act incentives (before the 2025 budget law): about 46 GW/yr solar and 18 GW/yr wind" },
   { v: 110, label: "NREL 100% low", title: "NREL (2022), 100% clean electricity by 2035: 40 GW/yr solar plus 70 GW/yr wind by about 2030 (an annual rate, not an average)" },
@@ -436,13 +438,7 @@ const CTL = [
     fmt: v => fmtD(v) + " to 2035",
     get: () => demM(P),
     marks: () => [
-      ...(UNITS === "pct"
-        ? [[hc(D.history.demand, 2005, 2019), "2005-19", "Average growth of U.S. demand, 2005 to 2019 (Ember)"],
-           [D.g_demand_total, "2019-25", "Average growth of U.S. demand, 2019 to 2025 (Ember)"]]
-        : [[(D.history.demand[14] - D.history.demand[0]) / 14, "2005-19", "Average yearly increase in U.S. demand, 2005 to 2019 (Ember)"],
-           [(D.history.demand[20] - D.history.demand[14]) / 6, "2019-25", "Average yearly increase in U.S. demand, 2019 to 2025 (Ember)"]]),
       [demM(DEF), "Recent rates", "Every end use at its recent rate (the default)"],
-      [demM(Object.assign({}, anchorD, { g_dc: 0.13 })), "LBNL low", "Data centers at LBNL's low 2028 projection (+13%/yr), other end uses as set"],
       [demM(Object.assign({}, anchorD, { g_dc: 0.27 })), "LBNL high", "Data centers at LBNL's high 2028 projection (+27%/yr), other end uses as set"],
       ...REFS_DEMAND.map(r => [dToU(r.g), r.label, r.title]),
       [needDemand(61), "Max for 61%", "Fastest demand growth at which the current clean build still cuts 2035 emissions 61% below 2005", T]],
@@ -464,12 +460,8 @@ const CTL = [
     fmt: v => fmtC(v) + " to 2035",
     get: () => cleanM(P),
     marks: () => [
-      ...(UNITS === "pct"
-        ? [[hc(D.history.clean, 2005, 2019), "2005-19", "Average growth of U.S. clean generation, 2005 to 2019 (Ember)"],
-           [hc(D.history.clean, 2015, 2025), "2015-25", "Average growth of U.S. clean generation, 2015 to 2025 (Ember)"]]
-        : [[(D.history.cap_sw[20] - D.history.cap_sw[10]) / 10, "2016-25", "U.S. solar and wind added per year, 2016 to 2025 average (Ember)"]]),
       [cleanM(DEF), "Recent rates", "Each source on its recent trend (the default)"],
-      ...REFS_BUILD.map(r => [cConv(r.v, "abs", anchorC), r.label, r.title + (UNITS === "pct" ? ". Shown as the clean growth that build gives, with the current mix" : "")]),
+      ...REFS_BUILD.filter(r => !["IRA path", "NREL 100% low"].includes(r.label)).map(r => [cConv(r.v, "abs", anchorC), r.short || r.label, r.title + (UNITS === "pct" ? ". Shown as the clean growth that build gives, with the current mix" : "")]),
       [needClean(61), "61% cut", "Clean build that cuts 2035 emissions 61% below 2005 with demand as set", T],
       [needAllClean(), "100% clean", "Clean generation equal to demand in 2035", T]],
     note: () => `${f0(at(cur, HZ).cleanGross)} TWh of clean generation in 2035, from ${f0(at(cur, Y0).cleanGross)} TWh (${UNITS === "pct" ? fmtC(cleanAbs(P), "abs") + " of solar and wind" : fmtC(cleanCagr(P), "pct")}). Moves the solar, wind and other-clean rates below by the same amount` },
@@ -538,28 +530,68 @@ function renderMarks(c, val) {
   if (key === c.mkey) return;
   c.mkey = key;
   mk.replaceChildren();
-  const rows = []; // right edge of the last label in each row, in px
-  for (const [v, t, title, cls] of [...ms].sort((a, b) => a[0] - b[0])) {
+  // Staggered rows of labels. Leaders drop straight from the tick through the rows above, then bend to
+  // their label.
+  const RH = 16, TOP = 7, NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg"); svg.setAttribute("class", "ld"); mk.appendChild(svg);
+  const items = [...ms].sort((a, b) => a[0] - b[0]).map(([v, t, title, cls], n) => {
     const f = (v - c.min) / (c.max - c.min);
     const tick = document.createElement("i"); tick.style.left = f * 100 + "%"; mk.appendChild(tick);
     const b = document.createElement("button");
-    b.type = "button"; b.textContent = t;
+    b.type = "button"; b.textContent = t; b.classList.add("l");
     b.title = (title ? title + ". " : "") + "Set to " + c.fmt(v);
     if (cls) b.classList.add(cls);
     if (c.on === t) b.classList.add("on");
-    b.style.left = f * 100 + "%";
     b.addEventListener("click", () => { c.apply(v); anchorD = Object.assign({}, P); anchorC = Object.assign({}, P); schedule(); });
     mk.appendChild(b);
-    const bw = b.offsetWidth;
-    let x0 = f * w - bw / 2;
-    if (x0 < -10) { b.classList.add("l"); b.style.left = "-4px"; x0 = -4; }
-    else if (x0 + bw > w + 10) { b.classList.add("r"); b.style.left = "calc(100% + 4px)"; x0 = w + 4 - bw; }
-    let r = rows.findIndex(e => e + 4 <= x0);
-    if (r < 0) { r = rows.length; rows.push(0); }
-    rows[r] = x0 + bw;
-    b.style.top = 6 + r * 13 + "px";
+    return { b, tx: f * w, bw: b.offsetWidth };
+  });
+  // Rows cycle through the ticks in order. A label stays between the leaders of the nearest deeper-row
+  // ticks on either side, and labels in a row are nudged apart. Add a row until everything fits.
+  const lo = -4, hi = w + 4;
+  const layout = rowsOf => {
+    let ok = true;
+    items.forEach((d, k) => d.row = rowsOf[k]);
+    const nr = Math.max(0, ...rowsOf) + 1;
+    for (let row = 0; row < nr; row++) {
+      const it = items.filter(d => d.row === row);
+      for (const d of it) {
+        const k = items.indexOf(d);
+        let L = lo, R = hi;
+        for (let q = k - 1; q >= 0; q--) if (items[q].row > row) { L = items[q].tx + 4; break; }
+        for (let q = k + 1; q < items.length; q++) if (items[q].row > row) { R = items[q].tx - 4; break; }
+        d.L = L; d.R = R;
+        d.x0 = Math.min(Math.max(d.tx - d.bw / 2, L), R - d.bw);
+      }
+      for (let k = 1; k < it.length; k++) it[k].x0 = Math.max(it[k].x0, it[k - 1].x0 + it[k - 1].bw + 6);
+      for (let k = it.length - 1; k >= 0; k--) {
+        const lim = k === it.length - 1 ? hi : it[k + 1].x0 - 6;
+        if (it[k].x0 + it[k].bw > lim) it[k].x0 = lim - it[k].bw;
+      }
+      for (const d of it) if (d.x0 < Math.max(lo, d.L) - 0.5 || d.x0 + d.bw > Math.min(hi, d.R) + 0.5) ok = false;
+    }
+    return ok ? items.reduce((a, d) => a + Math.abs(d.x0 + d.bw / 2 - d.tx), 0) : Infinity;
+  };
+  // fewest rows that fit; among those, the assignment that keeps labels closest to their ticks
+  let best = null;
+  for (let nr = 1; nr <= 4 && !best; nr++) {
+    let bc = Infinity;
+    for (let code = 0; code < Math.pow(nr, items.length); code++) {
+      const ro = items.map((_, k) => Math.floor(code / Math.pow(nr, k)) % nr);
+      const cost = layout(ro);
+      if (cost < bc) { bc = cost; best = ro; }
+    }
   }
-  mk.style.height = 6 + Math.max(1, rows.length) * 13 + "px";
+  layout(best || items.map((_, k) => k % 4));
+  const seg = pts => { const p = document.createElementNS(NS, "polyline"); p.setAttribute("points", pts.map(q => q.join(",")).join(" ")); svg.appendChild(p); };
+  for (const d of items) {
+    const top = TOP + d.row * RH;
+    d.b.style.left = d.x0 + "px"; d.b.style.top = top + "px";
+    const ax = Math.min(Math.max(d.tx, d.x0 + 3), d.x0 + d.bw - 3); // where the leader meets the label
+    const bend = d.row ? TOP + d.row * RH - 2 : 5;
+    if (d.row || Math.abs(ax - d.tx) > 0.5) seg([[d.tx, 5], [d.tx, bend], [ax, top + 1]]);
+  }
+  mk.style.height = TOP + (items.length ? Math.max(...items.map(d => d.row)) + 1 : 1) * RH - 2 + "px";
 }
 for (const d of document.querySelectorAll("details")) d.addEventListener("toggle", () => { for (const c of CTL) c.mkey = ""; schedule(); });
 addEventListener("resize", () => schedule());

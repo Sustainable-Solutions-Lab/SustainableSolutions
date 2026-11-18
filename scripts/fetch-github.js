@@ -16,10 +16,15 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ORG = 'Sustainable-Solutions-Lab';
+// Cornerstone (Steve co-leads it) is listed alongside the lab's own repos
+// (Steve, 18 Nov 2026). Its forks of EPA's USEEIO repos stay out via the
+// fork filter. The "Follow us" link still points at the lab org.
+const ORGS = [ORG, 'Cornerstone-Data'];
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data', 'github.json');
-const N_FEATURED = 6;
+// Featured per org, so Cornerstone's starred repos don't crowd out the lab's.
+const N_FEATURED = { 'Sustainable-Solutions-Lab': 6, 'Cornerstone-Data': 3 };
 // The site's own repo is not a research output; howto is internal docs.
-const EXCLUDE = new Set(['SustainableSolutions', 'howto', '.github']);
+const EXCLUDE = new Set(['SustainableSolutions', 'howto', '.github', 'cornerstone-data.github.io']);
 // Cross-listed forks of Steve's personal published-paper repos are lab
 // projects too — allow them through the fork filter by name.
 const ALLOW_FORKS = new Set(['FoodWithoutAg', 'multiregional-acct', 'eeio-defense']);
@@ -33,11 +38,11 @@ async function gh(path) {
   return r.json();
 }
 
-async function participation(repo) {
+async function participation(owner, repo) {
   // 52 weekly commit counts; GitHub returns 202 while it computes — retry
   // once, then give up quietly (the card just skips its sparkline).
   for (let i = 0; i < 2; i++) {
-    const d = await gh(`/repos/${ORG}/${repo}/stats/participation`).catch(() => null);
+    const d = await gh(`/repos/${owner}/${repo}/stats/participation`).catch(() => null);
     if (d && !d.__pending && Array.isArray(d.all)) return d.all;
     await new Promise((res) => setTimeout(res, 2500));
   }
@@ -46,7 +51,8 @@ async function participation(repo) {
 
 async function main() {
   const org = await gh(`/orgs/${ORG}`);
-  const repos = await gh(`/orgs/${ORG}/repos?per_page=100&type=public`);
+  const repos = (await Promise.all(ORGS.map((o) =>
+    gh(`/orgs/${o}/repos?per_page=100&type=public`)))).flat();
   const pool = repos
     .filter((r) => !EXCLUDE.has(r.name) && !r.archived
       && (!r.fork || ALLOW_FORKS.has(r.name)))
@@ -54,7 +60,10 @@ async function main() {
       (b.stargazers_count - a.stargazers_count)
       || (new Date(b.pushed_at) - new Date(a.pushed_at)));
   const featured = [];
-  for (const r of pool.slice(0, N_FEATURED)) {
+  const picks = ORGS.flatMap((o) => pool
+    .filter((r) => r.owner.login.toLowerCase() === o.toLowerCase())
+    .slice(0, N_FEATURED[o]));
+  for (const r of picks) {
     featured.push({
       name: r.name,
       url: r.html_url,
@@ -62,7 +71,7 @@ async function main() {
       language: r.language ?? null,
       stars: r.stargazers_count,
       pushedAt: r.pushed_at,
-      commits52w: await participation(r.name),
+      commits52w: await participation(r.owner.login, r.name),
     });
   }
   const snapshot = {

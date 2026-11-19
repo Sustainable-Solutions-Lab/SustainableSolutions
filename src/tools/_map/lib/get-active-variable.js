@@ -120,7 +120,16 @@ function resolveVariable(config, activeLayer, activeDimensions) {
   const maskSuffixes = typeof maskDim === 'string' && maskDim.length
     ? maskDim.split(',').filter(Boolean)
     : null
-  const vm = maskSuffixes && v ? { ...v, maskSuffixes } : v
+  // Masks with a time dimension (config.enhancedMasks[].epochs) ride along
+  // so lib/variable-value.js can interpolate their epoch ratios.
+  const maskEpochs = maskSuffixes
+    ? (config.enhancedMasks ?? [])
+      .filter((m) => m.epochs && maskSuffixes.includes(m.suffix))
+      .map((m) => ({ suffix: m.suffix, years: m.epochs.years, crops: m.epochs.crops }))
+    : []
+  const vm = maskSuffixes && v
+    ? { ...v, maskSuffixes, ...(maskEpochs.length ? { maskEpochs } : {}) }
+    : v
 
   const yc = config.yearControl
   if (vm?.yearTerms && yc) {
@@ -142,7 +151,10 @@ function resolveVariable(config, activeLayer, activeDimensions) {
         label: `${vm.label} — ${year} vs. ${yearB}`,
       }
     }
-    if (year !== yc.referenceYear) {
+    // A mask whose reference epoch is not the tool's reference year (CDL,
+    // ACI and MapBiomas are 2023 maps) needs its ratio applied at the
+    // reference year too, so the scaled path runs whenever epochs are on.
+    if (year !== yc.referenceYear || vm.maskEpochs) {
       return {
         ...vm,
         // Anchor the color scale to the reference-year base prop so the

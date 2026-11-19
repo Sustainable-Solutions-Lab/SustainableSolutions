@@ -49,18 +49,102 @@ export function propExpr(name, suffixes) {
   return ['coalesce', ...suffixes.map((sfx) => ['get', name + sfx]), ['get', name]]
 }
 
+/**
+ * Mask time dimension (variable.maskEpochs, from config.enhancedMasks[].epochs):
+ * a mask built from an annual product carries, per cell and crop, the
+ * crop's within-country share at each epoch relative to its share in the
+ * mask's reference year, as `w_<crop>_<year><suffix>` (absent = 1). The
+ * ratio for any year is interpolated between the bracketing epochs and
+ * held flat outside them. A source × crop term is multiplied by it; an
+ * all-crop term (fer, tot, ...) gains each covered crop's part times
+ * (ratio − 1), so the mask moves the crop's pattern through time while
+ * the national year factor still sets the level.
+ */
+function bracket(years, y) {
+  const n = years.length
+  if (y <= years[0]) return [years[0], years[0], 0]
+  if (y >= years[n - 1]) return [years[n - 1], years[n - 1], 0]
+  for (let i = 0; i < n - 1; i += 1) {
+    if (years[i] <= y && y <= years[i + 1]) {
+      return [years[i], years[i + 1], (y - years[i]) / (years[i + 1] - years[i])]
+    }
+  }
+  return [years[n - 1], years[n - 1], 0]
+}
+
+const wName = (mask, crop, e) => `w_${crop}_${e}${mask.suffix}`
+
+function ratioRead(props, mask, crop, y) {
+  const [e0, e1, t] = bracket(mask.years, y)
+  const a = props[wName(mask, crop, e0)] ?? 1
+  if (t === 0) return a
+  const b = props[wName(mask, crop, e1)] ?? 1
+  return a * (1 - t) + b * t
+}
+
+function ratioExpr(mask, crop, y) {
+  const [e0, e1, t] = bracket(mask.years, y)
+  const g = (e) => ['coalesce', ['to-number', ['get', wName(mask, crop, e)]], 1]
+  if (t === 0) return g(e0)
+  if (t === 1) return g(e1)
+  return ['+', ['*', 1 - t, g(e0)], ['*', t, g(e1)]]
+}
+
+/** The mask crop a prop is specific to (prop ends in `_<crop>`), or null. */
+function cropOf(prop, crops) {
+  for (const c of crops) if (prop.endsWith(`_${c}`)) return c
+  return null
+}
+
+function termRead(props, prop, sfx, masks, y) {
+  const v = readProp(props, prop, sfx)
+  if (v == null || isNaN(v)) return null
+  if (!masks) return v
+  let val = v
+  for (const m of masks) {
+    const c = cropOf(prop, m.crops)
+    if (c) {
+      val *= ratioRead(props, m, c, y)
+    } else {
+      for (const cc of m.crops) {
+        const pv = readProp(props, `${prop}_${cc}`, sfx)
+        if (pv != null && !isNaN(pv)) val += pv * (ratioRead(props, m, cc, y) - 1)
+      }
+    }
+  }
+  return val
+}
+
+function termExpr(prop, sfx, masks, y) {
+  let e = ['coalesce', ['to-number', propExpr(prop, sfx)], 0]
+  if (!masks) return e
+  for (const m of masks) {
+    const c = cropOf(prop, m.crops)
+    if (c) {
+      e = ['*', e, ratioExpr(m, c, y)]
+    } else {
+      const parts = m.crops.map((cc) => ['*',
+        ['coalesce', ['to-number', propExpr(`${prop}_${cc}`, sfx)], 0],
+        ['-', ratioExpr(m, cc, y), 1]])
+      e = ['+', e, ...parts]
+    }
+  }
+  return e
+}
+
 /** JS-side read from a properties object. */
 export function readVarValue(props, variable) {
   if (!props || !variable) return undefined
   if (variable.rawRead) return variable.rawRead(props)
   const sfx = variable.maskSuffixes
+  const masks = variable.maskEpochs
   if (variable.scaled?.factors) {
     const { terms, year, yearB, factors } = variable.scaled
     const m49 = props.m49
     const at = (y) =>
       terms.reduce((sum, t) => {
-        const v = readProp(props, t.prop, sfx)
-        if (v == null || isNaN(v)) return sum
+        const v = termRead(props, t.prop, sfx, masks, y)
+        if (v == null) return sum
         const k = t.cellScale ? t.cellScale.fn(props) : 1
         return sum + v * k * factorFor(factors, t.src, m49, y)
       }, 0)
@@ -86,11 +170,12 @@ export function readVarValue(props, variable) {
 export function varValueExpr(variable) {
   if (variable.rawExpr) return variable.rawExpr
   const sfx = variable.maskSuffixes
+  const masks = variable.maskEpochs
   if (variable.scaled?.factors) {
     const { terms, year, yearB, factors } = variable.scaled
     const at = (y) => {
       const parts = terms.map((t) => {
-        const raw = ['coalesce', ['to-number', propExpr(t.prop, sfx)], 0]
+        const raw = termExpr(t.prop, sfx, masks, y)
         // Per-term cell multiplier (e.g. the rangeland LSRS scope share,
         // lib/rangeland-scope.js) applied before the national year factor.
         const get = t.cellScale ? ['*', raw, t.cellScale.expr] : raw

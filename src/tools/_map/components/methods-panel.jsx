@@ -218,7 +218,7 @@ function FoodEmissionsMethods() {
         pattern, and Gridded Livestock of the World, interpolated between
         its 2010, 2015 and 2020 editions, for pigs and poultry. Both are
         census downscalings rather than observations of animals. National
-        totals match FAOSTAT for every year 2000–2023, and each species
+        totals match FAOSTAT for every year 2000–2024, and each species
         group carries its own primary product (raw milk, carcass meat,
         eggs), so emissions per kilogram are reported per commodity.
       </p>
@@ -280,6 +280,22 @@ function FoodEmissionsMethods() {
         Cameroon&rsquo;s oil palm, scattered into the northern savanna
         rather than the coastal estates, the toggle is the difference
         between a blank map and the right one.
+      </p>
+      <p style={pStyle}>
+        Where the finer product is itself a time series, the toggle also
+        carries the crop&rsquo;s pattern through time. SPAM alone moves a
+        crop between its 2000, 2005, 2010 and 2020 editions; a mask built
+        from one map would freeze it. So the Descals planting-year layer
+        gives palm standing in 2000, 2005, 2010 and 2015, the Cropland
+        Data Layer its 2008, 2013 and 2018 editions, the Annual Crop
+        Inventory 2011, 2015 and 2019, EUCROPMAP 2018 and MapBiomas 2000,
+        2010 and 2020. Each cell stores the crop&rsquo;s
+        within-country share at each epoch relative to the mask&rsquo;s
+        own year; the year slider interpolates between epochs and applies
+        that ratio on top of the national trend, so the level still comes
+        from the statistics and only the placement moves. Rubber, cocoa
+        and the Forest Data Partnership layers are single maps and stay
+        fixed in time.
       </p>
       <p style={pStyle}>
         The enhanced track&rsquo;s first entries are the cocoa and coffee

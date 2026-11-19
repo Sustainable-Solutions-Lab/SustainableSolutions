@@ -559,31 +559,38 @@ const config = {
       id: 'descals-palm',
       label: 'Oil palm \u2014 satellite-mapped at 10 m (Descals et al. 2024)',
       suffix: '__dsc',
-      note: 'Reallocates each country\u2019s palm-attributed emissions and production to the mapped 10 m extent (industrial + smallholder). National totals unchanged.',
+      // Time dimension: the 30 m planting-year layer gives palm standing at
+      // each epoch; cells carry w_oilp_<year>__dsc share ratios (exporter).
+      epochs: { years: [2000, 2005, 2010, 2015, 2020], crops: ['oilp'] },
+      note: 'Reallocates each country\u2019s palm-attributed emissions and production to the mapped 10 m extent (industrial + smallholder), and moves that pattern through time with the planting-year layer: palm standing in 2000, 2005, 2010 and 2015, interpolated between. Replanted blocks carry their latest planting year, so early epochs under-count old estates. National totals unchanged.',
     },
     {
       id: 'usda-cdl',
       label: 'United States \u2014 USDA Cropland Data Layer (30 m)',
       suffix: '__cdl',
-      note: 'Places US maize, soybean, wheat, cotton, rice, sorghum, barley, canola, potatoes, beans, peanuts, and sugarcane where the 2023 CDL maps them. US totals unchanged.',
+      epochs: { years: [2008, 2013, 2018, 2023], crops: ['maiz', 'soyb', 'whea', 'cott', 'rice', 'sorg', 'barl', 'rape', 'pota', 'bean', 'grou', 'sugc'] },
+      note: 'Places US maize, soybean, wheat, cotton, rice, sorghum, barley, canola, potatoes, beans, peanuts, and sugarcane where the CDL maps them, with the pattern following the 2008, 2013, 2018 and 2023 layers through time (interpolated between, held outside). US totals unchanged.',
     },
     {
       id: 'mapbiomas',
       label: 'Brazil \u2014 MapBiomas collection 9 (30 m)',
       suffix: '__mb',
-      note: 'Places Brazilian soybean, sugarcane, rice, coffee, and cotton where MapBiomas 2023 maps them. Brazilian totals unchanged.',
+      epochs: { years: [2000, 2010, 2020, 2023], crops: ['soyb', 'sugc', 'rice', 'coff', 'rcof', 'cott'] },
+      note: 'Places Brazilian soybean, sugarcane, rice, coffee, and cotton where MapBiomas maps them, with the pattern following the 2000, 2010, 2020 and 2023 layers through time (interpolated between). Brazilian totals unchanged.',
     },
     {
       id: 'aafc-aci',
       label: 'Canada \u2014 AAFC Annual Crop Inventory (30 m)',
       suffix: '__aci',
-      note: 'Places Canadian wheat, canola, barley, maize, soybean, beans, potatoes, and sorghum where the 2023 ACI maps them. Canadian totals unchanged.',
+      epochs: { years: [2011, 2015, 2019, 2023], crops: ['whea', 'rape', 'barl', 'maiz', 'soyb', 'bean', 'pota', 'sorg'] },
+      note: 'Places Canadian wheat, canola, barley, maize, soybean, beans, potatoes, and sorghum where the ACI maps them, with the pattern following the 2011, 2015, 2019 and 2023 inventories through time (interpolated between, held before 2011). Canadian totals unchanged.',
     },
     {
       id: 'eucropmap',
       label: 'European Union \u2014 JRC EUCROPMAP (10 m)',
       suffix: '__eu',
-      note: 'Places EU wheat, barley, maize, rice, potatoes, rapeseed, and soybean where EUCROPMAP 2022 maps them. National totals unchanged.',
+      epochs: { years: [2018, 2022], crops: ['whea', 'barl', 'maiz', 'rice', 'pota', 'rape', 'soyb'] },
+      note: 'Places EU wheat, barley, maize, rice, potatoes, rapeseed, and soybean where EUCROPMAP maps them, with the pattern following the 2018 and 2022 maps (interpolated between, held outside). National totals unchanged.',
     },
     {
       id: 'wang-rubber',

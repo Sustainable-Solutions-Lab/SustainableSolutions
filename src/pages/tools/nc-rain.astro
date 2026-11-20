@@ -1,0 +1,16 @@
+---
+import ToolFrame from '../../layouts/ToolFrame.astro';
+import NcRainTool from '../../tools/nc-rain/NcRainTool';
+
+// How often it rains in North Carolina, 1976–2025 (NOAA GHCN-Daily).
+// Unlisted demo tool: noindex, no row in the Tools sheet.
+---
+
+<ToolFrame
+  title="How often it rains in North Carolina"
+  description="Fifty years of daily rain gauge records at six North Carolina stations, 1976–2025."
+  noindex
+  background="var(--paper-2)"
+>
+  <NcRainTool client:only="react" />
+</ToolFrame>

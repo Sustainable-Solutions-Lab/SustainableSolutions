@@ -106,6 +106,11 @@ th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--rul
 th:first-child, td:first-child { text-align: left; white-space: normal; min-width: 150px }
 tr.h td { font-weight: 600; border-top: 1px solid var(--rule) } td.ind { padding-left: 20px; color: var(--ink-2) }
 thead th { color: var(--muted); font-weight: 600; font-size: 11.5px }
+.card > details.fold { border-top: 0; padding-top: 0 }
+details.fold > summary { list-style-position: inside }
+details.fold > summary h3 { display: inline; margin: 0 }
+details.fold > summary .hint { color: var(--muted); font-size: 12px; font-weight: 400; margin-left: 6px }
+details.fold[open] > summary .hint { display: none }
 .method { color: var(--ink-2); font-size: 12.5px; display: grid; gap: 6px; max-width: 80ch }
 .method p { margin: 0 }
 a { color: var(--accent) }
@@ -181,6 +186,8 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
 .ctl.big input[type=range]::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -9px; border-width: 3px }
 .ctl.big input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-width: 3px }
 .ctl.big input[type=range]::-moz-range-track { background: var(--ink-2) }
+.credit a, .methods-link a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px }
+.methods-link { font-size: 14px; margin: 0 }
 </style>
 
 <div class="wrap">
@@ -271,28 +278,17 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
       </section>
 
       <section class="card">
-        <h3>Scenario in numbers</h3>
-        <p class="sub">Absolute values for the current settings. Growth rates are compound annual rates from 2025.</p>
-        <div class="tablewrap"><table id="tbl"></table></div>
-      </section>
-
-      <section class="card">
-        <details open>
-          <summary>How this works</summary>
-          <div class="method inner">
-            <p><b>Demand.</b> 2025 demand of 4,532 TWh (Ember) is split by end use. Data centers are about 246 TWh: LBNL's 2018 and 2023 estimates (76 and 176 TWh), carried forward at their 18%/yr pace. LBNL's 2028 range of 325 to 580 TWh implies 13 to 27%/yr. Transportation is about 28 TWh (EV charging plus rail), growing about 20%/yr. Industry is about 27% of demand, and buildings (homes and non-data-center commercial) are the rest. Together, buildings and industry grew about 0.7%/yr over 2019 to 2025. Data-center and transport growth slow after the first timing year and reach the buildings and industry rate by the second. The top-line slider adds the same amount to every end-use rate. It reads as the average growth of total demand from 2025 to 2035.</p>
-            <p><b>Clean generation.</b> Solar and wind fleets grow by each year's additions, with each source on its own rate. In 2023 to 2025, the U.S. added an average of 33 GW/yr of solar and 6 GW/yr of wind. Over 2016 to 2025, solar additions grew 19%/yr and wind additions fell 3%/yr. Nuclear changes by a net GW/yr. Hydro, bioenergy, other renewables and imports share one growth rate (−0.7%/yr over 2015 to 2025). 2025 capacity factors turn GW into TWh. The top-line slider adds the same amount to the solar, wind and other-clean rates. It reads as the average growth of clean generation from 2025 to 2035. These rates set the pace of building when it is needed. Once clean supply covers demand in a year, solar and wind are built only as far as needed to keep up with demand, so actual additions can fall below the slider's path.</p>
-            <p><b>Units and context.</b> The two top-line sliders and the map's axes can be read as growth rates or as amounts per year, both averaged from 2025 to the year shown: the increase in total demand (TWh/yr) and the solar and wind capacity built (GW/yr, the planned pace, before building stops once clean supply covers demand). For context, the U.S. built 39 GW/yr of solar and wind in 2023 to 2025 (Ember). Princeton's Net-Zero America (2021) high-electrification pathway builds about 55 to 60 GW/yr through the 2020s. Princeton's REPEAT project put the Inflation Reduction Act's incentives at about 64 GW/yr, before the 2025 budget law cut them. NREL's study of 100% clean electricity by 2035 (2022) needs 110 to 240 GW/yr by about 2030, an annual rate rather than an average. On demand, Grid Strategies (2025) reads utility forecasts as about 5.7%/yr growth in electricity use over five years, and EPRI (2026) puts data centers at 9 to 17% of U.S. electricity in 2030.</p>
-            <p><b>Fossil.</b> Coal and gas supply whatever demand is left. When that is less than in 2025, both scale down together. When it is more, gas covers the increase: first the existing fleet runs harder, then new plants are built. Coal retires 9 GW/yr (2020 to 2025 average) and gas 3 GW/yr.</p>
-            <p><b>Emissions and targets.</b> Direct CO<sub>2</sub> from power plants, the basis of the U.S. inventory and the NDC. Coal, gas and other fossil generation are multiplied by their 2025 intensities (EIA electric-power CO<sub>2</sub> by fuel divided by Ember generation: 1.02, 0.39 and 0.74 t/MWh). Solar, wind, nuclear, hydro and bioenergy count as zero; their lifecycle emissions (from manufacturing, construction and fuel supply) are left out. History is EIA's electric-power CO<sub>2</sub>, 2,412 Mt in 2005 and 1,485 Mt in 2025. The U.S. economy-wide NDC targets, 50 to 52% below 2005 by 2030 and 61 to 66% by 2035, are applied to the power sector one for one. That reading is lenient, because most pathways cut power faster than the rest of the economy. The 100% clean electricity goal for 2035 and net zero by 2050 are shown as zero. The U.S. has since withdrawn from the Paris Agreement, so these are benchmarks.</p>
-            <p><b>Limits.</b> This is an annual energy balance with no hourly matching or storage, so it overstates how much fossil power solar displaces once solar's share is large. Coal and gas output does not respond to fuel prices. Methane leaked upstream of gas plants is not counted.</p>
-            <p>Data: <a href="https://ember-energy.org/data/yearly-electricity-data/" target="_blank" rel="noopener">Ember yearly electricity data</a> (generation and capacity to 2025); <a href="https://www.eia.gov/totalenergy/data/monthly/" target="_blank" rel="noopener">EIA Monthly Energy Review</a>, table 11.6 (electric-power CO<sub>2</sub> by fuel); Shehabi et al. (LBNL, 2024), <i>United States Data Center Energy Usage Report</i>.</p>
-          </div>
+        <details class="fold">
+          <summary><h3>Scenario in numbers</h3> <span class="hint">Show the table</span></summary>
+          <p class="sub" style="margin-top:8px">Absolute values for the current settings. Growth rates are compound annual rates from 2025.</p>
+          <div class="tablewrap"><table id="tbl"></table></div>
         </details>
       </section>
+
+      <section class="card"><p class="methods-link"><a href="/tools/data-centers-methods" target="_top">How this works: model, default inputs, sources and limits</a></p></section>
     </main>
   </div>
-  <p class="credit">A first-pass annual energy-balance model of the U.S. power sector, built by the Sustainable Solutions Lab. Data from Ember, the U.S. Energy Information Administration and Lawrence Berkeley National Laboratory; assumptions and limits under How this works.</p>
+  <p class="credit">A first-pass annual energy-balance model of the U.S. power sector, built by the Sustainable Solutions Lab. Data from Ember, the U.S. Energy Information Administration and Lawrence Berkeley National Laboratory. <a href="/tools/data-centers-methods" target="_top">Methods and sources</a>.</p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>

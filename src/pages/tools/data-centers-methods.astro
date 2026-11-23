@@ -1,0 +1,133 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import tools from '../../data/tools.json';
+import type { Tool } from '../../lib/types';
+
+// Companion methods page for the data-centers tool (/tools/data-centers): how the
+// model works, its default inputs and where they come from, the published scenarios
+// used for context, the limits, and the sources. noindex matches the tool.
+//
+// LIVING DOCUMENT: keep in step with analysis/model.py and web/template.html in
+// Papers/Ideas/Data center demand and emissions (README.md there has the same numbers).
+const tool = (tools as Tool[]).find((t) => t.slug === 'data-centers') ?? null;
+
+const defaults = [
+  { k: 'Data centers', v: '246 TWh in 2025, +18.3%/yr', s: 'LBNL (2024): 76 TWh in 2018 and 176 TWh in 2023, carried forward at the same pace.' },
+  { k: 'Transportation', v: '28 TWh, +20%/yr', s: 'EV charging (about 20 TWh) plus rail. An order of magnitude, from EV stock growth in 2022 to 2025.' },
+  { k: 'Industry', v: '1,224 TWh, +0.4%/yr', s: 'About 27% of demand (EIA retail industrial sales plus direct use).' },
+  { k: 'Buildings', v: '3,034 TWh, +0.8%/yr', s: 'Homes and non-data-center commercial: the rest of Ember’s 4,532 TWh. Buildings and industry together grew 0.7%/yr over 2019 to 2025.' },
+  { k: 'Solar additions', v: '32.9 GW/yr, +18.9%/yr', s: 'Ember capacity: 2023 to 2025 average, and the log-linear trend in yearly additions over 2016 to 2025.' },
+  { k: 'Wind additions', v: '5.8 GW/yr, −3.2%/yr', s: 'Same method.' },
+  { k: 'Nuclear', v: '+0.08 GW/yr', s: 'Ember capacity, 2020 to 2025.' },
+  { k: 'Hydro, bioenergy, other renewables, imports', v: '−0.7%/yr', s: 'Ember generation, 2015 to 2025.' },
+  { k: 'Coal retirements', v: '9.0 GW/yr', s: 'Ember capacity, 2020 to 2025 average net decline.' },
+  { k: 'Gas retirements', v: '3 GW/yr', s: 'An order of magnitude from EIA-860. Ember reports net capacity only.' },
+  { k: 'Highest use of existing gas plants', v: '60% capacity factor', s: 'Above this, new gas plants are built.' },
+];
+
+const refs = [
+  { k: '2023-25 pace', v: '39 GW/yr', s: 'U.S. solar and wind added, 2023 to 2025 average (Ember).' },
+  { k: 'Net-Zero America', v: '55–60 GW/yr', s: 'Princeton (2021), high-electrification pathway, wind and solar through the 2020s.' },
+  { k: 'IRA path', v: '64 GW/yr', s: 'Princeton REPEAT, the Inflation Reduction Act’s incentives before the 2025 budget law: about 46 GW/yr solar and 18 GW/yr wind.' },
+  { k: 'NREL 100% clean by 2035', v: '110–240 GW/yr', s: 'NREL (2022): 40 to 90 GW/yr of solar plus 70 to 150 GW/yr of wind by about 2030, an annual rate rather than an average.' },
+  { k: 'Grid Strategies', v: '+5.7%/yr demand', s: 'Grid Strategies (2025): utility forecasts imply U.S. electricity use growing about 5.7%/yr over five years.' },
+  { k: 'EPRI 2026', v: '9–17% of 2030 use', s: 'EPRI (2026): data centers’ share of U.S. electricity in 2030. The high case is about +28%/yr from 2025 here; the low case is close to LBNL’s low.' },
+];
+
+const h2 = 'font-size: 23px; line-height: 1.25; margin: 36px 0 10px;';
+const p = 'font-size: 15px; line-height: 1.6; margin: 0 0 12px;';
+---
+
+<BaseLayout
+  title={`${tool?.title ?? 'Data centers, clean power and U.S. power-sector emissions'}: methods`}
+  description="How the data-centers tool turns demand growth and clean build into U.S. power-sector emissions, its default inputs, and where the numbers come from."
+  noindex={tool?.unlisted ?? true}
+>
+  <article class="mx-auto max-w-[760px] px-4 pb-24 pt-10">
+    <p class="m-0 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">Methods</p>
+    <h1 class="font-serif text-ink" style="font-size: 34px; line-height: 1.12; letter-spacing: -0.01em; margin: 6px 0 12px;">Data centers, clean power and U.S. power-sector emissions</h1>
+    <p class="text-ink-2" style="font-size: 16px; line-height: 1.6; margin: 0 0 8px;">
+      <a href="/tools/data-centers" class="text-ink underline">The tool</a> is a first-pass annual energy balance of the U.S. power sector from 2025 to 2050. Demand grows by end use, clean generation grows by source, and fossil plants supply whatever demand is left. Two top-line sliders move every demand rate, or every clean rate, by the same amount, so the question is how fast clean power has to be built to keep up with demand, data centers above all, and still meet the national targets.
+    </p>
+
+    <h2 class="font-serif text-ink" style={h2}>Demand</h2>
+    <p class="text-ink-2" style={p}>
+      2025 demand of 4,532 TWh (Ember) is split into data centers, transportation, buildings and industry, each with its own growth rate. Data-center and transport growth hold until the first timing year (2030 by default), then slow in a straight line to the combined rate of buildings and industry by the second (2040). The top-line slider adds the same amount to every end-use rate and reads as the average growth of total demand from 2025 to the year shown, or, in the other units, as the average demand added per year.
+    </p>
+
+    <h2 class="font-serif text-ink" style={h2}>Clean generation</h2>
+    <p class="text-ink-2" style={p}>
+      Solar and wind fleets grow by each year’s additions. Each source’s additions grow at their own rate until 2035 (a timing setting) and are then held at that year’s level. Nuclear changes by a net GW a year. Hydro, bioenergy, other renewables and net imports share one growth rate. 2025 capacity factors turn GW into TWh, and capacity added during a year counts for half that year.
+    </p>
+    <p class="text-ink-2" style={p}>
+      The rates set the pace of building when building is needed. Once clean supply covers demand in a year, solar and wind are built only as far as needed to keep up with demand, so actual additions can fall below the planned path and little clean power is wasted. The top-line clean slider adds the same amount to the solar, wind and other-clean rates and reads as the average growth of planned clean generation, or as the planned solar and wind built per year, from 2025 to the year shown.
+    </p>
+
+    <h2 class="font-serif text-ink" style={h2}>Fossil</h2>
+    <p class="text-ink-2" style={p}>
+      Coal and gas supply the demand that clean power and the remaining other fossil plants leave. When that is less than in 2025, coal and gas scale down together. When it is more, gas covers the increase: first the existing fleet runs harder, up to a 60% capacity factor, then new gas plants are built. Coal retires 9 GW a year and existing gas 3 GW a year.
+    </p>
+
+    <h2 class="font-serif text-ink" style={h2}>Emissions and targets</h2>
+    <p class="text-ink-2" style={p}>
+      Emissions are direct CO₂ from power plants, the basis of the U.S. greenhouse gas inventory and the NDC. Coal, gas and other fossil generation are multiplied by their 2025 intensities: EIA’s electric-power CO₂ by fuel divided by Ember’s generation, 1.02, 0.39 and 0.74 t CO₂/MWh. Solar, wind, nuclear, hydro and bioenergy count as zero. Their lifecycle emissions, from manufacturing, construction and fuel supply, are left out, as is methane leaked upstream of gas plants. The history is EIA’s electric-power CO₂: 2,412 Mt in 2005 and 1,485 Mt in 2025.
+    </p>
+    <p class="text-ink-2" style={p}>
+      The U.S. economy-wide NDC targets, 50 to 52% below 2005 by 2030 and 61 to 66% by 2035, are applied to the power sector one for one. That reading is lenient, because most pathways cut power faster than the rest of the economy. The goals of 100% clean electricity by 2035 and net zero by 2050 are shown as zero. The U.S. has since withdrawn from the Paris Agreement, so these serve as benchmarks.
+    </p>
+
+    <h2 class="font-serif text-ink" style={h2}>Default inputs</h2>
+    <p class="text-ink-2" style={p}>The defaults are recent rates. Each slider marks them, and the reset button returns to them.</p>
+    <dl style="margin: 0; display: grid; grid-template-columns: 1fr; gap: 10px;">
+      {defaults.map((d) => (
+        <div class="border-b border-rule pb-2.5">
+          <dt class="text-ink" style="font-size: 14px; font-weight: 600;">{d.k} <span class="font-mono text-ink-4" style="font-size: 11px; font-weight: 400;">{d.v}</span></dt>
+          <dd class="m-0 text-ink-2" style="font-size: 13.5px; line-height: 1.5;">{d.s}</dd>
+        </div>
+      ))}
+    </dl>
+
+    <h2 class="font-serif text-ink" style={h2}>Published scenarios for context</h2>
+    <p class="text-ink-2" style={p}>
+      Slider ticks and dotted lines on the map mark these. Build rates are solar plus wind GW a year. In the growth-rate units they are shown as the clean growth that build gives with the current mix. The accent-colored ticks are solved live for the current settings: the clean build that just cuts 2035 emissions 61% below 2005, the build at which clean supply equals demand in 2035, and the fastest demand growth at which the current build still meets 61%.
+    </p>
+    <dl style="margin: 0; display: grid; grid-template-columns: 1fr; gap: 10px;">
+      {refs.map((d) => (
+        <div class="border-b border-rule pb-2.5">
+          <dt class="text-ink" style="font-size: 14px; font-weight: 600;">{d.k} <span class="font-mono text-ink-4" style="font-size: 11px; font-weight: 400;">{d.v}</span></dt>
+          <dd class="m-0 text-ink-2" style="font-size: 13.5px; line-height: 1.5;">{d.s}</dd>
+        </div>
+      ))}
+    </dl>
+    <p class="font-serif italic text-ink-3" style="font-size: 13.5px; line-height: 1.5; margin: 10px 0 0;">
+      These come from summaries of each report and are approximate. The map is a guide to scale, not a comparison of the studies.
+    </p>
+
+    <h2 class="font-serif text-ink" style={h2}>Reading the charts</h2>
+    <p class="text-ink-2" style={p}>
+      The emissions chart shows history and the current scenario, with the targets as circles. Thin gray lines show the same settings with demand held at its 2025 level, or with no new clean capacity built; the scenario falls between them. The map shows emissions in the chosen year over a grid of the two top-line sliders, red above 2025 emissions and blue below, with the 2025 level as a solid line and the NDC as a dashed one.
+    </p>
+
+    <h2 class="font-serif text-ink" style={h2}>Limits</h2>
+    <ul class="text-ink-2" style="font-size: 15px; line-height: 1.6; padding-left: 18px; margin: 0;">
+      <li>An annual energy balance, with no hourly matching or storage. It overstates how much fossil power solar displaces once solar’s share is large, and it lets fossil generation reach zero once clean supply covers annual demand.</li>
+      <li>The fossil rule stands in for dispatch. Coal and gas output does not respond to fuel prices.</li>
+      <li>Retirements are fixed recent rates, not an age-based schedule.</li>
+      <li>National only. Data-center siting, regional grids and transmission are not modeled.</li>
+    </ul>
+
+    <h2 class="font-serif text-ink" style={h2}>Sources</h2>
+    <ul class="text-ink-2" style="font-size: 14px; line-height: 1.6; padding-left: 18px; margin: 0;">
+      <li>Ember. Yearly electricity data, 2025 release: generation, capacity and demand to 2025.</li>
+      <li>U.S. Energy Information Administration. Monthly Energy Review, table 11.6: carbon dioxide emissions from energy consumption, electric power sector.</li>
+      <li>Shehabi, A. and others. 2024 United States Data Center Energy Usage Report. Lawrence Berkeley National Laboratory (2024).</li>
+      <li>EPRI. Powering Intelligence: data-center electricity scenarios (2026 update).</li>
+      <li>Larson, E. and others. Net-Zero America: Potential Pathways, Infrastructure, and Impacts. Princeton University (2021).</li>
+      <li>Jenkins, J. D. and others. REPEAT Project analyses of the Inflation Reduction Act. Princeton ZERO Lab.</li>
+      <li>Denholm, P. and others. Examining Supply-Side Options to Achieve 100% Clean Electricity by 2035. National Renewable Energy Laboratory (2022).</li>
+      <li>Grid Strategies. Strategic Industries Surging: National Load Growth Forecast (2025).</li>
+    </ul>
+
+    <p class="font-mono text-ink-4" style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin: 40px 0 0;">Status as of 22 November 2026 · unlisted while in development</p>
+  </article>
+</BaseLayout>

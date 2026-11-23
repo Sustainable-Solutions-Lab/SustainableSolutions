@@ -64,6 +64,10 @@ input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offs
 .marks i { position: absolute; top: 0; width: 1px; height: 5px; background: var(--muted); transform: translateX(-0.5px) }
 .marks svg.ld { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none }
 .marks svg.ld polyline { fill: none; stroke: var(--muted); stroke-width: 1; opacity: 0.6 }
+.marks svg.ld polyline.tgt { stroke: var(--target, var(--accent)); opacity: 1 }
+/* target ticks cross the slider track (the track's center sits 8px above the marks, 11px on the big sliders) */
+.marks i.tgt { background: var(--target, var(--accent)); width: 1.5px; top: -13px; height: 18px }
+.ctl.big .marks i.tgt { top: -17px; height: 22px }
 .marks button { position: absolute; transform: translateX(-50%); background: none; border: 0; padding: 0; color: var(--muted); font: inherit; cursor: pointer; white-space: nowrap }
 .marks button.l { transform: none } .marks button.r { transform: translateX(-100%) }
 .marks button:hover, .marks button.on { color: var(--ink) } .marks button.on { font-weight: 600 }
@@ -286,7 +290,7 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
         <div class="charthead">
           <div>
             <h3>Power-sector emissions</h3>
-            <p class="sub">Million tons CO<sub>2</sub> per year from power plants, with targets marked. Thin gray lines show the current settings with demand held at its 2025 level, or with no new clean capacity built. History from EIA.</p>
+            <p class="sub">Million tons CO<sub>2</sub> per year from power plants, with targets marked. Thin gray lines show either current settings with demand held at its 2025 level (low), or with no new clean capacity built (high). Circles on the scenario mark 2030 and 2035, as on the maps below. History from EIA.</p>
           </div>
         </div>
         <div class="chart" id="ts"></div>
@@ -321,7 +325,7 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
             <p><b>Demand.</b> 2025 demand of 4,532 TWh (Ember) is split by end use. Data centers are about 246 TWh: LBNL's 2018 and 2023 estimates (76 and 176 TWh), carried forward at their 18%/yr pace. LBNL's 2028 range of 325 to 580 TWh implies 13 to 27%/yr. Transportation is about 28 TWh (EV charging plus rail), buildings (homes and non-data-center commercial) about 3,034 TWh and industry about 1,224 TWh. The top-line slider moves only data-center growth, on top of the chosen demand for everything else; its left end is flat data centers, and its ticks mark LBNL's low and high cases and the 2018-23 rate. Data-center growth holds until the first timing year and then slows to the buildings and industry rate by the second.</p>
             <p><b>Demand other than data centers.</b> "Recent" keeps transportation growing about 20%/yr (slowing like data centers), buildings 0.8%/yr and industry 0.4%/yr. The other chips follow published scenarios: NREL's Electrification Futures Study (2018: reference, medium, high), Princeton's Net-Zero America (2021: reference, E−, E+; end-use demand only, without hydrogen or direct air capture), NREL's 100% clean electricity by 2035 study (2022: AEO2021 reference, long-term strategy and accelerated electrification demand) and EIA's Annual Energy Outlook 2026 (low economic growth, baseline, high electricity demand; data-center servers removed and EV charging moved to transportation). Each study's TWh added per end use since its own 2025 value is added to the 2025 base here, because the studies assumed electrification already under way by 2025. Years between published values are interpolated, and the NREL 2035 study continues at its 2030 to 2035 pace. Older studies have no data-center line; their modest data-center growth sits inside commercial buildings.</p>
             <p><b>Clean generation.</b> Solar and wind fleets grow by each year's additions, with each source on its own rate. In 2023 to 2025, the U.S. added an average of 33 GW/yr of solar and 6 GW/yr of wind. Over 2016 to 2025, solar additions grew 19%/yr and wind additions fell 3%/yr. Nuclear changes by a net GW/yr. Hydro, bioenergy, other renewables and imports share one growth rate (−0.7%/yr over 2015 to 2025). 2025 capacity factors turn GW into TWh. The top-line slider adds the same amount to the solar, wind and other-clean rates. It reads as the average growth of clean generation from 2025 to 2035. These rates set the pace of building when it is needed. Once clean supply covers demand in a year, solar and wind are built only as far as needed to keep up with demand, so actual additions can fall below the slider's path.</p>
-            <p><b>Units and context.</b> The two top-line sliders and the map's axes can be read as growth rates or as amounts per year, both averaged from 2025 to the year shown: the increase in total demand (TWh/yr) and the solar and wind capacity built (GW/yr, the planned pace, before building stops once clean supply covers demand). For context, the U.S. built 39 GW/yr of solar and wind in 2023 to 2025 (Ember). Princeton's Net-Zero America (2021) high-electrification pathway builds about 55 to 60 GW/yr through the 2020s. Princeton's REPEAT project put the Inflation Reduction Act's incentives at about 64 GW/yr, before the 2025 budget law cut them. NREL's study of 100% clean electricity by 2035 (2022) needs 110 to 240 GW/yr by about 2030, an annual rate rather than an average. On demand, Grid Strategies (2025) reads utility forecasts as about 5.7%/yr growth in electricity use over five years, and EPRI (2026) puts data centers at 9 to 17% of U.S. electricity in 2030.</p>
+            <p><b>Units and context.</b> The two top-line sliders and the map's axes can be read as growth rates or as amounts per year, both averaged from 2025 to the year shown: the increase in total demand (TWh/yr) and the solar and wind capacity built (GW/yr, the planned pace, before building stops once clean supply covers demand). For context, the U.S. built 39 GW/yr of solar and wind in 2023 to 2025 (Ember). Princeton's Net-Zero America (2021) high-electrification pathway builds about 55 to 60 GW/yr through the 2020s. Princeton's REPEAT project put the Inflation Reduction Act's incentives at about 64 GW/yr, before the 2025 budget law cut them. NREL's study of 100% clean electricity by 2035 (2022) needs 110 to 240 GW/yr by about 2030, an annual rate rather than an average. On demand, EPRI (2026) puts data centers at 9 to 17% of U.S. electricity in 2030.</p>
             <p><b>Fossil.</b> Coal and gas supply whatever demand is left. When that is less than in 2025, both scale down together. When it is more, gas covers the increase: first the existing fleet runs harder, then new plants are built. Coal retires 9 GW/yr (2020 to 2025 average) and gas 3 GW/yr.</p>
             <p><b>Emissions and targets.</b> Direct CO<sub>2</sub> from power plants, the basis of the U.S. inventory and the NDC. Coal, gas and other fossil generation are multiplied by their 2025 intensities (EIA electric-power CO<sub>2</sub> by fuel divided by Ember generation: 1.02, 0.39 and 0.74 t/MWh). Solar, wind, nuclear, hydro and bioenergy count as zero; their lifecycle emissions (from manufacturing, construction and fuel supply) are left out. History is EIA's electric-power CO<sub>2</sub>, 2,412 Mt in 2005 and 1,485 Mt in 2025. The U.S. economy-wide NDC targets, 50 to 52% below 2005 by 2030 and 61 to 66% by 2035, are applied to the power sector one for one. That reading is lenient, because most pathways cut power faster than the rest of the economy. The 100% clean electricity goal for 2035 and net zero by 2050 are shown as zero. The U.S. has since withdrawn from the Paris Agreement, so these are benchmarks.</p>
             <p><b>Limits.</b> This is an annual energy balance with no hourly matching or storage, so it overstates how much fossil power solar displaces once solar's share is large. Coal and gas output does not respond to fuel prices. Methane leaked upstream of gas plants is not counted.</p>
@@ -459,7 +463,6 @@ const REFS_BUILD = [
   { v: 240, label: "NREL 100% high", title: "NREL (2022), 100% clean electricity by 2035: 90 GW/yr solar plus 150 GW/yr wind by about 2030 (an annual rate, not an average)" },
 ];
 const REFS_DEMAND = [
-  { g: 0.057, label: "Grid Strategies", title: "Grid Strategies (Nov 2025): utility forecasts imply U.S. electricity use growing about 5.7%/yr over five years; held to the year shown" },
 ];
 
 // ------------------------------------------------------------------ controls
@@ -501,7 +504,7 @@ const CTL = [
       [demM(withDC(P, 0.13)), "Slows", "Data-center growth slows to LBNL's low 2028 projection (+13%/yr)"],
       [demM(withDC(P, DEF.g_dc)), "Persists", "Data centers keep growing at their 2018-23 rate (+18.3%/yr, LBNL)"],
       [demM(withDC(P, 0.27)), "Accelerates", "Data-center growth accelerates to LBNL's high 2028 projection (+27%/yr); EPRI's 2026 high case is about the same"],
-      [needDemand(61), "Max for 61%", "Fastest data-center growth at which the current clean build still cuts 2035 emissions 61% below 2005", T]],
+      [needDemand(61), "Max for NDC", "Fastest data-center growth at which the current clean build still cuts 2035 emissions 61% below 2005", T]],
     note: () => `${f0(at(cur, HZ).demand)} TWh in 2035, from ${f0(at(cur, Y0).demand)} TWh (${UNITS === "pct" ? fmtD(demAbs(P), "abs") : fmtD(demandCagr(P), "pct")}). Data centers ${signPct(P.g_dc)} on top of the projection above, which sets the left end. Ticks: if recent data-center growth slows, persists or accelerates (LBNL)` },
   { k: "g_dc", label: "Data centers", min: 0, max: 0.45, step: 0.005, fmt: signPct, note: twh("dc", "2018-23 rate +18.3%/yr"),
     marks: () => [[0, "Flat"], [0.13, "LBNL low", "LBNL (2024): 325 TWh in 2028"],
@@ -516,7 +519,7 @@ const CTL = [
     marks: () => [
       [cleanM(DEF), "Recent rates", "Each source on its recent trend (the default)"],
       ...REFS_BUILD.filter(r => !["IRA path", "NREL 100% low"].includes(r.label)).map(r => [cConv(r.v, "abs", anchorC), r.short || r.label, r.title + (UNITS === "pct" ? ". Shown as the clean growth that build gives, with the current mix" : "")]),
-      [needClean(61), "61% cut", "Clean build that cuts 2035 emissions 61% below 2005 with demand as set", T],
+      [needClean(61), "Min for NDC", "Clean build that cuts 2035 emissions 61% below 2005 with demand as set", T],
       [needAllClean(), "100% clean", "Clean generation equal to demand in 2035", T]],
     note: () => `${f0(at(cur, HZ).cleanGross)} TWh of clean generation in 2035, from ${f0(at(cur, Y0).cleanGross)} TWh (${UNITS === "pct" ? fmtC(cleanAbs(P), "abs") + " of solar and wind" : fmtC(cleanCagr(P), "pct")}). Moves the solar, wind and other-clean rates below by the same amount` },
   { k: "g_solar", label: "Solar: growth in yearly additions", min: -0.30, max: 0.40, step: 0.005, fmt: signPct,
@@ -565,8 +568,8 @@ for (const c of CTL) {
   };
   inp.addEventListener("input", () => {
     let v = +inp.value;
-    // snap: within 2.5% of the slider's span of a tick, take the tick's exact value
-    const tol = 0.025 * (c.max - c.min);
+    // snap: within 5% of the slider's span of a tick, take the tick's exact value
+    const tol = 0.05 * (c.max - c.min);
     let best = null;
     for (const [mv] of c.cur || []) if (Math.abs(v - mv) < tol && (best === null || Math.abs(v - mv) < Math.abs(v - best))) best = mv;
     if (best !== null) v = best;
@@ -590,7 +593,7 @@ function renderMarks(c, val) {
   const svg = document.createElementNS(NS, "svg"); svg.setAttribute("class", "ld"); mk.appendChild(svg);
   const items = [...ms].sort((a, b) => a[0] - b[0]).map(([v, t, title, cls], n) => {
     const f = (v - c.min) / (c.max - c.min);
-    const tick = document.createElement("i"); tick.style.left = f * 100 + "%"; mk.appendChild(tick);
+    const tick = document.createElement("i"); tick.style.left = f * 100 + "%"; if (cls) tick.classList.add(cls); mk.appendChild(tick);
     const b = document.createElement("button");
     b.type = "button"; b.textContent = t; b.classList.add("l");
     b.title = (title ? title + ". " : "") + "Set to " + c.fmt(v);
@@ -598,7 +601,7 @@ function renderMarks(c, val) {
     if (c.on === t) b.classList.add("on");
     b.addEventListener("click", () => { c.apply(v); anchorD = Object.assign({}, P); anchorC = Object.assign({}, P); schedule(); });
     mk.appendChild(b);
-    return { b, tx: f * w, bw: b.offsetWidth };
+    return { b, tx: f * w, bw: b.offsetWidth, cls };
   });
   // Rows cycle through the ticks in order. A label stays between the leaders of the nearest deeper-row
   // ticks on either side, and labels in a row are nudged apart. Add a row until everything fits.
@@ -638,13 +641,13 @@ function renderMarks(c, val) {
     }
   }
   layout(best || items.map((_, k) => k % 4));
-  const seg = pts => { const p = document.createElementNS(NS, "polyline"); p.setAttribute("points", pts.map(q => q.join(",")).join(" ")); svg.appendChild(p); };
+  const seg = (pts, cls) => { const p = document.createElementNS(NS, "polyline"); p.setAttribute("points", pts.map(q => q.join(",")).join(" ")); if (cls) p.setAttribute("class", cls); svg.appendChild(p); };
   for (const d of items) {
     const top = TOP + d.row * RH;
     d.b.style.left = d.x0 + "px"; d.b.style.top = top + "px";
     const ax = Math.min(Math.max(d.tx, d.x0 + 3), d.x0 + d.bw - 3); // where the leader meets the label
     const bend = d.row ? TOP + d.row * RH - 2 : 5;
-    if (d.row || Math.abs(ax - d.tx) > 0.5) seg([[d.tx, 5], [d.tx, bend], [ax, top + 1]]);
+    if (d.row || Math.abs(ax - d.tx) > 0.5) seg([[d.tx, 5], [d.tx, bend], [ax, top + 1]], d.cls);
   }
   mk.style.height = TOP + (items.length ? Math.max(...items.map(d => d.row)) + 1 : 1) * RH - 2 + "px";
 }
@@ -778,7 +781,7 @@ function drawTS() {
   // NDC markers: open circles like the 100% clean one, at the lower end of each range (50% and 61%)
   for (const yr of [2030, 2035]) {
     const v = REF * (1 - TARGETS[yr][0] / 100);
-    tg.append("circle").attr("cx", x(yr)).attr("cy", y(v)).attr("r", 4).attr("fill", css("--panel")).attr("stroke", ink).attr("stroke-width", 1.5);
+    tg.append("circle").attr("cx", x(yr)).attr("cy", y(v)).attr("r", 4.5).attr("fill", css("--panel")).attr("stroke", ink).attr("stroke-width", 1.5).attr("stroke-dasharray", "2.4 1.6");
     tg.append("text").attr("x", x(yr) - 8).attr("y", y(v) + 4).attr("text-anchor", "end").attr("class", "lab").text(`${yr} NDC (${TARGETS[yr][0]}%)`);
   }
   for (const [yr, t] of [[2035, "100% clean"], [2050, "Net zero"]]) {
@@ -797,6 +800,8 @@ function drawTS() {
   svg.append("path").datum(cur).attr("d", line).attr("fill", "none").attr("stroke", scCol).attr("stroke-width", 3.5);
   const end = cur[cur.length - 1];
   svg.append("circle").attr("cx", x(end.year)).attr("cy", y(end.ems)).attr("r", 4).attr("fill", scCol).attr("stroke", ink).attr("stroke-opacity", 0.4);
+  for (const yr of CT_YEARS) svg.append("circle").attr("cx", x(yr)).attr("cy", y(at(cur, yr).ems)).attr("r", 5.5)
+    .attr("fill", "white").attr("stroke", "#111").attr("stroke-width", 1.6); // the maps' current-settings dot
   // direct labels in each series' color
   const lab = (tx, ty, text, col, anchor = "start") => svg.append("text").attr("x", tx).attr("y", ty).attr("text-anchor", anchor)
     .style("fill", col).attr("font-size", 12).attr("font-weight", 600).text(text);

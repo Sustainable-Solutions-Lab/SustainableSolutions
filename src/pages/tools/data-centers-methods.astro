@@ -30,7 +30,6 @@ const refs = [
   { k: 'Net-Zero America', v: '55–60 GW/yr', s: 'Princeton (2021), high-electrification pathway, wind and solar through the 2020s.' },
   { k: 'IRA path', v: '64 GW/yr', s: 'Princeton REPEAT, the Inflation Reduction Act’s incentives before the 2025 budget law: about 46 GW/yr solar and 18 GW/yr wind.' },
   { k: 'NREL 100% clean by 2035', v: '110–240 GW/yr', s: 'NREL (2022): 40 to 90 GW/yr of solar plus 70 to 150 GW/yr of wind by about 2030, an annual rate rather than an average.' },
-  { k: 'Grid Strategies', v: '+5.7%/yr demand', s: 'Grid Strategies (2025): utility forecasts imply U.S. electricity use growing about 5.7%/yr over five years.' },
   { k: 'EPRI 2026', v: '9–17% of 2030 use', s: 'EPRI (2026): data centers’ share of U.S. electricity in 2030. The high case is about +28%/yr from 2025 here; the low case is close to LBNL’s low.' },
 ];
 
@@ -108,7 +107,7 @@ const p = 'font-size: 15px; line-height: 1.6; margin: 0 0 12px;';
 
     <h2 class="font-serif text-ink" style={h2}>Published scenarios for context</h2>
     <p class="text-ink-2" style={p}>
-      Slider ticks and dotted lines on the map mark these. Build rates are solar plus wind GW a year. In the growth-rate units they are shown as the clean growth that build gives with the current mix. The accent-colored ticks are solved live for the current settings: the clean build that just cuts 2035 emissions 61% below 2005, the build at which clean supply equals demand in 2035, and the fastest demand growth at which the current build still meets 61%.
+      Slider ticks and dotted lines on the map mark these. Build rates are solar plus wind GW a year. In the growth-rate units they are shown as the clean growth that build gives with the current mix. The accent-colored ticks are solved live for the current settings: the clean build that just meets the 2035 NDC (61% below 2005), the build at which clean supply equals demand in 2035, and the fastest data-center growth at which the current build still meets it. Sliders snap to a tick within 5% of their span.
     </p>
     <dl style="margin: 0; display: grid; grid-template-columns: 1fr; gap: 10px;">
       {refs.map((d) => (
@@ -144,7 +143,6 @@ const p = 'font-size: 15px; line-height: 1.6; margin: 0 0 12px;';
       <li>Larson, E. and others. Net-Zero America: Potential Pathways, Infrastructure, and Impacts. Princeton University (2021).</li>
       <li>Jenkins, J. D. and others. REPEAT Project analyses of the Inflation Reduction Act. Princeton ZERO Lab.</li>
       <li>Denholm, P. and others. Examining Supply-Side Options to Achieve 100% Clean Electricity by 2035. National Renewable Energy Laboratory (2022).</li>
-      <li>Grid Strategies. Strategic Industries Surging: National Load Growth Forecast (2025).</li>
       <li>Mai, T. and others. Electrification Futures Study: Scenarios of Electric Technology Adoption and Power Consumption for the United States. NREL/TP-6A20-71500 (2018).</li>
       <li>U.S. Energy Information Administration. Annual Energy Outlook 2026, tables 4, 5 and 8.</li>
     </ul>

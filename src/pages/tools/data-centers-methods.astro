@@ -39,7 +39,7 @@ const p = 'font-size: 15px; line-height: 1.6; margin: 0 0 12px;';
 ---
 
 <BaseLayout
-  title={`${tool?.title ?? 'Data centers, clean power and U.S. power-sector emissions'}: methods`}
+  title={`${tool?.title ?? 'The race between clean power and demand'}: methods`}
   description="How the data-centers tool turns demand growth and clean build into U.S. power-sector emissions, its default inputs, and where the numbers come from."
   noindex={tool?.unlisted ?? true}
 >
@@ -50,7 +50,7 @@ const p = 'font-size: 15px; line-height: 1.6; margin: 0 0 12px;';
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
       </a>
     </div>
-    <h1 class="font-serif text-ink" style="font-size: 34px; line-height: 1.12; letter-spacing: -0.01em; margin: 6px 0 12px;">Data centers, clean power and U.S. power-sector emissions</h1>
+    <h1 class="font-serif text-ink" style="font-size: 34px; line-height: 1.12; letter-spacing: -0.01em; margin: 6px 0 12px;">The race between clean power and demand</h1>
     <p class="text-ink-2" style="font-size: 16px; line-height: 1.6; margin: 0 0 8px;">
       <a href="/tools/data-centers" class="text-ink underline">The tool</a> is a first-pass annual energy balance of the U.S. power sector from 2025 to 2050. Demand grows by end use, clean generation grows by source, and fossil plants supply whatever demand is left. Two top-line sliders move every demand rate, or every clean rate, by the same amount, so the question is how fast clean power has to be built to keep up with demand, data centers above all, and still meet the national targets.
     </p>
@@ -110,7 +110,7 @@ const p = 'font-size: 15px; line-height: 1.6; margin: 0 0 12px;';
 
     <h2 class="font-serif text-ink" style={h2}>Reading the charts</h2>
     <p class="text-ink-2" style={p}>
-      The emissions chart shows history and the current scenario, with the targets as circles. Thin gray lines show the same settings with demand held at its 2025 level, or with no new clean capacity built; the scenario falls between them. The map shows emissions in the chosen year over a grid of the two top-line sliders, red above 2025 emissions and blue below, with the 2025 level as a solid line and the NDC as a dashed one.
+      The emissions chart shows history and the current scenario, with the targets as circles. Thin gray lines show the same settings with demand held at its 2025 level, or with no new clean capacity built; the scenario falls between them. Two maps show emissions in 2030 and 2035 over a grid of the two top-line sliders. They share axes, the sliders' settings as averages from 2025 to 2035, so a point is the same settings in both. Red is above 2025 emissions and blue below, with the 2025 level as a solid line and each year's NDC as a dashed one.
     </p>
 
     <h2 class="font-serif text-ink" style={h2}>Limits</h2>

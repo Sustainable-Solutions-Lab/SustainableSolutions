@@ -290,7 +290,7 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
         <div class="charthead">
           <div>
             <h3>Power-sector emissions</h3>
-            <p class="sub">Million tons CO<sub>2</sub> per year from power plants, with targets marked. Thin gray lines show either current settings with demand held at its 2025 level (low), or with no new clean capacity built (high). Circles on the scenario mark 2030 and 2035, as on the maps below. History from EIA.</p>
+            <p class="sub">Million tons CO<sub>2</sub> per year from power plants. Thin gray lines show either current settings with demand held at its 2025 level (low), or with no new clean capacity built (high). Filled circles mark the scenario in 2030 and 2035 (the years of the maps below) and 2050; dashed circles mark the NDC targets. History from EIA.</p>
           </div>
         </div>
         <div class="chart" id="ts"></div>
@@ -784,10 +784,6 @@ function drawTS() {
     tg.append("circle").attr("cx", x(yr)).attr("cy", y(v)).attr("r", 4.5).attr("fill", css("--panel")).attr("stroke", ink).attr("stroke-width", 1.5).attr("stroke-dasharray", "2.4 1.6");
     tg.append("text").attr("x", x(yr) - 8).attr("y", y(v) + 4).attr("text-anchor", "end").attr("class", "lab").text(`${yr} NDC (${TARGETS[yr][0]}%)`);
   }
-  for (const [yr, t] of [[2035, "100% clean"], [2050, "Net zero"]]) {
-    tg.append("circle").attr("cx", x(yr)).attr("cy", y(0)).attr("r", 4).attr("fill", css("--panel")).attr("stroke", ink).attr("stroke-width", 1.5);
-    tg.append("text").attr("x", x(yr)).attr("y", y(0) - 8).attr("text-anchor", yr === 2050 ? "end" : "middle").attr("class", "lab").text(t);
-  }
   const line = d3.line().x(d => x(d.year)).y(d => y(d.ems));
   const hist = D.history.year.map((yr, i) => ({ year: yr, ems: D.history.emissions[i] }));
   svg.append("path").datum(hist).attr("d", line).attr("fill", "none").attr("stroke", ink).attr("stroke-width", 2);
@@ -799,15 +795,14 @@ function drawTS() {
   svg.append("path").datum(cur).attr("d", line).attr("fill", "none").attr("stroke", ink).attr("stroke-opacity", 0.3).attr("stroke-width", 5.5);
   svg.append("path").datum(cur).attr("d", line).attr("fill", "none").attr("stroke", scCol).attr("stroke-width", 3.5);
   const end = cur[cur.length - 1];
-  svg.append("circle").attr("cx", x(end.year)).attr("cy", y(end.ems)).attr("r", 4).attr("fill", scCol).attr("stroke", ink).attr("stroke-opacity", 0.4);
-  for (const yr of CT_YEARS) svg.append("circle").attr("cx", x(yr)).attr("cy", y(at(cur, yr).ems)).attr("r", 5.5)
-    .attr("fill", "white").attr("stroke", "#111").attr("stroke-width", 1.6); // the maps' current-settings dot
+  for (const yr of [...CT_YEARS, end.year]) svg.append("circle").attr("cx", x(yr)).attr("cy", y(at(cur, yr).ems)).attr("r", 4.5)
+    .attr("fill", scCol).attr("stroke", ink).attr("stroke-opacity", 0.4);
   // direct labels in each series' color
   const lab = (tx, ty, text, col, anchor = "start") => svg.append("text").attr("x", tx).attr("y", ty).attr("text-anchor", anchor)
     .style("fill", col).attr("font-size", 12).attr("font-weight", 600).text(text);
   lab(x(2012), y(d3.max(D.history.emissions.slice(5, 10))) - 10, "History", ink, "middle"); // above 2010-14
   let sy = y(end.ems) - 10;
-  if (y(0) - sy < 27) sy = y(0) - 27; // clear the "Net zero" marker label
+  if (y(0) - sy < 14) sy = y(0) - 14;
   lab(x(2050) - 6, sy, "Scenario", ink, "end");
   // hairline labels: "No new clean power" above its line near the right; "No demand growth" to the left
   // of its line where it falls through 40% of 2025 emissions, an empty part of the chart

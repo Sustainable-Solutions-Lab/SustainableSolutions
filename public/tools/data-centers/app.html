@@ -56,9 +56,9 @@ h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.01em; text
 .ctl .note { color: var(--muted); font-size: 12px }
 input[type=range] { width: 100%; height: 28px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; accent-color: var(--accent) }
 input[type=range]::-webkit-slider-runnable-track { height: 4px; background: var(--track); border-radius: 2px }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); margin-top: -8px; border: 2px solid var(--panel) }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--thumb, var(--accent)); margin-top: -8px; border: 2px solid var(--panel); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) }
 input[type=range]::-moz-range-track { height: 4px; background: var(--track); border-radius: 2px }
-input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 2px solid var(--panel) }
+input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--thumb, var(--accent)); border: 2px solid var(--panel); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) }
 input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px }
 .marks { position: relative; height: 18px; font-size: 10.5px; line-height: 13px; color: var(--muted); margin: -6px 10px 2px }
 .marks i { position: absolute; top: 0; width: 1px; height: 5px; background: var(--muted); transform: translateX(-0.5px) }
@@ -76,10 +76,10 @@ button.b { font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 6px
 button.b:hover { border-color: var(--accent) }
 button.b:focus-visible, .seg button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px }
 .results { display: grid; gap: 16px; min-width: 0 }
-.kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) }
-.kpi { border: 1px solid var(--rule); border-radius: 10px; padding: 11px 13px; background: var(--bg); display: flex; flex-direction: column }
+.kpis { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) }
+.kpi { border: 1px solid var(--rule); border-radius: 10px; padding: 8px 11px; background: var(--bg); display: flex; flex-direction: column }
 .kpi .k { font-size: 11px; opacity: 0.6; margin-bottom: 3px; line-height: 1.25 }
-.kpi .v { font: 600 21px var(--mono, var(--sans)); line-height: 1.15; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-variant-numeric: tabular-nums }
+.kpi .v { font: 600 20px var(--mono, var(--sans)); line-height: 1.15; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-variant-numeric: tabular-nums }
 .kpi .v small { font-size: 12px; font-weight: 600; opacity: 0.75 }
 .kpi .d { font-size: 12px; font-weight: 600 }
 .kpi .s { font: 400 10px var(--mono, var(--sans)); opacity: 0.6; margin-top: auto; padding-top: 4px; letter-spacing: 0.03em; line-height: 1.4 }
@@ -133,13 +133,13 @@ details.fold[open] > summary .hint { display: none }
 .mpane-x { background: none; border: 1px solid var(--rule); color: var(--ink); width: 38px; height: 38px; display: grid; place-items: center; cursor: pointer; border-radius: 4px; flex: none }
 .mpane-x:hover { border-color: var(--ink) }
 .mpane .method { font-size: 15px; line-height: 1.6; gap: 12px; max-width: none }
-.bgsel { display: grid; gap: 5px; font-size: 12px }
-.bghead { font-size: 12px; font-weight: 600; color: var(--ink-2) }
+.bgsel { display: grid; gap: 3px; font-size: 11.5px }
+.bghead { font-size: 11.5px; font-weight: 600; color: var(--ink-2); margin-bottom: 1px }
 .bgrow { display: flex; justify-content: space-between; align-items: center; gap: 8px }
 .bgrow > span { color: var(--ink-2); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .bgrow .chips { flex: none; flex-wrap: nowrap }
 .chips { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end }
-.bgrow .chip { padding: 2px 7px; font-size: 10.5px }
+.bgrow .chip { padding: 1px 6px; font-size: 10px; border-radius: 5px }
 .bgnote { font-size: 11.5px; color: var(--muted) }
 .method { color: var(--ink-2); font-size: 12.5px; display: grid; gap: 6px; max-width: 80ch }
 .method p { margin: 0 }
@@ -162,7 +162,7 @@ a { color: var(--accent) }
 :root, :root[data-theme="light"] {
   --bg: #F8F8E8; --panel: #F1F1DF; --ink: #181838; --ink-2: #3A3A5A; --muted: #6B6B80;
   --rule: rgba(24, 24, 56, 0.14); --track: rgba(24, 24, 56, 0.18);
-  --accent: #181838; --focus: #8C1515; --target: #8C1515; --chip-on: #8C1515; --rule-strong: rgba(24, 24, 56, 0.28);
+  --accent: #181838; --focus: #8C1515; --target: #8C1515; --chip-on: #8C1515; --thumb: #8C1515; --rule-strong: rgba(24, 24, 56, 0.28);
   --scenario: #3288BD; --pinned: #9A9AAE; --bad: #9E0142; --good: #2E7B3F;
   --bad-bg: rgba(213, 62, 79, 0.10); --good-bg: rgba(102, 194, 165, 0.16);
   --sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
@@ -173,13 +173,13 @@ a { color: var(--accent) }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #0C0C1C; --panel: #14142A; --ink: #F8F8E8; --ink-2: #C8C8D8; --muted: #9A9AB0;
   --rule: rgba(248, 248, 232, 0.14); --track: rgba(248, 248, 232, 0.2);
-  --accent: #F8F8E8; --focus: #E04545; --target: #E04545; --chip-on: #E04545; --rule-strong: rgba(248, 248, 232, 0.28);
+  --accent: #F8F8E8; --focus: #E04545; --target: #E04545; --chip-on: #E04545; --thumb: #E04545; --rule-strong: rgba(248, 248, 232, 0.28);
   --scenario: #66B2E0; --pinned: #686880; --bad: #F46D43; --good: #66C2A5;
   --bad-bg: rgba(244, 109, 67, 0.14); --good-bg: rgba(102, 194, 165, 0.14); color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #0C0C1C; --panel: #14142A; --ink: #F8F8E8; --ink-2: #C8C8D8; --muted: #9A9AB0;
   --rule: rgba(248, 248, 232, 0.14); --track: rgba(248, 248, 232, 0.2);
-  --accent: #F8F8E8; --focus: #E04545; --target: #E04545; --chip-on: #E04545; --rule-strong: rgba(248, 248, 232, 0.28);
+  --accent: #F8F8E8; --focus: #E04545; --target: #E04545; --chip-on: #E04545; --thumb: #E04545; --rule-strong: rgba(248, 248, 232, 0.28);
   --scenario: #66B2E0; --pinned: #686880; --bad: #F46D43; --good: #66C2A5;
   --bad-bg: rgba(244, 109, 67, 0.14); --good-bg: rgba(102, 194, 165, 0.14); color-scheme: dark }
 
@@ -232,15 +232,12 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
         <div class="seg" role="group" aria-label="Units"><button type="button" data-u="pct">Growth (%/yr)</button><button type="button" data-u="abs">TWh and GW per year</button></div></div>
       <div class="lever">
         <h2>Demand</h2>
+        <div class="bgsel" id="bgsel" role="radiogroup" aria-label="Projection of demand other than data centers"></div>
         <div class="ctl big" id="c-top_demand"></div>
-        <div class="bgsel" id="bgsel" role="radiogroup" aria-label="Demand other than data centers"></div>
         <details id="dd">
-          <summary>By end use</summary>
+          <summary>Data-center growth rate</summary>
           <div class="inner">
             <div class="ctl" id="c-g_dc"></div>
-            <div class="ctl" id="c-g_transport"></div>
-            <div class="ctl" id="c-g_buildings"></div>
-            <div class="ctl" id="c-g_industry"></div>
           </div>
         </details>
       </div>
@@ -501,23 +498,16 @@ const CTL = [
     get: () => demM(P),
     // ticks: data-center growth cases on top of the chosen background; the slider's floor is flat data centers
     marks: () => [
-      [demM(withDC(P, 0.13)), "Low", "Data centers at LBNL's low 2028 projection (+13%/yr), on the chosen background demand"],
-      [demM(withDC(P, DEF.g_dc)), "Recent", "Data centers at their 2018-23 rate (+18.3%/yr, LBNL), on the chosen background demand"],
-      [demM(withDC(P, 0.27)), "High", "Data centers at LBNL's high 2028 projection (+27%/yr), on the chosen background demand. EPRI's 2026 high case is about the same"],
-      ...REFS_DEMAND.map(r => [dToU(r.g), r.label, r.title]),
+      [demM(withDC(P, 0.13)), "Slows", "Data-center growth slows to LBNL's low 2028 projection (+13%/yr)"],
+      [demM(withDC(P, DEF.g_dc)), "Persists", "Data centers keep growing at their 2018-23 rate (+18.3%/yr, LBNL)"],
+      [demM(withDC(P, 0.27)), "Accelerates", "Data-center growth accelerates to LBNL's high 2028 projection (+27%/yr); EPRI's 2026 high case is about the same"],
       [needDemand(61), "Max for 61%", "Fastest data-center growth at which the current clean build still cuts 2035 emissions 61% below 2005", T]],
-    note: () => `${f0(at(cur, HZ).demand)} TWh in 2035, from ${f0(at(cur, Y0).demand)} TWh (${UNITS === "pct" ? fmtD(demAbs(P), "abs") : fmtD(demandCagr(P), "pct")}). Data centers ${signPct(P.g_dc)}; the left end is flat data centers on the background below. Ticks: LBNL low and high, and the 2018-23 rate` },
-  { k: "g_dc", label: "Data centers", min: -0.05, max: 0.40, step: 0.005, fmt: signPct, note: twh("dc", "2018-23 rate +18.3%/yr"),
+    note: () => `${f0(at(cur, HZ).demand)} TWh in 2035, from ${f0(at(cur, Y0).demand)} TWh (${UNITS === "pct" ? fmtD(demAbs(P), "abs") : fmtD(demandCagr(P), "pct")}). Data centers ${signPct(P.g_dc)} on top of the projection above, which sets the left end. Ticks: if recent data-center growth slows, persists or accelerates (LBNL)` },
+  { k: "g_dc", label: "Data centers", min: 0, max: 0.45, step: 0.005, fmt: signPct, note: twh("dc", "2018-23 rate +18.3%/yr"),
     marks: () => [[0, "Flat"], [0.13, "LBNL low", "LBNL (2024): 325 TWh in 2028"],
       [DEF.g_dc, "2018-23", "LBNL estimates, 76 TWh (2018) to 176 TWh (2023); the default"],
       [0.27, "LBNL high", "LBNL (2024): 580 TWh in 2028"],
       [EPRI_HI, "EPRI 2026 high", "EPRI (2026): data centers 17% of U.S. electricity in 2030, about 860 TWh here. Their low case, 9%, is about LBNL low"]] },
-  { k: "g_transport", label: "Transportation", min: -0.05, max: 0.40, step: 0.005, fmt: signPct, note: twh("transport", "EV charging and rail"),
-    marks: () => [[0, "Flat"], [DEF.g_transport, "Recent (est.)", "Order-of-magnitude EV-charging growth; the default"]] },
-  { k: "g_buildings", label: "Buildings", min: -0.02, max: 0.06, step: 0.001, fmt: signPct, note: twh("buildings", "homes and non-data-center commercial"),
-    marks: () => [[0, "Flat"], [D.g_other_demand, "2019-25", "Buildings and industry combined, 2019 to 2025"], [DEF.g_buildings, "Default"]] },
-  { k: "g_industry", label: "Industry", min: -0.02, max: 0.06, step: 0.001, fmt: signPct, note: twh("industry"),
-    marks: () => [[0, "Flat"], [DEF.g_industry, "Default"], [D.g_other_demand, "2019-25", "Buildings and industry combined, 2019 to 2025"]] },
   { k: "top_clean", units: {
       pct: { label: "Clean generation growth", min: 0, max: 0.16, step: 0.001 },
       abs: { label: "Solar and wind built per year", min: 0, max: 300, step: 1 } },
@@ -569,7 +559,7 @@ for (const c of CTL) {
   c.apply = v => {
     if (c.k === "top_demand") P.g_dc = solveShift(g => demM(withDC(P, g)), v, DC_LO, DC_HI);
     else if (c.k === "top_clean") { const dcl = solveShift(s => cleanM(shifted(anchorC, 0, s)), v); for (const k of CLEAN_KEYS) P[k] = anchorC[k] + dcl; }
-    else { P[c.k] = v; fixTiming(c.k); if (["g_transport", "g_buildings", "g_industry"].includes(c.k)) P.bg_path = null; }
+    else { P[c.k] = v; fixTiming(c.k); }
     if (c.k !== "top_demand") anchorD = Object.assign({}, P);
     if (c.k !== "top_clean") anchorC = Object.assign({}, P);
   };
@@ -692,14 +682,12 @@ function setBG(key) {
 }
 let bgKey = "";
 function renderBG() {
-  const el = document.getElementById("bgsel"), key = JSON.stringify([P.bg_path, P.g_transport, P.g_buildings, P.g_industry]);
+  const el = document.getElementById("bgsel"), key = String(P.bg_path);
   if (key === bgKey) return; bgKey = key;
-  const custom = !P.bg_path && ["transport", "buildings", "industry"].some(k => Math.abs(P["g_" + k] - DEF["g_" + k]) > 1e-9);
-  const opt = (k, txt, title) => `<button type="button" class="chip" role="radio" aria-checked="${(P.bg_path || "") === k && !(k === "" && custom)}" data-k="${k}" title="${title}">${txt}</button>`;
-  el.innerHTML = `<div class="bghead">Demand other than data centers</div>
-    <div class="bgrow"><span>Recent trends</span><div class="chips">${opt("", "Recent", "Transportation, buildings and industry at their recent rates (the default)")}</div></div>
-    ${D.bg.reports.map(r => `<div class="bgrow"><span title="${r.title}">${r.label}</span><div class="chips">${r.options.map(o => opt(o.key, o.short, o.title)).join("")}</div></div>`).join("")}
-    ${custom ? `<div class="bgnote">Custom: set under By end use</div>` : ""}`;
+  const opt = (k, txt, title) => `<button type="button" class="chip" role="radio" aria-checked="${(P.bg_path || "") === k}" data-k="${k}" title="${title}">${txt}</button>`;
+  el.innerHTML = `<div class="bghead">Projection for demand other than data centers</div>
+    <div class="bgrow"><span>Recent trends</span><div class="chips">${opt("", "Recent", "Transportation +20%/yr (slowing like data centers), buildings +0.8%/yr, industry +0.4%/yr: recent rates")}</div></div>
+    ${D.bg.reports.map(r => `<div class="bgrow"><span title="${r.title}">${r.label}</span><div class="chips">${r.options.map(o => opt(o.key, o.short, o.title)).join("")}</div></div>`).join("")}`;
   for (const b of el.querySelectorAll("button")) b.addEventListener("click", () => setBG(b.dataset.k || null));
 }
 const mp = document.getElementById("methods"), mOpen = document.getElementById("open-methods");
@@ -736,24 +724,25 @@ function update() {
 }
 
 // ------------------------------------------------------------------ KPIs
+// Red-blue tone for a KPI value, v from -1 (worst) to 1 (best), on the same RdBu ramp as the maps; the pale
+// middle of the ramp is skipped so the number stays legible, and dark mode takes lighter steps.
+function tone(v) {
+  v = Math.max(-1, Math.min(1, v));
+  if (Math.abs(v) < 0.06) return css("--ink");
+  const dark = d3.hsl(css("--bg")).l < 0.5, a = dark ? 0.16 + 0.2 * Math.abs(v) : 0.24 + 0.22 * Math.abs(v);
+  return d3.interpolateRdBu(0.5 + Math.sign(v) * a);
+}
 function drawKPIs() {
-  const r35 = at(cur, HZ), e = r35.ems, pb = pctBelow(e), d0 = at(cur, Y0).demand;
-  const gap = pb - 61, dcEff = e - at(noDC, HZ).ems;
+  const r35 = at(cur, HZ), r0 = at(cur, Y0), e = r35.ems, pb = pctBelow(e);
+  const E0 = D.history.emissions[Y0 - 2005], dcEff = Math.max(0, e - at(noDC, HZ).ems), dg = r35.demand / r0.demand - 1;
   const sgn = v => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(0);
-  const ok = gap >= 0, okCol = ok ? "var(--good)" : "var(--bad)";
-  document.getElementById("kpis").innerHTML = `
-    <div class="kpi"><div class="k">2035 emissions vs 2005</div>
-      <div class="v">${sgn(-pb)}%<span class="d" style="color:${okCol}">${ok ? "✓ meets" : "✕ misses"} the −61% NDC${ok ? "" : " by " + Math.abs(gap).toFixed(0) + " pt"}</span></div>
-      <div class="s">${f0(e)} Mt CO₂; target −61 to −66%</div></div>
-    <div class="kpi"><div class="k">Demand, 2035 vs 2025</div>
-      <div class="v">${sgn(100 * (r35.demand / d0 - 1))}%<small>${signPct(demandCagr(P))}</small></div>
-      <div class="s">${f0(r35.demand)} TWh; data centers ${pct(r35.dc / r35.demand, 0)} of it</div></div>
-    <div class="kpi"><div class="k">Clean power in 2035</div>
-      <div class="v">${pct(r35.cleanShare, 0)}<small>of demand</small></div>
-      <div class="s">From ${pct(at(cur, Y0).cleanShare, 0)} in 2025; ${f0(r35.add)} GW of solar and wind added in 2035</div></div>
-    <div class="kpi"><div class="k">From data-center growth</div>
-      <div class="v">${e > 0 ? pct(Math.max(0, dcEff) / e, 0) : "–"}<small>of 2035 emissions</small></div>
-      <div class="s">${dcEff >= 0 ? "+" : "−"}${f0(Math.abs(dcEff))} Mt vs data centers growing like buildings and industry</div></div>`;
+  const gap = 61 - pb, ndc = gap > 0.5 ? `${gap.toFixed(0)} pt short of −61% NDC` : "Meets −61% NDC";
+  const card = (k, v, col, s) => `<div class="kpi"><div class="k">${k}</div><div class="v" style="color:${col}">${v}</div><div class="s">${s}</div></div>`;
+  document.getElementById("kpis").innerHTML =
+    card("Emissions, 2035 vs 2005", `${sgn(-pb)}%`, tone((E0 - e) / E0), `${ndc} · ${f0(e)} Mt`) +
+    card("Demand, 2035 vs 2025", `${sgn(100 * dg)}%`, tone(-dg / 0.6), `${f0(r35.demand)} TWh · data centers ${pct(r35.dc / r35.demand, 0)}`) +
+    card("Clean share of demand, 2035", pct(r35.cleanShare, 0), tone((r35.cleanShare - r0.cleanShare) / (1 - r0.cleanShare)), `${pct(r0.cleanShare, 0)} in 2025`) +
+    card("Share from data-center growth", e > 0 ? pct(dcEff / e, 0) : "–", tone(-(e > 0 ? dcEff / e : 0) / 0.6), `of 2035 emissions · +${f0(dcEff)} Mt`);
 }
 
 // ------------------------------------------------------------------ tooltip helpers
@@ -802,16 +791,19 @@ function drawTS() {
   // hairlines: where emissions go with no demand growth, or with no new clean capacity
   const hl = css("--muted");
   for (const r of [noGrow, noBuild]) svg.append("path").datum(r).attr("d", line).attr("fill", "none").attr("stroke", hl).attr("stroke-width", 0.8);
-  svg.append("path").datum(cur).attr("d", line).attr("fill", "none").attr("stroke", sc).attr("stroke-width", 2.5);
+  // the scenario takes the map's color for its 2035 emissions, over a faint casing so pale tones stay visible
+  const E0c = D.history.emissions[Y0 - 2005], scCol = d3.scaleDiverging([2 * E0c, E0c, 0], d3.interpolateRdBu).clamp(true)(at(cur, HZ).ems);
+  svg.append("path").datum(cur).attr("d", line).attr("fill", "none").attr("stroke", ink).attr("stroke-opacity", 0.3).attr("stroke-width", 5.5);
+  svg.append("path").datum(cur).attr("d", line).attr("fill", "none").attr("stroke", scCol).attr("stroke-width", 3.5);
   const end = cur[cur.length - 1];
-  svg.append("circle").attr("cx", x(end.year)).attr("cy", y(end.ems)).attr("r", 3.5).attr("fill", sc);
+  svg.append("circle").attr("cx", x(end.year)).attr("cy", y(end.ems)).attr("r", 4).attr("fill", scCol).attr("stroke", ink).attr("stroke-opacity", 0.4);
   // direct labels in each series' color
   const lab = (tx, ty, text, col, anchor = "start") => svg.append("text").attr("x", tx).attr("y", ty).attr("text-anchor", anchor)
     .style("fill", col).attr("font-size", 12).attr("font-weight", 600).text(text);
   lab(x(2012), y(d3.max(D.history.emissions.slice(5, 10))) - 10, "History", ink, "middle"); // above 2010-14
   let sy = y(end.ems) - 10;
   if (y(0) - sy < 27) sy = y(0) - 27; // clear the "Net zero" marker label
-  lab(x(2050) - 6, sy, "Scenario", sc, "end");
+  lab(x(2050) - 6, sy, "Scenario", ink, "end");
   // hairline labels: "No new clean power" above its line near the right; "No demand growth" to the left
   // of its line where it falls through 40% of 2025 emissions, an empty part of the chart
   svg.append("text").attr("x", x(2044)).attr("y", y(at(noBuild, 2044).ems) - 6).attr("text-anchor", "middle").attr("class", "lab").text("No new clean power");
@@ -976,7 +968,9 @@ function drawCT() {
   const kl = levels.map((v, i) => [v, Math.min(kmax, upper(i))]).filter(([a]) => a < kmax);
   ks.selectAll("rect.k").data(kl).join("rect").attr("x", d => kxS(d[0])).attr("y", ky).attr("width", d => kxS(d[1]) - kxS(d[0])).attr("height", kh).attr("fill", d => color((d[0] + d[1]) / 2));
   ks.append("line").attr("x1", kxS(E0)).attr("x2", kxS(E0)).attr("y1", ky - 3).attr("y2", ky + kh).attr("stroke", css("--ink")).attr("stroke-width", 1.2);
-  ks.append("text").attr("x", kxS(E0)).attr("y", ky - 5).attr("text-anchor", "middle").attr("class", "lab").text(`2025: ${f0(E0)}`);
+  ks.append("line").attr("x1", kxS(E0)).attr("x2", kxS(E0)).attr("y1", ky + kh).attr("y2", ky + kh + 3).attr("stroke", css("--ink")).attr("stroke-width", 1.2);
+  ks.append("text").attr("x", kxS(E0)).attr("y", ky - 5).attr("text-anchor", "middle").attr("class", "lab").text("2025");
+  ks.append("text").attr("x", kxS(E0)).attr("y", ky + kh + 13).attr("text-anchor", "middle").attr("class", "lab").attr("font-weight", 600).text(f0(E0));
   ks.append("text").attr("x", kx).attr("y", ky - 5).attr("class", "lab").text("← Lower");
   ks.append("text").attr("x", kx + kw).attr("y", ky - 5).attr("text-anchor", "end").attr("class", "lab").text("Higher →");
   ks.append("rect").attr("x", kx).attr("y", ky).attr("width", kw).attr("height", kh).attr("fill", "none").attr("stroke", css("--ink-2")).attr("stroke-width", 0.6);

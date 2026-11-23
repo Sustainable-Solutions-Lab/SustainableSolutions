@@ -57,7 +57,21 @@ const p = 'font-size: 15px; line-height: 1.6; margin: 0 0 12px;';
 
     <h2 class="font-serif text-ink" style={h2}>Demand</h2>
     <p class="text-ink-2" style={p}>
-      2025 demand of 4,532 TWh (Ember) is split into data centers, transportation, buildings and industry, each with its own growth rate. Data-center and transport growth hold until the first timing year (2030 by default), then slow in a straight line to the combined rate of buildings and industry by the second (2040). The top-line slider adds the same amount to every end-use rate and reads as the average growth of total demand from 2025 to the year shown, or, in the other units, as the average demand added per year.
+      2025 demand of 4,532 TWh (Ember) is split into data centers, transportation, buildings and industry. The top-line demand slider moves only data-center growth, on top of the chosen demand for everything else. Its left end is flat data centers, so the chosen background sets the floor, and its ticks mark LBNL’s low (+13%/yr) and high (+27%/yr) cases and the 2018 to 2023 rate (+18.3%/yr); it can be set anywhere between them. Data-center growth holds until the first timing year (2030 by default), then slows in a straight line to the combined rate of buildings and industry by the second (2040). The slider reads as the average growth of total demand from 2025 to 2035, or as the average demand added per year.
+    </p>
+
+    <h2 class="font-serif text-ink" style={h2}>Demand other than data centers</h2>
+    <p class="text-ink-2" style={p}>
+      “Recent” keeps transportation growing about 20%/yr (slowing like data centers), buildings 0.8%/yr and industry 0.4%/yr. The other choices follow published scenarios for transportation, buildings and industry:
+    </p>
+    <ul class="text-ink-2" style="font-size: 15px; line-height: 1.6; padding-left: 18px; margin: 0 0 12px;">
+      <li>NREL Electrification Futures Study (2018), moderate technology: reference, medium and high electrification.</li>
+      <li>Princeton Net-Zero America (2021): reference, E− and E+. End-use demand only; the electricity for hydrogen, industrial boilers and direct air capture in those scenarios is left out.</li>
+      <li>NREL 100% clean electricity by 2035 (2022): AEO2021 reference, long-term strategy and accelerated demand electrification. After 2035 the paths continue at their 2030 to 2035 pace.</li>
+      <li>EIA Annual Energy Outlook 2026: low economic growth, baseline and high electricity demand. Data-center servers are removed, and EV charging, which AEO books in homes and businesses, is moved to transportation.</li>
+    </ul>
+    <p class="text-ink-2" style={p}>
+      Each study’s TWh added per end use since its own 2025 value is added to the 2025 base here. The studies assumed electrification already under way by 2025 (the high Electrification Futures case has about 108 TWh of transport charging in 2025, against about 28 TWh in reality), so applying their growth rates to today’s base would understate the TWh they add. Years between published values are interpolated. Buildings are residential plus commercial. Older studies have no data-center line; their modest data-center growth sits inside commercial buildings. To 2035, these paths grow demand other than data centers by 0.4 to 3.7%/yr, against about 0.8%/yr for recent trends.
     </p>
 
     <h2 class="font-serif text-ink" style={h2}>Clean generation</h2>
@@ -131,6 +145,8 @@ const p = 'font-size: 15px; line-height: 1.6; margin: 0 0 12px;';
       <li>Jenkins, J. D. and others. REPEAT Project analyses of the Inflation Reduction Act. Princeton ZERO Lab.</li>
       <li>Denholm, P. and others. Examining Supply-Side Options to Achieve 100% Clean Electricity by 2035. National Renewable Energy Laboratory (2022).</li>
       <li>Grid Strategies. Strategic Industries Surging: National Load Growth Forecast (2025).</li>
+      <li>Mai, T. and others. Electrification Futures Study: Scenarios of Electric Technology Adoption and Power Consumption for the United States. NREL/TP-6A20-71500 (2018).</li>
+      <li>U.S. Energy Information Administration. Annual Energy Outlook 2026, tables 4, 5 and 8.</li>
     </ul>
 
     <p class="font-mono text-ink-4" style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin: 40px 0 0;">Status as of 22 November 2026 · unlisted while in development</p>

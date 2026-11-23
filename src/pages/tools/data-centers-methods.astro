@@ -44,7 +44,12 @@ const p = 'font-size: 15px; line-height: 1.6; margin: 0 0 12px;';
   noindex={tool?.unlisted ?? true}
 >
   <article class="mx-auto max-w-[760px] px-4 pb-24 pt-10">
-    <p class="m-0 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">Methods</p>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <p class="m-0 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">Methods</p>
+      <a href="/tools/data-centers" aria-label="Close methods and return to the tool" class="text-ink" style="display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--rule-strong); border-radius: 4px;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+      </a>
+    </div>
     <h1 class="font-serif text-ink" style="font-size: 34px; line-height: 1.12; letter-spacing: -0.01em; margin: 6px 0 12px;">Data centers, clean power and U.S. power-sector emissions</h1>
     <p class="text-ink-2" style="font-size: 16px; line-height: 1.6; margin: 0 0 8px;">
       <a href="/tools/data-centers" class="text-ink underline">The tool</a> is a first-pass annual energy balance of the U.S. power sector from 2025 to 2050. Demand grows by end use, clean generation grows by source, and fossil plants supply whatever demand is left. Two top-line sliders move every demand rate, or every clean rate, by the same amount, so the question is how fast clean power has to be built to keep up with demand, data centers above all, and still meet the national targets.

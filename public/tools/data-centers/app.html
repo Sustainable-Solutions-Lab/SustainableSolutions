@@ -250,7 +250,7 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
         <div class="charthead">
           <div>
             <h3>Power-sector emissions</h3>
-            <p class="sub">Million tons CO<sub>2</sub>e per year, with targets marked. Thin gray lines show the current settings with demand held at its 2025 level, or with no new clean capacity built. History from Ember.</p>
+            <p class="sub">Million tons CO<sub>2</sub> per year from power plants, with targets marked. Thin gray lines show the current settings with demand held at its 2025 level, or with no new clean capacity built. History from EIA.</p>
           </div>
         </div>
         <div class="chart" id="ts"></div>
@@ -281,23 +281,23 @@ a { color: var(--ink); text-decoration-color: rgba(127, 127, 150, 0.5); text-und
           <summary>How this works</summary>
           <div class="method inner">
             <p><b>Demand.</b> 2025 demand of 4,532 TWh (Ember) is split by end use. Data centers are about 246 TWh: LBNL's 2018 and 2023 estimates (76 and 176 TWh), carried forward at their 18%/yr pace. LBNL's 2028 range of 325 to 580 TWh implies 13 to 27%/yr. Transportation is about 28 TWh (EV charging plus rail), growing about 20%/yr. Industry is about 27% of demand, and buildings (homes and non-data-center commercial) are the rest. Together, buildings and industry grew about 0.7%/yr over 2019 to 2025. Data-center and transport growth slow after the first timing year and reach the buildings and industry rate by the second. The top-line slider adds the same amount to every end-use rate. It reads as the average growth of total demand from 2025 to 2035.</p>
-            <p><b>Clean generation.</b> Solar and wind fleets grow by each year's additions, with each source on its own rate. In 2023 to 2025, the U.S. added an average of 33 GW/yr of solar and 6 GW/yr of wind. Over 2016 to 2025, solar additions grew 19%/yr and wind additions fell 3%/yr. Nuclear changes by a net GW/yr. Hydro, bioenergy, other renewables and imports share one growth rate (−0.7%/yr over 2015 to 2025). 2025 capacity factors turn GW into TWh. The top-line slider adds the same amount to the solar, wind and other-clean rates. It reads as the average growth of clean generation from 2025 to 2035.</p>
-            <p><b>Units and context.</b> The two top-line sliders and the map's axes can be read as growth rates or as amounts per year, both averaged from 2025 to the year shown: the increase in total demand (TWh/yr) and the solar and wind capacity built (GW/yr). For context, the U.S. built 39 GW/yr of solar and wind in 2023 to 2025 (Ember). Princeton's Net-Zero America (2021) high-electrification pathway builds about 55 to 60 GW/yr through the 2020s. Princeton's REPEAT project put the Inflation Reduction Act's incentives at about 64 GW/yr, before the 2025 budget law cut them. NREL's study of 100% clean electricity by 2035 (2022) needs 110 to 240 GW/yr by about 2030, an annual rate rather than an average. On demand, Grid Strategies (2025) reads utility forecasts as about 5.7%/yr growth in electricity use over five years, and EPRI (2026) puts data centers at 9 to 17% of U.S. electricity in 2030.</p>
+            <p><b>Clean generation.</b> Solar and wind fleets grow by each year's additions, with each source on its own rate. In 2023 to 2025, the U.S. added an average of 33 GW/yr of solar and 6 GW/yr of wind. Over 2016 to 2025, solar additions grew 19%/yr and wind additions fell 3%/yr. Nuclear changes by a net GW/yr. Hydro, bioenergy, other renewables and imports share one growth rate (−0.7%/yr over 2015 to 2025). 2025 capacity factors turn GW into TWh. The top-line slider adds the same amount to the solar, wind and other-clean rates. It reads as the average growth of clean generation from 2025 to 2035. These rates set the pace of building when it is needed. Once clean supply covers demand in a year, solar and wind are built only as far as needed to keep up with demand, so actual additions can fall below the slider's path.</p>
+            <p><b>Units and context.</b> The two top-line sliders and the map's axes can be read as growth rates or as amounts per year, both averaged from 2025 to the year shown: the increase in total demand (TWh/yr) and the solar and wind capacity built (GW/yr, the planned pace, before building stops once clean supply covers demand). For context, the U.S. built 39 GW/yr of solar and wind in 2023 to 2025 (Ember). Princeton's Net-Zero America (2021) high-electrification pathway builds about 55 to 60 GW/yr through the 2020s. Princeton's REPEAT project put the Inflation Reduction Act's incentives at about 64 GW/yr, before the 2025 budget law cut them. NREL's study of 100% clean electricity by 2035 (2022) needs 110 to 240 GW/yr by about 2030, an annual rate rather than an average. On demand, Grid Strategies (2025) reads utility forecasts as about 5.7%/yr growth in electricity use over five years, and EPRI (2026) puts data centers at 9 to 17% of U.S. electricity in 2030.</p>
             <p><b>Fossil.</b> Coal and gas supply whatever demand is left. When that is less than in 2025, both scale down together. When it is more, gas covers the increase: first the existing fleet runs harder, then new plants are built. Coal retires 9 GW/yr (2020 to 2025 average) and gas 3 GW/yr.</p>
-            <p><b>Emissions and targets.</b> Generation times 2025 lifecycle intensity by source (Ember), against Ember's 2005 total of 2,439 Mt. The U.S. economy-wide NDC targets, 50 to 52% below 2005 by 2030 and 61 to 66% by 2035, are applied to the power sector one for one. That reading is lenient, because most pathways cut power faster than the rest of the economy. The 100% clean electricity goal for 2035 and net zero by 2050 are shown as zero. The U.S. has since withdrawn from the Paris Agreement, so these are benchmarks.</p>
-            <p><b>Limits.</b> This is an annual energy balance with no hourly matching or storage, so it overstates how much fossil power solar displaces once solar's share is large. Coal and gas output does not respond to fuel prices.</p>
-            <p>Data: <a href="https://ember-energy.org/data/yearly-electricity-data/" target="_blank" rel="noopener">Ember yearly electricity data</a> (generation, capacity and emissions to 2025); Shehabi et al. (LBNL, 2024), <i>United States Data Center Energy Usage Report</i>.</p>
+            <p><b>Emissions and targets.</b> Direct CO<sub>2</sub> from power plants, the basis of the U.S. inventory and the NDC. Coal, gas and other fossil generation are multiplied by their 2025 intensities (EIA electric-power CO<sub>2</sub> by fuel divided by Ember generation: 1.02, 0.39 and 0.74 t/MWh). Solar, wind, nuclear, hydro and bioenergy count as zero; their lifecycle emissions (from manufacturing, construction and fuel supply) are left out. History is EIA's electric-power CO<sub>2</sub>, 2,412 Mt in 2005 and 1,485 Mt in 2025. The U.S. economy-wide NDC targets, 50 to 52% below 2005 by 2030 and 61 to 66% by 2035, are applied to the power sector one for one. That reading is lenient, because most pathways cut power faster than the rest of the economy. The 100% clean electricity goal for 2035 and net zero by 2050 are shown as zero. The U.S. has since withdrawn from the Paris Agreement, so these are benchmarks.</p>
+            <p><b>Limits.</b> This is an annual energy balance with no hourly matching or storage, so it overstates how much fossil power solar displaces once solar's share is large. Coal and gas output does not respond to fuel prices. Methane leaked upstream of gas plants is not counted.</p>
+            <p>Data: <a href="https://ember-energy.org/data/yearly-electricity-data/" target="_blank" rel="noopener">Ember yearly electricity data</a> (generation and capacity to 2025); <a href="https://www.eia.gov/totalenergy/data/monthly/" target="_blank" rel="noopener">EIA Monthly Energy Review</a>, table 11.6 (electric-power CO<sub>2</sub> by fuel); Shehabi et al. (LBNL, 2024), <i>United States Data Center Energy Usage Report</i>.</p>
           </div>
         </details>
       </section>
     </main>
   </div>
-  <p class="credit">A first-pass annual energy-balance model of the U.S. power sector, built by the Sustainable Solutions Lab. Data from Ember and Lawrence Berkeley National Laboratory; assumptions and limits under How this works.</p>
+  <p class="credit">A first-pass annual energy-balance model of the U.S. power sector, built by the Sustainable Solutions Lab. Data from Ember, the U.S. Energy Information Administration and Lawrence Berkeley National Laboratory; assumptions and limits under How this works.</p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script>
-const D = {"base": {"Solar": 388.82, "Wind": 464.39, "Nuclear": 784.78, "Hydro": 241.7, "Bioenergy": 46.19, "Other renewables": 17.7, "Net imports": 12.352, "Coal": 737.15, "Gas": 1807.34, "Other fossil": 31.72, "Demand": 4532.142, "cap_solar": 211.61, "cap_wind": 158.83, "cap_nuc": 96.89, "cap_coal": 188.86, "cap_gas": 549.79, "cap_ofos": 32.51, "cf_solar": 0.22808758863750483, "cf_wind": 0.3403914028356592, "cf_nuc": 0.9249097459309064, "cf_coal": 0.44103534265720873, "cf_gas": 0.37656023288587975, "cf_ofos": 0.11043014840530789, "ei": {"Solar": 0.04799907412170156, "Wind": 0.008510088503197743, "Nuclear": 0.005414256224674431, "Hydro": 0.02400082747207282, "Bioenergy": 0.2300064949123187, "Other renewables": 0.038022598870056504, "Coal": 0.9498338194397341, "Gas": 0.5373017805172242, "Other fossil": 0.7000000000000001, "Net imports": 0.0}}, "params": {"dc0": 246.25910572669505, "transport0": 28.0, "buildings0": 3034.2045542733044, "industry0": 1223.67834, "g_dc": 0.18287762019416953, "g_transport": 0.2, "g_buildings": 0.008, "g_industry": 0.004, "fade_start": 2030.0, "fade_end": 2040.0, "solar_add0": 32.92333333333334, "wind_add0": 5.776666666666671, "g_solar": 0.1885896243805283, "g_wind": -0.03245150095017035, "build_growth_end": 2035.0, "nuclear_add_gw": 0.07800000000000011, "g_oclean": -0.006669699492123815, "cf_solar": 0.22808758863750483, "cf_wind": 0.3403914028356592, "coal_retire_gw": 8.995999999999999, "gas_retire_gw": 3.0, "other_fossil_retire_gw": 0.0, "gas_cf_max": 0.6}, "g_demand_total": 0.012869546324808967, "g_other_demand": 0.007109623731736736, "ref2005": 2438.706, "history": {"year": [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025], "emissions": [2438.7, 2409.8, 2479.2, 2428.9, 2226.1, 2348.4, 2251.1, 2152.9, 2163.6, 2168.7, 2062.2, 1975.9, 1900.8, 1943.8, 1827.4, 1664.7, 1760.2, 1759.3, 1671.4, 1685.3, 1737.4], "demand": [4059.8, 4065.4, 4173.8, 4140.4, 3973.9, 4139.9, 4126.1, 4087.9, 4113.5, 4149.2, 4150.7, 4154.1, 4108.6, 4246.0, 4197.4, 4090.5, 4192.9, 4328.1, 4272.8, 4404.8, 4532.1], "clean": [1159.8, 1186.8, 1185.6, 1216.1, 1248.5, 1257.4, 1337.2, 1308.9, 1367.3, 1397.2, 1420.3, 1497.1, 1568.5, 1584.7, 1609.2, 1658.6, 1680.5, 1770.9, 1758.5, 1852.3, 1955.9], "cap_sw": [9.59, 12.43, 17.95, 26.27, 36.39, 42.51, 51.32, 67.69, 73.01, 81.88, 96.01, 116.01, 130.71, 146.09, 164.5, 194.27, 227.64, 254.34, 287.45, 330.24, 370.44]}, "check": {"2030": 1642.72, "2035": 1287.86, "2050": 285.04}};
+const D = {"base": {"Solar": 388.82, "Wind": 464.39, "Nuclear": 784.78, "Hydro": 241.7, "Bioenergy": 46.19, "Other renewables": 17.7, "Net imports": 12.352, "Coal": 737.15, "Gas": 1807.34, "Other fossil": 31.72, "Demand": 4532.142, "cap_solar": 211.61, "cap_wind": 158.83, "cap_nuc": 96.89, "cap_coal": 188.86, "cap_gas": 549.79, "cap_ofos": 32.51, "cf_solar": 0.22808758863750483, "cf_wind": 0.3403914028356592, "cf_nuc": 0.9249097459309064, "cf_coal": 0.44103534265720873, "cf_gas": 0.37656023288587975, "cf_ofos": 0.11043014840530789, "ei_lifecycle": {"Solar": 0.04799907412170156, "Wind": 0.008510088503197743, "Nuclear": 0.005414256224674431, "Hydro": 0.02400082747207282, "Bioenergy": 0.2300064949123187, "Other renewables": 0.038022598870056504, "Coal": 0.9498338194397341, "Gas": 0.5373017805172242, "Other fossil": 0.7000000000000001, "Net imports": 0.0}, "ei": {"Solar": 0.0, "Wind": 0.0, "Nuclear": 0.0, "Hydro": 0.0, "Bioenergy": 0.0, "Other renewables": 0.0, "Coal": 1.0175188224920302, "Gas": 0.3939120475394779, "Other fossil": 0.7370744010088273, "Net imports": 0.0}}, "params": {"dc0": 246.25910572669505, "transport0": 28.0, "buildings0": 3034.2045542733044, "industry0": 1223.67834, "g_dc": 0.18287762019416953, "g_transport": 0.2, "g_buildings": 0.008, "g_industry": 0.004, "fade_start": 2030.0, "fade_end": 2040.0, "solar_add0": 32.92333333333334, "wind_add0": 5.776666666666671, "g_solar": 0.1885896243805283, "g_wind": -0.03245150095017035, "build_growth_end": 2035.0, "nuclear_add_gw": 0.07800000000000011, "g_oclean": -0.006669699492123815, "cf_solar": 0.22808758863750483, "cf_wind": 0.3403914028356592, "coal_retire_gw": 8.995999999999999, "gas_retire_gw": 3.0, "other_fossil_retire_gw": 0.0, "gas_cf_max": 0.6}, "g_demand_total": 0.012869546324808967, "g_other_demand": 0.007109623731736736, "ref2005": 2411.519, "history": {"year": [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025], "emissions": [2411.5, 2356.1, 2422.0, 2371.0, 2156.6, 2270.1, 2169.7, 2034.7, 2049.3, 2048.4, 1911.8, 1820.0, 1742.6, 1764.5, 1617.6, 1450.2, 1552.5, 1538.5, 1421.7, 1427.4, 1485.4], "demand": [4059.8, 4065.4, 4173.8, 4140.4, 3973.9, 4139.9, 4126.1, 4087.9, 4113.5, 4149.2, 4150.7, 4154.1, 4108.6, 4246.0, 4197.4, 4090.5, 4192.9, 4328.1, 4272.8, 4404.8, 4532.1], "clean": [1159.8, 1186.8, 1185.6, 1216.1, 1248.5, 1257.4, 1337.2, 1308.9, 1367.3, 1397.2, 1420.3, 1497.1, 1568.5, 1584.7, 1609.2, 1658.6, 1680.5, 1770.9, 1758.5, 1852.3, 1955.9], "cap_sw": [9.59, 12.43, 17.95, 26.27, 36.39, 42.51, 51.32, 67.69, 73.01, 81.88, 96.01, 116.01, 130.71, 146.09, 164.5, 194.27, 227.64, 254.34, 287.45, 330.24, 370.44]}, "check": {"2030": 1339.1, "2035": 965.29, "2050": 23.18}};
 const B = D.base, EI = B.ei, H = 8.76, Y0 = 2025, REF = D.ref2005, HZ = 2035;
 const DEF = Object.assign({}, D.params);
 let P = Object.assign({}, DEF);
@@ -322,25 +322,36 @@ function run(p, end = 2050) {
   const bg = bgRate(p);
   let d = { dc: p.dc0, transport: p.transport0, buildings: p.buildings0, industry: p.industry0 };
   let cs = B.cap_solar, cw = B.cap_wind, cn = B.cap_nuc, cc = B.cap_coal, cg = B.cap_gas, co = B.cap_ofos, newGas = 0;
+  let csP = cs, cwP = cw; // planned fleets: the levers' build path, ignoring the stop once supply covers demand
   let oc = OC.reduce((o, k) => (o[k] = B[k], o), {});
   const out = [];
   for (let y = Y0; y <= end; y++) {
     const i = y - Y0;
-    let sa = 0, wa = 0, solar, wind, nuc, ofos;
+    let sa = 0, wa = 0, saP = 0, waP = 0, solar, wind, nuc, ofos, solarP, windP;
     if (i > 0) {
       d.dc *= 1 + fade(p.g_dc, bg, y, p); d.transport *= 1 + fade(p.g_transport, bg, y, p);
       d.buildings *= 1 + p.g_buildings; d.industry *= 1 + p.g_industry;
       const t = Math.min(y, p.build_growth_end) - Y0;
-      sa = p.solar_add0 * Math.pow(1 + p.g_solar, t); wa = p.wind_add0 * Math.pow(1 + p.g_wind, t);
-      const csp = cs, cwp = cw; cs += sa; cw += wa;
+      saP = p.solar_add0 * Math.pow(1 + p.g_solar, t); waP = p.wind_add0 * Math.pow(1 + p.g_wind, t);
       cn = Math.max(0, cn + p.nuclear_add_gw); cc = Math.max(0, cc - p.coal_retire_gw);
       cg = Math.max(0, cg - p.gas_retire_gw); co = Math.max(0, co - p.other_fossil_retire_gw);
       for (const k of OC) oc[k] *= 1 + p.g_oclean;
-      solar = (cs + csp) / 2 * p.cf_solar * H; wind = (cw + cwp) / 2 * p.cf_wind * H; nuc = cn * B.cf_nuc * H; ofos = co * B.cf_ofos * H;
-    } else { solar = B.Solar; wind = B.Wind; nuc = B.Nuclear; ofos = B["Other fossil"]; }
+      nuc = cn * B.cf_nuc * H; ofos = co * B.cf_ofos * H;
+      // build the planned additions only as far as needed for clean supply to cover demand
+      // (capacity added during the year counts for half a year)
+      const demY = d.dc + d.transport + d.buildings + d.industry;
+      const baseY = (cs * p.cf_solar + cw * p.cf_wind) * H + nuc + OC.reduce((s, k) => s + oc[k], 0) + ofos;
+      const per = (saP * p.cf_solar + waP * p.cf_wind) * H / 2;
+      const kb = per > 0 ? Math.min(1, Math.max(0, (demY - baseY) / per)) : 0;
+      sa = kb * saP; wa = kb * waP;
+      const csp = cs, cwp = cw; cs += sa; cw += wa;
+      const cspP = csP, cwpP = cwP; csP += saP; cwP += waP;
+      solar = (cs + csp) / 2 * p.cf_solar * H; wind = (cw + cwp) / 2 * p.cf_wind * H;
+      solarP = (csP + cspP) / 2 * p.cf_solar * H; windP = (cwP + cwpP) / 2 * p.cf_wind * H;
+    } else { solar = solarP = B.Solar; wind = windP = B.Wind; nuc = B.Nuclear; ofos = B["Other fossil"]; }
     const demand = d.dc + d.transport + d.buildings + d.industry;
     const other = OC.reduce((s, k) => s + oc[k], 0);
-    const clean = solar + wind + nuc + other;
+    const clean = solar + wind + nuc + other, cleanPlan = solarP + windP + nuc + other;
     const resid = Math.max(0, demand - clean - ofos), curt = Math.max(0, clean + ofos - demand);
     const coalAv = cc * B.cf_coal * H, gasAv = cg * B.cf_gas * H;
     const share = coalAv + gasAv > 0 ? Math.min(1, resid / (coalAv + gasAv)) : 1;
@@ -350,7 +361,7 @@ function run(p, end = 2050) {
     const s2 = solar * k, w2 = wind * k;
     const ems = s2 * EI.Solar + w2 * EI.Wind + nuc * EI.Nuclear + OC.reduce((s, kk) => s + oc[kk] * EI[kk], 0)
       + coal * EI.Coal + gas * EI.Gas + ofos * EI["Other fossil"];
-    out.push({ year: y, demand, ...d, sa, wa, add: sa + wa, capSW: cs + cw, capNuc: cn, solar: s2, wind: w2, nuc, other,
+    out.push({ year: y, demand, ...d, sa, wa, add: sa + wa, addPlan: saP + waP, cleanPlan, capSW: cs + cw, capNuc: cn, solar: s2, wind: w2, nuc, other,
                cleanGross: clean, clean: clean - curt, cleanShare: (clean - curt) / demand, coalCap: cc, newGas, coal, gas, ofos, ems });
   }
   return out;
@@ -359,7 +370,9 @@ const at = (r, y) => r[y - Y0];
 const pctBelow = e => 100 * (1 - e / REF);
 const cagr = (a, b, n) => Math.pow(b / a, 1 / n) - 1;
 const demandCagr = (p, y = HZ) => { const r = run(p, y); return cagr(r[0].demand, r[r.length - 1].demand, y - Y0); };
-const cleanCagr = (p, y = HZ) => { const r = run(p, y); return cagr(r[0].cleanGross, r[r.length - 1].cleanGross, y - Y0); };
+// The clean lever is the planned build pace: what would be built if needed. Actual building stops once
+// clean supply covers demand, so these use the planned path to keep the lever one-to-one.
+const cleanCagr = (p, y = HZ) => { const r = run(p, y); return cagr(r[0].cleanPlan, r[r.length - 1].cleanPlan, y - Y0); };
 function solveShift(f, target, lo = -0.5, hi = 0.5) { // f monotone increasing in shift on [lo, hi]
   for (let n = 0; n < 40; n++) { const m = (lo + hi) / 2; if (f(m) < target) lo = m; else hi = m; }
   return (lo + hi) / 2;
@@ -380,7 +393,7 @@ let UNITS = "pct";
 try { if (localStorage.getItem("dc-units") === "abs") UNITS = "abs"; } catch (e) {}
 const D0 = D.history.demand[Y0 - 2005];
 const demAbs = (p, y = HZ) => { const r = run(p, y); return (r[r.length - 1].demand - r[0].demand) / (y - Y0); };
-const cleanAbs = (p, y = HZ) => { const r = run(p, y); return d3.mean(r.slice(1), d => d.add); };
+const cleanAbs = (p, y = HZ) => { const r = run(p, y); return d3.mean(r.slice(1), d => d.addPlan); };
 const demM = (p, y = HZ, u = UNITS) => u === "pct" ? demandCagr(p, y) : demAbs(p, y);
 const cleanM = (p, y = HZ, u = UNITS) => u === "pct" ? cleanCagr(p, y) : cleanAbs(p, y);
 const fmtD = (v, u = UNITS) => u === "pct" ? signPct(v) : (v >= 0 ? "+" : "−") + f0(Math.abs(v)) + " TWh/yr";
@@ -424,7 +437,7 @@ function needDemand(pct) { // highest demand growth at which current clean build
   return demM(shifted(anchorD, solveShift(f, tgt, -0.04, 0.07), 0));
 }
 function needAllClean() { // clean growth at which gross clean supply equals demand in 2035
-  const f = s => { const r = run(shifted(anchorC, 0, s), HZ), l = r[r.length - 1]; return l.cleanGross / l.demand; };
+  const f = s => { const r = run(shifted(anchorC, 0, s), HZ), l = r[r.length - 1]; return l.cleanPlan / l.demand; };
   if (f(0.25) < 1 || f(-0.3) > 1) return null;
   return cleanM(shifted(anchorC, 0, solveShift(f, 1, -0.3, 0.25)));
 }
@@ -646,7 +659,7 @@ function drawKPIs() {
   const r35 = at(cur, HZ), e = r35.ems, pb = pctBelow(e);
   const gap = e - REF * (1 - 0.61), dcEff = e - at(noDC, HZ).ems;
   document.getElementById("kpis").innerHTML = `
-    <div class="card kpi"><div class="k">2035 emissions</div><div class="v">${f0(e)} <small>Mt CO<sub>2</sub>e</small></div>
+    <div class="card kpi"><div class="k">2035 emissions</div><div class="v">${f0(e)} <small>Mt CO<sub>2</sub></small></div>
       <div class="s">${pb.toFixed(0)}% below 2005 (target 61 to 66%)</div>
       <span class="pill ${gap > 0 ? "bad" : "good"}">${gap > 0 ? "✕ Misses 2035 target by " + f0(gap) + " Mt" : "✓ Meets 2035 target"}</span></div>
     <div class="card kpi"><div class="k">Demand in 2035</div><div class="v">${f0(r35.demand)} <small>TWh</small></div>
@@ -714,7 +727,7 @@ function drawTS() {
   const pEnd = pinned ? pinned.r[pinned.r.length - 1] : null;
   const scAbove = !pEnd || pEnd.ems <= end.ems;
   let sy = y(end.ems) + (scAbove ? -10 : 18);
-  if (y(0) - sy < 22) sy = y(0) - 22; // clear the "Net zero" marker label
+  if (y(0) - sy < 27) sy = y(0) - 27; // clear the "Net zero" marker label
   lab(x(2050) - 6, sy, "Scenario", sc, "end");
   if (pEnd) lab(x(2050) - 6, y(pEnd.ems) + (scAbove ? 18 : -10), "Kept", pin, "end");
   // hairline labels: "No new clean power" above its line near the right; "No demand growth" to the left
@@ -852,7 +865,7 @@ function drawCT() {
   key.append("text").attr("x", kx + kw).attr("y", ky - 5).attr("text-anchor", "end").attr("class", "lab").text("Higher →");
   key.append("rect").attr("x", kx).attr("y", ky).attr("width", kw).attr("height", kh).attr("fill", "none").attr("stroke", css("--ink-2")).attr("stroke-width", 0.6);
   key.append("g").attr("class", "axis").attr("transform", `translate(0,${ky + kh})`).call(d3.axisBottom(kxS).tickValues([0, 1000, 2000, 3000].filter(v => v <= kmax)).tickFormat(f0).tickSize(3)).call(g => g.select(".domain").remove());
-  key.append("text").attr("x", kx - 8).attr("y", ky + kh - 1).attr("text-anchor", "end").attr("class", "lab").text("Mt CO₂e");
+  key.append("text").attr("x", kx - 8).attr("y", ky + kh - 1).attr("text-anchor", "end").attr("class", "lab").text("Mt CO₂");
   host.replaceChildren(svg.node());
   const t = tip(host);
   svg.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", Hh - m.t - m.b).attr("fill", "transparent")
@@ -862,7 +875,7 @@ function drawCT() {
       const j = Math.max(0, Math.min(ny - 1, d3.bisectCenter(ys, y.invert(py))));
       const e = vals[j * nx + i];
       const r = run(shifted(P, dD[i], dC[j]), YR), last = r[r.length - 1];
-      setTip(t, `${f0(e)} Mt CO₂e in ${YR}`, [
+      setTip(t, `${f0(e)} Mt CO₂ in ${YR}`, [
         ["Below 2005", pctBelow(e).toFixed(0) + "%"],
         [`Demand in ${YR}`, f0(last.demand) + " TWh"],
         ["Demand growth", fmtD(cagr(r[0].demand, last.demand, YR - Y0), "pct") + ", " + fmtD((last.demand - r[0].demand) / (YR - Y0), "abs")],
@@ -897,7 +910,7 @@ function drawTable() {
     ["Fossil generation (TWh)", r => f0(r.coal + r.gas + r.ofos), "h"],
     ["  Coal", r => f0(r.coal)], ["  Gas", r => f0(r.gas)],
     ["  Coal capacity (GW)", r => f0(r.coalCap)], ["  New gas capacity needed (GW)", r => f0(r.newGas)],
-    ["Emissions (Mt CO₂e)", r => f0(r.ems), "h"],
+    ["Emissions (Mt CO₂)", r => f0(r.ems), "h"],
     ["  Below 2005", r => pctBelow(r.ems).toFixed(0) + "%"],
   ];
   const tb = document.getElementById("tbl"); tb.replaceChildren();

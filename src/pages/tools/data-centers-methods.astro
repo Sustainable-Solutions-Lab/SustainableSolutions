@@ -107,7 +107,7 @@ const p = 'font-size: 15px; line-height: 1.6; margin: 0 0 12px;';
 
     <h2 class="font-serif text-ink" style={h2}>Published scenarios for context</h2>
     <p class="text-ink-2" style={p}>
-      Slider ticks and dotted lines on the map mark these. Build rates are solar plus wind GW a year. In the growth-rate units they are shown as the clean growth that build gives with the current mix. The accent-colored ticks are solved live for the current settings: the clean build that just meets the 2035 NDC (61% below 2005), the build at which clean supply equals demand in 2035, and the fastest data-center growth at which the current build still meets it. Sliders snap to a tick within 5% of their span.
+      Slider ticks and dotted lines on the map mark these. Build rates are solar plus wind GW a year. In the growth-rate units they are shown as the clean growth that build gives with the current mix. The accent-colored ticks are solved live for the current settings: the clean build that just meets the 2035 NDC (61% below 2005), the build at which clean supply equals demand in 2035, and the fastest data-center growth at which the current build still meets it. Sliders snap to a tick within 5% of their span. Once the clean slider is set on its NDC tick it stays there: moving demand re-solves the clean build that just meets the 2035 NDC, so the slider reads how fast clean power would need to grow.
     </p>
     <dl style="margin: 0; display: grid; grid-template-columns: 1fr; gap: 10px;">
       {refs.map((d) => (
@@ -123,7 +123,7 @@ const p = 'font-size: 15px; line-height: 1.6; margin: 0 0 12px;';
 
     <h2 class="font-serif text-ink" style={h2}>Reading the charts</h2>
     <p class="text-ink-2" style={p}>
-      The emissions chart shows history and the current scenario, with the targets as circles. Thin gray lines show the same settings with demand held at its 2025 level, or with no new clean capacity built; the scenario falls between them. Two maps show emissions in 2030 and 2035 over a grid of the two top-line sliders. They share axes, the sliders' settings as averages from 2025 to 2035, so a point is the same settings in both. Red is above 2025 emissions and blue below, with the 2025 level as a solid line and each year's NDC as a dashed one.
+      The emissions chart shows history and the current scenario, with the targets as circles. Thin gray lines show the same settings with demand held at its 2025 level, or with no new clean capacity built; the scenario falls between them. A thinner dark line holds data centers at their 2025 level with the same clean build, and the shaded band between it and the scenario is the emissions from data-center growth (also the share in the last summary card). Filled circles mark the scenario in 2030, 2035 and 2050, and dashed circles the NDC targets. Two maps show emissions in 2030 and 2035 over a grid of the two top-line sliders. They share axes, the sliders' settings as averages from 2025 to 2035, so a point is the same settings in both. Red is above 2025 emissions and blue below, with the 2025 level as a solid line and each year's NDC as a dashed one.
     </p>
 
     <h2 class="font-serif text-ink" style={h2}>Limits</h2>

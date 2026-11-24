@@ -508,7 +508,8 @@ const CTL = [
       [demM(withDC(P, 0.13)), "Slows", "Data-center growth slows to LBNL's low 2028 projection (+13%/yr)"],
       [demM(withDC(P, DEF.g_dc)), "Persists", "Data centers keep growing at their 2018-23 rate (+18.3%/yr, LBNL)"],
       [demM(withDC(P, 0.27)), "Accelerates", "Data-center growth accelerates to LBNL's high 2028 projection (+27%/yr); EPRI's 2026 high case is about the same"],
-      [needDemand(61), "Max for NDC", "Fastest data-center growth at which the current clean build still cuts 2035 emissions 61% below 2005", T]],
+      // hidden while clean is held at its NDC minimum: it would sit on the current demand and trap the slider
+      [cleanLock ? null : needDemand(61), "Max for NDC", "Fastest data-center growth at which the current clean build still cuts 2035 emissions 61% below 2005", T]],
     note: () => `${f0(at(cur, HZ).demand)} TWh in 2035, from ${f0(at(cur, Y0).demand)} TWh (${UNITS === "pct" ? fmtD(demAbs(P), "abs") : fmtD(demandCagr(P), "pct")}). Data centers ${signPct(P.g_dc)} on top of the projection above, which sets the left end. Ticks: if recent data-center growth slows, persists or accelerates (LBNL)` },
   { k: "g_dc", label: "Data centers", min: 0, max: 0.45, step: 0.005, fmt: signPct, note: twh("dc", "2018-23 rate +18.3%/yr"),
     marks: () => [[0, "Flat"], [0.13, "LBNL low", "LBNL (2024): 325 TWh in 2028"],
@@ -579,6 +580,7 @@ for (const c of CTL) {
     for (const [mv, lab] of c.cur || []) if (Math.abs(v - mv) < tol && (best === null || Math.abs(v - mv) < Math.abs(v - best))) { best = mv; bestLab = lab; }
     if (best !== null) v = best;
     if (c.k === "top_clean") cleanLock = bestLab === NDC_CLEAN;
+    else if ((c.k === "top_demand" || c.k === "g_dc") && CTL.find(q => q.k === "top_clean").on === NDC_CLEAN) cleanLock = true;
     else if (c.k !== "top_demand" && c.k !== "g_dc") cleanLock = false; // other clean or fossil settings release the lock
     c.apply(v); schedule(c.k);
   });
@@ -806,13 +808,17 @@ function drawTS() {
   svg.append("path").datum(band).attr("d", d3.area().x(d => x(d.year)).y0(d => y(d.lo)).y1(d => y(d.hi)))
     .attr("fill", scCol).attr("fill-opacity", 0.35);
   svg.append("path").datum(noDC).attr("d", line).attr("fill", "none").attr("stroke", ink).attr("stroke-opacity", 0.75).attr("stroke-width", 1.2);
-  { // label the band where it is tallest
+  { // label the band beside it, up and to the right of its widest point (above the falling scenario line),
+    // with a leader into the band
     const k = d3.maxIndex(band, d => y(d.lo) - y(d.hi)), b = band[k];
-    // centered in the band and turned along its midline so it stays inside
-    const mid = d => [x(d.year), (y(d.lo) + y(d.hi)) / 2], p0 = mid(band[Math.max(0, k - 2)]), p1 = mid(band[Math.min(band.length - 1, k + 2)]);
-    const ang = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]) * 180 / Math.PI, [cx, cy] = mid(b);
-    if (y(b.lo) - y(b.hi) > 18) svg.append("text").attr("transform", `translate(${cx},${cy}) rotate(${ang})`).attr("y", 4).attr("text-anchor", "middle")
-      .attr("class", "lab").attr("font-size", 10.5).text("From data-center growth");
+    const cx = x(b.year), cy = (y(b.lo) + y(b.hi)) / 2;
+    if (y(b.lo) - y(b.hi) > 4) {
+      const t = svg.append("text").attr("class", "lab").attr("font-size", 10.5).text("From data-center growth");
+      const tw = 128, lx = Math.min(cx + 34, W - m.r - tw), ly = Math.max(m.t + 10, y(b.hi) - 34);
+      t.attr("x", lx).attr("y", ly);
+      svg.append("polyline").attr("points", `${cx},${cy} ${lx - 3},${ly + 3}`).attr("fill", "none")
+        .attr("stroke", ink).attr("stroke-opacity", 0.7).attr("stroke-width", 0.8);
+    }
   }
   svg.append("path").datum(cur).attr("d", line).attr("fill", "none").attr("stroke", ink).attr("stroke-opacity", 0.3).attr("stroke-width", 5.5);
   svg.append("path").datum(cur).attr("d", line).attr("fill", "none").attr("stroke", scCol).attr("stroke-width", 3.5);

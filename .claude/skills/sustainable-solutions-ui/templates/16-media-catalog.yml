@@ -1,0 +1,38 @@
+# TEMPLATE; no supplied rights, credits, DOIs, or media URLs are genuine.
+assets:
+  - id: figure-example
+    type: image
+    role: explanatory
+    src: "[approved-image-path]"
+    width: null
+    height: null
+    alt: "[informational alternative text]"
+    longDescription: null
+    caption: "[figure number, scale, what it shows, date/geography]"
+    creator: "[verified rights holder]"
+    sourceUrl: "[verified URL]"
+    license: "[verified identifier or license statement]"
+    displayCredit: "[exact credit required by rightsholder]"
+    cropChanges: null
+    permissionEvidence: null
+  - id: video-example
+    type: video
+    src: "[approved-video-path]"
+    title: "[video title]"
+    poster: "[approved-image-path]"
+    language: en
+    vttCaptions: "[approved-en.vtt]"
+    transcriptUrl: "[transcript path]"
+    audioDescription: "[description file or integrated alternative]"
+    creator: "[verified]"
+    license: "[verified]"
+    credit: "[display-ready]"
+    consentRequiredForEmbed: false
+  - id: basemap-example
+    type: map-tiles
+    provider: "[verified basemap provider]"
+    attributionHtml: "[provider-required exact attribution]"
+    license: "[verified]"
+    termsUrl: "[provider terms URL]"
+    maxZoom: null
+    exportPermitted: null

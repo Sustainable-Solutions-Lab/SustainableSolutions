@@ -1,0 +1,43 @@
+category,token_or_pattern,production_value,production_file_or_selector,verified_date,status,candidate_value,decision_owner,notes
+font,--font-sans,"Inter, -apple-system, BlinkMacSystemFont, Helvetica Neue, Arial, sans-serif",":root computed",2026-11-09,VERIFIED,,site owner,Body/UI font
+font,--font-serif,"Tiempos Headline, Source Serif 4, Source Serif Pro, Georgia, serif",":root computed",2026-11-09,VERIFIED,,site owner,Heading font; Tiempos is commercial (Klim Type Foundry)
+font,--font-mono,"Inter (same as sans)",":root computed",2026-11-09,VERIFIED,,site owner,Used for eyebrow labels with uppercase+tracking
+color,--paper,#f8f8e8,":root",2026-11-09,VERIFIED,,site owner,Warm cream background
+color,--paper-2,#f1f1df,":root",2026-11-09,VERIFIED,,site owner,Surface / panel background
+color,--paper-3,#e8e8d4,":root",2026-11-09,VERIFIED,,site owner,Deeper surface
+color,--ink,#181838,":root",2026-11-09,VERIFIED,,site owner,Primary text (dark navy)
+color,--ink-2,#3a3a5a,":root",2026-11-09,VERIFIED,,site owner,Secondary text
+color,--ink-3,#6b6b80,":root",2026-11-09,VERIFIED,,site owner,Tertiary text / labels
+color,--ink-4,#9a9aae,":root",2026-11-09,VERIFIED,,site owner,Quaternary text / disabled
+color,--cardinal,#8c1515,":root",2026-11-09,VERIFIED,,site owner,Stanford Cardinal Red / accent
+color,--rule,#18183824,":root",2026-11-09,VERIFIED,,site owner,Border at 14% ink opacity
+color,--rule-strong,#18183847,":root",2026-11-09,VERIFIED,,site owner,Emphasized border at 28% ink
+color,--highlight,#78c8d859,":root",2026-11-09,VERIFIED,,site owner,Teal highlight at 35%
+color,--brand-navy,#181838,":root",2026-11-09,VERIFIED,,site owner,Brand navy
+color,--brand-green,#48a848,":root",2026-11-09,VERIFIED,,site owner,Brand green
+color,--brand-teal,#78c8d8,":root",2026-11-09,VERIFIED,,site owner,Brand teal
+color,--brand-orange,#e87828,":root",2026-11-09,VERIFIED,,site owner,Brand orange
+color,--brand-cream,#f8f8e8,":root",2026-11-09,VERIFIED,,site owner,Brand cream (same as paper)
+dataviz,--spectral-1,#9e0142,":root",2026-11-09,VERIFIED,,site owner,Spectral diverging 1 (magenta)
+dataviz,--spectral-2,#d53e4f,":root",2026-11-09,VERIFIED,,site owner,Spectral diverging 2 (red)
+dataviz,--spectral-3,#f46d43,":root",2026-11-09,VERIFIED,,site owner,Spectral diverging 3 (orange)
+dataviz,--spectral-4,#fdae61,":root",2026-11-09,VERIFIED,,site owner,Spectral diverging 4 (amber)
+dataviz,--spectral-5,#fee08b,":root",2026-11-09,VERIFIED,,site owner,Spectral diverging 5 (yellow)
+dataviz,--spectral-6,#ffffbf,":root",2026-11-09,VERIFIED,,site owner,Spectral diverging 6 (light yellow)
+dataviz,--spectral-7,#e6f598,":root",2026-11-09,VERIFIED,,site owner,Spectral diverging 7 (lime)
+dataviz,--spectral-8,#abdda4,":root",2026-11-09,VERIFIED,,site owner,Spectral diverging 8 (green)
+dataviz,--spectral-9,#66c2a5,":root",2026-11-09,VERIFIED,,site owner,Spectral diverging 9 (teal)
+dataviz,--spectral-10,#3288bd,":root",2026-11-09,VERIFIED,,site owner,Spectral diverging 10 (blue)
+dataviz,--spectral-11,#5e4fa2,":root",2026-11-09,VERIFIED,,site owner,Spectral diverging 11 (purple)
+layout,container-max,1200px,".container-content computed",2026-11-09,VERIFIED,,site owner,Content max-width
+layout,header-height,57px,"header.getBoundingClientRect()",2026-11-09,VERIFIED,,site owner,Sticky header height
+layout,spacing-base,4px,"--spacing on :root",2026-11-09,VERIFIED,,site owner,4px grid base unit
+layout,tool-frame,"calc(100dvh - 57px)","tool detail page style",2026-11-09,VERIFIED,,site owner,Full-viewport tool frame
+theme,data-theme,"data-theme attr on html","DOM inspection",2026-11-09,VERIFIED,,site owner,Attribute-based theme toggle
+theme,localStorage-key,ssl-theme,"JS inspection",2026-11-09,VERIFIED,,site owner,Theme persistence key
+dark,--paper (dark),#0c0c1c,"[data-theme=dark]",2026-11-09,VERIFIED,,site owner,Dark background
+dark,--ink (dark),#f8f8e8,"[data-theme=dark]",2026-11-09,VERIFIED,,site owner,Dark text
+dark,--cardinal (dark),#e04545,"[data-theme=dark]",2026-11-09,VERIFIED,,site owner,Dark accent red
+interaction,--focus,#8c1515 / var(--accent-brand),":root",2026-11-09,VERIFIED,,site owner,Focus ring color
+interaction,--radius,PROPOSED,N/A,,PROPOSED,"0.25/0.5/0.75rem",skill maintainer,Site uses Tailwind utilities; no explicit radius token
+interaction,--motion,PROPOSED,N/A,,PROPOSED,"140ms/240ms",skill maintainer,Not observed in production tokens

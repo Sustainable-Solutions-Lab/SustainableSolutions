@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sustainable Solutions UI: outputs from the design skill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,300..900&display=swap" rel="stylesheet">
+<style>
+/* Tokens, copied from the skill's tokens/ssl-candidate.css (source verified 2026-11-09) */
+:root{
+  color-scheme:light;
+  --font-sans:"Inter",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+  --font-serif:"Tiempos Headline","Source Serif 4","Source Serif Pro",Georgia,"Times New Roman",serif;
+  --font-mono:"Inter",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+  --font-code:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --t-xs:11px;--t-sm:13px;--t-base:16px;--t-md:19px;--t-lg:23px;--t-xl:28px;--t-2xl:34px;--t-3xl:41px;--t-4xl:56px;--t-5xl:72px;
+  --lh-tight:1.12;--lh-snug:1.28;--lh-normal:1.5;--lh-loose:1.7;
+  --tr-tight:-0.02em;--tr-mono:0.04em;--tr-eyebrow:0.12em;
+  --s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:24px;--s-6:32px;--s-7:48px;--s-8:64px;--s-9:96px;--s-10:128px;
+  --radius-sm:2px;--radius-md:4px;--radius-lg:8px;
+  --paper:#f8f8e8;--paper-2:#f1f1df;--paper-3:#e8e8d4;
+  --ink:#181838;--ink-2:#3a3a5a;--ink-3:#6b6b80;--ink-4:#9a9aae;
+  --rule:rgba(24,24,56,.14);--rule-strong:rgba(24,24,56,.28);--highlight:rgba(120,200,216,.35);
+  --brand-navy:#181838;--brand-green:#48a848;--brand-teal:#78c8d8;--brand-orange:#e87828;--brand-cream:#f8f8e8;
+  --accent-brand:#8c1515;--accent-bg:rgba(140,21,21,.08);--cardinal:#8c1515;
+  --spectral-1:#9e0142;--spectral-2:#d53e4f;--spectral-3:#f46d43;--spectral-4:#fdae61;--spectral-5:#fee08b;
+  --spectral-6:#ffffbf;--spectral-7:#e6f598;--spectral-8:#abdda4;--spectral-9:#66c2a5;--spectral-10:#3288bd;--spectral-11:#5e4fa2;
+  --system-energy-text:#c2440e;--system-food-text:#2e7b3f;--system-water-text:#1f5e8c;
+  --system-materials-text:var(--spectral-11);--system-climate-text:#1f6b82;--system-health-text:var(--spectral-1);
+  --bg:var(--paper);--bg-alt:var(--paper-2);--fg:var(--ink);--link:var(--ink);--link-rule:var(--rule-strong);
+  --accent:var(--accent-brand);--focus:var(--accent-brand);
+  --content-max:1200px;--prose-max:680px;--gutter:24px;--gutter-mobile:16px;
+  --ease:cubic-bezier(.2,0,0,1);--dur-fast:120ms;--dur-ui:200ms;--dur-content:400ms;
+  --shadow-pop:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.08);
+}
+[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#0c0c1c;--paper-2:#14142a;--paper-3:#1c1c36;
+  --ink:#f8f8e8;--ink-2:#c8c8d8;--ink-3:#9a9ab0;--ink-4:#686880;
+  --rule:rgba(248,248,232,.14);--rule-strong:rgba(248,248,232,.28);--highlight:rgba(120,200,216,.22);
+  --accent-brand:#e04545;--accent-bg:rgba(224,69,69,.10);--cardinal:#e04545;
+  --system-energy-text:var(--spectral-3);--system-food-text:var(--spectral-8);--system-water-text:var(--spectral-10);
+  --system-climate-text:var(--brand-teal);--system-health-text:var(--spectral-2);
+  --shadow-pop:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.5);
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important}}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);font-size:var(--t-base);line-height:var(--lh-normal);-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--content-max);margin:0 auto;padding:0 var(--gutter)}
+@media (max-width:640px){.wrap{padding:0 var(--gutter-mobile)}}
+a{color:var(--link);text-decoration:none;border-bottom:1px solid var(--link-rule)}
+a:hover{border-bottom-color:var(--ink)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.skip{position:absolute;left:-9999px}
+.skip:focus{left:var(--s-4);top:var(--s-2);z-index:60;background:var(--paper);padding:var(--s-2) var(--s-3);border:1px solid var(--ink)}
+
+header.mast{position:sticky;top:0;z-index:50;height:57px;display:flex;align-items:center;background:color-mix(in oklab,var(--paper) 70%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+.mast .wrap{display:flex;align-items:center;gap:var(--s-5);width:100%}
+.mark{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-eyebrow);font-weight:500;border:0}
+.mast nav{margin-left:auto;display:flex;gap:var(--s-5);align-items:center}
+.mast nav a{font-size:var(--t-sm);border:0;color:var(--ink-2)}
+.mast nav a:hover,.mast nav a[aria-current="page"]{color:var(--ink);font-weight:500}
+.toggle{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-mono);color:var(--ink-3);background:none;border:1px solid var(--rule);border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer}
+.toggle:hover{color:var(--ink);border-color:var(--rule-strong)}
+
+.eyebrow{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-eyebrow);color:var(--ink-3);margin:0 0 var(--s-3)}
+h1,h2,h3,h4{font-family:var(--font-serif);font-weight:500;letter-spacing:var(--tr-tight);margin:0}
+h1{font-size:var(--t-3xl);line-height:var(--lh-tight)}
+h2{font-size:var(--t-2xl);line-height:var(--lh-tight)}
+h3{font-size:var(--t-xl);line-height:var(--lh-snug)}
+h4{font-size:var(--t-lg)}
+p{margin:0 0 var(--s-4)}
+.lede{font-size:var(--t-md);color:var(--ink-2);max-width:var(--prose-max)}
+.prose{max-width:var(--prose-max)}
+.small{font-size:var(--t-sm);color:var(--ink-3)}
+.mono{font-family:var(--font-code);font-size:var(--t-sm)}
+
+.hero{padding:var(--s-9) 0 var(--s-7)}
+.meta{display:flex;flex-wrap:wrap;gap:var(--s-5);padding:var(--s-4) 0;margin-top:var(--s-6);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.meta div{font-size:var(--t-sm)}
+.meta dt{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-eyebrow);color:var(--ink-3);margin:0 0 2px}
+.meta dd{margin:0;color:var(--ink)}
+
+section.block{padding:var(--s-8) 0;border-top:1px solid var(--rule)}
+.block-head{display:flex;align-items:baseline;gap:var(--s-4);margin-bottom:var(--s-5)}
+.num{font-family:var(--font-mono);font-size:var(--t-xs);color:var(--accent);letter-spacing:var(--tr-eyebrow)}
+
+/* foundations */
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--s-3)}
+.sw{border:1px solid var(--rule);border-radius:var(--radius-md);overflow:hidden}
+.sw .chip{height:64px}
+.sw .lab{padding:var(--s-2) var(--s-3);font-family:var(--font-code);font-size:var(--t-xs);line-height:1.5}
+.sw .lab b{display:block;font-family:var(--font-mono);font-size:var(--t-xs);letter-spacing:var(--tr-mono);text-transform:uppercase;font-weight:500}
+.ramp{display:flex;height:40px;border:1px solid var(--rule);border-radius:var(--radius-md);overflow:hidden;margin:var(--s-3) 0 var(--s-2)}
+.ramp span{flex:1}
+.scale-row{display:flex;align-items:baseline;gap:var(--s-4);padding:var(--s-2) 0;border-bottom:1px solid var(--rule)}
+.scale-row .k{font-family:var(--font-code);font-size:var(--t-xs);color:var(--ink-3);width:120px;flex:none}
+.spacing li{display:flex;align-items:center;gap:var(--s-3);list-style:none;margin:0 0 6px;font-family:var(--font-code);font-size:var(--t-xs);color:var(--ink-3)}
+.spacing{padding:0;margin:0}
+.spacing i{display:block;height:12px;background:var(--brand-teal);border-radius:var(--radius-sm)}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-7)}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-5)}
+@media (max-width:860px){.cols2,.cols3{grid-template-columns:1fr;gap:var(--s-6)}}
+
+/* device frame holding a full example page */
+.frame{border:1px solid var(--rule-strong);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-pop);background:var(--paper)}
+.frame-bar{display:flex;align-items:center;gap:var(--s-2);padding:var(--s-2) var(--s-3);background:var(--paper-2);border-bottom:1px solid var(--rule)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ink-4)}
+.frame-url{font-family:var(--font-code);font-size:var(--t-xs);color:var(--ink-3);margin-left:var(--s-2)}
+.frame-body{padding:var(--s-6)}
+@media (max-width:640px){.frame-body{padding:var(--s-4)}}
+
+.tool-head{border-bottom:1px solid var(--rule);padding-bottom:var(--s-5);margin-bottom:var(--s-5)}
+.strip{display:flex;flex-wrap:wrap;gap:var(--s-5);margin-top:var(--s-4)}
+.strip dt{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-eyebrow);color:var(--ink-3);margin:0}
+.strip dd{margin:2px 0 0;font-size:var(--t-sm)}
+.tool-grid{display:grid;grid-template-columns:300px 1fr;gap:var(--s-6)}
+@media (max-width:860px){.tool-grid{grid-template-columns:1fr}}
+.panel{background:var(--paper-2);border:1px solid var(--rule);border-radius:var(--radius-md);padding:var(--s-5)}
+fieldset{border:0;padding:0;margin:0 0 var(--s-5)}
+label{display:block;font-size:var(--t-sm);font-weight:500;margin-bottom:var(--s-1)}
+.hint{display:block;font-size:var(--t-xs);color:var(--ink-3);margin-bottom:var(--s-2)}
+select,input[type=text],input[type=number]{width:100%;font-family:var(--font-sans);font-size:var(--t-sm);color:var(--ink);background:var(--paper);border:1px solid var(--rule-strong);border-radius:var(--radius-sm);padding:8px 10px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.rangewrap{display:flex;gap:var(--s-3);align-items:center}
+.rangewrap input[type=number]{width:88px;flex:none}
+.btn{font-family:var(--font-sans);font-size:var(--t-sm);font-weight:500;padding:9px 16px;border-radius:var(--radius-sm);border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer}
+.btn:hover,.btn.is-hover{background:var(--ink-2);border-color:var(--ink-2)}
+.btn.is-focus{outline:2px solid var(--focus);outline-offset:2px}
+.btn.is-pressed{background:var(--accent);border-color:var(--accent)}
+.btn[disabled]{background:var(--paper-3);color:var(--ink-4);border-color:var(--rule);cursor:not-allowed}
+.btn-sec{background:none;color:var(--ink);border:1px solid var(--rule-strong)}
+.btn-sec:hover{background:var(--paper-3)}
+.btnrow{display:flex;flex-wrap:wrap;gap:var(--s-3);align-items:center}
+.summary{display:flex;flex-wrap:wrap;gap:var(--s-6);padding:var(--s-4) 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-bottom:var(--s-5)}
+.stat .v{font-family:var(--font-serif);font-size:var(--t-2xl);line-height:1}
+.stat .k{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-eyebrow);color:var(--ink-3)}
+.stat .u{font-size:var(--t-sm);color:var(--ink-3)}
+figure{margin:0 0 var(--s-5)}
+figcaption{font-size:var(--t-sm);color:var(--ink-2);margin-top:var(--s-2)}
+.legend{display:flex;flex-wrap:wrap;gap:var(--s-4);margin:var(--s-3) 0;font-size:var(--t-sm)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend svg{display:block}
+table{width:100%;border-collapse:collapse;font-size:var(--t-sm)}
+caption{text-align:left;font-size:var(--t-sm);color:var(--ink-3);padding-bottom:var(--s-2)}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule)}
+thead th{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-mono);color:var(--ink-3);font-weight:500}
+tbody tr:nth-child(even){background:var(--paper-2)}
+td.num-cell,th.num-cell{text-align:right;font-variant-numeric:tabular-nums}
+details{border-top:1px solid var(--rule);padding:var(--s-3) 0}
+summary{cursor:pointer;font-size:var(--t-sm);font-weight:500}
+.note{background:var(--accent-bg);border-left:3px solid var(--accent);padding:var(--s-3) var(--s-4);font-size:var(--t-sm);margin:0 0 var(--s-4)}
+.alert{display:flex;gap:var(--s-3);align-items:flex-start;border:1px solid var(--rule-strong);border-left-width:3px;border-radius:var(--radius-sm);padding:var(--s-3) var(--s-4);font-size:var(--t-sm);margin-bottom:var(--s-3);background:var(--paper-2)}
+.alert .tag{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-mono);flex:none}
+.alert.warn{border-left-color:var(--spectral-3)}.alert.warn .tag{color:var(--system-energy-text)}
+.alert.info{border-left-color:var(--spectral-10)}.alert.info .tag{color:var(--system-water-text)}
+.alert.err{border-left-color:var(--spectral-2)}.alert.err .tag{color:var(--system-health-text)}
+.chips{display:flex;flex-wrap:wrap;gap:var(--s-2);align-items:center}
+.chip-btn{font-size:var(--t-sm);padding:5px 12px;border-radius:999px;border:1px solid var(--rule-strong);background:none;color:var(--ink-2);cursor:pointer}
+.chip-btn[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tabs{display:flex;gap:var(--s-4);border-bottom:1px solid var(--rule);margin-bottom:var(--s-4)}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:var(--s-2) 0;font-size:var(--t-sm);color:var(--ink-3);cursor:pointer}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent);font-weight:500}
+.research{background:var(--paper-2);border:1px solid var(--rule);border-radius:var(--radius-md);padding:var(--s-6)}
+.research dl{display:grid;grid-template-columns:150px 1fr;gap:var(--s-2) var(--s-4);margin:0;font-size:var(--t-sm)}
+.research dt{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-eyebrow);color:var(--ink-3);padding-top:3px}
+.research dd{margin:0}
+@media (max-width:640px){.research dl{grid-template-columns:1fr;gap:2px var(--s-4)}.research dd{margin-bottom:var(--s-3)}}
+
+/* catalog cards */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-7)}
+@media (max-width:860px){.cards{grid-template-columns:1fr}}
+.card{display:block;border:0}
+.card .thumb{aspect-ratio:16/9;border-radius:var(--radius-md);border:1px solid var(--rule);display:flex;align-items:flex-end;padding:var(--s-3);margin-bottom:var(--s-4)}
+.card .thumb .tagline{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-mono);background:var(--paper);padding:2px 6px;border-radius:var(--radius-sm)}
+.card h3{margin:var(--s-2) 0}
+.paperblk{border-top:1px solid var(--rule);margin-top:var(--s-4);padding-top:var(--s-3);font-size:var(--t-sm)}
+.extlinks{display:flex;gap:var(--s-4);margin-top:var(--s-3)}
+.extlinks a{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-mono);border:0;color:var(--ink-2)}
+.extlinks a:hover{color:var(--ink)}
+
+/* state gallery */
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--s-5)}
+.gal .cell{border:1px solid var(--rule);border-radius:var(--radius-md);padding:var(--s-4);background:var(--paper)}
+.gal .st{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-mono);color:var(--ink-3);margin-bottom:var(--s-3)}
+.err-text{color:var(--system-health-text);font-size:var(--t-xs);margin-top:4px}
+.invalid{border-color:var(--system-health-text) !important;border-width:2px !important}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--paper);border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* before and after */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-5)}
+@media (max-width:860px){.ba{grid-template-columns:1fr}}
+.ba-col h4{margin-bottom:var(--s-3)}
+.before{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#222;border:1px solid #ddd;border-radius:6px;padding:16px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.before h5{font-family:Arial,Helvetica,sans-serif;font-size:20px;margin:0 0 4px;font-weight:bold;color:#111}
+.before p{font-size:13px;color:#555;margin:0 0 12px}
+.before a{color:#0b5fff;border:0;text-decoration:underline}
+.before .kpi{font-size:30px;font-weight:bold;color:#0b5fff}
+.before .bar{display:flex;gap:4px;align-items:flex-end;height:70px;margin:10px 0}
+.before .bar i{display:block;width:16px;background:#0b5fff;border-radius:2px 2px 0 0}
+.before .bar i:nth-child(even){background:#f0a}
+.before .lg{font-size:11px;color:#777}
+.after{background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius-md);padding:var(--s-4)}
+.diffs{columns:2;column-gap:var(--s-6);font-size:var(--t-sm);margin-top:var(--s-5)}
+@media (max-width:640px){.diffs{columns:1}}
+.diffs li{margin-bottom:var(--s-2)}
+
+.statuses{font-size:var(--t-sm)}
+.pill{font-family:var(--font-mono);font-size:var(--t-xs);letter-spacing:var(--tr-mono);text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--rule-strong);white-space:nowrap}
+.pill.v{color:var(--system-food-text);border-color:currentColor}
+.pill.i{color:var(--system-water-text);border-color:currentColor}
+.pill.p{color:var(--system-energy-text);border-color:currentColor}
+
+footer.site{background:var(--paper-2);border-top:1px solid var(--rule);padding:var(--s-7) 0;margin-top:var(--s-8)}
+footer.site .wrap{display:flex;flex-wrap:wrap;gap:var(--s-6);justify-content:space-between;font-size:var(--t-sm);color:var(--ink-2)}
+.synthetic{font-family:var(--font-mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:var(--tr-mono);color:var(--system-energy-text);border:1px solid currentColor;border-radius:999px;padding:2px 8px;display:inline-block}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="mast">
+  <div class="wrap">
+    <a href="#main" class="mark">Sustainable Solutions Lab</a>
+    <nav aria-label="Showcase sections">
+      <a href="#foundations">Foundations</a>
+      <a href="#toolpage">Tool page</a>
+      <a href="#catalog">Catalog</a>
+      <a href="#components">Components</a>
+      <a href="#contrast">Before and after</a>
+      <button class="toggle" id="themebtn" type="button" aria-label="Toggle color theme" aria-pressed="false">Dark</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+
+  <div class="hero">
+    <p class="eyebrow">Design skill, rendered output</p>
+    <h1>What the Sustainable Solutions UI skill produces</h1>
+    <p class="lede">Every element on this page is drawn with the design tokens, page skeleton, component states and attribution rules defined in the <span class="mono">sustainable-solutions-ui</span> skill. Nothing here is decoration chosen by hand: the colours, type steps, spacing, dark mode and focus rings come straight from the token file that was extracted from the live lab site.</p>
+    <dl class="meta">
+      <div><dt>Skill</dt><dd>sustainable-solutions-ui, version 2.1.0</dd></div>
+      <div><dt>Target stack</dt><dd>Astro, Tailwind CSS v4, Vercel</dd></div>
+      <div><dt>Tokens verified</dt><dd>9 November 2026, from live site source</dd></div>
+      <div><dt>Data on this page</dt><dd><span class="synthetic">Synthetic</span></dd></div>
+    </dl>
+    <p class="note" style="margin-top:var(--s-6)">All numbers, place names, papers and DOIs on this page are invented for demonstration. They must not be read as lab results. The purpose is to show form, states and structure, not findings.</p>
+    <p><button class="btn" type="button" id="themebtn2">Switch to dark mode</button> <span class="small">Dark mode is part of the system, not an afterthought. The toggle writes <span class="mono">data-theme</span> on the html element and remembers the choice in <span class="mono">localStorage('ssl-theme')</span>, which is how the production site does it.</span></p>
+  </div>
+
+  <section class="block" id="foundations">
+    <div class="block-head"><span class="num">01</span><h2>Foundations</h2></div>
+    <p class="prose">The skill carries one token file with a status on every value: source verified, inferred, or proposed. A tool built with it cannot drift into its own palette, because there are no hand written hex codes to drift with.</p>
+
+    <h3 style="margin-top:var(--s-6)">Surfaces and ink</h3>
+    <div class="swatches" style="margin-top:var(--s-4)">
+      <div class="sw"><div class="chip" style="background:var(--paper)"></div><div class="lab"><b>--paper</b>#f8f8e8 canvas</div></div>
+      <div class="sw"><div class="chip" style="background:var(--paper-2)"></div><div class="lab"><b>--paper-2</b>#f1f1df recessed</div></div>
+      <div class="sw"><div class="chip" style="background:var(--paper-3)"></div><div class="lab"><b>--paper-3</b>#e8e8d4 alt row</div></div>
+      <div class="sw"><div class="chip" style="background:var(--ink)"></div><div class="lab"><b>--ink</b>#181838 body text</div></div>
+      <div class="sw"><div class="chip" style="background:var(--ink-2)"></div><div class="lab"><b>--ink-2</b>#3a3a5a secondary</div></div>
+      <div class="sw"><div class="chip" style="background:var(--ink-3)"></div><div class="lab"><b>--ink-3</b>#6b6b80 metadata</div></div>
+      <div class="sw"><div class="chip" style="background:var(--cardinal)"></div><div class="lab"><b>--cardinal</b>#8c1515 accent</div></div>
+      <div class="sw"><div class="chip" style="background:var(--brand-teal)"></div><div class="lab"><b>--brand-teal</b>#78c8d8</div></div>
+      <div class="sw"><div class="chip" style="background:var(--brand-green)"></div><div class="lab"><b>--brand-green</b>#48a848</div></div>
+      <div class="sw"><div class="chip" style="background:var(--brand-orange)"></div><div class="lab"><b>--brand-orange</b>#e87828</div></div>
+    </div>
+
+    <h3 style="margin-top:var(--s-7)">Data palette</h3>
+    <p class="small">Eleven stop spectral diverging ramp, <span class="mono">--spectral-1</span> to <span class="mono">--spectral-11</span>. Default two series pair is blue <span class="mono">--spectral-10</span> and red <span class="mono">--spectral-2</span>, always with a second non colour cue.</p>
+    <div class="ramp" aria-hidden="true">
+      <span style="background:var(--spectral-1)"></span><span style="background:var(--spectral-2)"></span><span style="background:var(--spectral-3)"></span>
+      <span style="background:var(--spectral-4)"></span><span style="background:var(--spectral-5)"></span><span style="background:var(--spectral-6)"></span>
+      <span style="background:var(--spectral-7)"></span><span style="background:var(--spectral-8)"></span><span style="background:var(--spectral-9)"></span>
+      <span style="background:var(--spectral-10)"></span><span style="background:var(--spectral-11)"></span>
+    </div>
+
+    <h3 style="margin-top:var(--s-7)">Research domain colours, with measured contrast</h3>
+    <div class="cols3" style="margin-top:var(--s-4)">
+      <p style="margin:0"><span style="color:var(--system-energy-text);font-weight:600">Energy</span> <span class="small">4.75:1</span></p>
+      <p style="margin:0"><span style="color:var(--system-food-text);font-weight:600">Food</span> <span class="small">4.87:1</span></p>
+      <p style="margin:0"><span style="color:var(--system-water-text);font-weight:600">Water</span> <span class="small">6.45:1</span></p>
+      <p style="margin:0"><span style="color:var(--system-materials-text);font-weight:600">Materials</span> <span class="small">6.28:1</span></p>
+      <p style="margin:0"><span style="color:var(--system-climate-text);font-weight:600">Climate</span> <span class="small">5.62:1</span></p>
+      <p style="margin:0"><span style="color:var(--system-health-text);font-weight:600">Health</span> <span class="small">7.72:1</span></p>
+    </div>
+
+    <div class="cols2" style="margin-top:var(--s-7)">
+      <div>
+        <h3>Type scale</h3>
+        <p class="small">Ten steps, 1.20 minor third, anchored at 16px. Serif for headings, Inter for interface text, monospaced only for code.</p>
+        <div style="margin-top:var(--s-4)">
+          <div class="scale-row"><span class="k">--t-5xl 72px</span><span style="font-family:var(--font-serif);font-size:var(--t-4xl);line-height:1">Hero</span></div>
+          <div class="scale-row"><span class="k">--t-3xl 41px</span><span style="font-family:var(--font-serif);font-size:var(--t-3xl);line-height:1">Page title h1</span></div>
+          <div class="scale-row"><span class="k">--t-2xl 34px</span><span style="font-family:var(--font-serif);font-size:var(--t-2xl);line-height:1">Section h2</span></div>
+          <div class="scale-row"><span class="k">--t-xl 28px</span><span style="font-family:var(--font-serif);font-size:var(--t-xl);line-height:1">Subsection h3</span></div>
+          <div class="scale-row"><span class="k">--t-md 19px</span><span style="font-size:var(--t-md)">Lead paragraph</span></div>
+          <div class="scale-row"><span class="k">--t-base 16px</span><span>Body copy, 1.5 line height</span></div>
+          <div class="scale-row"><span class="k">--t-sm 13px</span><span style="font-size:var(--t-sm)">Metadata and table text</span></div>
+          <div class="scale-row"><span class="k">--t-xs 11px</span><span class="eyebrow" style="margin:0">Eyebrow and caption</span></div>
+        </div>
+      </div>
+      <div>
+        <h3>Spacing, radius, motion</h3>
+        <p class="small">Four pixel base. Layout widths 1200px container and 680px prose measure, so long explanations stay readable next to a wide map.</p>
+        <ul class="spacing" style="margin-top:var(--s-4)">
+          <li><i style="width:4px"></i>--s-1 4px</li>
+          <li><i style="width:8px"></i>--s-2 8px</li>
+          <li><i style="width:12px"></i>--s-3 12px</li>
+          <li><i style="width:16px"></i>--s-4 16px</li>
+          <li><i style="width:24px"></i>--s-5 24px</li>
+          <li><i style="width:32px"></i>--s-6 32px</li>
+          <li><i style="width:48px"></i>--s-7 48px</li>
+          <li><i style="width:64px"></i>--s-8 64px</li>
+          <li><i style="width:96px"></i>--s-9 96px</li>
+        </ul>
+        <div class="btnrow" style="margin-top:var(--s-5)">
+          <span style="padding:10px 14px;border:1px solid var(--rule-strong);border-radius:var(--radius-sm);font-size:var(--t-sm)">radius-sm 2px</span>
+          <span style="padding:10px 14px;border:1px solid var(--rule-strong);border-radius:var(--radius-md);font-size:var(--t-sm)">radius-md 4px</span>
+          <span style="padding:10px 14px;border:1px solid var(--rule-strong);border-radius:var(--radius-lg);font-size:var(--t-sm)">radius-lg 8px</span>
+        </div>
+        <p class="small" style="margin-top:var(--s-4)">Motion: 120ms for controls, 200ms for interface, 400ms for content, one shared easing curve, and every transition disabled under <span class="mono">prefers-reduced-motion</span>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="toolpage">
+    <div class="block-head"><span class="num">02</span><h2>A tool page, built to the mandatory skeleton</h2></div>
+    <p class="prose">The skill fixes the order of a tool page: eyebrow, one serif title, a plain language question, a metadata strip, then controls, result summary, figure, how to read it, the data behind it, and a research and attribution block that only shows fields with real values. Below is that skeleton filled with invented data.</p>
+
+    <div class="frame" style="margin-top:var(--s-5)">
+      <div class="frame-bar" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="frame-url">sustainablesolutions.stanford.edu/tools/example-groundwater</span></div>
+      <div class="frame-body">
+
+        <div class="tool-head">
+          <p class="eyebrow">Tools, interactive model</p>
+          <h1>How far does groundwater stress spread under two withdrawal paths?</h1>
+          <p class="lede" style="margin-top:var(--s-3)">A demonstration model comparing a constant withdrawal path against a managed reduction path in one invented basin, so that the shape of the interface can be judged without any real result.</p>
+          <dl class="strip">
+            <div><dt>Status</dt><dd>Modelled, synthetic</dd></div>
+            <div><dt>Data version</dt><dd>v0.3 demo</dd></div>
+            <div><dt>Updated</dt><dd>12 November 2026</dd></div>
+            <div><dt>Companion paper</dt><dd>Not applicable, example page</dd></div>
+          </dl>
+        </div>
+
+        <div class="tool-grid">
+          <form class="panel" aria-labelledby="ctrl-h">
+            <h4 id="ctrl-h" style="font-family:var(--font-serif);margin-bottom:var(--s-4)">Choose inputs</h4>
+            <fieldset>
+              <label for="basin">Basin</label>
+              <span class="hint">Invented study areas only</span>
+              <select id="basin"><option>Region Alpha</option><option>Region Beta</option><option>Region Gamma</option></select>
+            </fieldset>
+            <fieldset>
+              <label for="rate">Withdrawal change by 2050</label>
+              <span class="hint">Percent per year, range -4 to +2, default -1</span>
+              <div class="rangewrap">
+                <input type="range" id="rate" min="-4" max="2" step="0.5" value="-1" aria-describedby="rate-val">
+                <input type="number" id="rate-val" value="-1" min="-4" max="2" step="0.5" aria-label="Withdrawal change, percent per year">
+              </div>
+            </fieldset>
+            <fieldset>
+              <label for="band">Show uncertainty interval</label>
+              <span class="hint">Shaded 10th to 90th percentile</span>
+              <div class="chips"><button class="chip-btn" type="button" aria-pressed="true" id="band">On</button></div>
+            </fieldset>
+            <div class="btnrow">
+              <button class="btn" type="button">Run scenario</button>
+              <button class="btn btn-sec" type="reset">Reset</button>
+            </div>
+            <p class="small" style="margin:var(--s-4) 0 0">Every control has a real label, units and a stated range. A slider always has a number input beside it, because a slider alone is not usable by keyboard at precision.</p>
+          </form>
+
+          <div>
+            <div class="summary">
+              <div class="stat"><div class="k">Area under stress, 2050</div><div class="v">41<span class="u"> thousand km2</span></div></div>
+              <div class="stat"><div class="k">Difference from baseline</div><div class="v" style="color:var(--system-water-text)">-18<span class="u"> percent</span></div></div>
+              <div class="stat"><div class="k">Interval</div><div class="v" style="font-size:var(--t-lg)">34 to 49<span class="u"> thousand km2</span></div></div>
+            </div>
+
+            <figure aria-labelledby="fig1-t" aria-describedby="fig1-d">
+              <p class="eyebrow" style="margin-bottom:var(--s-1)">Figure 1</p>
+              <h4 id="fig1-t" style="margin-bottom:var(--s-2)">Area under groundwater stress, 2030 to 2050</h4>
+              <p id="fig1-d" class="small" style="margin-bottom:var(--s-3)">Two synthetic paths. Baseline holds withdrawal constant, managed reduces it by one percent per year. Shaded band is the 10th to 90th percentile of the managed path.</p>
+              <div class="legend">
+                <span><svg width="34" height="10" aria-hidden="true"><line x1="0" y1="5" x2="34" y2="5" stroke="var(--spectral-2)" stroke-width="2.5"></line><circle cx="17" cy="5" r="3.5" fill="var(--spectral-2)"></circle></svg> Baseline, circles</span>
+                <span><svg width="34" height="10" aria-hidden="true"><line x1="0" y1="5" x2="34" y2="5" stroke="var(--spectral-10)" stroke-width="2.5" stroke-dasharray="6 4"></line><rect x="13" y="1" width="8" height="8" fill="var(--spectral-10)"></rect></svg> Managed, dashed with squares</span>
+                <span><svg width="34" height="10" aria-hidden="true"><rect x="0" y="2" width="34" height="6" fill="var(--spectral-10)" opacity=".2"></rect></svg> 10th to 90th percentile</span>
+              </div>
+              <svg viewBox="0 0 640 300" width="100%" height="auto" role="img" aria-label="Line chart of synthetic area under stress from 2030 to 2050, baseline rising from 44 to 50 thousand square kilometres, managed path falling from 44 to 41.">
+                <g stroke="var(--rule)" stroke-width="1">
+                  <line x1="60" y1="250" x2="620" y2="250"></line>
+                  <line x1="60" y1="20" x2="60" y2="250"></line>
+                  <line x1="60" y1="192" x2="620" y2="192" stroke-dasharray="2 4"></line>
+                  <line x1="60" y1="134" x2="620" y2="134" stroke-dasharray="2 4"></line>
+                  <line x1="60" y1="76" x2="620" y2="76" stroke-dasharray="2 4"></line>
+                </g>
+                <g fill="var(--ink-3)" font-size="11" font-family="var(--font-mono)">
+                  <text x="52" y="254" text-anchor="end">30</text>
+                  <text x="52" y="196" text-anchor="end">40</text>
+                  <text x="52" y="138" text-anchor="end">50</text>
+                  <text x="52" y="80" text-anchor="end">60</text>
+                  <text x="60" y="272">2030</text><text x="200" y="272">2035</text><text x="340" y="272">2040</text><text x="480" y="272">2045</text><text x="620" y="272" text-anchor="end">2050</text>
+                  <text x="12" y="20" font-size="11">thousand km2</text>
+                </g>
+                <polygon points="60,163 200,157 340,151 480,146 620,140 620,227 480,215 340,198 200,186 60,175" fill="var(--spectral-10)" opacity=".2"></polygon>
+                <polyline points="60,169 200,157 340,146 480,140 620,134" fill="none" stroke="var(--spectral-2)" stroke-width="2.5"></polyline>
+                <g fill="var(--spectral-2)"><circle cx="60" cy="169" r="4"></circle><circle cx="200" cy="157" r="4"></circle><circle cx="340" cy="146" r="4"></circle><circle cx="480" cy="140" r="4"></circle><circle cx="620" cy="134" r="4"></circle></g>
+                <polyline points="60,169 200,169 340,169 480,180 620,186" fill="none" stroke="var(--spectral-10)" stroke-width="2.5" stroke-dasharray="6 4"></polyline>
+                <g fill="var(--spectral-10)"><rect x="56" y="165" width="8" height="8"></rect><rect x="196" y="165" width="8" height="8"></rect><rect x="336" y="165" width="8" height="8"></rect><rect x="476" y="176" width="8" height="8"></rect><rect x="616" y="182" width="8" height="8"></rect></g>
+                <g font-size="12" font-family="var(--font-sans)" font-weight="500">
+                  <text x="614" y="124" text-anchor="end" fill="var(--spectral-2)">Baseline</text>
+                  <text x="66" y="206" fill="var(--spectral-10)">Managed</text>
+                </g>
+              </svg>
+              <figcaption>Figure 1. Synthetic illustration. Series are distinguished by line style and marker shape as well as colour, and both are labelled directly on the plot so the legend is not the only key.</figcaption>
+            </figure>
+
+            <div class="note">How to read this: the vertical axis is area, not volume. Values are rounded to whole thousands for display while the export keeps full precision. The band is a percentile range across model runs, not a confidence interval.</div>
+
+            <details>
+              <summary>Show the plotted values as a table</summary>
+              <table style="margin-top:var(--s-3)">
+                <caption>Synthetic area under stress, thousand km2, invented Region Alpha</caption>
+                <thead><tr><th scope="col">Year</th><th scope="col" class="num-cell">Baseline</th><th scope="col" class="num-cell">Managed</th><th scope="col" class="num-cell">Managed, 10th to 90th</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row">2030</th><td class="num-cell">44</td><td class="num-cell">44</td><td class="num-cell">43 to 45</td></tr>
+                  <tr><th scope="row">2035</th><td class="num-cell">46</td><td class="num-cell">44</td><td class="num-cell">41 to 46</td></tr>
+                  <tr><th scope="row">2040</th><td class="num-cell">48</td><td class="num-cell">44</td><td class="num-cell">39 to 47</td></tr>
+                  <tr><th scope="row">2045</th><td class="num-cell">49</td><td class="num-cell">42</td><td class="num-cell">36 to 48</td></tr>
+                  <tr><th scope="row">2050</th><td class="num-cell">50</td><td class="num-cell">41</td><td class="num-cell">34 to 49</td></tr>
+                </tbody>
+              </table>
+            </details>
+            <div class="btnrow" style="margin-top:var(--s-4)">
+              <button class="btn btn-sec" type="button">Download plotted data, CSV, about 4 KB</button>
+              <span class="small">Export carries the exact filtered scope, units and method version.</span>
+            </div>
+          </div>
+        </div>
+
+        <section class="research" style="margin-top:var(--s-7)" aria-labelledby="res-t">
+          <p class="eyebrow">Reproducibility</p>
+          <h3 id="res-t" style="margin-bottom:var(--s-4)">Research and attribution</h3>
+          <dl>
+            <dt>Method</dt><dd>Invented two path withdrawal model, demonstration only, version 0.3</dd>
+            <dt>Data</dt><dd>Synthetic series generated for this page, no external dataset used</dd>
+            <dt>Code</dt><dd>Example page, no repository</dd>
+            <dt>Units</dt><dd>Thousand km2, calendar years, no seasonal disaggregation</dd>
+            <dt>Limitations</dt><dd>No real basin, no validation, no uncertainty from measurement, not suitable for any inference</dd>
+            <dt>Licence</dt><dd>Example markup, reusable within the lab</dd>
+          </dl>
+          <p class="small" style="margin:var(--s-5) 0 0">Fields with no real value are shown as not applicable rather than filled with a plausible looking placeholder. The skill forbids invented DOIs, authors and credits.</p>
+        </section>
+
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="catalog">
+    <div class="block-head"><span class="num">03</span><h2>Catalog cards</h2></div>
+    <p class="prose">On the index page each tool is one anchor wrapping the whole card: image, type eyebrow in monospaced capitals, serif title, one sentence of purpose, then the companion paper and the external links in a fixed order.</p>
+    <div class="cards" style="margin-top:var(--s-6)">
+      <a class="card" href="#catalog">
+        <div class="thumb" style="background:linear-gradient(135deg,var(--spectral-10),var(--spectral-8) 60%,var(--spectral-5))"><span class="tagline">Synthetic thumbnail</span></div>
+        <p class="eyebrow" style="margin-bottom:var(--s-1)">Interactive map</p>
+        <h3>Example basin explorer</h3>
+        <p class="small" style="color:var(--ink-2)">Compare invented withdrawal paths across three fictional basins, with a region list for keyboard use.</p>
+        <div class="paperblk">
+          <p class="eyebrow" style="margin-bottom:var(--s-1)">Companion paper</p>
+          <p style="margin:0">Not applicable, example card <span class="small">, demonstration</span></p>
+        </div>
+        <div class="extlinks"><span>Github, example</span><span>Zenodo, example</span></div>
+      </a>
+      <a class="card" href="#catalog">
+        <div class="thumb" style="background:linear-gradient(135deg,var(--spectral-2),var(--spectral-4) 55%,var(--spectral-6))"><span class="tagline">Synthetic thumbnail</span></div>
+        <p class="eyebrow" style="margin-bottom:var(--s-1)">Chart dashboard</p>
+        <h3>Example scenario comparison</h3>
+        <p class="small" style="color:var(--ink-2)">Two invented series on one shared scale, with the plotted values available as a table and a download.</p>
+        <div class="paperblk">
+          <p class="eyebrow" style="margin-bottom:var(--s-1)">Companion paper</p>
+          <p style="margin:0">Not applicable, example card <span class="small">, demonstration</span></p>
+        </div>
+        <div class="extlinks"><span>Github, example</span><span>Website, example</span></div>
+      </a>
+    </div>
+  </section>
+
+  <section class="block" id="components">
+    <div class="block-head"><span class="num">04</span><h2>Components, in every state</h2></div>
+    <p class="prose">The skill treats a component as unfinished until default, hover, focus visible, pressed, disabled, loading, error and empty are all defined. These are those states, drawn side by side instead of described.</p>
+
+    <h3 style="margin:var(--s-6) 0 var(--s-4)">Buttons</h3>
+    <div class="gal">
+      <div class="cell"><p class="st">Default</p><button class="btn" type="button">Run scenario</button></div>
+      <div class="cell"><p class="st">Hover</p><button class="btn is-hover" type="button">Run scenario</button></div>
+      <div class="cell"><p class="st">Focus visible</p><button class="btn is-focus" type="button">Run scenario</button></div>
+      <div class="cell"><p class="st">Pressed</p><button class="btn is-pressed" type="button">Run scenario</button></div>
+      <div class="cell"><p class="st">Busy, no double submit</p><button class="btn" type="button" aria-busy="true"><span class="spin"></span>Running</button></div>
+      <div class="cell"><p class="st">Disabled, with reason</p><button class="btn" type="button" disabled>Download</button><p class="small" style="margin:6px 0 0">Choose a basin first.</p></div>
+    </div>
+
+    <h3 style="margin:var(--s-7) 0 var(--s-4)">Inputs</h3>
+    <div class="gal">
+      <div class="cell"><p class="st">Default, label and units</p><label for="i1">Withdrawal change</label><span class="hint">Percent per year</span><input type="number" id="i1" value="-1"></div>
+      <div class="cell"><p class="st">Invalid</p><label for="i2">Withdrawal change</label><input type="number" id="i2" class="invalid" value="-9" aria-invalid="true" aria-describedby="e2"><p class="err-text" id="e2">Outside the allowed range, -4 to 2.</p></div>
+      <div class="cell"><p class="st">Disabled</p><label for="i3">Withdrawal change</label><input type="number" id="i3" value="-1" disabled></div>
+      <div class="cell"><p class="st">Filter chips, with count</p><div class="chips"><button class="chip-btn" aria-pressed="true" type="button">Water</button><button class="chip-btn" aria-pressed="false" type="button">Energy</button><button class="chip-btn" aria-pressed="false" type="button">Food</button></div><p class="small" style="margin:8px 0 0">4 tools match. <a href="#components">Clear all</a></p></div>
+      <div class="cell"><p class="st">No results</p><div class="chips"><button class="chip-btn" aria-pressed="true" type="button">Water</button><button class="chip-btn" aria-pressed="true" type="button">1990 to 1995</button></div><p class="small" style="margin:8px 0 0">No tools match these filters. Remove a filter to see more.</p></div>
+      <div class="cell"><p class="st">Tabs</p><div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="true">Map</button><button class="tab" role="tab" aria-selected="false">Table</button><button class="tab" role="tab" aria-selected="false">Methods</button></div><p class="small" style="margin:0">Arrow keys move between tabs.</p></div>
+    </div>
+
+    <h3 style="margin:var(--s-7) 0 var(--s-4)">Status messages</h3>
+    <div class="alert warn" role="status"><span class="tag">Stale data</span><span>Showing the version from 3 November 2026. A refresh is in progress, so values may change.</span></div>
+    <div class="alert err" role="alert"><span class="tag">Map tiles</span><span>Map tiles are unavailable. Your scenario results are still accessible in the table below.</span></div>
+    <div class="alert info" role="status"><span class="tag">Partial</span><span>Two of three layers loaded. The soils layer is missing, so the combined index is not shown.</span></div>
+    <p class="small prose">Each message names what happened and what is still safe to do, and severity is never carried by colour alone.</p>
+
+    <h3 style="margin:var(--s-7) 0 var(--s-4)">Map, with a keyboard alternative</h3>
+    <div class="cols2">
+      <figure>
+        <div style="position:relative;border:1px solid var(--rule);border-radius:var(--radius-md);overflow:hidden;background:var(--paper-2)">
+          <svg viewBox="0 0 400 300" width="100%" role="img" aria-label="Schematic map of three invented regions shaded by stress class, with a hatched area marking no data.">
+            <defs>
+              <pattern id="nodata" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <rect width="8" height="8" fill="var(--paper-3)"></rect><line x1="0" y1="0" x2="0" y2="8" stroke="var(--ink-4)" stroke-width="2"></line>
+              </pattern>
+            </defs>
+            <rect width="400" height="300" fill="var(--paper-2)"></rect>
+            <g stroke="var(--rule)" stroke-width="1">
+              <line x1="0" y1="75" x2="400" y2="75"></line><line x1="0" y1="150" x2="400" y2="150"></line><line x1="0" y1="225" x2="400" y2="225"></line>
+              <line x1="100" y1="0" x2="100" y2="300"></line><line x1="200" y1="0" x2="200" y2="300"></line><line x1="300" y1="0" x2="300" y2="300"></line>
+            </g>
+            <g stroke="var(--paper)" stroke-width="1.5">
+              <polygon points="40,40 150,28 196,96 150,150 62,140" fill="var(--spectral-2)" opacity=".85"></polygon>
+              <polygon points="196,96 290,52 356,110 330,186 240,170" fill="var(--spectral-4)" opacity=".9"></polygon>
+              <polygon points="62,140 150,150 240,170 220,250 96,262" fill="var(--spectral-9)" opacity=".9"></polygon>
+              <polygon points="240,170 330,186 352,252 230,262" fill="url(#nodata)"></polygon>
+            </g>
+            <g font-family="var(--font-sans)" font-size="11" fill="var(--ink)" font-weight="500">
+              <text x="70" y="96">Region Alpha</text><text x="246" y="124">Region Beta</text><text x="120" y="212">Region Gamma</text>
+              <text x="250" y="222" fill="var(--ink-3)">No data</text>
+            </g>
+          </svg>
+          <span class="synthetic" style="position:absolute;top:10px;left:10px;background:var(--paper)">Schematic, not a real map</span>
+          <div style="position:absolute;bottom:10px;left:10px;right:10px;background:color-mix(in oklab,var(--paper) 88%,transparent);border:1px solid var(--rule);border-radius:var(--radius-sm);padding:8px 10px;font-size:var(--t-xs)">
+            <strong style="font-weight:500">Stress class</strong>
+            <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap">
+              <span><svg width="10" height="10"><rect width="10" height="10" fill="var(--spectral-9)"></rect></svg> Low</span>
+              <span><svg width="10" height="10"><rect width="10" height="10" fill="var(--spectral-4)"></rect></svg> Moderate</span>
+              <span><svg width="10" height="10"><rect width="10" height="10" fill="var(--spectral-2)"></rect></svg> High</span>
+              <span style="color:var(--ink-3)">Hatching marks no data</span>
+            </div>
+          </div>
+        </div>
+        <figcaption>Invented geometry, no real coordinates or projection. Attribution line would carry tile and imagery providers.</figcaption>
+      </figure>
+      <div>
+        <h4 style="margin-bottom:var(--s-3)">Regions, same data as the map</h4>
+        <table>
+          <caption>Synthetic stress class by invented region</caption>
+          <thead><tr><th scope="col">Region</th><th scope="col">Class</th><th scope="col" class="num-cell">Area, km2</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><a href="#components">Region Alpha</a></th><td>High</td><td class="num-cell">18 400</td></tr>
+            <tr><th scope="row"><a href="#components">Region Beta</a></th><td>Moderate</td><td class="num-cell">12 950</td></tr>
+            <tr><th scope="row"><a href="#components">Region Gamma</a></th><td>Low</td><td class="num-cell">9 700</td></tr>
+          </tbody>
+        </table>
+        <p class="small" style="margin-top:var(--s-3)">Selecting a row selects the region on the map, so nothing on the map depends on dragging or pinching. No task is gesture only.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="contrast">
+    <div class="block-head"><span class="num">05</span><h2>The same content, with and without the skill</h2></div>
+    <p class="prose">On the left, a one off tool page of the kind that appears when each project styles itself: invented here for contrast, not a copy of any real page. On the right, the same content under the skill.</p>
+    <div class="ba" style="margin-top:var(--s-6)">
+      <div class="ba-col">
+        <h4>Without a shared system</h4>
+        <div class="before">
+          <h5>Water Dashboard 2050</h5>
+          <p>Our results show a big improvement in the managed scenario.</p>
+          <div class="kpi">41</div>
+          <div class="bar"><i style="height:40px"></i><i style="height:56px"></i><i style="height:33px"></i><i style="height:62px"></i><i style="height:48px"></i><i style="height:70px"></i></div>
+          <div class="lg">Blue = baseline, pink = managed</div>
+          <p style="margin-top:12px"><a href="#contrast">Learn more</a> | <a href="#contrast">Data</a></p>
+        </div>
+        <ul class="small" style="margin-top:var(--s-4);padding-left:1.1em">
+          <li>No units on the headline number</li>
+          <li>Legend carries meaning by colour alone</li>
+          <li>Promotional claim, no uncertainty</li>
+          <li>No source, method, version or date</li>
+          <li>Its own font, blue links, own shadows</li>
+        </ul>
+      </div>
+      <div class="ba-col">
+        <h4>With the skill</h4>
+        <div class="after">
+          <p class="eyebrow" style="margin-bottom:var(--s-1)">Tools, interactive model</p>
+          <h3 style="font-size:var(--t-lg);margin-bottom:var(--s-2)">Area under groundwater stress, 2050</h3>
+          <p class="small" style="margin-bottom:var(--s-3)">Modelled, synthetic. Managed path compared against a constant withdrawal baseline.</p>
+          <div class="summary" style="margin-bottom:var(--s-3)">
+            <div class="stat"><div class="k">Managed, 2050</div><div class="v" style="font-size:var(--t-xl)">41<span class="u"> thousand km2</span></div></div>
+            <div class="stat"><div class="k">Interval</div><div class="v" style="font-size:var(--t-md)">34 to 49</div></div>
+          </div>
+          <div class="legend" style="font-size:var(--t-xs)">
+            <span><svg width="28" height="8" aria-hidden="true"><line x1="0" y1="4" x2="28" y2="4" stroke="var(--spectral-2)" stroke-width="2.5"></line></svg> Baseline, solid</span>
+            <span><svg width="28" height="8" aria-hidden="true"><line x1="0" y1="4" x2="28" y2="4" stroke="var(--spectral-10)" stroke-width="2.5" stroke-dasharray="5 3"></line></svg> Managed, dashed</span>
+          </div>
+          <svg viewBox="0 0 320 120" width="100%" role="img" aria-label="Small synthetic chart repeating the two paths.">
+            <line x1="28" y1="100" x2="312" y2="100" stroke="var(--rule)"></line>
+            <polyline points="28,70 100,62 170,54 240,46 312,38" fill="none" stroke="var(--spectral-2)" stroke-width="2.5"></polyline>
+            <polyline points="28,72 100,72 170,72 240,70 312,68" fill="none" stroke="var(--spectral-10)" stroke-width="2.5" stroke-dasharray="5 3"></polyline>
+            <g font-size="9" font-family="var(--font-mono)" fill="var(--ink-3)"><text x="28" y="114">2030</text><text x="312" y="114" text-anchor="end">2050</text><text x="2" y="30">km2, thousand</text></g>
+          </svg>
+          <p class="small" style="margin:var(--s-3) 0 0">Method v0.3 demo, synthetic data, updated 12 November 2026. <a href="#toolpage">Plotted values and download</a></p>
+        </div>
+        <ul class="small" style="margin-top:var(--s-4);padding-left:1.1em">
+          <li>Units on every number, rounding stated</li>
+          <li>Line style as well as colour</li>
+          <li>Interval shown next to the headline</li>
+          <li>Method, status and date always present</li>
+          <li>Site fonts, site tokens, one shared shell</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="status">
+    <div class="block-head"><span class="num">06</span><h2>What is verified and what is not</h2></div>
+    <p class="prose">The skill is explicit about its own evidence, which is the part that makes it safe to hand to someone else. Values carry a status, and the agent is told never to invent a hex code, a font implementation, a DOI or a credit.</p>
+    <table class="statuses" style="margin-top:var(--s-5)">
+      <thead><tr><th scope="col">Item</th><th scope="col">Status</th><th scope="col">Basis</th></tr></thead>
+      <tbody>
+        <tr><td>Colour tokens, type scale, spacing, dark mode</td><td><span class="pill v">Verified</span></td><td>Live site source and computed styles, 9 November 2026</td></tr>
+        <tr><td>Header height, container and prose widths</td><td><span class="pill v">Verified</span></td><td>Measured in the browser</td></tr>
+        <tr><td>Theme mechanism and storage key</td><td><span class="pill v">Verified</span></td><td>Site behaviour</td></tr>
+        <tr><td>Breakpoints</td><td><span class="pill i">Inferred</span></td><td>Tailwind v4 defaults, no custom values found</td></tr>
+        <tr><td>Serif typeface in production</td><td><span class="pill i">Inferred</span></td><td>Tiempos Headline is first in the stack but not licensed, so Source Serif 4 renders</td></tr>
+        <tr><td>Component props and names</td><td><span class="pill p">Proposed</span></td><td>Contract for handoff, to reconcile with the Astro components</td></tr>
+        <tr><td>Font loading strategy, build pipeline, chart libraries per tool</td><td><span class="pill p">Open</span></td><td>Needs repository access</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div>
+      <p style="margin:0 0 var(--s-2)"><strong style="font-weight:500">Sustainable Solutions UI, showcase page</strong></p>
+      <p class="small" style="margin:0">Built from the <span class="mono">sustainable-solutions-ui</span> Claude Code skill, version 2.1.0. Tokens source verified 9 November 2026.</p>
+    </div>
+    <div>
+      <p class="small" style="margin:0">All data, regions, papers and figures on this page are synthetic and for demonstration only.</p>
+      <p class="small" style="margin:var(--s-2) 0 0">Try: toggle dark mode, tab through the controls, narrow the window to phone width, zoom to 200 percent.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root=document.documentElement, KEY='ssl-theme';
+  function set(t){
+    if(t==='dark'){root.setAttribute('data-theme','dark');}else{root.removeAttribute('data-theme');}
+    try{localStorage.setItem(KEY,t);}catch(e){}
+    var dark=t==='dark';
+    var b=document.getElementById('themebtn');
+    if(b){b.textContent=dark?'Light':'Dark';b.setAttribute('aria-pressed',String(dark));}
+    var b2=document.getElementById('themebtn2');
+    if(b2){b2.textContent=dark?'Switch to light mode':'Switch to dark mode';}
+  }
+  var saved=null;
+  try{saved=localStorage.getItem(KEY);}catch(e){}
+  if(!saved){saved=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+  set(saved);
+  function toggle(){set(root.getAttribute('data-theme')==='dark'?'light':'dark');}
+  ['themebtn','themebtn2'].forEach(function(id){var el=document.getElementById(id); if(el){el.addEventListener('click',toggle);} });
+  document.querySelectorAll('.chip-btn,[role=tab]').forEach(function(el){
+    el.addEventListener('click',function(){
+      if(el.hasAttribute('aria-pressed')){el.setAttribute('aria-pressed',el.getAttribute('aria-pressed')==='true'?'false':'true');return;}
+      var group=el.closest('[role=tablist]'); if(!group)return;
+      group.querySelectorAll('[role=tab]').forEach(function(t){t.setAttribute('aria-selected','false');});
+      el.setAttribute('aria-selected','true');
+    });
+  });
+  var r=document.getElementById('rate'), rv=document.getElementById('rate-val');
+  if(r&&rv){r.addEventListener('input',function(){rv.value=r.value;});rv.addEventListener('input',function(){r.value=rv.value;});}
+})();
+</script>
+</body>
+</html>

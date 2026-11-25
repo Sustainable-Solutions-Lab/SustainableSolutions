@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f8e8">
+  <title>Illustrative research tool — SSL UI/UX pattern demo</title>
+  <link rel="stylesheet" href="../tokens/ssl-candidate.css">
+  <link rel="stylesheet" href="./example.css">
+  <script src="./example.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to main content</a>
+  <header class="masthead">
+    <div class="wrap masthead-inner">
+      <div class="lab-mark" aria-label="Illustrative lab shell — not an approved Stanford logo">
+        <span class="university">STANFORD DOERR SCHOOL OF SUSTAINABILITY</span>
+        <span class="lab-name">Sustainable Solutions Lab <small>UI example</small></span>
+      </div>
+      <nav aria-label="Example navigation"><a href="https://sustainablesolutions.stanford.edu/">Lab homepage</a><a href="https://sustainablesolutions.stanford.edu/tools">Tools</a></nav>
+      <button id="theme" type="button" aria-label="Toggle color theme" aria-pressed="false">Dark</button>
+    </div>
+  </header>
+  <main id="main" class="wrap">
+    <div class="eyebrow">TOOLS / INTERACTIVE MAP AND MODEL · DESIGN DEMONSTRATION</div>
+    <div class="hero">
+      <div>
+        <h1>Explore an illustrative scenario</h1>
+        <p class="lead">A reusable page composition for new sustainability tools. All displayed figures are <strong>synthetic examples</strong>, not scientific results or real regional measurements.</p>
+      </div>
+      <div class="metadata"><strong>Prototype only</strong><span>Verified token styles — production shell not included</span></div>
+    </div>
+    <div class="notice" role="note"><strong>Demo content:</strong> This page intentionally has no real study area, DOI, map tiles, or published dataset. Replace content with validated project data and attributions before release.</div>
+    <div class="workspace">
+      <form class="panel controls" id="model" aria-labelledby="model-title">
+        <div class="eyebrow">CONTROLS</div>
+        <h2 id="model-title">Choose inputs</h2>
+        <label for="region">Example region</label>
+        <select id="region" name="region"><option value="alpha">Region Alpha (fictional)</option><option value="beta">Region Beta (fictional)</option></select>
+        <label for="scenario">Scenario</label>
+        <select id="scenario" name="scenario"><option value="baseline">Baseline</option><option value="alternative">Alternative</option></select>
+        <label for="year">Year</label>
+        <input id="year" name="year" type="number" inputmode="numeric" min="2030" max="2050" step="10" value="2040" aria-describedby="year-help year-error">
+        <p id="year-help" class="hint">Example years: 2030, 2040 or 2050</p>
+        <p id="year-error" class="error" role="alert" hidden></p>
+        <div class="actions"><button type="submit" class="primary">Update example</button><button type="reset">Reset</button></div>
+        <p class="hint">Model values are local, deterministic demonstration data with no connection to the lab's research.</p>
+      </form>
+      <section class="panel output" aria-labelledby="output-title">
+        <div class="eyebrow">RESULT</div>
+        <h2 id="output-title">Illustrative index</h2>
+        <p id="result-line" class="kpi" aria-live="polite" aria-atomic="true"><strong id="result-value">42</strong> <span>index points</span></p>
+        <p id="result-summary" class="hint">Region Alpha, baseline, 2040. Synthetic UI data.</p>
+        <figure class="chart" aria-labelledby="fig-title" aria-describedby="fig-desc">
+          <div class="eyebrow">FIGURE 1 · SCENARIO COMPARISON</div>
+          <h3 id="fig-title">Example index by year</h3>
+          <p id="fig-desc">Two example series are shown. A solid blue line represents baseline; a dashed red line represents alternative. Numerical values are available in the following table.</p>
+          <svg viewBox="0 0 620 280" role="img" aria-label="Synthetic line chart from 2030 to 2050. Exact values are in the data table below." focusable="false">
+            <g class="gridlines"><line x1="70" y1="36" x2="588" y2="36"/><line x1="70" y1="118" x2="588" y2="118"/><line x1="70" y1="200" x2="588" y2="200"/></g>
+            <g class="axes"><line x1="70" y1="20" x2="70" y2="216"/><line x1="70" y1="216" x2="588" y2="216"/></g>
+            <g class="chart-labels"><text x="60" y="40" text-anchor="end">80</text><text x="60" y="122" text-anchor="end">50</text><text x="60" y="204" text-anchor="end">20</text><text x="70" y="240" text-anchor="middle">2030</text><text x="329" y="240" text-anchor="middle">2040</text><text x="588" y="240" text-anchor="middle">2050</text><text x="329" y="267" text-anchor="middle">Year</text><text x="12" y="16">Index points</text></g>
+            <polyline class="line-1" points="70,169 329,139 588,88"/><polyline class="line-2" points="70,191 329,155 588,109"/>
+            <g class="dots"><circle class="line-1-dot" cx="70" cy="169" r="5"/><circle class="line-1-dot" cx="329" cy="139" r="5"/><circle class="line-1-dot" cx="588" cy="88" r="5"/><rect class="line-2-dot" x="65" y="186" width="10" height="10"/><rect class="line-2-dot" x="324" y="150" width="10" height="10"/><rect class="line-2-dot" x="583" y="104" width="10" height="10"/></g>
+          </svg>
+          <div class="legend"><span><i class="swatch baseline"></i> Baseline</span><span><i class="swatch alternative"></i> Alternative</span></div>
+          <figcaption>Figure 1. Synthetic series for demonstrating figure hierarchy, legend, axes and table alternatives. Not a scientific result. Source: local example fixture, version 1.</figcaption>
+        </figure>
+        <details id="table-details" open><summary>View exact illustrative values</summary>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Synthetic example values table">
+            <table><caption>Illustrative index (points), fictional Region Alpha</caption><thead><tr><th scope="col">Year</th><th scope="col">Baseline</th><th scope="col">Alternative</th></tr></thead><tbody><tr><th scope="row">2030</th><td>31</td><td>23</td></tr><tr><th scope="row">2040</th><td>42</td><td>36</td></tr><tr><th scope="row">2050</th><td>61</td><td>53</td></tr></tbody></table>
+          </div>
+        </details>
+        <div class="actions"><button type="button" id="download">Download synthetic CSV</button><a href="#research">Review methods and credits</a></div>
+      </section>
+    </div>
+    <section class="section" aria-labelledby="map-title">
+      <div class="eyebrow">MAP PATTERN · PLACEHOLDER</div>
+      <h2 id="map-title">Geospatial explorer structure</h2>
+      <p>The tile-free schematic below illustrates layout only. A live implementation needs a legitimate basemap, keyboard-operable region selection, legend classes, spatial data table, CRS, geography and persistent source credits.</p>
+      <div class="map-demo" role="group" aria-label="Mock geospatial panel without real geography">
+        <svg viewBox="0 0 680 230" role="img" aria-label="Abstract shapes representing three fictional areas, not an actual map.">
+          <path class="area-a" d="M50,25 L250,30 L286,128 L215,206 L74,188Z"/><path class="area-b" d="M258,24 L460,35 L516,142 L290,163Z"/><path class="area-c" d="M310,171 L525,148 L635,205 L358,224Z"/>
+          <text x="163" y="110">Region Alpha</text><text x="384" y="92">Region Beta</text><text x="469" y="202">Region Gamma</text>
+        </svg>
+        <aside class="map-legend"><strong>Example legend</strong><span><i class="map-key a"></i> Lower (illustrative)</span><span><i class="map-key b"></i> Higher (illustrative)</span><span><i class="map-key c"></i> Missing data</span><p>Fictional map. No geodata, tiles or coordinates are represented.</p></aside>
+      </div>
+      <p class="hint">Map attribution example: "Tiles © [verified provider]; data © [verified contributors], [license]." Never publish unverified placeholders.</p>
+    </section>
+    <section class="section" aria-labelledby="media-title">
+      <div class="eyebrow">MEDIA PATTERN</div>
+      <h2 id="media-title">Media with caption and credit</h2>
+      <figure class="sample-figure">
+        <div class="media-placeholder" role="img" aria-label="Simple decorative illustration placeholder for a research photograph or diagram">ILLUSTRATION / IMAGE SLOT</div>
+        <figcaption>Figure 2. A local placeholder — not a licensed scientific image. Replace with an approved responsive image, meaningful alt description, source, creator, rights and required credit. A video variant requires captions, transcript and an accessible player.</figcaption>
+      </figure>
+    </section>
+    <section class="section" aria-labelledby="methods-title">
+      <div class="eyebrow">HOW TO READ</div><h2 id="methods-title">Methods, uncertainty &amp; limitations</h2>
+      <p>The example index is calculated from a local fixture only. It is intentionally not calibrated or connected to environmental data. In a production research tool, document the model, sampling resolution, uncertainty intervals, exclusions, study bounds and any source limitations adjacent to results.<sup><a id="fnref-1" href="#fn-1" aria-label="Read footnote 1">1</a></sup></p>
+    </section>
+    <section class="section research" id="research" aria-labelledby="research-title">
+      <div class="eyebrow">REPRODUCIBILITY</div><h2 id="research-title">Research &amp; attribution</h2>
+      <dl><dt>Companion paper</dt><dd>Not applicable — this is a synthetic example. <a href="https://sustainablesolutions.stanford.edu/tools">Browse verified catalog entries</a>.</dd>
+      <dt>Data</dt><dd>Synthetic, version 1, distributed with this example. Not for research or policy use.</dd>
+      <dt>Code</dt><dd>Open the local <code>example.js</code> file for the demonstration logic.</dd>
+      <dt>Maps and images</dt><dd>Local inline placeholder drawings; not reproductions of any real geography or lab asset.</dd></dl>
+      <h3>Notes</h3><ol><li id="fn-1">The example index is arbitrary and must never be used to infer exposure, mortality, emissions or climate impacts. <a href="#fnref-1" aria-label="Return to footnote 1 reference">↩</a></li></ol>
+    </section>
+  </main>
+  <footer class="footer"><div class="wrap">Demo of a reusable research tool pattern. This is <strong>not</strong> the real Stanford site masthead/footer. In production, inherit the existing Astro site shell.</div></footer>
+</body></html>
